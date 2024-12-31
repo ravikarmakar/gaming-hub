@@ -1,0 +1,88 @@
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Audiowide&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inconsolata:wght@200..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Russo+One&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-orbitron: "Orbitron", sans-serif;
+  --font-poppins: "Poppins", sans-serif;
+  --font-inconsolata: "Inconsolata", serif;
+  --font-grotesk: "Space Grotesk", serif;
+  --font-press: "Press Start 2P", serif;
+  --font-audiowide: "Audiowide", serif;
+  --font-russo: "Russo One", serif;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-poppins);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: black;
+  color: white;
+}
+
+.font-orbitron {
+  font-family: var(--font-orbitron);
+}
+.font-poppins {
+  font-family: var(--font-poppins);
+}
+.font-inconsolata {
+  font-family: var(--font-inconsolata);
+}
+.font-grotesk {
+  font-family: var(--font-grotesk);
+}
+.font-press {
+  font-family: var(--font-press);
+}
+.font-audiowide {
+  font-family: var(--font-audiowide);
+}
+.font-russo {
+  font-family: var(--font-russo);
+}
+/* Custom Animations */
+@keyframes glow {
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+  }
+}
+
+.hover-glow:hover {
+  animation: glow 2s infinite;
+}
+
+/* Smooth Scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
