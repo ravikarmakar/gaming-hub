@@ -7,7 +7,7 @@ import AboutSection from "../../components/AboutSection";
 
 import { TournamentsSection } from "@/components/tournaments-section";
 import { ContactSection } from "@/components/contact-section";
-import { RankingsSection } from "../player/ranking/RankingsSection";
+import { RankingsSection } from "../team/player/ranking/RankingsSection";
 
 const Home = () => {
   return (

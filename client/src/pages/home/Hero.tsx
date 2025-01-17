@@ -1,30 +1,27 @@
 import { motion } from "framer-motion";
 import AnimatedText from "../../components/elements/AnimatedTextProps";
 import Particles from "react-tsparticles";
-import { Trophy, Gamepad2 } from "lucide-react";
+import { Trophy, Gamepad2, Zap } from "lucide-react";
+import HeaderButton from "./Button";
+
+const particleOptions = {
+  fullScreen: { enable: false },
+  particles: {
+    number: { value: 50 },
+    color: { value: "#ffffff" },
+    shape: { type: "circle" },
+    opacity: { value: 0.6, random: true },
+    size: { value: 2, random: true },
+    move: { enable: true, speed: 1.5 },
+  },
+};
 
 export default function HeroSection() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-black via-gray-900 to-purple-900">
       {/* Dynamic Particles */}
-      <Particles
-        options={{
-          fullScreen: { enable: false },
-          particles: {
-            number: { value: 50 },
-            color: { value: "#ffffff" },
-            shape: { type: "circle" },
-            opacity: { value: 0.6, random: true },
-            size: { value: 2, random: true }, // Adjusted particle size for better performance on small screens
-            move: { enable: true, speed: 1.5 },
-          },
-        }}
-        className="absolute inset-0 z-0"
-      />
-      {/* Glowing Circle */}
-      {/* <div className="absolute inset-0 z-0 flex justify-center items-center">
-        <div className="w-48 h-48 sm:w-64 sm:h-64 lg:w-96 lg:h-96 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 rounded-full blur-3xl opacity-50 animate-pulse" />
-      </div> */}
+      <Particles options={particleOptions} className="absolute inset-0 z-0" />
+
       {/* Floating Cubes */}
       <div className="absolute left-6 sm:left-10 md:left-16 lg:left-20 top-10 sm:top-14 md:top-20 lg:top-24 z-10">
         <motion.div
@@ -33,6 +30,7 @@ export default function HeroSection() {
           className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-purple-600 to-blue-500 shadow-lg rounded-sm"
         />
       </div>
+
       {/* Floating Icon - Gamepad */}
       <div className="absolute top-20 sm:top-28 md:top-32 lg:top-40 right-8 sm:right-12 md:right-16 lg:right-20 z-10">
         <motion.img
@@ -43,6 +41,7 @@ export default function HeroSection() {
           transition={{ duration: 4, repeat: Infinity }}
         />
       </div>
+
       {/* Main Content */}
       <div className="relative z-10 container mx-auto px-4 text-center">
         <motion.div
@@ -77,34 +76,34 @@ export default function HeroSection() {
           </motion.p>
 
           {/* Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <motion.button
-              whileHover={{
-                scale: 1.15,
-                boxShadow:
-                  "0 0 20px rgba(0,255,255,0.8), 0 0 40px rgba(0,255,255,0.5)",
-                textShadow: "0 0 10px rgba(0,255,255,1)",
-              }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold px-8 py-3 sm:px-10 sm:py-4 rounded-lg transition-all duration-300 tracking-wide uppercase text-sm sm:text-base lg:text-lg flex items-center justify-center"
-            >
-              <Gamepad2 className="mr-2 h-5 w-5" />
-              Explore Games
-            </motion.button>
-
-            <motion.button
-              whileHover={{
-                scale: 1.15,
-                boxShadow:
-                  "0 0 20px rgba(160,32,240,0.8), 0 0 40px rgba(160,32,240,0.5)",
-                textShadow: "0 0 10px rgba(160,32,240,1)",
-              }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold px-8 py-3 sm:px-10 sm:py-4 rounded-lg transition-all duration-300 tracking-wide uppercase text-sm sm:text-base lg:text-lg flex items-center justify-center"
-            >
-              <Trophy className="mr-2 h-5 w-5" />
-              Join Tournament
-            </motion.button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <HeaderButton
+              text="Find Future Teams"
+              icon={<Gamepad2 className="mr-2 h-5 w-5" />}
+              gradientFrom="cyan-500"
+              gradientTo="blue-600"
+              hoverColor1="rgba(0,255,255,0.8)"
+              hoverColor2="rgba(0,255,255,0.5)"
+              link="/teams"
+            />
+            <HeaderButton
+              text="Play Scrims"
+              icon={<Zap className="mr-2 h-5 w-5" />} // Lucide Zap icon for energy and action
+              gradientFrom="yellow-500" // Vibrant yellow
+              gradientTo="red-500" // Bright red
+              hoverColor1="rgba(255, 215, 0, 0.8)" // Golden yellow glow
+              hoverColor2="rgba(255, 69, 0, 0.5)" // Red-orange glow
+              link="/scrims"
+            />
+            <HeaderButton
+              text="Free Tournaments"
+              icon={<Trophy className="mr-2 h-5 w-5" />}
+              gradientFrom="purple-500"
+              gradientTo="pink-600"
+              hoverColor1="rgba(160,32,240,0.8)"
+              hoverColor2="rgba(160,32,240,0.5)"
+              link="/free-tournaments"
+            />
           </div>
         </motion.div>
       </div>
