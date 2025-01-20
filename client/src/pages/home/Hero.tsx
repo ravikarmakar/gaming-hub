@@ -2,8 +2,7 @@ import { motion } from "framer-motion";
 import AnimatedText from "../../components/elements/AnimatedTextProps";
 import Particles from "react-tsparticles";
 import { Trophy, Gamepad2, Zap } from "lucide-react";
-import HeaderButton from "./Button";
-import { Link } from "react-router-dom";
+import QuickActionButton from "./Button";
 
 const particleOptions = {
   fullScreen: { enable: false },
@@ -17,7 +16,27 @@ const particleOptions = {
   },
 };
 
-export default function HeroSection() {
+const icon = [
+  {
+    icon: <Trophy className="h-5 w-5 text-white/80 group-hover:text-white" />,
+    label: "Free Tournaments",
+    to: "/free-tournaments",
+  },
+
+  {
+    icon: <Gamepad2 className="h-5 w-5 text-white/80 group-hover:text-white" />,
+    label: "Find Teams",
+    to: "/teams",
+  },
+
+  {
+    icon: <Zap className="h-5 w-5 text-white/80 group-hover:text-white" />,
+    label: "Play Scrims",
+    to: "/scrims",
+  },
+];
+
+const HeroSection = () => {
   return (
     <section className="relative py-20">
       {/* Background gradient */}
@@ -61,80 +80,18 @@ export default function HeroSection() {
           </motion.div>
         </div>
 
-        {/* Quick Actions Buttons - Fixed positioning and z-index */}
+        {/* Quick Actions Buttons - Professional & Mobile Friendly */}
         <div className="relative z-20 w-full mt-12">
           <div className="container mx-auto px-4">
-            {/* Responsive Flexbox */}
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-              {/* Free Tournament Button */}
-              {/* <div className="flex justify-center items-center px-4">
-                <Link
-                  to="/free-tournaments"
-                  className="w-full max-w-xs sm:max-w-sm"
-                >
-                  <motion.div
-                    whileHover={{
-                      scale: 1.05,
-                      boxShadow: "0px 4px 12px rgba(59, 130, 246, 0.5)", // Blue shadow
-                    }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-blue-500/20 border-2 border-blue-500/20 py-4 px-6 flex justify-center items-center gap-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
-                  >
-                    <Trophy className="h-6 w-6 text-blue-500" />
-                    <p className="text-white font-semibold text-base sm:text-lg">
-                      Free Tournament
-                    </p>
-                  </motion.div>
-                </Link>
-              </div> */}
-
-              {/* <motion.div
-                className="bg-blue-800/30 py-4 px-6 sm:px-10 md:px-20 flex justify-center items-center gap-2 rounded-xl shadow-lg hover:shadow-blue-500/20"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 1.07 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-              >
-                <Gamepad2 className="h-6 w-6 text-cyan-400" />
-                <p className="text-white font-medium text-lg">
-                  Find Future Teams
-                </p>
-              </motion.div> */}
-
-              {/* Find Future Team Button */}
-              {/* <Link to="/teams">
-                <motion.div
-                  whileHover={{
-                    scale: 1.1,
-                    boxShadow: "0px 4px 12px rgba(255, 223, 0, 0.5)",
-                  }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-yellow-500/20 py-3 px-6 flex justify-center items-center rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
-                >
-                  <Gamepad2 className="mr-2 h-6 w-6 text-yellow-500" />
-                  <p className="text-white font-semibold text-lg">
-                    Find Future Team
-                  </p>
-                </motion.div>
-              </Link> */}
-
-              {/* Play Scrims Button */}
-              {/* <Link to="/scrims">
-                <motion.div
-                  whileHover={{
-                    scale: 1.1,
-                    boxShadow: "0px 4px 12px rgba(0, 191, 255, 0.5)",
-                  }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-blue-500/20 py-3 px-6 flex justify-center items-center rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
-                >
-                  <Zap className="mr-2 h-6 w-6 text-blue-500" />
-                  <p className="text-white font-semibold text-lg">
-                    Play Scrims
-                  </p>
-                </motion.div>
-              </Link> */}
+            <div className="flex flex-col md:flex-row gap-4 md:gap-6 justify-center items-stretch">
+              {icon.map((item, index) => (
+                <QuickActionButton
+                  key={index}
+                  to={item.to}
+                  icon={item.icon}
+                  label={item.label}
+                />
+              ))}
             </div>
           </div>
         </div>
@@ -150,4 +107,6 @@ export default function HeroSection() {
       </div>
     </section>
   );
-}
+};
+
+export default HeroSection;

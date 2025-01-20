@@ -1,15 +1,7 @@
-import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  User,
-  // Settings,
-  LogOut,
-  Users,
-  // Bell,
-  // Heart,
-  // Wallet,
-} from "lucide-react";
+import { User, LogOut, Users } from "lucide-react";
+import { useMenu } from "../context/MenuContext";
 
 // Navigation options stored in a variable
 const navigationOptions = [
@@ -23,48 +15,26 @@ const navigationOptions = [
     label: "Team Profile",
     path: "/team",
   },
-  // {
-  //   icon: Heart,
-  //   label: "Favorites",
-  //   path: "/favorites",
-  //   description: "Your favorite items",
-  // },
-  // {
-  //   icon: Bell,
-  //   label: "Notifications",
-  //   path: "/notifications",
-  //   description: "View your notifications",
-  // },
-  // {
-  //   icon: Wallet,
-  //   label: "Billing",
-  //   path: "/billing",
-  //   description: "Manage your billing",
-  // },
-  // {
-  //   icon: Settings,
-  //   label: "Settings",
-  //   path: "/settings",
-  //   description: "Account preferences",
-  // },
 ];
 
 export const ProfileAvatar = () => {
-  const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const { activeMenu, setActiveMenu } = useMenu();
+  const isOpen = activeMenu === "profile";
 
   const handleLogout = () => {
     // Add your logout logic here
     console.log("Logging out...");
+    setActiveMenu(null);
     navigate("/login");
   };
 
   return (
-    <div className="relative">
+    <div className="relative profile-menu">
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setActiveMenu(isOpen ? null : "profile")}
         className="focus:outline-none"
       >
         <img
@@ -94,7 +64,7 @@ export const ProfileAvatar = () => {
                   <Link
                     to={option.path}
                     className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors group"
-                    onClick={() => setIsOpen(false)}
+                    onClick={() => setActiveMenu(null)}
                   >
                     <option.icon className="w-5 h-5 text-gray-400 group-hover:text-cyan-400" />
                     <div className="flex flex-col">
@@ -135,7 +105,7 @@ export const UnknowProfile = () => {
   return (
     <div>
       {/* Profile Button */}
-      <Link to="/signup">
+      <Link to="/login">
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}

@@ -1,42 +1,35 @@
 import { motion } from "framer-motion";
-import { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
-interface ButtonProps {
-  text: string;
-  icon: ReactNode;
-  color: string;
-  gradientFrom: string;
-  gradientTo: string;
-  hoverColor1: string;
-  hoverColor2: string;
-  link: string;
+interface QuickActionButtonProps {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  hoverEffect?: boolean;
+  className?: string;
 }
 
-const HeaderButton = ({
-  text,
+const QuickActionButton = ({
+  to,
   icon,
-  color,
-  hoverColor1,
-  hoverColor2,
-  link,
-}: ButtonProps) => {
+  label,
+  hoverEffect = true,
+  className,
+}: QuickActionButtonProps) => {
   return (
-    <Link to={link} className="w-full sm:w-auto">
-      <motion.button
-        whileHover={{
-          scale: 1.05,
-          boxShadow: `0 0 20px ${hoverColor1}, 0 0 40px ${hoverColor2}`,
-          textShadow: `0 0 10px ${hoverColor1}`,
-        }}
-        whileTap={{ scale: 0.95 }}
-        className={`${color} text-white font-bold px-4 py-6 sm:px-10 sm:py-4 rounded-lg transition-all duration-300 tracking-wide uppercase text-sm sm:text-base lg:text-lg flex items-center justify-center`}
+    <Link to={to} className="w-full md:w-1/3 max-w-sm mx-auto">
+      <motion.div
+        whileHover={hoverEffect ? { scale: 1.02 } : {}}
+        whileTap={hoverEffect ? { scale: 0.98 } : {}}
+        className={`h-full bg-white/5 backdrop-blur-sm border border-white/10 py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition-all duration-200 hover:bg-white/10 group ${className}`}
       >
         {icon}
-        {text}
-      </motion.button>
+        <span className="text-white/90 group-hover:text-white font-medium text-base">
+          {label}
+        </span>
+      </motion.div>
     </Link>
   );
 };
 
-export default HeaderButton;
+export default QuickActionButton;

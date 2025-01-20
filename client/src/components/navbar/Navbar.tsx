@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, useScroll } from "framer-motion";
-import { Menu, Scale, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { NAV_LINKS } from "@/lib/constants";
 import throttle from "lodash.throttle";
@@ -11,81 +11,118 @@ import { NavLink } from "./components/NavLinks";
 import { MobileMenu } from "./components/MobileMenu";
 import { ProfileAvatar, UnknowProfile } from "./components/ProfileAvatar";
 import { useUserStore } from "@/store/useUserStore";
+import { MenuProvider, useMenu } from "./context/MenuContext";
 
-const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
+const iconVariants = {
+  closed: { rotate: 0 },
+  open: { rotate: 90 },
+};
+
+const NavbarContent = () => {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const location = useLocation();
   const { scrollY } = useScroll();
   const { user, checkingAuth } = useUserStore();
+  const { activeMenu, setActiveMenu, closeAllMenus } = useMenu();
 
-  // Scroll visibility handler with debounce
+  const isMobileMenuOpen = activeMenu === "mobile";
+  console.log(isMobileMenuOpen);
+
+  // Handle menu close on outside click or scroll
   useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      event.preventDefault(); // Add this line
+      const mobileMenu = document.querySelector(".mobile-menu");
+      const mobileMenuButton = document.querySelector(".mobile-menu-button");
+      const profileMenu = document.querySelector(".profile-menu");
+      const target = event.target as HTMLElement;
+
+      // Check if click is inside the mobile menu button
+      if (mobileMenuButton?.contains(target)) {
+        event.stopPropagation(); // Add this line
+        setActiveMenu(isMobileMenuOpen ? null : "mobile");
+        return;
+      }
+
+      // Only close menus if clicking outside both menus
+      if (!mobileMenu?.contains(target) && !profileMenu?.contains(target)) {
+        closeAllMenus();
+      }
+    };
+
     const handleScroll = throttle(() => {
       const currentScrollY = scrollY.get();
       setIsVisible(currentScrollY <= lastScrollY || currentScrollY <= 50);
       setLastScrollY(currentScrollY);
+
+      // Close all menus on scroll
+      closeAllMenus();
     }, 50);
 
-    // const unsubscribe = scrollY.onChange(handleScroll);
+    document.addEventListener("click", handleOutsideClick);
     const unsubscribe = scrollY.on("change", handleScroll);
+
     return () => {
+      document.removeEventListener("click", handleOutsideClick);
       unsubscribe();
       handleScroll.cancel();
     };
-  }, [scrollY, lastScrollY]);
-
-  const closeMenu = () => setIsOpen(false);
+  }, [scrollY, lastScrollY, closeAllMenus, isMobileMenuOpen, setActiveMenu]);
 
   return (
-    <header>
+    <header className="relative z-50">
       <motion.nav
         initial={{ y: -100 }}
         animate={{ y: isVisible ? 0 : -100 }}
-        // transition={{ type: "spring", stiffness: 260, damping: 20 }}
-        transition={{ duration: 0.1 }}
-        className="fixed backdrop-blur-sm transition-all duration-300 w-full bg-gray-900/95 z-50 shadow-lg"
+        transition={{ duration: 0.2, ease: "easeInOut" }}
+        className={`
+          fixed w-full 
+          bg-gradient-to-b from-gray-900/95 to-gray-900/90
+          backdrop-blur-md shadow-lg
+          transition-all duration-300
+        `}
         role="navigation"
         aria-label="Main Navigation"
       >
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex justify-center items-center">
-              {/* Mobile Menu Button */}
-              <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="md:hidden text-white hover:bg-gray-800 p-2 rounded-md"
-                aria-label="Toggle mobile menu"
-                aria-expanded={isOpen}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 lg:h-20">
+            <div className="flex items-center gap-2">
+              <motion.button
+                className="mobile-menu-button md:hidden p-2 rounded-lg hover:bg-gray-800 transition-colors"
+                whileTap={{ scale: 0.95 }}
+                aria-label="Toggle menu"
               >
-                {isOpen ? (
-                  <X className="h-6 w-6" />
-                ) : (
-                  <Menu className="h-6 w-6" />
-                )}
-              </button>
-              {/* Logo */}
+                <motion.div
+                  animate={isMobileMenuOpen ? "open" : "closed"}
+                  variants={iconVariants}
+                  transition={{ duration: 0.2 }}
+                >
+                  {isMobileMenuOpen ? (
+                    <X className="w-6 h-6" />
+                  ) : (
+                    <Menu className="w-6 h-6" />
+                  )}
+                </motion.div>
+              </motion.button>
               <Logo />
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-2">
+            <div className="hidden lg:flex items-center justify-center flex-1 px-8">
               {NAV_LINKS.map((link) => (
                 <NavLink
-                  key={link.name}
+                  key={link.href}
                   href={link.href}
                   name={link.name}
-                  isActive={location.pathname.startsWith(link.href)}
+                  isActive={location.pathname === link.href}
                 />
               ))}
             </div>
 
-            {/* Profile Avatar / Auth Buttons */}
-            <div className="md:flex items-center space-x-4">
-              {checkingAuth ? (
-                <span className="text-gray-300">Loading...</span>
-              ) : user ? (
+            {/* Profile Section */}
+            <div className="flex items-center gap-4">
+              {checkingAuth ? null : user ? (
                 <ProfileAvatar />
               ) : (
                 <UnknowProfile />
@@ -94,11 +131,17 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
-        <MobileMenu isOpen={isOpen} onClose={closeMenu} />
+        {/* Mobile Menu */}
+        <MobileMenu isOpen={isMobileMenuOpen} onClose={() => closeAllMenus()} />
       </motion.nav>
     </header>
   );
 };
+
+const Navbar = () => (
+  <MenuProvider>
+    <NavbarContent />
+  </MenuProvider>
+);
 
 export default Navbar;

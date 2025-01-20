@@ -12,9 +12,9 @@ export const MobileMenu = memo(
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.2 }}
-          className="md:hidden"
+          className="md:hidden mobile-menu"
         >
-          <div className="flex flex-col px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-[#1d1e1e] border-gray-800/50 backdrop-blur-sm">
+          <div className="flex flex-col px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-gray-900/95 border-gray-800/50 backdrop-blur-0">
             {NAV_LINKS.map((link) => (
               <NavLink
                 className="flex flex-col space-y-4 px-6"
