@@ -3,6 +3,7 @@ import { TeamSearch } from "./components/TeamSearch";
 import { TeamFilters } from "./components/TeamFilters";
 import { TeamGrid } from "./components/TeamGrid";
 import { useTeamFilters } from "./hook/useTeamFilters";
+// import { Search } from "lucide-react";
 
 export default function TeamFinderPage() {
   const { teams, filters, searchQuery, setSearchQuery, setFilters } =

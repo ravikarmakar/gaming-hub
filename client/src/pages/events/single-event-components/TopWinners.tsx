@@ -142,12 +142,10 @@ export function TopWinners() {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="text-center mb-16 flex justify-start items-center gap-3"
+          className="mb-12 flex items-center gap-3"
         >
-          <Trophy className="size-14 text-purple-400" />
-          <h2 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
-            Tournament Champions
-          </h2>
+          <Trophy className="w-10 h-10 text-purple-400" />
+          <h2 className="text-3xl font-bold text-white">Event Champions</h2>
         </motion.div>
 
         {/* Top 3 Winners */}
@@ -187,14 +185,13 @@ export function TopWinners() {
                 </motion.div>
 
                 <div
-                  className={`text-4xl font-bold mb-4 bg-gradient-to-r ${team.color} text-transparent bg-clip-text`}
+                  className={`text-4xl flex gap-5 font-bold mb-4 bg-gradient-to-r ${team.color} text-transparent bg-clip-text`}
                 >
                   #{team.rank}
+                  <h3 className={`text-3xl font-bold ${team.color}  mb-4`}>
+                    {team.team}
+                  </h3>
                 </div>
-
-                <h3 className="text-2xl font-bold text-white mb-4">
-                  {team.team}
-                </h3>
 
                 <div className="space-y-4">
                   <div>

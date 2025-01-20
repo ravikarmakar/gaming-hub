@@ -1,39 +1,11 @@
 import { motion } from "framer-motion";
+import { Event } from "../components/types";
 
-const event = {
-  id: "1",
-  title: "Cyber Gaming Championship 2025",
-  description:
-    "The ultimate gaming showdown featuring elite teams from across the globe",
-  coverImage:
-    "https://images.unsplash.com/photo-1593305841991-05c297ba4575?q=80&w=1957&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-  status: "live",
-  date: "March 15-20, 2025",
-  venue: "CyberArena, Silicon Valley",
-  prize: {
-    total: "$250,000",
-    distribution: [
-      { position: 1, amount: "$125,000", team: "TBD" },
-      { position: 2, amount: "$75,000", team: "TBD" },
-      { position: 3, amount: "$50,000", team: "TBD" },
-    ],
-  },
-  stats: {
-    registeredTeams: 64,
-    totalPlayers: 320,
-    viewerCount: "4.2M",
-    prizePool: "$250K",
-  },
-  schedule: [
-    { phase: "Registration", date: "Jan 1 - Feb 15", completed: true },
-    { phase: "Qualifiers", date: "Feb 20 - Mar 1", completed: true },
-    { phase: "Group Stage", date: "Mar 15-17", completed: false },
-    { phase: "Finals", date: "Mar 19-20", completed: false },
-  ],
-};
+interface SingleEventHeaderProps {
+  event: Event;
+}
 
-const SingleEventHeader = () => {
-  // const [isLiked, setIsLiked] = useState(false);
+const SingleEventHeader = ({ event }: SingleEventHeaderProps) => {
   return (
     <>
       <motion.div
@@ -44,7 +16,7 @@ const SingleEventHeader = () => {
         className="relative rounded-2xl overflow-hidden h-[500px] group"
       >
         <img
-          src={event.coverImage}
+          src={event.image}
           alt={event.title}
           className="w-full h-full object-cover"
         />
@@ -63,31 +35,6 @@ const SingleEventHeader = () => {
                 {event.description}
               </p>
             </div>
-            {/* <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setIsLiked(!isLiked)}
-              className={`p-4 rounded-full backdrop-blur-lg transition-all duration-300 ${
-                isLiked ? "bg-rose-500/20" : "bg-zinc-800/50"
-              }`}
-            >
-              <motion.svg
-                animate={{ scale: isLiked ? [1, 1.2, 1] : 1 }}
-                className={`w-6 h-6 ${
-                  isLiked ? "text-rose-500" : "text-zinc-400"
-                }`}
-                fill={isLiked ? "currentColor" : "none"}
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                />
-              </motion.svg>
-            </motion.button> */}
           </div>
         </motion.div>
       </motion.div>

@@ -3,11 +3,9 @@ import {
   Shield,
   AlertCircle,
   CheckCircle2,
-  XCircle,
   Clock,
   Users,
   Gamepad2,
-  Trophy,
 } from "lucide-react";
 
 const rules = [
@@ -72,7 +70,7 @@ const itemVariants = {
 
 export function EventRules() {
   return (
-    <div className="bg-gray-900 py-20">
+    <div className="relative py-20">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

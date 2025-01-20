@@ -1,234 +1,293 @@
-import { Crown, Trophy, Medal } from "lucide-react";
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Crown, Flame, Star } from "lucide-react";
+
+interface TeamData {
+  id: number;
+  teamName: string;
+  totalMatches: number;
+  totalKills: number;
+  totalScore: number;
+  winRate: number;
+}
 
 const LeaderBoard = () => {
-  const leaderboardData = [
+  const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
+  const [hoveredTeam, setHoveredTeam] = useState<number | null>(null);
+
+  const teams: TeamData[] = [
     {
-      rank: 1,
-      username: "FireKing123",
-      score: 2850,
-      kills: 156,
-      wins: 42,
-      avatar: "/api/placeholder/48/48",
+      id: 1,
+      teamName: "Team Elite",
+      totalMatches: 45,
+      totalKills: 238,
+      totalScore: 892,
+      winRate: 68,
     },
     {
-      rank: 2,
-      username: "PUBGMaster",
-      score: 2720,
-      kills: 145,
-      wins: 38,
-      avatar: "/api/placeholder/48/48",
+      id: 2,
+      teamName: "Phoenix Squad",
+      totalMatches: 45,
+      totalKills: 225,
+      totalScore: 845,
+      winRate: 64,
     },
     {
-      rank: 3,
-      username: "EliteSniper",
-      score: 2680,
-      kills: 142,
-      wins: 35,
-      avatar: "/api/placeholder/48/48",
+      id: 3,
+      teamName: "Dragon Warriors",
+      totalMatches: 45,
+      totalKills: 212,
+      totalScore: 812,
+      winRate: 61,
     },
     {
-      rank: 4,
-      username: "ProGamer404",
-      score: 2450,
-      kills: 128,
-      wins: 32,
-      avatar: "/api/placeholder/48/48",
+      id: 4,
+      teamName: "Shadow Hunters",
+      totalMatches: 45,
+      totalKills: 198,
+      totalScore: 775,
+      winRate: 58,
     },
     {
-      rank: 5,
-      username: "BattleQueen",
-      score: 2380,
-      kills: 125,
-      wins: 30,
-      avatar: "/api/placeholder/48/48",
+      id: 5,
+      teamName: "Ninja Force",
+      totalMatches: 45,
+      totalKills: 185,
+      totalScore: 742,
+      winRate: 55,
     },
     {
-      rank: 6,
-      username: "NinjaWarrior",
-      score: 2340,
-      kills: 118,
-      wins: 28,
-      avatar: "/api/placeholder/48/48",
+      id: 6,
+      teamName: "Ghost Squad",
+      totalMatches: 45,
+      totalKills: 175,
+      totalScore: 715,
+      winRate: 52,
     },
     {
-      rank: 7,
-      username: "HeadHunter",
-      score: 2290,
-      kills: 115,
-      wins: 27,
-      avatar: "/api/placeholder/48/48",
+      id: 7,
+      teamName: "Eagle Eye",
+      totalMatches: 45,
+      totalKills: 168,
+      totalScore: 695,
+      winRate: 49,
     },
     {
-      rank: 8,
-      username: "StealthMode",
-      score: 2200,
-      kills: 110,
-      wins: 25,
-      avatar: "/api/placeholder/48/48",
+      id: 8,
+      teamName: "Wolf Pack",
+      totalMatches: 45,
+      totalKills: 162,
+      totalScore: 678,
+      winRate: 47,
+    },
+    {
+      id: 9,
+      teamName: "Thunder Legion",
+      totalMatches: 45,
+      totalKills: 155,
+      totalScore: 645,
+      winRate: 45,
+    },
+    {
+      id: 10,
+      teamName: "Cobra Unit",
+      totalMatches: 45,
+      totalKills: 148,
+      totalScore: 625,
+      winRate: 43,
+    },
+    {
+      id: 11,
+      teamName: "Viper Squad",
+      totalMatches: 45,
+      totalKills: 142,
+      totalScore: 608,
+      winRate: 41,
+    },
+    {
+      id: 12,
+      teamName: "Lion Hearts",
+      totalMatches: 45,
+      totalKills: 135,
+      totalScore: 585,
+      winRate: 39,
     },
   ];
 
-  const getRankIcon = (rank: number) => {
-    switch (rank) {
+  const getRankIcon = (position: number) => {
+    switch (position) {
       case 1:
-        return <Crown className="w-6 h-6 text-yellow-400" />;
+        return <Crown className="w-6 h-6 text-yellow-500" />;
       case 2:
-        return <Trophy className="w-6 h-6 text-purple-400" />;
+        return <Crown className="w-6 h-6 text-gray-400" />;
       case 3:
-        return <Medal className="w-6 h-6 text-blue-400" />;
+        return <Crown className="w-6 h-6 text-amber-700" />;
       default:
-        return (
-          <span className="w-6 h-6 flex items-center justify-center font-bold text-gray-400">
-            {rank}
-          </span>
-        );
+        return <Star className="w-5 h-5 text-gray-600" />;
     }
   };
 
-  const getRowColor = (rank: number) => {
-    switch (rank) {
+  const getRowColor = (position: number) => {
+    switch (position) {
       case 1:
-        return "bg-gradient-to-r from-yellow-900/20 to-yellow-800/10";
+        return "bg-gradient-to-r from-yellow-500/20 via-yellow-500/10 to-transparent";
       case 2:
-        return "bg-gradient-to-r from-purple-900/20 to-purple-800/10";
+        return "bg-gradient-to-r from-gray-400/20 via-gray-400/10 to-transparent";
       case 3:
-        return "bg-gradient-to-r from-blue-900/20 to-blue-800/10";
+        return "bg-gradient-to-r from-amber-700/20 via-amber-700/10 to-transparent";
       default:
-        return "bg-gray-900/0";
+        return "bg-gray-800/40";
     }
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
-  const rowVariants = {
-    hidden: {
-      opacity: 0,
-      y: 20,
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: "spring",
-        stiffness: 100,
-        damping: 12,
-      },
-    },
-    hover: {
-      scale: 1.02,
-      backgroundColor: "rgba(255, 255, 255, 0.05)",
-      transition: {
-        type: "spring",
-        stiffness: 400,
-        damping: 20,
-      },
-    },
   };
 
   return (
-    <div className="relative max-w-4xl mx-auto p-6 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl shadow-2xl">
+    <div className="min-h-screen">
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="mb-6 text-center"
+        className="space-y-8"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
       >
-        <h2 className="text-3xl font-bold text-white mb-2">
-          Battle Royale Leaderboard
-        </h2>
-        <p className="text-gray-400">Top Players This Season</p>
-      </motion.div>
-
-      <div className="overflow-hidden rounded-lg border border-gray-700">
-        <table className="min-w-full divide-y divide-gray-800">
-          <thead className="bg-gray-800">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Rank
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Player
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Score
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Kills
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                Wins
-              </th>
-            </tr>
-          </thead>
-          <motion.tbody
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="divide-y divide-gray-800"
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center relative"
+        >
+          <h1 className="text-5xl md:text-6xl font-bold mt-8 mb-4">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-orange-500">
+              Free Fire Tournament
+            </span>
+          </h1>
+          <motion.p
+            className="text-gray-400 text-xl"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
           >
-            {leaderboardData.map((player, index) => (
-              <motion.tr
-                key={index}
-                variants={rowVariants}
-                whileHover="hover"
-                className={`${getRowColor(
-                  player.rank
-                )} transition-all duration-300`}
-              >
-                <td className="px-6 py-4 whitespace-nowrap">
+            Elite Teams Battleground
+          </motion.p>
+        </motion.div>
+
+        <motion.div
+          className="bg-gray-800/30 rounded-3xl p-8 backdrop-blur-xl border border-gray-700/50 relative overflow-hidden"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          />
+
+          <div className="relative">
+            <div className="grid grid-cols-5 gap-4 mb-6 text-gray-400 font-semibold text-sm md:text-base px-4 py-3">
+              <div>RANK</div>
+              <div>TEAM NAME</div>
+              <div className="text-center">MATCHES</div>
+              <div className="text-center">KILLS</div>
+              <div className="text-center">SCORE</div>
+            </div>
+
+            <AnimatePresence>
+              {teams.map((team, index) => (
+                <motion.div
+                  key={team.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  whileHover={{ scale: 1.02, x: 10 }}
+                  onClick={() =>
+                    setSelectedTeam(selectedTeam === team.id ? null : team.id)
+                  }
+                  onHoverStart={() => setHoveredTeam(team.id)}
+                  onHoverEnd={() => setHoveredTeam(null)}
+                  className={`grid grid-cols-5 gap-4 px-6 py-4 ${getRowColor(
+                    index + 1
+                  )} 
+                    rounded-xl mb-3 cursor-pointer relative
+                    ${
+                      hoveredTeam === team.id
+                        ? "shadow-lg shadow-purple-500/10"
+                        : ""
+                    }
+                    ${
+                      selectedTeam === team.id ? "ring-2 ring-purple-500" : ""
+                    }`}
+                >
                   <motion.div
-                    className="flex items-center justify-center"
-                    whileHover={{ scale: 1.2, rotate: 360 }}
-                    transition={{ duration: 0.3 }}
+                    className="font-bold flex items-center gap-3"
+                    whileHover={{ scale: 1.1 }}
                   >
-                    {getRankIcon(player.rank)}
+                    {getRankIcon(index + 1)}
+                    <span
+                      className={index < 3 ? "text-white" : "text-gray-400"}
+                    >
+                      #{index + 1}
+                    </span>
                   </motion.div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <motion.img
-                      src={player.avatar}
-                      alt={player.username}
-                      className="w-10 h-10 rounded-full bg-gray-700"
-                      whileHover={{ scale: 1.1 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 400,
-                        damping: 17,
-                      }}
-                    />
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-200">
-                        {player.username}
+
+                  <div className="font-semibold text-white flex items-center gap-2">
+                    {team.teamName}
+                    {index < 3 && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring" }}
+                      >
+                        <Flame className="w-4 h-4 text-orange-500" />
+                      </motion.div>
+                    )}
+                  </div>
+
+                  <motion.div
+                    className="text-center"
+                    whileHover={{ scale: 1.1 }}
+                  >
+                    {team.totalMatches}
+                  </motion.div>
+
+                  <motion.div
+                    className="text-center"
+                    whileHover={{ scale: 1.1 }}
+                  >
+                    {team.totalKills}
+                  </motion.div>
+
+                  <motion.div
+                    className="text-center font-semibold"
+                    whileHover={{ scale: 1.1 }}
+                  >
+                    <span className="text-purple-400">{team.totalScore}</span>
+                  </motion.div>
+
+                  {selectedTeam === team.id && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="col-span-5 mt-4 bg-gray-800/50 rounded-lg p-4"
+                    >
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <div className="text-gray-400 text-sm">Win Rate</div>
+                          <div className="text-white font-bold">
+                            {team.winRate}%
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400 text-sm">K/D Ratio</div>
+                          <div className="text-white font-bold">
+                            {(team.totalKills / team.totalMatches).toFixed(2)}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-300 font-semibold">
-                    {player.score}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-300">{player.kills}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-300">{player.wins}</div>
-                </td>
-              </motion.tr>
-            ))}
-          </motion.tbody>
-        </table>
-      </div>
+                    </motion.div>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 };

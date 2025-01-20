@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 interface ButtonProps {
   text: string;
   icon: ReactNode;
+  color: string;
   gradientFrom: string;
   gradientTo: string;
   hoverColor1: string;
@@ -15,8 +16,7 @@ interface ButtonProps {
 const HeaderButton = ({
   text,
   icon,
-  gradientFrom,
-  gradientTo,
+  color,
   hoverColor1,
   hoverColor2,
   link,
@@ -25,12 +25,12 @@ const HeaderButton = ({
     <Link to={link} className="w-full sm:w-auto">
       <motion.button
         whileHover={{
-          scale: 1.15,
+          scale: 1.05,
           boxShadow: `0 0 20px ${hoverColor1}, 0 0 40px ${hoverColor2}`,
           textShadow: `0 0 10px ${hoverColor1}`,
         }}
         whileTap={{ scale: 0.95 }}
-        className={`bg-gradient-to-r from-${gradientFrom} to-${gradientTo} text-white font-bold px-8 py-3 sm:px-10 sm:py-4 rounded-lg transition-all duration-300 tracking-wide uppercase text-sm sm:text-base lg:text-lg flex items-center justify-center`}
+        className={`${color} text-white font-bold px-4 py-6 sm:px-10 sm:py-4 rounded-lg transition-all duration-300 tracking-wide uppercase text-sm sm:text-base lg:text-lg flex items-center justify-center`}
       >
         {icon}
         {text}

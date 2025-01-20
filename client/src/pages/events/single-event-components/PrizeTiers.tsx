@@ -1,44 +1,38 @@
 import { motion } from "framer-motion";
 import { Trophy } from "lucide-react";
 
-const prizes = [
-  {
-    position: "1st Place",
-    prize: "₹5,00,000",
-    color: "from-yellow-400 to-yellow-600",
-    icon: "🏆",
-  },
-  {
-    position: "2nd Place",
-    prize: "₹3,00,000",
-    color: "from-gray-300 to-gray-500",
-    icon: "🥈",
-  },
-  {
-    position: "3rd Place",
-    prize: "₹1,50,000",
-    color: "from-amber-600 to-amber-800",
-    icon: "🥉",
-  },
-];
+interface Prize {
+  icon: JSX.Element;
+  position: string;
+  prize: string;
+  color: string;
+}
 
-export default function PrizeTiers() {
+interface Event {
+  distribution: Prize[];
+}
+
+interface PrizeTiersProps {
+  event: Event;
+}
+
+export default function PrizeTiers({ event }: PrizeTiersProps) {
   return (
     <article className="relative">
-      <div className="container mx-auto px-4">
+      <div className="container">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="text-center mb-12"
+          className="mb-12 flex items-center gap-3"
         >
-          <Trophy className="w-12 h-12 text-purple-400 mx-auto mb-4" />
-          <h2 className="text-3xl font-bold text-white">Prize Pool</h2>
+          <Trophy className="w-10 h-10 text-purple-400" />
+          <h2 className="text-3xl font-bold text-white">Prize Distributions</h2>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {prizes.map((prize, index) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-8">
+          {event.distribution.map((prize, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 50 }}

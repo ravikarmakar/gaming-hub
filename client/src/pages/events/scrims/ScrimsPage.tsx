@@ -1,51 +1,7 @@
 import PopularOrganiser from "@/pages/organiser/PopularOrganiser";
 import { motion } from "framer-motion";
-import {
-  Trophy,
-  Users,
-  Calendar,
-  Clock,
-  Gamepad2,
-  Timer,
-  Gift,
-} from "lucide-react";
-// import './App.css';
-
-const tournaments = [
-  {
-    id: 1,
-    title: "Pro League Season 5",
-    prizePool: "$10,000",
-    teams: "48",
-    date: "2024-03-25",
-    time: "18:00 UTC",
-    slots: "12/48",
-    image:
-      "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-  },
-  {
-    id: 2,
-    title: "Elite Scrims Series",
-    prizePool: "$5,000",
-    teams: "32",
-    date: "2024-03-26",
-    time: "20:00 UTC",
-    slots: "8/32",
-    image:
-      "https://images.unsplash.com/photo-1542751110-97427bbecf20?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-  },
-  {
-    id: 3,
-    title: "Championship Finals",
-    prizePool: "$15,000",
-    teams: "24",
-    date: "2024-03-27",
-    time: "19:00 UTC",
-    slots: "6/24",
-    image:
-      "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-  },
-];
+import PageLayout from "@/pages/PageLayout";
+import { Users, Clock, Timer, Gift } from "lucide-react";
 
 const dailyScrims = [
   {
@@ -178,84 +134,15 @@ const Badge = ({ type }: { type: string }) => {
   );
 };
 
-function ScrimsPage() {
+const ScrimsPage = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 py-12 px-4 sm:px-6 lg:px-8">
+    <PageLayout
+      title="Free Fire Scrims"
+      description="Join elite scrims and compete against the best teams. Level up your
+            game and win amazing prizes!"
+    >
       <div className="max-w-7xl mx-auto">
-        {/* Tournaments Section */}
-        <motion.div
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-center mb-16"
-        >
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600">
-            Free Fire Tournament Scrims
-          </h1>
-          <p className="text-gray-300 text-lg md:text-xl max-w-3xl mx-auto">
-            Join elite scrims and compete against the best teams. Level up your
-            game and win amazing prizes!
-          </p>
-        </motion.div>
-
         <PopularOrganiser />
-
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20"
-        >
-          {tournaments.map((tournament) => (
-            <motion.div
-              key={tournament.id}
-              variants={cardVariants}
-              whileHover="hover"
-              className="relative bg-gray-800 bg-opacity-50 rounded-xl overflow-hidden backdrop-blur-sm border border-cyan-500/20"
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
-              <img
-                src={tournament.image}
-                alt={tournament.title}
-                className="w-full h-48 object-cover"
-              />
-              <div className="relative z-20 p-6">
-                <h3 className="text-2xl font-bold mb-4 text-cyan-400">
-                  {tournament.title}
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex items-center text-gray-300">
-                    <Trophy className="w-5 h-5 mr-3 text-yellow-500" />
-                    <span>Prize Pool: {tournament.prizePool}</span>
-                  </div>
-                  <div className="flex items-center text-gray-300">
-                    <Users className="w-5 h-5 mr-3 text-blue-500" />
-                    <span>Teams: {tournament.teams}</span>
-                  </div>
-                  <div className="flex items-center text-gray-300">
-                    <Calendar className="w-5 h-5 mr-3 text-green-500" />
-                    <span>Date: {tournament.date}</span>
-                  </div>
-                  <div className="flex items-center text-gray-300">
-                    <Clock className="w-5 h-5 mr-3 text-purple-500" />
-                    <span>Time: {tournament.time}</span>
-                  </div>
-                  <div className="flex items-center text-gray-300">
-                    <Gamepad2 className="w-5 h-5 mr-3 text-pink-500" />
-                    <span>Available Slots: {tournament.slots}</span>
-                  </div>
-                </div>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="mt-6 w-full py-3 px-6 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-cyan-500/50 transition-all duration-300"
-                >
-                  Register Now
-                </motion.button>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
 
         {/* Daily Scrims Section */}
         <motion.div
@@ -387,8 +274,8 @@ function ScrimsPage() {
           ))}
         </motion.div>
       </div>
-    </div>
+    </PageLayout>
   );
-}
+};
 
 export default ScrimsPage;

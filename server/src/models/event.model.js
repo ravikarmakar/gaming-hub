@@ -1,18 +1,23 @@
 import mongoose from "mongoose";
 
-const prizeTierSchema = new mongoose.Schema(
-  {
-    position: {
-      type: String,
-      required: true,
-    },
-    prize: {
-      type: String,
-      required: true,
-    },
+const prizeSchema = new mongoose.Schema({
+  total: {
+    type: String,
+    required: true,
   },
-  { _id: false }
-);
+  distribution: [
+    {
+      position: {
+        type: String,
+        required: true,
+      },
+      prize: {
+        type: String,
+        required: true,
+      },
+    },
+  ],
+});
 
 const eventSchema = new mongoose.Schema(
   {
@@ -44,10 +49,16 @@ const eventSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    prizeTiers: [prizeTierSchema],
+    prize: [prizeSchema],
     image: {
       type: String,
       required: true,
+      validate: {
+        validator: function (v) {
+          return /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp))$/i.test(v);
+        },
+        message: "Please enter a valid image URL.",
+      },
     },
     description: {
       type: String,
@@ -65,8 +76,13 @@ const eventSchema = new mongoose.Schema(
     registrationEnds: {
       type: Date,
       required: true,
+      validate: {
+        validator: function (value) {
+          return value > Date.now();
+        },
+        message: "The registration period must be in the future.",
+      },
     },
-    totalPrizePool: { type: Number, required: true }, // Optional: Prize pool amount
     teams: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -75,7 +91,7 @@ const eventSchema = new mongoose.Schema(
     ],
     organizer: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // Reference to the User model (the organizer)
+      ref: "Organizer", // Reference to the User model (the organizer)
       required: true,
     },
     leaderboard: [

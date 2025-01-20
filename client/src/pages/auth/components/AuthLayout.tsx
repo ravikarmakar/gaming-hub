@@ -1,8 +1,7 @@
 import React from "react";
-import { BackgroundAnimation } from "./BackgroundAnimation";
-import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
+import { BackgroundAnimation } from "./BackgroundAnimation";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -12,39 +11,37 @@ interface AuthLayoutProps {
 
 export const AuthLayout = ({ children, title, subtitle }: AuthLayoutProps) => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black relative overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center bg-black relative overflow-hidden p-4">
+      {/* Background gradient effect */}
       <BackgroundAnimation />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative z-10 w-full max-w-md p-4 sm:p-8"
-      >
-        <div
-          className="bg-gray-900/90 backdrop-blur-xl rounded-2xl border border-gray-800 p-4 sm:p-6 
-          shadow-[0_0_50px_0_rgba(6,182,212,0.1)] 
-          hover:shadow-[0_0_80px_0_rgba(6,182,212,0.2)] 
-          transition-all duration-500"
-        >
+      {/* Main container */}
+      <div className="relative z-10 w-full max-w-md mx-auto">
+        <div className="bg-gray-900/80 backdrop-blur-lg rounded-2xl border border-gray-800 shadow-xl p-4 md:p-8">
+          {/* Back button */}
           <Link to="/">
-            <span className="flex gap-3">
-              <ArrowLeft className="w-6 h-6 text-white" />
-              Back
-            </span>
+            <button className="group flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6">
+              <ArrowLeft className="w-5 h-5 group-hover:translate-x-[-4px] transition-transform" />
+              <span>Back</span>
+            </button>
           </Link>
 
-          <h2
-            className="text-3xl font-bold text-center mb-2 font-orbitron 
-            bg-gradient-to-r from-cyan-400 via-purple-500 to-cyan-400 
-            bg-300% animate-gradient bg-clip-text text-transparent"
-          >
-            {title}
-          </h2>
-          <p className="text-gray-400 text-center mb-8">{subtitle}</p>
-          {children}
+          {/* Title section */}
+          <div className="space-y-4 mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-center bg-gradient-to-r from-cyan-400 via-purple-500 to-cyan-400 bg-clip-text text-transparent">
+              {title}
+            </h2>
+            <p className="text-gray-400 text-center text-sm md:text-base">
+              {subtitle}
+            </p>
+          </div>
+
+          {/* Content area */}
+          <div className="space-y-6">{children}</div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };
+
+// absolute left-1/2 top-1/2 -z-10 h-[400px] w-[800px] -translate-x-1/2 -translate-y-1/2 opacity-10 blur-[100px] bg-emerald-500

@@ -1,9 +1,37 @@
 import { motion } from "framer-motion";
-import { Trophy, Users, Clock, Tag } from "lucide-react";
+import { Trophy, Calendar, MapPin, Gamepad2 } from "lucide-react";
+import { Event } from "../EventPostPage";
 
-export function EventDetails() {
+interface EventDetailsProps {
+  event: Event;
+}
+
+export default function EventDetails({ event }: EventDetailsProps) {
+  const itemVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: { duration: 0.5 },
+    },
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        staggerChildren: 0.2,
+      },
+    },
+  };
+
   return (
-    <div className="relative container mx-auto px-4">
+    <div className="relative container py-10">
+      {/* Title */}
+
       <motion.div
         initial={{ opacity: 0, y: 50 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -11,44 +39,71 @@ export function EventDetails() {
         viewport={{ once: true }}
         className="grid grid-cols-1 md:grid-cols-2 gap-12"
       >
-        <div>
-          <h2 className="text-3xl font-bold text-purple-400 mb-6">
+        <motion.div
+          className="max-w-2xl"
+          initial="hidden"
+          animate="visible"
+          variants={containerVariants}
+        >
+          <motion.h2
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+            className="text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-6"
+          >
             Event Details
-          </h2>
-          <p className="text-gray-300 leading-relaxed mb-8">
-            Join us for the most anticipated gaming event of the year! Cyber
-            Thunder 2024 brings together elite gamers from around the world to
-            compete in multiple game titles for glory and incredible prizes.
-          </p>
+          </motion.h2>
 
           <div className="space-y-4">
+            <motion.h2
+              className="text-xl font-extrabold text-gray-400"
+              initial={{ opacity: 0, y: -20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              viewport={{ once: true }}
+            >
+              <span className="text-gray-400">Organized By - </span>
+              <span className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                {event.organizer}
+              </span>
+            </motion.h2>
+
             {[
-              { icon: Trophy, text: "Multiple Game Categories" },
-              { icon: Users, text: "500+ Participants Expected" },
-              { icon: Clock, text: "72 Hours of Non-Stop Gaming" },
-              { icon: Tag, text: "₹10,00,000 Prize Pool" },
+              { icon: MapPin, text: event.location },
+              { icon: Gamepad2, text: event.mode },
+              // { icon: Clock, text: event.time },
+              { icon: Trophy, text: event.prize.total },
+              { icon: Calendar, text: event.date },
             ].map((item, index) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className="flex items-center gap-3 text-gray-300"
+                className="flex items-center space-x-4 group"
+                variants={itemVariants}
+                whileHover={{ x: 10 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
               >
-                <item.icon className="w-5 h-5 text-purple-400" />
-                <span>{item.text}</span>
+                <div className="p-2 bg-gray-800 rounded-lg group-hover:bg-gray-700 transition-colors">
+                  <item.icon className="w-5 h-5 text-blue-400" />
+                </div>
+                <span className="text-gray-300 group-hover:text-white transition-colors">
+                  {item.text}
+                </span>
               </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          whileInView={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, scale: 0.8, rotateX: -10 }}
+          whileInView={{ opacity: 1, scale: 1, rotateX: 0 }}
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
-          className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 p-8 rounded-2xl border border-purple-500/20"
+          className="bg-gradient-to-br from-gray-900/50 to-purple-900/50 p-8 rounded-2xl shadow-xl transform transition-transform hover:rotate-3 hover:scale-105"
+          style={{
+            perspective: "1000px",
+            boxShadow: "0 20px 50px rgba(128, 90, 213, 0.5)", // Adds depth
+          }}
         >
           <h3 className="text-2xl font-bold text-purple-400 mb-6">
             Registration Status
@@ -64,306 +119,24 @@ export function EventDetails() {
               <div className="text-sm text-gray-400 mb-2">Slots Remaining</div>
               <div className="text-4xl font-bold text-white">42/500</div>
             </div>
-            <button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all duration-300">
+            <motion.button
+              whileHover={{
+                scale: 1.1,
+                background:
+                  "linear-gradient(to right, #38b2ac, #2c5282, #5a67d8)", // Teal to Navy Blue to Indigo
+                boxShadow: "0px 6px 25px rgba(58, 150, 200, 0.6)", // Glow effect with teal shade
+              }}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, type: "spring" }}
+              className="w-full relative bg-gradient-to-r from-teal-600 to-indigo-600 via-blue-900 text-white py-3 px-6 rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-400"
+            >
               Register Now
-            </button>
+            </motion.button>
           </div>
         </motion.div>
       </motion.div>
     </div>
   );
 }
-
-/////////////////////////////
-
-// import React, { useState } from "react";
-// import { motion, AnimatePresence } from "framer-motion";
-// import {
-//   Trophy,
-//   Users,
-//   Clock,
-//   Gamepad,
-//   ChevronRight,
-//   Globe,
-//   Zap,
-// } from "lucide-react";
-
-// // Types
-// interface EventFeature {
-//   icon: React.ElementType;
-//   label: string;
-//   value: string;
-//   color: string;
-// }
-
-// interface RegistrationStats {
-//   daysLeft: number;
-//   totalSlots: number;
-//   remainingSlots: number;
-//   registrationEndDate: string;
-// }
-
-// interface Props {
-//   eventStats: RegistrationStats;
-// }
-
-// const GamingEventPortal: React.FC<Props> = ({ eventStats }) => {
-//   const [hoverFeature, setHoverFeature] = useState<number | null>(null);
-
-//   // Animation variants defined within component
-//   const containerVariants = {
-//     hidden: { opacity: 0 },
-//     visible: {
-//       opacity: 1,
-//       transition: {
-//         staggerChildren: 0.1,
-//         delayChildren: 0.2,
-//       },
-//     },
-//   };
-
-//   const itemVariants = {
-//     hidden: { y: 20, opacity: 0 },
-//     visible: {
-//       y: 0,
-//       opacity: 1,
-//       transition: {
-//         type: "spring",
-//         stiffness: 100,
-//       },
-//     },
-//   };
-
-//   const glowVariants = {
-//     initial: { scale: 0.8, opacity: 0.5 },
-//     animate: {
-//       scale: 1.2,
-//       opacity: [0.4, 0.2, 0.4],
-//       transition: {
-//         duration: 3,
-//         repeat: Infinity,
-//         ease: "easeInOut",
-//       },
-//     },
-//   };
-
-//   const floatVariants = {
-//     initial: { y: 0 },
-//     animate: {
-//       y: [-10, 10],
-//       transition: {
-//         duration: 4,
-//         repeat: Infinity,
-//         repeatType: "reverse",
-//         ease: "easeInOut",
-//       },
-//     },
-//   };
-
-//   const features: EventFeature[] = [
-//     {
-//       icon: Trophy,
-//       label: "Prize Pool",
-//       value: "₹10,00,000",
-//       color: "from-amber-500 to-yellow-500",
-//     },
-//     {
-//       icon: Users,
-//       label: "Players",
-//       value: "500+",
-//       color: "from-cyan-500 to-blue-500",
-//     },
-//     {
-//       icon: Clock,
-//       label: "Duration",
-//       value: "72h",
-//       color: "from-purple-500 to-pink-500",
-//     },
-//     {
-//       icon: Gamepad,
-//       label: "Games",
-//       value: "5+",
-//       color: "from-green-500 to-emerald-500",
-//     },
-//   ];
-
-//   return (
-//     <div className="min-h-screen bg-black text-white overflow-hidden">
-//       {/* Background Effects */}
-//       <motion.div
-//         className="fixed inset-0 bg-[radial-gradient(circle_at_center,rgba(29,78,216,0.15),transparent_80%)]"
-//         variants={glowVariants}
-//         initial="initial"
-//         animate="animate"
-//       />
-
-//       <div className="relative container mx-auto px-4 py-12 lg:py-24">
-//         <motion.div
-//           variants={containerVariants}
-//           initial="hidden"
-//           animate="visible"
-//           className="grid lg:grid-cols-2 gap-12 items-center"
-//         >
-//           {/* Left Content Section */}
-//           <div className="space-y-12">
-//             <motion.div variants={itemVariants} className="space-y-4">
-//               <motion.div
-//                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-sm"
-//                 whileHover={{ scale: 1.05 }}
-//               >
-//                 <Zap className="w-4 h-4 text-yellow-500" />
-//                 <span className="text-sm font-medium">Live Registration</span>
-//               </motion.div>
-
-//               <h1 className="text-5xl md:text-6xl font-bold">
-//                 <span className="block bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-//                   Cyber Thunder
-//                 </span>
-//                 <span className="block mt-2">2024</span>
-//               </h1>
-
-//               <p className="text-xl text-gray-400 max-w-xl">
-//                 Experience the future of competitive gaming in this
-//                 groundbreaking tournament series.
-//               </p>
-//             </motion.div>
-
-//             {/* Features Grid */}
-//             <motion.div
-//               className="grid grid-cols-2 gap-4"
-//               variants={itemVariants}
-//             >
-//               {features.map((feature, index) => (
-//                 <motion.div
-//                   key={index}
-//                   className="relative p-6 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-white/20 transition-colors"
-//                   onHoverStart={() => setHoverFeature(index)}
-//                   onHoverEnd={() => setHoverFeature(null)}
-//                   whileHover={{ y: -5 }}
-//                 >
-//                   <motion.div
-//                     className={`absolute inset-0 rounded-xl bg-gradient-to-r ${feature.color} opacity-0`}
-//                     animate={{
-//                       opacity: hoverFeature === index ? 0.1 : 0,
-//                     }}
-//                     transition={{ duration: 0.3 }}
-//                   />
-//                   <div className="relative space-y-3">
-//                     <feature.icon className="w-6 h-6 text-white/80" />
-//                     <div>
-//                       <div className="text-2xl font-bold">{feature.value}</div>
-//                       <div className="text-sm text-gray-400">
-//                         {feature.label}
-//                       </div>
-//                     </div>
-//                   </div>
-//                 </motion.div>
-//               ))}
-//             </motion.div>
-//           </div>
-
-//           {/* Right Registration Section */}
-//           <motion.div
-//             variants={floatVariants}
-//             initial="initial"
-//             animate="animate"
-//             className="relative"
-//           >
-//             <motion.div
-//               className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 blur-3xl"
-//               animate={{
-//                 opacity: [0.3, 0.15, 0.3],
-//                 scale: [1, 1.1, 1],
-//               }}
-//               transition={{
-//                 duration: 4,
-//                 repeat: Infinity,
-//                 repeatType: "reverse",
-//               }}
-//             />
-
-//             <motion.div
-//               className="relative p-8 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10"
-//               variants={itemVariants}
-//             >
-//               <div className="space-y-8">
-//                 <div>
-//                   <div className="flex items-center gap-2 mb-2">
-//                     <Globe className="w-4 h-4 text-blue-500" />
-//                     <span className="text-sm text-gray-400">
-//                       Registration Status
-//                     </span>
-//                   </div>
-//                   <div className="space-y-6">
-//                     {/* Time Remaining */}
-//                     <div>
-//                       <div className="flex justify-between mb-2">
-//                         <span className="text-sm text-gray-400">
-//                           Time Remaining
-//                         </span>
-//                         <span className="text-sm text-gray-400">
-//                           {eventStats.registrationEndDate}
-//                         </span>
-//                       </div>
-//                       <div className="text-3xl font-bold mb-2">
-//                         {eventStats.daysLeft} Days Left
-//                       </div>
-//                       <motion.div className="h-1 bg-white/10 rounded-full overflow-hidden">
-//                         <motion.div
-//                           className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
-//                           initial={{ width: 0 }}
-//                           animate={{ width: "75%" }}
-//                           transition={{ duration: 1, delay: 0.5 }}
-//                         />
-//                       </motion.div>
-//                     </div>
-
-//                     {/* Slots */}
-//                     <div>
-//                       <div className="flex justify-between mb-2">
-//                         <span className="text-sm text-gray-400">
-//                           Available Slots
-//                         </span>
-//                         <span className="text-sm text-gray-400">
-//                           {eventStats.remainingSlots}/{eventStats.totalSlots}
-//                         </span>
-//                       </div>
-//                       <motion.div className="h-1 bg-white/10 rounded-full overflow-hidden">
-//                         <motion.div
-//                           className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
-//                           initial={{ width: 0 }}
-//                           animate={{
-//                             width: `${
-//                               (eventStats.remainingSlots /
-//                                 eventStats.totalSlots) *
-//                               100
-//                             }%`,
-//                           }}
-//                           transition={{ duration: 1, delay: 0.7 }}
-//                         />
-//                       </motion.div>
-//                     </div>
-//                   </div>
-//                 </div>
-
-//                 <motion.button
-//                   className="w-full group relative"
-//                   whileHover={{ scale: 1.02 }}
-//                   whileTap={{ scale: 0.98 }}
-//                 >
-//                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-200" />
-//                   <div className="relative flex items-center justify-center gap-2 px-8 py-4 rounded-lg bg-black text-white font-medium">
-//                     Register Now
-//                     <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-//                   </div>
-//                 </motion.button>
-//               </div>
-//             </motion.div>
-//           </motion.div>
-//         </motion.div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default GamingEventPortal;

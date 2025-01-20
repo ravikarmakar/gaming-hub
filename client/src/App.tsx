@@ -1,6 +1,6 @@
 import { useEffect, Suspense, lazy, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Routes, Route, useLocation, Outlet } from "react-router-dom";
+import { Routes, Route, Outlet } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
 import { ROUTES } from "@/lib/constants";
 import { Toaster } from "react-hot-toast";
@@ -16,6 +16,8 @@ import FreeEvents from "./pages/events/free-tournaments/FreeEvents";
 import { useUserStore } from "./store/useUserStore";
 import TournamentOrgProfile from "./pages/user/tournament-org-profile/TournamentOrgProfile";
 import ScrimsPage from "./pages/events/scrims/ScrimsPage";
+import AdminDashboard from "./pages/admin/Dashboard";
+import SuperAdminDashboard from "./pages/admin/SuperAdmin";
 
 // Lazy-loaded components
 const Home = lazy(() => import("./pages/home/Home"));
@@ -42,14 +44,10 @@ function ErrorFallback({ error }: { error: unknown }) {
 
 // Main layout component
 const MainLayout = () => {
-  const location = useLocation();
-  const noNavbarRoutes = [ROUTES.LOGIN, ROUTES.SIGNUP];
-  const showNavbar = !noNavbarRoutes.includes(location.pathname);
-
   return (
     <>
-      {showNavbar && <Navbar />}
-      <main className="min-h-screen bg-black text-white">
+      <Navbar />
+      <main className="overflow-x-hidden text-white">
         <Outlet />
       </main>
       <Footer />
@@ -68,7 +66,7 @@ export default function App() {
     memoizedCheckAuth();
   }, [memoizedCheckAuth]);
 
-  console.log(user);
+  // console.log(user);
 
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
@@ -105,13 +103,20 @@ export default function App() {
                   <Route path={ROUTES.BLOG_POST} element={<BlogPostPage />} />
                   <Route path={ROUTES.TEAMS} element={<TeamFinderPage />} />
                   <Route path={ROUTES.EVENT} element={<EventPostPage />} />
+                  <Route path={ROUTES.EVENTS} element={<EventPage />} />
                   <Route path={ROUTES.SCRIMSPAGE} element={<ScrimsPage />} />
-                </Route>
-                {/* Pages without Navbar */}
-                <Route path={ROUTES.EVENTS} element={<EventPage />} />
 
-                <Route path={ROUTES.LOGIN} element={<LoginPage />} />
-                <Route path={ROUTES.SIGNUP} element={<SignupPage />} />
+                  {/* Authantication */}
+                  <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+                  <Route path={ROUTES.SIGNUP} element={<SignupPage />} />
+                </Route>
+
+                {/* Admin and max-admin */}
+                <Route path={ROUTES.ADMIN} element={<AdminDashboard />} />
+                <Route
+                  path={ROUTES.MAXADMIN}
+                  element={<SuperAdminDashboard />}
+                />
               </Routes>
             </Suspense>
             <Toaster />

@@ -14,10 +14,10 @@ const userSchema = new mongoose.Schema(
     rank: { type: Number, default: 0 },
     role: {
       type: String,
-      enum: ["admin", "max admin", "user"],
+      enum: ["admin", "max admin", "user", "staff", "moderator"],
       default: "user",
     },
-    isOrganisation: { type: Boolean, default: false },
+    isOrganizer: { type: Boolean, default: false },
     blocked: { type: Boolean, default: false }, // New blocked field
     globalRank: { type: Number, default: 0 },
     country: { type: String, default: null },
@@ -27,6 +27,7 @@ const userSchema = new mongoose.Schema(
     game: {
       type: String,
     },
+    blogs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Blog" }],
     achievements: [
       { type: mongoose.Schema.Types.ObjectId, ref: "Achievement" },
     ],

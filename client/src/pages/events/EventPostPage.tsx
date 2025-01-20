@@ -1,104 +1,124 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import SingleEventHeader from "./single-event-components/SingleEventHeader";
-import { TopWinners } from "./single-event-components/TopWinners";
+// import { TopWinners } from "./single-event-components/TopWinners";
 import PrizeTiers from "./single-event-components/PrizeTiers";
-
 import LeaderBoard from "./single-event-components/Leaderboard";
-import { Star, Share2, Heart } from "lucide-react";
 import { useParams } from "react-router-dom";
 // import { useEvent } from "./Event";
 import EventStatus from "./single-event-components/EventStatus";
 import { EventRules } from "./single-event-components/EventRules";
-import GamingEventPortal, {
-  EventDetails,
-} from "./single-event-components/EventDetails";
-// import { Sponsors } from "./single-event-components/Sponsers";
+import EventDetails from "./single-event-components/EventDetails";
+// import EventStats from "./single-event-components/EventStats";
+import EventTimeLine from "./single-event-components/EventTimeline";
+import QuickAction from "./single-event-components/QuickActions";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "./single-event-components/EventTabs";
+import { Sponsors } from "./single-event-components/Sponsers";
+import { useEvent } from "./Event";
 
-// Custom Button Component
-const Button = ({ children, variant = "primary", onClick, className = "" }) => {
-  const baseStyles =
-    "px-4 py-2 rounded-lg font-medium transition-all duration-200";
-  const variants = {
-    primary:
-      "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white",
-    secondary: "bg-zinc-800 hover:bg-zinc-700 text-white",
-    outline:
-      "border border-zinc-700 hover:border-violet-500 text-zinc-300 hover:text-violet-400",
-  };
+//  ALl Interface
+export interface PrizeDistribution {
+  position: string;
+  prize: string;
+  color: string;
+  icon: string;
+}
 
-  return (
-    <motion.button
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      className={`${baseStyles} ${variants[variant]} ${className}`}
-      onClick={onClick}
-    >
-      {children}
-    </motion.button>
-  );
-};
+export interface Prize {
+  total: string;
+  distribution: PrizeDistribution[];
+}
 
-// Custom Card Component
-const Card = ({ children, className = "" }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    className={`bg-zinc-900/80 backdrop-blur-lg rounded-xl border border-zinc-800 p-6 ${className}`}
-  >
-    {children}
-  </motion.div>
-);
+export interface Stats {
+  registeredTeams: number;
+  totalPlayers: number;
+  viewerCount: string;
+  prizePool: string;
+}
+
+export interface Schedule {
+  phase: string;
+  date: string;
+  completed: boolean;
+}
+
+export interface Event {
+  id: string;
+  title: string;
+  game: string;
+  organizer: string;
+  mode: string;
+  location: string;
+  slots: string;
+  description: string;
+  coverImage: string;
+  date: string;
+  venue: string;
+  prize: Prize;
+  status: string;
+  stats: Stats;
+  schedule: Schedule[];
+}
 
 // Badge Component
-
 const EventDisplay = () => {
-  const [isLiked, setIsLiked] = useState(false);
-  const [isRated, setIsRated] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
-
   const { id } = useParams();
 
-  // const event = useEvent(id);
+  const oneEvent = useEvent(id);
 
-  // Function to handle copy action
-  const handleCopy = () => {
-    const currentURL = window.location.href; // Get the current URL
-    navigator.clipboard.writeText(currentURL); // Copy to clipboard
-    setIsCopied(true); // Set copied state
-    setTimeout(() => setIsCopied(false), 2000); // Reset after 2 seconds
-  };
+  // console.log(oneEvent);
 
-  const event = {
+  const event: Event[] = {
     id: "1",
     title: "Cyber Gaming Championship 2025",
+    game: "Free Fire",
+    organizer: "ProPlayz Esports",
+    mode: "Esports",
+    location: "India",
+    slots: "100",
     description:
       "The ultimate gaming showdown featuring elite teams from across the globe",
-    coverImage: "/api/placeholder/1200/400",
+    image:
+      "https://images.unsplash.com/photo-1593305841991-05c297ba4575?q=80&w=1957&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
 
     date: "March 15-20, 2025",
     venue: "CyberArena, Silicon Valley",
+    status: "registration-open",
     prize: {
-      total: "$250,000",
+      total: "250,000 INR",
       distribution: [
-        { position: 1, amount: "$125,000", team: "TBD" },
-        { position: 2, amount: "$75,000", team: "TBD" },
-        { position: 3, amount: "$50,000", team: "TBD" },
+        {
+          position: "1st Place",
+          prize: "₹5,00,000",
+          color: "from-yellow-400 to-yellow-600",
+          icon: "🏆",
+        },
+        {
+          position: "2nd Place",
+          prize: "₹3,00,000",
+          color: "from-gray-300 to-gray-500",
+          icon: "🥈",
+        },
+        {
+          position: "3rd Place",
+          prize: "₹1,50,000",
+          color: "from-amber-600 to-amber-800",
+          icon: "🥉",
+        },
       ],
     },
-    status: "registration-open",
+
+    // optional
     stats: {
       registeredTeams: 64,
       totalPlayers: 320,
       viewerCount: "4.2M",
-      prizePool: "$250K",
+      prizePool: "250K",
     },
-    schedule: [
-      { phase: "Registration", date: "Jan 1 - Feb 15", completed: true },
-      { phase: "Qualifiers", date: "Feb 20 - Mar 1", completed: true },
-      { phase: "Group Stage", date: "Mar 15-17", completed: false },
-      { phase: "Finals", date: "Mar 19-20", completed: false },
-    ],
   };
 
   const containerVariants = {
@@ -109,13 +129,6 @@ const EventDisplay = () => {
         staggerChildren: 0.1,
       },
     },
-  };
-
-  const eventStats = {
-    daysLeft: 14,
-    totalSlots: 500,
-    remainingSlots: 42,
-    registrationEndDate: "Feb 28, 2024",
   };
 
   return (
@@ -131,172 +144,86 @@ const EventDisplay = () => {
         className="relative max-w-7xl mx-auto px-4 py-20 space-y-8"
       >
         {/* Hero Section */}
-        <SingleEventHeader />
+        <SingleEventHeader event={oneEvent} />
 
-        {/* Buttons */}
+        {/* Quick actions Buttons*/}
         <div className="flex items-center gap-4">
-          {/* Notification */}
-          <AnimatePresence>
-            {isCopied && (
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-gray-200 text-xs sm:text-sm px-4 py-2 rounded-lg shadow-md"
-              >
-                Link copied to clipboard!
-              </motion.div>
-            )}
-          </AnimatePresence>
           {/* Event Status*/}
-          <EventStatus status={event.status} />
+          <EventStatus status={oneEvent.status} />
 
-          {/* Like button */}
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setIsLiked(!isLiked)}
-            className={`p-4 rounded-full backdrop-blur-lg transition-all duration-300 ${
-              isLiked ? "bg-rose-500/20" : "bg-zinc-800/50"
-            }`}
-          >
-            <motion.div
-              animate={{ scale: isLiked ? [1, 1.2, 1] : 1 }}
-              className={`h-6 w-6 ${
-                isLiked ? "text-rose-500" : "text-zinc-400"
-              }`}
-            >
-              <Heart fill={isLiked ? "currentColor" : "none"} />
-            </motion.div>
-          </motion.button>
-          {/* Star Rating Button */}
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setIsRated(!isRated)}
-            className={`p-4 rounded-full backdrop-blur-lg transition-all duration-300 ${
-              isRated ? "bg-yellow-500/20" : "bg-zinc-800/50"
-            }`}
-          >
-            <motion.div
-              animate={{ scale: isRated ? [1, 1.2, 1] : 1 }}
-              className={`w-6 h-6 ${
-                isRated ? "text-yellow-500" : "text-zinc-400"
-              }`}
-            >
-              <Star fill={isRated ? "currentColor" : "none"} />
-            </motion.div>
-          </motion.button>
-          {/* Share Button */}
-          <div>
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={handleCopy}
-              className="p-4 rounded-full bg-zinc-800/50 backdrop-blur-lg transition-all duration-300 hover:bg-zinc-700"
-            >
-              <Share2 className="w-6 h-6 text-zinc-400" />
-            </motion.button>
-            {isCopied ? "copied" : ""}
-          </div>
+          <QuickAction />
         </div>
 
         {/* Stats Grid */}
-        <motion.div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-          {Object.entries(event.stats).map(([key, value], index) => (
-            <motion.div
-              key={key}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-              whileHover={{
-                scale: 1.1,
-                boxShadow: "0px 0px 30px rgba(139, 92, 246, 0.7)",
-                transition: { duration: 0.3 },
-              }}
-              whileTap={{ scale: 0.95 }}
-              className="relative bg-gray-900 rounded-xl p-6 shadow-lg transition-all"
-            >
-              {/* Glow Effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-900 rounded-xl blur-md opacity-30 z-0" />
-
-              {/* Content */}
-              <div className="relative z-10 text-center">
-                <motion.h3
-                  initial={{ opacity: 0, y: 50 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.2 }}
-                  className="text-4xl font-extrabold bg-gradient-to-r from-cyan-300 to-pink-500 bg-clip-text text-transparent"
-                >
-                  {value}
-                </motion.h3>
-                <p className="text-zinc-200 mt-2 text-sm sm:text-base">
-                  {key.replace(/([A-Z])/g, " $1").trim()}
-                </p>
-              </div>
-
-              {/* Hover Border Effect */}
-              <div className="absolute inset-0 rounded-xl border-2 border-transparent hover:border-gray-500 transition-all" />
-            </motion.div>
-          ))}
-        </motion.div>
+        {/* <EventStats event={event} /> */}
 
         {/* Event Details */}
-        <EventDetails />
+        <EventDetails event={oneEvent} />
         {/* <GamingEventPortal eventStats={eventStats} /> */}
 
         {/* Prize Pool */}
-        <PrizeTiers />
-
-        {/* Tournament Schedule */}
-        <Card>
-          <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-violet-400 to-indigo-400 bg-clip-text text-transparent">
-            Event Timeline
-          </h2>
-          <div className="relative">
-            <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-zinc-800" />
-            {event.schedule.map((phase, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="relative pl-10 pb-8 last:pb-0"
-              >
-                <motion.div
-                  whileHover={{ scale: 1.2 }}
-                  className={`absolute left-2 w-4 h-4 rounded-full border-2 top-1.5
-                    ${
-                      phase.completed
-                        ? "border-violet-500 bg-violet-500/20"
-                        : "border-zinc-600 bg-zinc-800"
-                    }`}
-                />
-                <div>
-                  <h3 className="font-semibold text-lg text-zinc-200">
-                    {phase.phase}
-                  </h3>
-                  <p className="text-zinc-400">{phase.date}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </Card>
+        <PrizeTiers event={event.prize} />
 
         {/* Top winners  */}
+        {/* <TopWinners /> */}
+      </motion.div>
 
-        <TopWinners />
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="relative max-w-7xl mx-auto px-4 space-y-8"
+      >
+        <motion.h2
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+          className="text-4xl relative font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 b border-b-4 border-gray-600 pb-2 bg-clip-text text-transparent mb-6 border-b-[rgba(58,109,191,0.77)] 
+             shadow-b-[0_4px_10px_rgba(58,134,255,0.8)] "
+        >
+          Quick Overview
+        </motion.h2>
 
-        {/* Leaderboard */}
+        <Tabs defaultValue="Roadmap" className="mt-10">
+          <TabsList>
+            <TabsTrigger value="Roadmap" className="text-sm">
+              Roadmap
+            </TabsTrigger>
+            <TabsTrigger value="Leaderboard" className="text-sm">
+              Leaderboard
+            </TabsTrigger>
+            <TabsTrigger value="Event Rules" className="text-sm">
+              Event Rules
+            </TabsTrigger>
+            <TabsTrigger value="Sponsers" className="text-sm">
+              Sponsers
+            </TabsTrigger>
+            <TabsTrigger value="history" className="text-sm">
+              Event History
+            </TabsTrigger>
+          </TabsList>
 
-        <LeaderBoard />
+          <TabsContent value="Leaderboard">
+            <LeaderBoard />
+          </TabsContent>
 
-        {/* Event Rules */}
-        <EventRules />
+          <TabsContent value="Roadmap">
+            <EventTimeLine />
+          </TabsContent>
 
-        {/* Sponsers */}
-        {/* <Sponsors /> */}
+          <TabsContent value="Event Rules">
+            <EventRules />
+          </TabsContent>
+
+          <TabsContent value="Sponsers">
+            <Sponsors />
+          </TabsContent>
+
+          <TabsContent value="history">
+            <div>Event History gose here</div>
+          </TabsContent>
+        </Tabs>
       </motion.div>
     </div>
   );

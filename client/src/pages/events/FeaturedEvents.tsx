@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
-import { EventCard } from "./components/EventCard";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { eventData } from "@/lib/constants";
+import EventGrid from "./components/EventGrid";
 
 export default function FeaturedEvents() {
   const location = useLocation();
@@ -49,11 +49,8 @@ export default function FeaturedEvents() {
           </motion.div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 mt-12 lg:px-10">
-          {eventData.map((event, index) => (
-            <EventCard key={event.id} event={event} index={index} />
-          ))}
-        </div>
+        {/* Event Grid */}
+        <EventGrid events={eventData} />
 
         {isRoot && (
           <motion.div
@@ -63,9 +60,11 @@ export default function FeaturedEvents() {
             viewport={{ once: true }}
             transition={{ delay: 0.4 }}
           >
-            <button className="px-8 mt-10 py-3 rounded-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-semibold hover:from-cyan-600 hover:to-purple-600 transition-all duration-300 hover:scale-105">
-              View Events
-            </button>
+            <Link to="/events">
+              <button className="px-8 mt-10 py-3 rounded-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-semibold hover:from-cyan-600 hover:to-purple-600 transition-all duration-300 hover:scale-105">
+                View Events
+              </button>
+            </Link>
           </motion.div>
         )}
       </div>
