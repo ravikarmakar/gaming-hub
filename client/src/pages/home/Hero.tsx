@@ -3,6 +3,7 @@ import AnimatedText from "../../components/elements/AnimatedTextProps";
 import Particles from "react-tsparticles";
 import { Trophy, Gamepad2, Zap } from "lucide-react";
 import QuickActionButton from "./Button";
+import TrustedOrgs from "./TrustedOrgs";
 
 const particleOptions = {
   fullScreen: { enable: false },
@@ -40,7 +41,7 @@ const HeroSection = () => {
   return (
     <section className="relative py-20">
       {/* Background gradient */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-6 blur-[100px] h-[600px] w-[800px] bg-gray-900"></div>
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-6 blur-[100px] h-[600px] w-[800px] bg-gray-900/65"></div>
 
       <div className="relative mx-auto max-w-screen-xl flex flex-col justify-center items-center pt-20">
         {/* Dynamic Particles */}
@@ -96,13 +97,9 @@ const HeroSection = () => {
           </div>
         </div>
 
-        {/* Organization trusted */}
-        <div className="relative z-20 mt-20">
-          <div className="mx-auto px-6 md:px-10 max-w-screen-md">
-            <h5 className="text-sm opacity-50 text-white">
-              Trusted By Leading Organizations
-            </h5>
-          </div>
+        {/*  Trusted Organization */}
+        <div className="relative z-20 mt-20 -mx-6 md:mx-0">
+          <TrustedOrgs />
         </div>
       </div>
     </section>

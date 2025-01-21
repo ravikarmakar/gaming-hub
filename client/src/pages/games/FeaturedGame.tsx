@@ -130,7 +130,7 @@ const GameStore: React.FC = () => {
           </p>
         </motion.div>
 
-        {/* Contentt */}
+        {/* Content */}
         <motion.div
           className="max-w-[1400px] mx-auto w-full flex flex-col lg:flex-row gap-6"
           initial={{ opacity: 0 }}
