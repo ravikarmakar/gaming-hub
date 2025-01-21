@@ -7,9 +7,8 @@ import CardCarousel from "./components/CardCarousel";
 // Main Store component
 const GameStore: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [isMobileView, setIsMobileView] = useState<boolean>(
-    typeof window !== "undefined" && window.innerWidth < 1020
-  );
+  const [isAutoPlay, setIsAutoPlay] = useState<boolean>(true);
+  const [isMobileView, setIsMobileView] = useState<boolean>(false);
 
   const gameData = [
     {
@@ -70,23 +69,38 @@ const GameStore: React.FC = () => {
     const handleResize = () => {
       setIsMobileView(window.innerWidth < 1020);
     };
-    // Initial check
+
+    // Initial check on mount
     handleResize();
 
-    window.addEventListener("resize", handleResize);
+    // Debounced resize handler
+    let timeoutId: NodeJS.Timeout;
+    const debouncedResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(handleResize, 150);
+    };
 
+    window.addEventListener("resize", debouncedResize);
     return () => {
-      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("resize", debouncedResize);
+      clearTimeout(timeoutId);
     };
   }, []);
 
   useEffect(() => {
+    if (!isAutoPlay) return;
+
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % gameData.length);
     }, 3000);
 
     return () => clearInterval(interval);
-  });
+  }, [isAutoPlay, gameData.length]);
+
+  const handleGameSelect = (index: number) => {
+    setCurrentIndex(index);
+    setIsAutoPlay(false);
+  };
 
   const featuredGame = gameData[currentIndex];
 
@@ -95,55 +109,59 @@ const GameStore: React.FC = () => {
       {/* Background Effect */}
       <div className="absolute inset-0 bg-gradient-to-b from-black via-gray-900 to-black" />
 
-      <div className="container mx-auto px-4 relative">
+      {/* Main Container */}
+      <div className="container mx-auto px-4 sm:px-6 relative">
+        {/* Headers */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-16 space-y-4"
+          className="text-center mb-16 mx-10"
+          initial={{ y: 60, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{
+            duration: 0.6,
+            ease: [0.6, -0.05, 0.01, 0.99],
+          }}
         >
-          <motion.h2
-            className="text-4xl md:text-5xl font-bold font-orbitron"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
+          <h1 className="text-4xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold mb-4 tracking-tight">
             Featured Games
-          </motion.h2>
-          <motion.p
-            className="text-gray-400 max-w-2xl mx-auto"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-          >
+          </h1>
+          <p className="text-gray-400 max-w-2xl mx-auto text-sm sm:text-base">
             We are in multiple game genres such as Action, Adventure, Strategy,
             and more.
-          </motion.p>
+          </p>
         </motion.div>
 
+        {/* Contentt */}
         <motion.div
           className="max-w-[1400px] mx-auto w-full flex flex-col lg:flex-row gap-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 0.4 }}
+          transition={{ duration: 0.5 }}
         >
           {/* Left section - Featured game */}
           <motion.div
-            className="hidden relative flex-1 justify-center items-center lg:block"
+            className="relative flex-1 justify-center items-center lg:block"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 0.4 }}
+            transition={{ duration: 0.5 }}
           >
             {/* GameCard */}
-            <GameCard game={featuredGame} onRatingClick={handleRating} />
+            <GameCard
+              game={featuredGame}
+              onRatingClick={handleRating}
+              onMouseEnter={() => setIsAutoPlay(false)}
+              onMouseLeave={() => setIsAutoPlay(true)}
+            />
           </motion.div>
 
           {/* Right section - Game list */}
           {isMobileView ? (
             <CardCarousel gameData={gameData} onRatingClick={handleRating} />
           ) : (
-            <SideGameList currentIndex={currentIndex} gameData={gameData} />
+            <SideGameList
+              currentIndex={currentIndex}
+              gameData={gameData}
+              onGameSelect={handleGameSelect}
+            />
           )}
         </motion.div>
       </div>

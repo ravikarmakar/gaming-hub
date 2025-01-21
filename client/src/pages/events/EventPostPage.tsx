@@ -95,19 +95,19 @@ const EventDisplay = () => {
           position: "1st Place",
           prize: "₹5,00,000",
           color: "from-yellow-400 to-yellow-600",
-          icon: "🏆",
+          icon: "",
         },
         {
           position: "2nd Place",
           prize: "₹3,00,000",
           color: "from-gray-300 to-gray-500",
-          icon: "🥈",
+          icon: "",
         },
         {
           position: "3rd Place",
           prize: "₹1,50,000",
           color: "from-amber-600 to-amber-800",
-          icon: "🥉",
+          icon: "",
         },
       ],
     },
@@ -130,6 +130,10 @@ const EventDisplay = () => {
       },
     },
   };
+
+  if (!oneEvent) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="relative min-h-screen inset-0 bg-gradient-to-t from-black via-transparent to-transparent text-zinc-100">

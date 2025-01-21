@@ -284,6 +284,25 @@ export const eventData = [
         { position: "3rd", prize: "₹25,000" },
       ],
     },
+    coverImage: "https://example.com/cover-image.jpg",
+    stats: {
+      registeredTeams: 50,
+      totalPlayers: 200,
+      viewerCount: "1000",
+      prizePool: "$5000",
+    },
+    schedule: [
+      {
+        phase: "Registration",
+        date: "2024-03-01",
+        completed: false,
+      },
+      {
+        phase: "Main Event",
+        date: "2024-04-15",
+        completed: false,
+      },
+    ],
   },
   {
     id: "2",
@@ -314,6 +333,25 @@ export const eventData = [
         { position: "3rd", prize: "₹50,000" },
       ],
     },
+    coverImage: "https://example.com/cover-image.jpg",
+    stats: {
+      registeredTeams: 50,
+      totalPlayers: 200,
+      viewerCount: "1000",
+      prizePool: "$5000",
+    },
+    schedule: [
+      {
+        phase: "Registration",
+        date: "2024-03-01",
+        completed: false,
+      },
+      {
+        phase: "Main Event",
+        date: "2024-04-15",
+        completed: false,
+      },
+    ],
   },
   {
     id: "3",
@@ -344,6 +382,25 @@ export const eventData = [
         { position: "3rd", prize: "₹1,00,000" },
       ],
     },
+    coverImage: "https://example.com/cover-image.jpg",
+    stats: {
+      registeredTeams: 50,
+      totalPlayers: 200,
+      viewerCount: "1000",
+      prizePool: "$5000",
+    },
+    schedule: [
+      {
+        phase: "Registration",
+        date: "2024-03-01",
+        completed: false,
+      },
+      {
+        phase: "Main Event",
+        date: "2024-04-15",
+        completed: false,
+      },
+    ],
   },
   {
     id: "4",
@@ -374,6 +431,25 @@ export const eventData = [
         { position: "3rd", prize: "₹50,000" },
       ],
     },
+    coverImage: "https://example.com/cover-image.jpg",
+    stats: {
+      registeredTeams: 50,
+      totalPlayers: 200,
+      viewerCount: "1000",
+      prizePool: "$5000",
+    },
+    schedule: [
+      {
+        phase: "Registration",
+        date: "2024-03-01",
+        completed: false,
+      },
+      {
+        phase: "Main Event",
+        date: "2024-04-15",
+        completed: false,
+      },
+    ],
   },
   {
     id: "5",
@@ -404,6 +480,25 @@ export const eventData = [
         { position: "3rd", prize: "₹1,00,000" },
       ],
     },
+    coverImage: "https://example.com/cover-image.jpg",
+    stats: {
+      registeredTeams: 50,
+      totalPlayers: 200,
+      viewerCount: "1000",
+      prizePool: "$5000",
+    },
+    schedule: [
+      {
+        phase: "Registration",
+        date: "2024-03-01",
+        completed: false,
+      },
+      {
+        phase: "Main Event",
+        date: "2024-04-15",
+        completed: false,
+      },
+    ],
   },
   {
     id: "6",
@@ -433,5 +528,24 @@ export const eventData = [
         { position: "3rd", prize: "₹1,50,000" },
       ],
     },
+    coverImage: "https://example.com/cover-image.jpg",
+    stats: {
+      registeredTeams: 50,
+      totalPlayers: 200,
+      viewerCount: "1000",
+      prizePool: "$5000",
+    },
+    schedule: [
+      {
+        phase: "Registration",
+        date: "2024-03-01",
+        completed: false,
+      },
+      {
+        phase: "Main Event",
+        date: "2024-04-15",
+        completed: false,
+      },
+    ],
   },
 ];

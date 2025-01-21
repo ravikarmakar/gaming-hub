@@ -1,10 +1,10 @@
+import { useEventFilters } from "./hook/useEventFilters";
+import PageLayout from "../PageLayout";
 import EventGrid from "./components/EventGrid";
 import { EventSearch } from "./components/EventSearch";
 import { EventFilters } from "./components/EventFilters";
-import { useEventFilters } from "./hook/useEventFilters";
-import PageLayout from "../PageLayout";
 
-const GamingEventsPage = () => {
+const EventsPage = () => {
   const { events, searchQuery, setSearchQuery, setFilters, filters } =
     useEventFilters();
 
@@ -13,16 +13,16 @@ const GamingEventsPage = () => {
       title="Best Event For You"
       description="Discover the most exciting gaming events"
     >
-      {/* Event Search */}
+      {/* Event Search Component */}
       <EventSearch searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
-      {/* Event filters */}
+      {/* Event Filters Component */}
       <EventFilters filters={filters} setFilters={setFilters} />
 
-      {/* Evnts Grid */}
+      {/* Events Grid Component */}
       <EventGrid events={events} />
     </PageLayout>
   );
 };
 
-export default GamingEventsPage;
+export default EventsPage;

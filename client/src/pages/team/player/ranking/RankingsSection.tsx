@@ -1,87 +1,105 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PlayerCard } from "./PlayerCard";
-import { TOP_PLAYERS } from "@/lib/constants";
+import { YouTubersSection } from "./YouTubersSection";
+import { OrganizationsSection } from "./OrganizationsSection";
+import { Players } from "./Players";
 
-type FilterType = "all" | "regional" | "global";
+const RankingsSection = () => {
+  const [activeTab, setActiveTab] = useState<
+    "players" | "youtubers" | "organizations"
+  >("players");
 
-export function RankingsSection() {
-  const [filter, setFilter] = useState<FilterType>("all");
-
-  const filters: { value: FilterType; label: string }[] = [
-    { value: "all", label: "All Rankings" },
-    { value: "regional", label: "Regional" },
-    { value: "global", label: "Global" },
+  const tabs = [
+    { value: "players", label: "Top Players" },
+    { value: "youtubers", label: "Gaming YouTubers" },
+    { value: "organizations", label: "Organizations" },
   ];
 
   return (
-    <section className="py-10 bg-black relative overflow-hidden">
-      {/* Background Gradient */}
+    <section className="relative bg-black overflow-hidden py-20">
+      {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-cyan-500/10 to-transparent blur-3xl" />
-      {/* top Gradient */}
-      <div className="absolute top-0 left-0 right-0 h-16 sm:h-24 lg:h-32 bg-gradient-to-b from-black to-transparent" />
-      {/* Bottom Gradient */}
-      <div className="absolute bottom-0 left-0 right-0 h-16 sm:h-24 lg:h-32 bg-gradient-to-t from-black to-transparent" />
 
-      <div className="container mx-auto px-4 relative">
+      {/* Headers */}
+      <div className="container max-w-[1400px] mx-auto px-4  sm:px-6 relative">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-16 space-y-4"
+          className="text-center mb-16 mx-10"
+          initial={{ y: 60, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{
+            duration: 0.6,
+            ease: [0.6, -0.05, 0.01, 0.99],
+          }}
         >
-          <h2 className="text-4xl md:text-5xl font-bold font-orbitron bg-clip-text">
-            Top Players
-          </h2>
-          <p className="text-gray-400 max-w-2xl mx-auto">
-            Meet the legends dominating the leaderboards
+          <h1 className="text-4xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold mb-4 tracking-tight">
+            Esports Ranking
+          </h1>
+          <p className="text-gray-400 max-w-2xl mx-auto text-sm sm:text-base">
+            Rankings of the top-10 players, organizations, and gaming YouTubers
           </p>
         </motion.div>
-
-        <div className="flex justify-center gap-4 mb-12">
-          {filters.map((f) => (
-            <motion.button
-              key={f.value}
-              onClick={() => setFilter(f.value)}
-              className={`px-6 py-2 rounded-full font-medium transition-all duration-300 ${
-                filter === f.value
-                  ? "bg-gradient-to-r from-cyan-500 to-purple-500 text-white"
-                  : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-              }`}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {f.label}
-            </motion.button>
-          ))}
-        </div>
-
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={filter}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-          >
-            {TOP_PLAYERS.map((player, index) => (
-              <PlayerCard key={player.id} player={player} index={index} />
-            ))}
-          </motion.div>
-        </AnimatePresence>
-
-        <motion.div
-          className="mt-12 text-center"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-        >
-          <button className="px-8 py-3 rounded-full bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-semibold hover:from-cyan-600 hover:to-purple-600 transition-all duration-300 hover:scale-105">
-            View Full Rankings
-          </button>
-        </motion.div>
       </div>
+
+      {/* Tab Navigation */}
+      <div className="sticky top-0 z-50 backdrop-blur-lg">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
+          <div className="flex overflow-x-auto overflow-y-hidden gap-4 scrollbar-hide">
+            {tabs.map((tab) => (
+              <motion.button
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value as typeof activeTab)}
+                className={`whitespace-nowrap px-5 py-2 rounded-full border border-gray-800 text-sm md:text-base lg:text-lg transition-all duration-300 ${
+                  activeTab === tab.value
+                    ? "bg-cyan-800/30 text-white"
+                    : "text-gray-400 hover:text-white"
+                }`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {tab.label}
+              </motion.button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <AnimatePresence mode="wait">
+        {activeTab === "players" && (
+          <motion.div
+            key="players"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <Players />
+          </motion.div>
+        )}
+
+        {activeTab === "youtubers" && (
+          <motion.div
+            key="youtubers"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <YouTubersSection />
+          </motion.div>
+        )}
+
+        {activeTab === "organizations" && (
+          <motion.div
+            key="organizations"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <OrganizationsSection />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
-}
+};
+
+export default RankingsSection;

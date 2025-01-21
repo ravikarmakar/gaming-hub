@@ -2,12 +2,14 @@ import FeaturedEvents from "../events/FeaturedEvents";
 import GameStore from "../games/FeaturedGame";
 import HeroSection from "./Hero";
 import AboutSection from "../../components/AboutSection";
+import RankingsSection from "../team/player/ranking/RankingsSection";
 
 // temp
 
 import { TournamentsSection } from "@/components/tournaments-section";
 import { ContactSection } from "@/components/contact-section";
-import { RankingsSection } from "../team/player/ranking/RankingsSection";
+
+import ServicesPage from "../service/Service";
 
 const Home = () => {
   return (
@@ -16,6 +18,7 @@ const Home = () => {
       <GameStore />
       <FeaturedEvents />
       <RankingsSection />
+      <ServicesPage />
       <AboutSection />
       <TournamentsSection />
       <ContactSection />

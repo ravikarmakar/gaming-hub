@@ -109,7 +109,7 @@ const NavbarContent = () => {
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center justify-center flex-1 px-8">
+            <div className="hidden lg:flex items-center gap-2 justify-center flex-1 px-8">
               {NAV_LINKS.map((link) => (
                 <NavLink
                   key={link.href}
