@@ -11,22 +11,8 @@ import { ServiceType } from "./types";
 
 export const services: ServiceType[] = [
   {
-    id: "free-fire-events",
-    title: "Esports Events",
-    description:
-      "Participate in exclusive Free Fire tournaments and events. Compete with players worldwide and win exciting prizes.",
-    icon: <Gamepad2 />,
-    link: "/services/free-fire-events",
-    features: [
-      "Daily Tournaments",
-      "Custom Rooms",
-      "Prize Pools",
-      "Live Streaming",
-    ],
-  },
-  {
     id: "gaming-events",
-    title: "Esports Scrims Management",
+    title: "Event Management",
     description:
       "Professional gaming event management services for tournaments, leagues, and championships across multiple games.",
     icon: <Trophy />,

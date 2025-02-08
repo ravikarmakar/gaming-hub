@@ -13,11 +13,12 @@ import FreeEvents from "./pages/events/free-tournaments/FreeEvents";
 
 // AuthRoutes
 // import { ProtectedRoute } from "./providers/AuthProvider";
-import { useUserStore } from "./store/useUserStore";
+import { useAuthStore } from "./store/useAuthStore";
 import TournamentOrgProfile from "./pages/user/tournament-org-profile/TournamentOrgProfile";
 import ScrimsPage from "./pages/events/scrims/ScrimsPage";
 import AdminDashboard from "./pages/admin/Dashboard";
 import SuperAdminDashboard from "./pages/admin/SuperAdmin";
+import FindPlayers from "./pages/team/player/FindPlayers";
 
 // Lazy-loaded components
 const Home = lazy(() => import("./pages/home/Home"));
@@ -31,6 +32,8 @@ const TeamFinderPage = lazy(
   () => import("./pages/team/teamFind/TeamFinderPage")
 );
 const ProfilePage = lazy(() => import("./pages/user/profile/ProfilePage"));
+const TeamProfile = lazy(() => import("./pages/user/teamProfile/TeamProfile"));
+const Notification = lazy(() => import("./pages/notifications/Notification"));
 
 // Error fallback component
 function ErrorFallback({ error }: { error: unknown }) {
@@ -56,7 +59,7 @@ const MainLayout = () => {
 };
 
 export default function App() {
-  const { user, checkAuth, checkingAuth } = useUserStore();
+  const { user, checkAuth, checkingAuth } = useAuthStore();
 
   const memoizedCheckAuth = useCallback(() => {
     checkAuth();
@@ -65,8 +68,6 @@ export default function App() {
   useEffect(() => {
     memoizedCheckAuth();
   }, [memoizedCheckAuth]);
-
-  // console.log(user);
 
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
@@ -95,6 +96,7 @@ export default function App() {
                       )
                     }
                   />
+                  <Route path={ROUTES.TEAMPROFILE} element={<TeamProfile />} />
                   <Route
                     path={ROUTES.FREE_TOURNAMENTS}
                     element={<FreeEvents />}
@@ -105,6 +107,11 @@ export default function App() {
                   <Route path={ROUTES.EVENT} element={<EventPostPage />} />
                   <Route path={ROUTES.EVENTS} element={<EventPage />} />
                   <Route path={ROUTES.SCRIMSPAGE} element={<ScrimsPage />} />
+                  <Route path={ROUTES.PLAYER} element={<FindPlayers />} />
+                  <Route
+                    path={ROUTES.NOTIFICATION}
+                    element={<Notification />}
+                  />
 
                   {/* Authantication */}
                   <Route path={ROUTES.LOGIN} element={<LoginPage />} />

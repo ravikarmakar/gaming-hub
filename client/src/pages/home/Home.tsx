@@ -10,6 +10,7 @@ import { TournamentsSection } from "@/components/tournaments-section";
 import { ContactSection } from "@/components/contact-section";
 
 import ServicesPage from "../service/Service";
+import CommunitySection from "../community/CommunitySection";
 
 const Home = () => {
   return (
@@ -18,6 +19,7 @@ const Home = () => {
       <GameStore />
       <FeaturedEvents />
       <RankingsSection />
+      <CommunitySection />
       <ServicesPage />
       <AboutSection />
       <TournamentsSection />

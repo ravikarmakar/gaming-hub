@@ -1,7 +1,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-import { User, LogOut, Users } from "lucide-react";
+import { User, LogOut, Users, Bell } from "lucide-react";
 import { useMenu } from "../context/MenuContext";
+import { useAuthStore } from "@/store/useAuthStore";
 
 // Navigation options stored in a variable
 const navigationOptions = [
@@ -13,7 +14,7 @@ const navigationOptions = [
   {
     icon: Users,
     label: "Team Profile",
-    path: "/team",
+    path: "/team/team-profile",
   },
 ];
 
@@ -22,27 +23,44 @@ export const ProfileAvatar = () => {
   const { activeMenu, setActiveMenu } = useMenu();
   const isOpen = activeMenu === "profile";
 
+  const { logOut } = useAuthStore();
+
   const handleLogout = () => {
     // Add your logout logic here
-    console.log("Logging out...");
+    logOut();
     setActiveMenu(null);
-    navigate("/login");
+    navigate("/");
   };
 
   return (
     <div className="relative profile-menu">
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setActiveMenu(isOpen ? null : "profile")}
-        className="focus:outline-none"
-      >
-        <img
-          src="https://plus.unsplash.com/premium_photo-1682089877310-b2308b0dc719?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-          alt="Profile Avatar"
-          className="w-10 h-10 rounded-full object-cover"
-        />
-      </motion.button>
+      <div className="flex justify-center items-center gap-6">
+        <Link to="/notification">
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            className="relative text-gray-200 hover:text-white transition-colors"
+          >
+            <Bell className="w-6 h-6" />
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs flex items-center justify-center">
+              3
+            </span>
+          </motion.button>
+        </Link>
+
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setActiveMenu(isOpen ? null : "profile")}
+          className="focus:outline-none"
+        >
+          <img
+            src="https://plus.unsplash.com/premium_photo-1682089877310-b2308b0dc719?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+            alt="Profile Avatar"
+            className="w-10 h-10 rounded-full object-cover"
+          />
+        </motion.button>
+      </div>
 
       <AnimatePresence>
         {isOpen && (

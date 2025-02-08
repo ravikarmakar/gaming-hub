@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema(
       enum: ["admin", "max admin", "user", "staff", "moderator"],
       default: "user",
     },
+    esportsRole: { type: String, default: "player" },
     isOrganizer: { type: Boolean, default: false },
     blocked: { type: Boolean, default: false }, // New blocked field
     globalRank: { type: Number, default: 0 },

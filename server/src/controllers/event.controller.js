@@ -1,9 +1,9 @@
-import Event from "../models/event.model.js"; // Model path adjust karein
+import Event from "../models/event-model/event.model.js";
 
 // Get All Events
 export const getAllEvents = async (req, res) => {
   try {
-    const events = await Event.find().populate("organizer", "name email");
+    const events = await Event.find({}).populate("prize");
     res.status(200).json({ success: true, events });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -24,9 +24,9 @@ export const createEvent = async (req, res) => {
 // Get Single Event by ID
 export const getSingleEvent = async (req, res) => {
   try {
-    const event = await Event.findById(req.params.eventId)
-      .populate("organizer", "name email")
-      .populate("teams", "name captain");
+    const event = await Event.findById(req.params.id)
+      .populate("prize")
+      .populate("rounds");
 
     if (!event) {
       return res

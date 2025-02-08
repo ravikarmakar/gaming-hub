@@ -41,7 +41,9 @@ const HeroSection = () => {
   return (
     <section className="relative py-20">
       {/* Background gradient */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-6 blur-[100px] h-[600px] w-[800px] bg-gray-900/65"></div>
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-6 blur-[100px] h-[600px] w-[800px] bg-blue-900/30"></div>
+
+      {/* <div className="absoulte bg-gradient-to-r from-blue-600 via-purple-700 to-pink-600"></div> */}
 
       <div className="relative mx-auto max-w-screen-xl flex flex-col justify-center items-center pt-20">
         {/* Dynamic Particles */}

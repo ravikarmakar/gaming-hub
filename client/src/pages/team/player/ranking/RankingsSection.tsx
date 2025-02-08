@@ -48,9 +48,9 @@ const RankingsSection = () => {
               <motion.button
                 key={tab.value}
                 onClick={() => setActiveTab(tab.value as typeof activeTab)}
-                className={`whitespace-nowrap px-5 py-2 rounded-full border border-gray-800 text-sm md:text-base lg:text-lg transition-all duration-300 ${
+                className={`whitespace-nowrap px-5 py-2 rounded-full border-gray-800 text-sm md:text-base lg:text-lg transition-all duration-300 ${
                   activeTab === tab.value
-                    ? "bg-cyan-800/30 text-white"
+                    ? "bg-cyan-800/20 text-white"
                     : "text-gray-400 hover:text-white"
                 }`}
                 whileHover={{ scale: 1.05 }}

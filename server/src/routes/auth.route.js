@@ -4,6 +4,14 @@ import {
   protectMaxAdmin,
   checkBlockedStatus,
 } from "../middleware/authMiddleware.js";
+// import {
+//   loginUser,
+//   logoutUser,
+//   getUserProfile,
+//   blockUser,
+//   unblockUser,
+// } from "../controllers/user.controller.js";
+
 import {
   registerUser,
   loginUser,
@@ -11,7 +19,7 @@ import {
   getUserProfile,
   blockUser,
   unblockUser,
-} from "../controllers/user.controller.js";
+} from "../controllers/auth.controller.js";
 
 const router = expores.Router();
 

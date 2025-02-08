@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+# //
+
+Profile.tsx
+pz.tsx
+pz1.tsx
+pz3.tsx

@@ -1,353 +1,673 @@
 import React, { useState } from "react";
-import {
-  Trophy,
-  Users,
-  Monitor,
-  Star,
-  Globe,
-  Calendar,
-  Activity,
-  Gamepad,
-  Share2,
-  Medal,
-  ChevronRight,
-  Heart,
-  MessageCircle,
-} from "lucide-react";
+import { Trophy, Target, Shield, Crown, Medal, Flame } from "lucide-react";
+import { motion } from "framer-motion";
+import ProfileHeader from "./elements/ProfileHeader";
+import QuickView from "./elements/QuickView";
+import { useAuthStore } from "@/store/useAuthStore";
 
-// Types for custom components
-interface CardProps {
-  children: React.ReactNode;
-  className?: string;
+// Extended player data
+interface PlayerData {
+  id: string;
+  username: string;
+  nickname: string;
+  level: number;
+  rank: string;
+  coverImage: string;
+  totalMatches: number;
+  avatar: string;
+  verified: boolean;
+  winRate: number;
+  elitePass: string;
+  reputation: number;
+  status: string;
+  killStats: {
+    total: number;
+    headshots: number;
+    longRange: number;
+    melee: number;
+  };
+  stats: {
+    kills: number;
+    winRate: string;
+    kd: string;
+    matches: number;
+    playTime: string;
+    headshots: string;
+    accuracy: string;
+    survivalRate: string;
+    avgDamage: number;
+    seasonRank: string;
+    currentStreak: number;
+  };
+  guild: {
+    name: string;
+    role: string;
+    members: number;
+    trophies: number;
+    ranking: string;
+  };
+  loadout: {
+    favorite: {
+      weapon: string;
+      character: string;
+      pet: string;
+      vehicle: string;
+    };
+    characters: Array<{
+      name: string;
+      level: number;
+      skill: string;
+    }>;
+  };
+  achievements: {
+    total: number;
+    featured: string;
+    recent: Array<{
+      name: string;
+      description: string;
+      date: string;
+    }>;
+    badges: Array<{
+      name: string;
+      rarity: string;
+    }>;
+  };
+  tournaments: {
+    participated: number;
+    won: number;
+    history: Array<{
+      name: string;
+      position: string;
+      prize: string;
+      date: string;
+      kills: number;
+      matches: number;
+    }>;
+  };
+  highlights: Array<{
+    title: string;
+    thumbnail: string;
+    views: string;
+    date: string;
+  }>;
 }
 
-interface BadgeProps {
+interface TabButtonProps {
   children: React.ReactNode;
-  className?: string;
+  active: boolean;
+  onClick: () => void;
 }
 
-interface TabsProps {
+interface AnimatedSectionProps {
   children: React.ReactNode;
-  defaultValue: string;
-  className?: string;
+  show: boolean;
 }
 
-interface TabsListProps {
-  children: React.ReactNode;
-  activeTab?: string;
-  setActiveTab?: (value: string) => void;
+interface StatCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
 }
 
-interface TabsContentProps {
-  children: React.ReactNode;
+interface StatBarProps {
+  label: string;
   value: string;
+  maxValue: string;
 }
 
-interface TabsTriggerProps {
-  children: React.ReactNode;
-  value: string;
-  isActive?: boolean;
-  onClick?: () => void;
+interface SectionProps {
+  playerData: PlayerData;
 }
 
-// Custom Card Component
-const Card = ({ children, className = "" }: CardProps) => (
-  <div className={`rounded-lg ${className}`}>{children}</div>
-);
+const playerData: PlayerData = {
+  id: "FF_123456",
+  username: "DragonSlayer",
+  nickname: "Shadow",
+  level: 75,
+  rank: "Heroic",
+  totalMatches: 12547,
+  winRate: 78,
+  killStats: {
+    total: 48293,
+    headshots: 28976,
+    longRange: 12435,
+    melee: 1842,
+  },
+  coverImage: "/api/placeholder/1200/400",
+  avatar: "/api/placeholder/200/200",
+  verified: true,
+  elitePass: "MAX",
+  reputation: 9800,
+  status: "online",
+  stats: {
+    kills: 15420,
+    winRate: "68%",
+    kd: "4.2",
+    matches: 3500,
+    playTime: "2000h+",
+    headshots: "32%",
+    accuracy: "75%",
+    survivalRate: "45%",
+    avgDamage: 1250,
+    seasonRank: "Grandmaster",
+    currentStreak: 8,
+  },
+  guild: {
+    name: "Phoenix Elite",
+    role: "Guild Leader",
+    members: 48,
+    trophies: 25000,
+    ranking: "#3 Regional",
+  },
+  loadout: {
+    favorite: {
+      weapon: "AK47",
+      character: "Alok",
+      pet: "Spirit Fox",
+      vehicle: "Monster Truck",
+    },
+    characters: [
+      { name: "Alok", level: 20, skill: "Drop the Beat" },
+      { name: "Chrono", level: 18, skill: "Time Turner" },
+      { name: "K", level: 15, skill: "Master of All" },
+    ],
+  },
+  achievements: {
+    total: 145,
+    featured: "Season 25 Grandmaster",
+    recent: [
+      {
+        name: "Unstoppable",
+        description: "Win 10 matches in a row",
+        date: "2024-01-15",
+      },
+      {
+        name: "Sharpshooter",
+        description: "100 headshots in a single match",
+        date: "2024-01-10",
+      },
+      {
+        name: "Last Man Standing",
+        description: "Win a match solo vs squad",
+        date: "2024-01-05",
+      },
+    ],
+    badges: [
+      { name: "Pro Player", rarity: "Legendary" },
+      { name: "Squad Leader", rarity: "Epic" },
+      { name: "Marksman", rarity: "Rare" },
+    ],
+  },
+  tournaments: {
+    participated: 35,
+    won: 12,
+    history: [
+      {
+        name: "Free Fire World Series 2024",
+        position: "1st",
+        prize: "$50,000",
+        date: "2024-01-20",
+        kills: 45,
+        matches: 12,
+      },
+      {
+        name: "Regional Championship",
+        position: "2nd",
+        prize: "$25,000",
+        date: "2023-12-15",
+        kills: 38,
+        matches: 10,
+      },
+    ],
+  },
+  highlights: [
+    {
+      title: "Epic 1v4 Clutch",
+      thumbnail: "/api/placeholder/300/200",
+      views: "1.2M",
+      date: "2024-01-18",
+    },
+    {
+      title: "20 Kills Solo Match",
+      thumbnail: "/api/placeholder/300/200",
+      views: "958K",
+      date: "2024-01-15",
+    },
+  ],
+};
 
-// Custom Badge Component
-const Badge = ({ children, className = "" }: BadgeProps) => (
-  <span className={`px-2 py-1 text-sm font-medium rounded-full ${className}`}>
-    {children}
-  </span>
-);
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 },
+  },
+};
 
-// Custom Tabs Components
-const Tabs = ({ children, defaultValue, className = "" }: TabsProps) => {
-  const [activeTab, setActiveTab] = useState(defaultValue);
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: { type: "spring", stiffness: 100 },
+  },
+};
 
-  const content = React.Children.toArray(children).find(
-    (child) => child.props.value === activeTab
-  );
+const ProfilePage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState("overview");
+  const { user } = useAuthStore();
+
+  console.log(user);
+
+  // Header component from previous implementation remains the same
+  // Adding new content sections below
 
   return (
-    <div className={className}>
-      {React.Children.map(children, (child) => {
-        if (child.type === TabsList) {
-          return React.cloneElement(child, { activeTab, setActiveTab });
-        }
-        if (child.type === TabsContent && child.props.value === activeTab) {
-          return child;
-        }
-        return null;
-      })}
-    </div>
+    <section className="relative min-h-screen bg-[#0A0A1F]">
+      {/* Animated Background Gradients */}
+      <motion.div
+        initial={{ opacity: 0, scale: 1.1 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 1 }}
+        className="absolute inset-0"
+      >
+        <div className="absolute top-0 left-[-10%] w-[40%] h-[40%] bg-blue-600/20 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute top-[20%] right-[-5%] w-[35%] h-[35%] bg-purple-600/20 blur-[120px] rounded-full animate-pulse delay-1000" />
+      </motion.div>
+
+      {/* Profile Header (Previous Implementation) */}
+      <ProfileHeader />
+
+      {/* Quick Views */}
+      <QuickView />
+
+      {/* Navigation Tabs */}
+      <motion.nav
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="sticky top-0 z-30 bg-[#0A0A1F]/80 backdrop-blur-lg border-b border-white/10"
+      >
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="flex overflow-x-auto hide-scrollbar">
+            <TabButton
+              active={activeTab === "overview"}
+              onClick={() => setActiveTab("overview")}
+            >
+              Overview
+            </TabButton>
+            <TabButton
+              active={activeTab === "statistics"}
+              onClick={() => setActiveTab("statistics")}
+            >
+              Statistics
+            </TabButton>
+            <TabButton
+              active={activeTab === "loadout"}
+              onClick={() => setActiveTab("loadout")}
+            >
+              Loadout
+            </TabButton>
+            <TabButton
+              active={activeTab === "achievements"}
+              onClick={() => setActiveTab("achievements")}
+            >
+              Achievements
+            </TabButton>
+            <TabButton
+              active={activeTab === "tournaments"}
+              onClick={() => setActiveTab("tournaments")}
+            >
+              Tournaments
+            </TabButton>
+          </div>
+        </div>
+      </motion.nav>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 md:px-8 py-8">
+        <AnimatedSection show={activeTab === "overview"}>
+          <Overview playerData={playerData} />
+        </AnimatedSection>
+
+        <AnimatedSection show={activeTab === "statistics"}>
+          <Statistics playerData={playerData} />
+        </AnimatedSection>
+
+        <AnimatedSection show={activeTab === "loadout"}>
+          <Loadout playerData={playerData} />
+        </AnimatedSection>
+
+        <AnimatedSection show={activeTab === "achievements"}>
+          <Achievements playerData={playerData} />
+        </AnimatedSection>
+
+        <AnimatedSection show={activeTab === "tournaments"}>
+          <Tournaments playerData={playerData} />
+        </AnimatedSection>
+      </main>
+    </section>
   );
 };
 
-const TabsList = ({ children, activeTab, setActiveTab }: TabsListProps) => (
-  <div className="flex space-x-1">
-    {React.Children.map(children, (child) =>
-      React.isValidElement(child) // Use React.isValidElement instead of null check
-        ? React.cloneElement(child, {
-            isActive: activeTab === child.props.value,
-            onClick: () => setActiveTab(child.props.value),
-          })
-        : null
-    )}
-  </div>
-);
-
-const TabsTrigger = ({
-  children,
-  value,
-  isActive,
-  onClick,
-}: TabsTriggerProps) => (
+// Tab Button Component
+const TabButton: React.FC<TabButtonProps> = ({ children, active, onClick }) => (
   <button
-    className={`px-4 py-2 rounded text-sm font-medium transition-colors
-      ${
-        isActive
-          ? "bg-gray-700 text-white"
-          : "text-gray-400 hover:text-white hover:bg-gray-700/50"
-      }`}
     onClick={onClick}
-    key={value}
+    className={`px-6 py-4 text-sm font-medium transition-colors relative
+      ${active ? "text-white" : "text-gray-400 hover:text-white"}`}
   >
     {children}
+    {active && (
+      <motion.div
+        layoutId="activeTab"
+        className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500"
+      />
+    )}
   </button>
 );
 
-const TabsContent = ({ children, value }: TabsContentProps) => (
-  <div className="mt-4" key={value}>
-    {children}
-  </div>
-);
-
-const PlayerProfile = () => {
-  const [isFollowing, setIsFollowing] = useState(false);
+// Animated Section Component
+const AnimatedSection: React.FC<AnimatedSectionProps> = ({
+  children,
+  show,
+}) => {
+  if (!show) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 text-white p-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="relative">
-          {/* Animated Banner */}
-          <div className="h-48 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-t-lg overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/api/placeholder/1200/400')] opacity-30 hover:opacity-40 transition-opacity" />
-          </div>
-
-          {/* Profile Header */}
-          <div className="relative px-6 pb-6">
-            {/* Avatar with Glow Effect */}
-            <div className="absolute -top-16 left-6">
-              <div className="w-32 h-32 rounded-full bg-gray-800 border-4 border-gray-900 overflow-hidden shadow-lg hover:shadow-blue-500/50 transition-shadow">
-                <img
-                  src="/api/placeholder/128/128"
-                  alt="Player avatar"
-                  className="w-full h-full object-cover hover:scale-105 transition-transform"
-                />
-              </div>
-            </div>
-
-            {/* Player Details with Social Actions */}
-            <div className="pt-20">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-4">
-                    <h1 className="text-3xl font-bold">NightPhoenix</h1>
-                    <Badge className="bg-gradient-to-r from-purple-600 to-blue-600">
-                      Pro Player
-                    </Badge>
-                  </div>
-                  <p className="text-gray-400 mt-2">
-                    Professional Valorant Player | Team Phoenix Elite
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setIsFollowing(!isFollowing)}
-                    className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
-                      isFollowing
-                        ? "bg-gray-700 hover:bg-gray-600"
-                        : "bg-blue-600 hover:bg-blue-500"
-                    }`}
-                  >
-                    <Heart
-                      className={`w-4 h-4 ${
-                        isFollowing ? "text-red-400" : "text-white"
-                      }`}
-                    />
-                    {isFollowing ? "Following" : "Follow"}
-                  </button>
-                  <button className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
-                    <MessageCircle className="w-5 h-5" />
-                  </button>
-                  <button className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
-                    <Share2 className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="overview" className="mt-6">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="statistics">Statistics</TabsTrigger>
-            <TabsTrigger value="achievements">Achievements</TabsTrigger>
-            <TabsTrigger value="history">Event History</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Player Info Card */}
-              <Card className="bg-gray-800/50 backdrop-blur hover:bg-gray-800 transition-colors p-6">
-                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-blue-400" />
-                  Player Info
-                </h2>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 hover:bg-gray-700/50 p-2 rounded transition-colors">
-                    <Globe className="w-5 h-5 text-blue-400" />
-                    <span>Region: Asia Pacific</span>
-                  </div>
-                  <div className="flex items-center gap-3 hover:bg-gray-700/50 p-2 rounded transition-colors">
-                    <Users className="w-5 h-5 text-blue-400" />
-                    <span>Team: Phoenix Elite</span>
-                  </div>
-                  <div className="flex items-center gap-3 hover:bg-gray-700/50 p-2 rounded transition-colors">
-                    <Calendar className="w-5 h-5 text-blue-400" />
-                    <span>Active Since: 2020</span>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Stats Card */}
-              <Card className="bg-gray-800/50 backdrop-blur hover:bg-gray-800 transition-colors p-6">
-                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-blue-400" />
-                  Performance
-                </h2>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-2 hover:bg-gray-700/50 rounded transition-colors">
-                    <span>Win Rate</span>
-                    <Badge className="bg-gradient-to-r from-green-600 to-emerald-600">
-                      68%
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-2 hover:bg-gray-700/50 rounded transition-colors">
-                    <span>K/D Ratio</span>
-                    <Badge className="bg-gradient-to-r from-blue-600 to-cyan-600">
-                      1.85
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between p-2 hover:bg-gray-700/50 rounded transition-colors">
-                    <span>Headshot %</span>
-                    <Badge className="bg-gradient-to-r from-purple-600 to-pink-600">
-                      42%
-                    </Badge>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Recent Achievements */}
-              <Card className="bg-gray-800/50 backdrop-blur hover:bg-gray-800 transition-colors p-6">
-                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-yellow-400" />
-                  Recent Achievements
-                </h2>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 hover:bg-gray-700/50 p-2 rounded transition-colors">
-                    <Medal className="w-5 h-5 text-yellow-400" />
-                    <div className="flex-1">
-                      <p className="font-medium">APAC Championship 2024</p>
-                      <p className="text-sm text-gray-400">1st Place</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-500" />
-                  </div>
-                  <div className="flex items-center gap-3 hover:bg-gray-700/50 p-2 rounded transition-colors">
-                    <Star className="w-5 h-5 text-yellow-400" />
-                    <div className="flex-1">
-                      <p className="font-medium">MVP - Spring Season</p>
-                      <p className="text-sm text-gray-400">Tournament MVP</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-500" />
-                  </div>
-                </div>
-              </Card>
-            </div>
-
-            {/* Game Roles & Setup */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <Card className="bg-gray-800/50 backdrop-blur hover:bg-gray-800 transition-colors p-6">
-                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Gamepad className="w-5 h-5 text-blue-400" />
-                  Main Roles
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  <Badge className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 transition-colors cursor-pointer">
-                    Duelist
-                  </Badge>
-                  <Badge className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 transition-colors cursor-pointer">
-                    Initiator
-                  </Badge>
-                  <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 transition-colors cursor-pointer">
-                    Flex
-                  </Badge>
-                </div>
-              </Card>
-
-              <Card className="bg-gray-800/50 backdrop-blur hover:bg-gray-800 transition-colors p-6">
-                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Monitor className="w-5 h-5 text-blue-400" />
-                  Gaming Setup
-                </h2>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3 hover:bg-gray-700/50 p-2 rounded transition-colors">
-                    <Monitor className="w-5 h-5 text-blue-400" />
-                    <span>240Hz Gaming Monitor</span>
-                  </div>
-                  <div className="flex items-center gap-3 hover:bg-gray-700/50 p-2 rounded transition-colors">
-                    <Monitor className="w-5 h-5 text-blue-400" />
-                    <span>Custom Gaming PC</span>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="statistics">
-            <Card className="bg-gray-800/50 p-6">
-              <h2 className="text-xl font-bold mb-4">Detailed Statistics</h2>
-              <p className="text-gray-400">
-                Detailed statistics content coming soon...
-              </p>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="achievements">
-            <Card className="bg-gray-800/50 p-6">
-              <h2 className="text-xl font-bold mb-4">All Achievements</h2>
-              <p className="text-gray-400">
-                Full achievements list coming soon...
-              </p>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="setup">
-            <Card className="bg-gray-800/50 p-6">
-              <h2 className="text-xl font-bold mb-4">Complete Setup Details</h2>
-              <p className="text-gray-400">
-                Detailed setup information coming soon...
-              </p>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.2 }}
+    >
+      {children}
+    </motion.div>
   );
 };
 
-export default PlayerProfile;
+// Overview Section
+const Overview: React.FC<SectionProps> = ({ playerData }) => (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <motion.div
+      variants={itemVariants}
+      className="col-span-2 p-6 rounded-2xl bg-white/5 border border-white/10"
+    >
+      <h3 className="text-xl font-bold mb-4 text-white">Current Season</h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard
+          icon={<Crown className="text-yellow-400" />}
+          label="Rank"
+          value={playerData.stats.seasonRank}
+        />
+        <StatCard
+          icon={<Flame className="text-orange-400" />}
+          label="Win Streak"
+          value={playerData.stats.currentStreak}
+        />
+        <StatCard
+          icon={<Target className="text-red-400" />}
+          label="Avg Damage"
+          value={playerData.stats.avgDamage}
+        />
+        <StatCard
+          icon={<Shield className="text-blue-400" />}
+          label="Survival Rate"
+          value={playerData.stats.survivalRate}
+        />
+      </div>
+    </motion.div>
+
+    {/* Recent Highlights */}
+    <motion.div
+      variants={itemVariants}
+      className="p-6 rounded-2xl bg-white/5 border border-white/10"
+    >
+      <h3 className="text-xl font-bold mb-4 text-white">Recent Highlights</h3>
+      <div className="space-y-4">
+        {playerData.highlights.map((highlight, index) => (
+          <div
+            key={index}
+            className="relative group rounded-lg overflow-hidden"
+          >
+            <img
+              src={highlight.thumbnail}
+              alt={highlight.title}
+              className="w-full h-48 object-cover transform transition-transform group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent p-4 flex flex-col justify-end">
+              <h4 className="text-white font-medium">{highlight.title}</h4>
+              <p className="text-gray-300 text-sm">{highlight.views} views</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+
+    {/* Guild Information */}
+    <motion.div
+      variants={itemVariants}
+      className="p-6 rounded-2xl bg-white/5 border border-white/10"
+    >
+      <h3 className="text-xl font-bold mb-4 text-white">Guild</h3>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-gray-400">Name</span>
+          <span className="text-white font-medium">
+            {playerData.guild.name}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-gray-400">Role</span>
+          <span className="text-white font-medium">
+            {playerData.guild.role}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-gray-400">Ranking</span>
+          <span className="text-white font-medium">
+            {playerData.guild.ranking}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-gray-400">Members</span>
+          <span className="text-white font-medium">
+            {playerData.guild.members}/50
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  </div>
+);
+
+// Statistics Section
+const Statistics: React.FC<SectionProps> = ({ playerData }) => (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {/* Combat Stats */}
+    <motion.div
+      variants={itemVariants}
+      className="p-6 rounded-2xl bg-white/5 border border-white/10"
+    >
+      <h3 className="text-xl font-bold mb-4 text-white">Combat Statistics</h3>
+      <div className="space-y-4">
+        <StatBar label="K/D Ratio" value={playerData.stats.kd} maxValue="5.0" />
+        <StatBar
+          label="Headshot Rate"
+          value={playerData.stats.headshots}
+          maxValue="100%"
+        />
+        <StatBar
+          label="Accuracy"
+          value={playerData.stats.accuracy}
+          maxValue="100%"
+        />
+        <StatBar
+          label="Survival Rate"
+          value={playerData.stats.survivalRate}
+          maxValue="100%"
+        />
+      </div>
+    </motion.div>
+
+    {/* Match History Graph */}
+    <motion.div
+      variants={itemVariants}
+      className="p-6 rounded-2xl bg-white/5 border border-white/10"
+    >
+      <h3 className="text-xl font-bold mb-4 text-white">Performance Trend</h3>
+      {/* Add a graph component here */}
+      <div className="h-64 flex items-center justify-center text-gray-400">
+        Performance Graph Placeholder
+      </div>
+    </motion.div>
+  </div>
+);
+
+// Loadout Section
+const Loadout: React.FC<SectionProps> = ({ playerData }) => (
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    {playerData.loadout.characters.map((character, index) => (
+      <motion.div
+        key={index}
+        variants={itemVariants}
+        className="p-6 rounded-2xl bg-white/5 border border-white/10"
+      >
+        <h3 className="text-xl font-bold mb-4 text-white">{character.name}</h3>
+        <div className="space-y-4">
+          <div className="relative h-48 rounded-lg overflow-hidden">
+            <img
+              src="/api/placeholder/300/200"
+              alt={character.name}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+              <p className="text-white">Level {character.level}</p>
+              <p className="text-sm text-gray-300">{character.skill}</p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    ))}
+  </div>
+);
+
+// Achievements Section
+const Achievements: React.FC<SectionProps> = ({ playerData }) => (
+  <div className="space-y-6">
+    <motion.div
+      variants={itemVariants}
+      className="p-6 rounded-2xl bg-white/5 border border-white/10"
+    >
+      <h3 className="text-xl font-bold mb-4 text-white">Recent Achievements</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {playerData.achievements.recent.map((achievement, index) => (
+          <div
+            key={index}
+            className="p-4 rounded-lg bg-white/5 border border-white/10"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-2 rounded-lg bg-purple-500/20">
+                <Trophy className="w-6 h-6 text-purple-400" />
+              </div>
+              <div>
+                <h4 className="font-medium text-white">{achievement.name}</h4>
+                <p className="text-sm text-gray-400">
+                  {achievement.description}
+                </p>
+                <p className="text-sm text-gray-500 mt-2">{achievement.date}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+    <motion.div
+      variants={itemVariants}
+      className="p-6 rounded-2xl bg-white/5 border border-white/10"
+    >
+      <h3 className="text-xl font-bold mb-4 text-white">Badges</h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {playerData.achievements.badges.map((badge, index) => (
+          <div
+            key={index}
+            className="p-4 rounded-lg bg-white/5 border border-white/10 text-center"
+          >
+            <Medal className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
+            <h4 className="font-medium text-white">{badge.name}</h4>
+            <p className="text-sm text-gray-400">{badge.rarity}</p>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  </div>
+);
+
+// Utility Components
+const StatCard: React.FC<StatCardProps> = ({ icon, label, value }) => (
+  <div className="flex flex-col items-center p-4 rounded-lg bg-white/5 border border-white/10">
+    <div className="mb-2">{icon}</div>
+    <p className="text-gray-400 text-sm">{label}</p>
+    <p className="text-white font-bold text-lg">{value}</p>
+  </div>
+);
+
+const StatBar: React.FC<StatBarProps> = ({ label, value, maxValue }) => (
+  <div className="space-y-2">
+    <div className="flex justify-between text-sm">
+      <span className="text-gray-400">{label}</span>
+      <span className="text-white">{value}</span>
+    </div>
+    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+      <div
+        className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+        style={{
+          width: `${(parseFloat(value) / parseFloat(maxValue)) * 100}%`,
+        }}
+      />
+    </div>
+  </div>
+);
+
+// Tournaments Section
+const Tournaments: React.FC<SectionProps> = ({ playerData }) => (
+  <div className="space-y-6">
+    <motion.div
+      variants={itemVariants}
+      className="p-6 rounded-2xl bg-white/5 border border-white/10"
+    >
+      <h3 className="text-xl font-bold mb-4 text-white">Tournament History</h3>
+      <div className="space-y-4">
+        {playerData.tournaments.history.map((tournament, index) => (
+          <div
+            key={index}
+            className="p-4 rounded-lg bg-white/5 border border-white/10"
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <h4 className="font-medium text-white">{tournament.name}</h4>
+                <p className="text-sm text-gray-400">
+                  Position: {tournament.position}
+                </p>
+                <p className="text-sm text-gray-400">
+                  Prize: {tournament.prize}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-400">
+                  {tournament.kills} kills
+                </p>
+                <p className="text-sm text-gray-400">
+                  {tournament.matches} matches
+                </p>
+                <p className="text-sm text-gray-500">{tournament.date}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  </div>
+);
+
+export default ProfilePage;

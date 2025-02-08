@@ -1,24 +1,5 @@
 import mongoose from "mongoose";
 
-const prizeSchema = new mongoose.Schema({
-  total: {
-    type: String,
-    required: true,
-  },
-  distribution: [
-    {
-      position: {
-        type: String,
-        required: true,
-      },
-      prize: {
-        type: String,
-        required: true,
-      },
-    },
-  ],
-});
-
 const eventSchema = new mongoose.Schema(
   {
     title: {
@@ -33,8 +14,12 @@ const eventSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
-    maxTeams: {
-      type: Number,
+    mode: {
+      type: String,
+      required: true,
+    },
+    slots: {
+      type: String,
       required: true,
     },
     time: {
@@ -49,7 +34,15 @@ const eventSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    prize: [prizeSchema],
+    venue: {
+      type: String,
+      required: true,
+    },
+    prize: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Prize",
+    },
+
     image: {
       type: String,
       required: true,
@@ -91,15 +84,9 @@ const eventSchema = new mongoose.Schema(
     ],
     organizer: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Organizer", // Reference to the User model (the organizer)
-      required: true,
+      ref: "Organizer",
     },
-    leaderboard: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Leaderboard", // Reference to Leaderboard
-      },
-    ],
+    rounds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Round" }],
   },
   { timestamps: true }
 );

@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const teamSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true },
+    teamName: { type: String, required: true, trim: true, unique: true },
     captain: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User", // Reference to the User model (team captain)
@@ -23,7 +23,7 @@ const teamSchema = new mongoose.Schema(
       },
     ],
     maxPlayers: { type: Number, default: 6 }, // Limit the number of players
-    tournaments: [
+    playedTournaments: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Tournament", // Reference to tournaments the team is registered in

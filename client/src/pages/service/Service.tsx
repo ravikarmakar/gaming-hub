@@ -5,7 +5,7 @@ import { services } from "./data";
 const ServicesPage = () => {
   return (
     <section className="relative py-20 overflow-hidden">
-      <div className="absolute left-1/2 top-30 -translate-x-1/2 rounded-full opacity-60 blur-[100px] h-[400px] w-[500px] sm:h-[700px] sm:w-[900px] bg-red-500/20 pointer-events-none"></div>
+      <div className="absolute left-1/2 top-[5%] -translate-x-1/2 rounded-full opacity-60 blur-[100px] h-[400px] w-[500px] sm:h-[700px] sm:w-[900px] bg-red-500/15 pointer-events-none"></div>
 
       {/* Main Container*/}
       <motion.div

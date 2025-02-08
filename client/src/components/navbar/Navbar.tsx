@@ -10,7 +10,7 @@ import { Logo } from "./components/Logo";
 import { NavLink } from "./components/NavLinks";
 import { MobileMenu } from "./components/MobileMenu";
 import { ProfileAvatar, UnknowProfile } from "./components/ProfileAvatar";
-import { useUserStore } from "@/store/useUserStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import { MenuProvider, useMenu } from "./context/MenuContext";
 
 const iconVariants = {
@@ -23,11 +23,11 @@ const NavbarContent = () => {
   const [lastScrollY, setLastScrollY] = useState(0);
   const location = useLocation();
   const { scrollY } = useScroll();
-  const { user, checkingAuth } = useUserStore();
+  const { user, checkingAuth } = useAuthStore();
   const { activeMenu, setActiveMenu, closeAllMenus } = useMenu();
 
   const isMobileMenuOpen = activeMenu === "mobile";
-  console.log(isMobileMenuOpen);
+  // console.log(isMobileMenuOpen);
 
   // Handle menu close on outside click or scroll
   useEffect(() => {
@@ -78,7 +78,7 @@ const NavbarContent = () => {
         transition={{ duration: 0.2, ease: "easeInOut" }}
         className={`
           fixed w-full 
-          bg-gradient-to-b from-gray-900/95 to-gray-900/90
+          bg-gradient-to-b from-gray-800/95 to-gray border-b border-gray-800/95
           backdrop-blur-md shadow-lg
           transition-all duration-300
         `}

@@ -4,8 +4,8 @@ import { AuthLayout } from "./components/AuthLayout";
 import { AuthInput } from "./components/AuthInput";
 import { AuthButton } from "./components/AuthButton";
 import { Link, useNavigate } from "react-router-dom";
-import { useUserStore } from "@/store/useUserStore";
 import toast from "react-hot-toast";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export interface formDataType {
   email: string;
@@ -16,7 +16,7 @@ export const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [rememberMe, setRememberMe] = useState(false);
   // const [error, setError] = useState<string | null>(null);
-  const { logIn, isLoading, error } = useUserStore();
+  const { logIn, isLoading, error } = useAuthStore();
 
   const navigate = useNavigate();
 
@@ -42,6 +42,7 @@ export const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Clicked");
 
     try {
       await logIn(formData);
@@ -52,7 +53,7 @@ export const LoginPage: React.FC = () => {
         localStorage.removeItem("rememberMeEmail");
       }
       navigate("/");
-      useUserStore.setState({ error: null });
+      useAuthStore.setState({ error: null });
     } catch (error) {
       // toast.error(error || "Login failed, please try again.");
 
@@ -63,7 +64,7 @@ export const LoginPage: React.FC = () => {
 
       // Only show the error if it's not already handled by zustand
       if (errorMessage && errorMessage !== error) {
-        useUserStore.setState({ error: errorMessage });
+        useAuthStore.setState({ error: errorMessage });
         toast.error(errorMessage);
       }
     }
@@ -114,7 +115,7 @@ export const LoginPage: React.FC = () => {
             Forgot password?
           </a>
         </div>
-        <AuthButton type="submit" isLoading={isLoading}>
+        <AuthButton type="submit" isLoading={isLoading} onClick={handleSubmit}>
           <span className="flex items-center justify-center">
             Login to GameVerse
           </span>
