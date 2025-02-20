@@ -10,6 +10,7 @@ import {
   //Clock,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { User } from "@/types";
 
 const playerData = {
   id: "FF_123456",
@@ -54,12 +55,9 @@ interface IconButtonProps {
   icon: React.ReactNode;
 }
 
-// interface StatCardProps {
-//   icon: React.ReactNode;
-//   label: string;
-//   value: number;
-// }
-
+interface ProfileHeaderProps {
+  user: User;
+}
 // Helper Components
 // const StatCard = ({ icon, label, value }: StatCardProps) => (
 //   <div className="flex flex-col items-center md:items-start p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
@@ -77,7 +75,7 @@ const IconButton = ({ icon }: IconButtonProps) => (
   </button>
 );
 
-const ProfileHeader = () => {
+const ProfileHeader = ({ user }: ProfileHeaderProps) => {
   const [isFollowing, setIsFollowing] = useState(false);
 
   const containerVariants = {
@@ -154,7 +152,7 @@ const ProfileHeader = () => {
               <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden ring-4 ring-purple-500/30 bg-gradient-to-br from-blue-500 to-purple-600 p-1">
                 <img
                   src={playerData.avatar}
-                  alt={playerData.username}
+                  alt={user?.name}
                   className="w-full h-full object-cover rounded-full" // Applying rounded-full to make it a circle
                 />
               </div>
@@ -172,7 +170,7 @@ const ProfileHeader = () => {
                 className="flex flex-wrap items-center justify-center md:justify-start gap-3"
               >
                 <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  {playerData.username}
+                  {user?.name}
                 </h1>
                 {/* Verified Icon added here */}
               </motion.div>

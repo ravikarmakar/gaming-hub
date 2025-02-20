@@ -5,9 +5,11 @@ import { memo } from "react";
 
 export const Logo = memo(() => (
   <motion.div whileHover={{ scale: 1.1 }}>
-    <Link to="/" className="flex items-center space-x-2 text-white">
-      <Gamepad2 className="hidden md:block w-8 h-8 text-cyan-400" />
-      <span className="text-xl font-bold font-orbitron">GameHub</span>
+    <Link to="/" className="flex items-center space-x-2">
+      <Gamepad2 className="hidden md:block w-8 h-8 text-purple-500" />
+      <span className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+        GmareX
+      </span>
     </Link>
   </motion.div>
 ));

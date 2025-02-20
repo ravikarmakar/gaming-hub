@@ -1,7 +1,7 @@
 // Centralized routes
 export const ROUTES = {
   HOME: "/",
-  PROFILE: "/profile",
+  PROFILE: "/profile/:id",
   TEAMPROFILE: "/team/team-profile",
   EVENTS: "/events", // /events/:type
   EVENT: "/events/:id",
@@ -14,7 +14,7 @@ export const ROUTES = {
   SIGNUP: "/signup",
   ADMIN: "/admin/dashboard",
   MAXADMIN: "/admin/super",
-  NOTIFICATION: "/notification",
+  NOTIFICATION: "/notifications",
   PLAYER: "/players",
 };
 

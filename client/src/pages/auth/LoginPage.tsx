@@ -6,6 +6,8 @@ import { AuthButton } from "./components/AuthButton";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/useAuthStore";
+import { motion } from "framer-motion";
+import { SocialLogin } from "./components/SocialLogin";
 
 export interface formDataType {
   email: string;
@@ -75,61 +77,113 @@ export const LoginPage: React.FC = () => {
       title="Welcome Back, Gamer!"
       subtitle="Ready to continue your gaming journey?"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-        <AuthInput
-          name="email"
-          label="Email"
-          type="email"
-          placeholder="Enter your email"
-          icon={<Mail size={18} />}
-          value={formData.email}
-          onChange={handleChange}
-          required
-        />
-        <AuthInput
-          name="password"
-          label="Password"
-          type="password"
-          placeholder="Enter your password"
-          icon={<Lock size={18} />}
-          value={formData.password}
-          onChange={handleChange}
-          required
-        />
-        <div className="flex items-center justify-between text-sm">
-          <label className="flex items-center text-gray-300">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={handleRememberMeChange}
-              className="mr-2 rounded border-gray-600 text-cyan-500 focus:ring-cyan-500 bg-gray-800"
-              aria-label="Remember me"
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-red-500/10 border border-red-500/20 rounded-lg p-3"
+            >
+              <p className="text-red-500 text-sm text-center">{error}</p>
+            </motion.div>
+          )}
+          
+          <motion.div 
+            className="space-y-4"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <AuthInput
+              name="email"
+              label="Email"
+              type="email"
+              placeholder="Enter your email"
+              icon={<Mail size={18} />}
+              value={formData.email}
+              onChange={handleChange}
+              required
             />
-            Remember me
-          </label>
-          <a
-            href="#"
-            className="text-cyan-400 hover:text-cyan-300 transition-colors"
+            <AuthInput
+              name="password"
+              label="Password"
+              type="password"
+              placeholder="Enter your password"
+              icon={<Lock size={18} />}
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
+          </motion.div>
+
+          <motion.div 
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
           >
-            Forgot password?
-          </a>
-        </div>
-        <AuthButton type="submit" isLoading={isLoading} onClick={handleSubmit}>
-          <span className="flex items-center justify-center">
-            Login to GameVerse
-          </span>
-        </AuthButton>
-        <p className="text-center text-gray-400">
-          Don't have an account?{" "}
-          <Link
-            to="/signup"
-            className="text-cyan-400 hover:text-cyan-300 transition-colors"
+            <label className="flex items-center text-gray-300 order-2 sm:order-1">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={handleRememberMeChange}
+                className="mr-2 rounded border-gray-600 text-purple-500 focus:ring-purple-500 bg-gray-800"
+                aria-label="Remember me"
+              />
+              Remember me
+            </label>
+            <a
+              href="#"
+              className="text-purple-400 hover:text-purple-300 transition-colors order-1 sm:order-2 text-center sm:text-right"
+            >
+              Forgot password?
+            </a>
+          </motion.div>
+
+          <motion.div 
+            className="pt-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
           >
-            Sign up now
-          </Link>
-        </p>
-      </form>
+            <AuthButton type="submit" isLoading={isLoading} onClick={handleSubmit}>
+              Login to GameVerse
+            </AuthButton>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
+            <SocialLogin
+              onGoogleLogin={() => toast.success("Google login coming soon!")}
+              onDiscordLogin={() => toast.success("Discord login coming soon!")}
+              onGithubLogin={() => toast.success("Github login coming soon!")}
+            />
+          </motion.div>
+
+          <motion.p 
+            className="text-center text-gray-400 text-sm sm:text-base pt-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            Don't have an account?{" "}
+            <Link
+              to="/signup"
+              className="text-purple-400 hover:text-purple-300 transition-colors font-medium"
+            >
+              Sign up now
+            </Link>
+          </motion.p>
+        </form>
+      </motion.div>
     </AuthLayout>
   );
 };

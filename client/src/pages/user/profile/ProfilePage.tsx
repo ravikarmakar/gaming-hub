@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Trophy, Target, Shield, Crown, Medal, Flame } from "lucide-react";
 import { motion } from "framer-motion";
 import ProfileHeader from "./elements/ProfileHeader";
 import QuickView from "./elements/QuickView";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useParams } from "react-router-dom";
+import useUserStore from "@/store/useUserStore";
 
 // Extended player data
 interface PlayerData {
@@ -255,13 +256,18 @@ const itemVariants = {
 };
 
 const ProfilePage: React.FC = () => {
+  const { id } = useParams();
+
+  const { getOneUser, selectedUser } = useUserStore();
   const [activeTab, setActiveTab] = useState("overview");
-  const { user } = useAuthStore();
 
-  console.log(user);
+  useEffect(() => {
+    if (id) {
+      getOneUser(id);
+    }
+  }, [id, getOneUser]);
 
-  // Header component from previous implementation remains the same
-  // Adding new content sections below
+  if (!selectedUser) return <p>Loading user data...</p>;
 
   return (
     <section className="relative min-h-screen bg-[#0A0A1F]">
@@ -277,7 +283,7 @@ const ProfilePage: React.FC = () => {
       </motion.div>
 
       {/* Profile Header (Previous Implementation) */}
-      <ProfileHeader />
+      <ProfileHeader user={selectedUser} />
 
       {/* Quick Views */}
       <QuickView />

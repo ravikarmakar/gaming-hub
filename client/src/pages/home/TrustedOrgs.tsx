@@ -35,10 +35,10 @@ const TrustedOrgs = () => {
         x: [0, -1920], // Start from 0 and scroll to -1920px
         transition: {
           x: {
-            repeat: Infinity, // Infinite scrolling
-            repeatType: "loop", // Continuous loop
-            duration: 30, // Animation duration
-            ease: "linear", // Smooth movement
+            repeat: Infinity,
+            repeatType: "loop",
+            duration: 30,
+            ease: "linear",
           },
         },
       });

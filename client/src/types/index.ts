@@ -10,7 +10,7 @@ export interface User {
   email: string;
   termsAccepted: boolean;
   isOrganisation: boolean;
-  avatar?: string | null;
+  avatar?: string;
   rank: number;
   role: "admin" | "max admin" | "user";
   blocked: boolean;

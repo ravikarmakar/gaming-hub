@@ -6,7 +6,7 @@ import { AuthInput } from "./components/AuthInput";
 import { AuthButton } from "./components/AuthButton";
 import { motion } from "framer-motion";
 import { useAuthStore } from "@/store/useAuthStore";
-
+import { SocialLogin } from "./components/SocialLogin";
 import toast from "react-hot-toast";
 
 export interface FormDataType {
@@ -69,94 +69,137 @@ export const SignupPage = () => {
       title="Join GameVerse"
       subtitle="Begin your epic gaming adventure!"
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-red-500/10 border border-red-500/20 rounded-lg p-3"
+            >
+              <p className="text-red-500 text-sm text-center flex items-center justify-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                <span>{error}</span>
+              </p>
+            </motion.div>
+          )}
+
+          <motion.div 
+            className="space-y-4"
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-red-50 dark:bg-red-900/20 text-red-500 p-2 rounded-lg flex items-center gap-2"
+            transition={{ delay: 0.1 }}
           >
-            <AlertCircle className="w-5 h-5" />
-            <span>{error}</span>
-          </motion.div>
-        )}
-
-        <AuthInput
-          name="name"
-          label="name"
-          placeholder="Choose your name"
-          icon={<User size={18} />}
-          value={formData.name}
-          onChange={handleChange}
-        />
-
-        <AuthInput
-          name="email"
-          label="Email"
-          type="email"
-          placeholder="Enter your email"
-          icon={<Mail size={18} />}
-          value={formData.email}
-          onChange={handleChange}
-        />
-
-        <AuthInput
-          name="password"
-          label="Password"
-          type="password"
-          placeholder="Create a password"
-          icon={<Lock size={18} />}
-          value={formData.password}
-          onChange={handleChange}
-        />
-
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-sm text-gray-300">
-            <input
-              type="checkbox"
-              name="termsAccepted"
-              required
-              checked={formData.termsAccepted}
+            <AuthInput
+              name="name"
+              label="Name"
+              placeholder="Choose your name"
+              icon={<User size={18} />}
+              value={formData.name}
               onChange={handleChange}
-              className="rounded border-gray-600 text-cyan-500 focus:ring-cyan-500 bg-gray-800 p-2"
-              // aria-invalid={!!errors.termsAccepted}
+              required
             />
-            <span>
-              I agree to the{" "}
-              <a
-                href="#"
-                className="text-cyan-400 hover:text-cyan-300 transition-colors"
-              >
-                Terms of Service
-              </a>{" "}
-              and{" "}
-              <a
-                href="#"
-                className="text-cyan-400 hover:text-cyan-300 transition-colors"
-              >
-                Privacy Policy
-              </a>
-            </span>
-          </div>
-          {/* {error.termsAccepted && (
-            <p className="text-red-500 text-sm">{error.termsAccepted}</p>
-          )} */}
-        </div>
 
-        <AuthButton type="submit" onClick={handleSubmit} isLoading={isLoading}>
-          Create Account
-        </AuthButton>
+            <AuthInput
+              name="email"
+              label="Email"
+              type="email"
+              placeholder="Enter your email"
+              icon={<Mail size={18} />}
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
 
-        <p className="text-center text-gray-400">
-          Already have an account?{" "}
-          <Link
-            to="/login"
-            className="text-cyan-400 hover:text-cyan-300 transition-colors"
+            <AuthInput
+              name="password"
+              label="Password"
+              type="password"
+              placeholder="Create a password"
+              icon={<Lock size={18} />}
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
+          </motion.div>
+
+          <motion.div 
+            className="space-y-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
           >
-            Login here
-          </Link>
-        </p>
-      </form>
+            <div className="flex items-start gap-3 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                name="termsAccepted"
+                required
+                checked={formData.termsAccepted}
+                onChange={handleChange}
+                className="mt-1 rounded border-gray-600 text-purple-500 focus:ring-purple-500 bg-gray-800"
+              />
+              <span className="leading-relaxed">
+                I agree to the{" "}
+                <a
+                  href="#"
+                  className="text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  Terms of Service
+                </a>{" "}
+                and{" "}
+                <a
+                  href="#"
+                  className="text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  Privacy Policy
+                </a>
+              </span>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            className="pt-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <AuthButton type="submit" onClick={handleSubmit} isLoading={isLoading}>
+              Create Account
+            </AuthButton>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
+            <SocialLogin
+              onGoogleLogin={() => toast.success("Google signup coming soon!")}
+              onDiscordLogin={() => toast.success("Discord signup coming soon!")}
+              onGithubLogin={() => toast.success("Github signup coming soon!")}
+            />
+          </motion.div>
+
+          <motion.p 
+            className="text-center text-gray-400 text-sm sm:text-base pt-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+          >
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              className="text-purple-400 hover:text-purple-300 transition-colors font-medium"
+            >
+              Login here
+            </Link>
+          </motion.p>
+        </form>
+      </motion.div>
     </AuthLayout>
   );
 };

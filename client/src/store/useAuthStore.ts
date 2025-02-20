@@ -86,9 +86,9 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
         withCredentials: true,
       });
       if (response?.data) {
-        set({ user: response.data }); // User set करें
+        set({ user: response.data });
       } else {
-        set({ user: null }); // Null set करें अगर data न मिले
+        set({ user: null });
       }
     } catch (error) {
       if (error instanceof AxiosError) {

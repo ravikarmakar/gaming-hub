@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import GameCard from "./components/GameCard";
 import SideGameList from "./components/SideGameList";
 import CardCarousel from "./components/CardCarousel";
@@ -9,6 +9,7 @@ const GameStore: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isAutoPlay, setIsAutoPlay] = useState<boolean>(true);
   const [isMobileView, setIsMobileView] = useState<boolean>(false);
+  const [isHovered, setIsHovered] = useState<boolean>(false);
 
   const gameData = [
     {
@@ -70,10 +71,7 @@ const GameStore: React.FC = () => {
       setIsMobileView(window.innerWidth < 1020);
     };
 
-    // Initial check on mount
     handleResize();
-
-    // Debounced resize handler
     let timeoutId: NodeJS.Timeout;
     const debouncedResize = () => {
       clearTimeout(timeoutId);
@@ -88,14 +86,14 @@ const GameStore: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!isAutoPlay) return;
+    if (!isAutoPlay || isHovered) return;
 
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % gameData.length);
-    }, 3000);
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [isAutoPlay, gameData.length]);
+  }, [isAutoPlay, gameData.length, isHovered]);
 
   const handleGameSelect = (index: number) => {
     setCurrentIndex(index);
@@ -105,15 +103,38 @@ const GameStore: React.FC = () => {
   const featuredGame = gameData[currentIndex];
 
   return (
-    <section className="py-20 bg-black relative overflow-hidden">
-      {/* Background Effect */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black via-gray-900 to-black" />
+    <section className="h-auto lg:min-h-screen pb-20 pt-10 lg:py-20 bg-gradient-to-b from-[#0f0f1a] via-[#1a1a2e] to-[#0f0f1a] relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute w-full h-full">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 bg-sky-500 rounded-full opacity-30"
+              animate={{
+                y: ["0vh", "100vh"],
+                x: Math.sin(i) * 20,
+              }}
+              transition={{
+                duration: Math.random() * 10 + 10,
+                repeat: Infinity,
+                ease: "linear",
+                delay: Math.random() * 5,
+              }}
+              style={{
+                left: `${(i / 20) * 100}%`,
+                top: `-${Math.random() * 100}%`,
+              }}
+            />
+          ))}
+        </div>
+      </div>
 
       {/* Main Container */}
-      <div className="container mx-auto px-4 sm:px-6 relative">
+      <div className="container mx-auto px-6 sm:px-6 relative z-10">
         {/* Headers */}
         <motion.div
-          className="text-center mb-16 mx-10"
+          className="text-center mb-4 lg:mb-16"
           initial={{ y: 60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{
@@ -121,48 +142,80 @@ const GameStore: React.FC = () => {
             ease: [0.6, -0.05, 0.01, 0.99],
           }}
         >
-          <h1 className="text-4xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold mb-4 tracking-tight">
+          <motion.h1 className="text-4xl sm:text-4xl md:text-5xl font-bold mb-2 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-red-500 via-purple-500 to-pink-600">
             Featured Games
-          </h1>
-          <p className="text-gray-400 max-w-2xl mx-auto text-sm sm:text-base">
-            We are in multiple game genres such as Action, Adventure, Strategy,
-            and more.
-          </p>
+          </motion.h1>
+          <motion.p
+            className="text-gray-300 max-w-2xl mx-auto text-sm sm:text-base"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            Discover our handpicked selection of epic gaming adventures
+          </motion.p>
         </motion.div>
 
         {/* Content */}
         <motion.div
-          className="max-w-[1400px] mx-auto w-full flex flex-col lg:flex-row gap-6"
+          className="max-w-[1400px] mx-auto w-full flex flex-col lg:flex-row gap-4 lg:gap-6 relative"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
-          {/* Left section - Featured game */}
-          <motion.div
-            className="relative flex-1 justify-center items-center lg:block"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            {/* GameCard */}
-            <GameCard
-              game={featuredGame}
-              onRatingClick={handleRating}
-              onMouseEnter={() => setIsAutoPlay(false)}
-              onMouseLeave={() => setIsAutoPlay(true)}
-            />
-          </motion.div>
-
-          {/* Right section - Game list */}
-          {isMobileView ? (
-            <CardCarousel gameData={gameData} onRatingClick={handleRating} />
-          ) : (
-            <SideGameList
-              currentIndex={currentIndex}
-              gameData={gameData}
-              onGameSelect={handleGameSelect}
-            />
+          {/* Featured game section - Only shown on desktop */}
+          {!isMobileView && (
+            <motion.div
+              className="relative flex-1 justify-center items-center"
+              initial={{ x: -100, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.6 }}
+              onHoverStart={() => setIsHovered(true)}
+              onHoverEnd={() => setIsHovered(false)}
+            >
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentIndex}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <GameCard
+                    game={featuredGame}
+                    onRatingClick={handleRating}
+                    onMouseEnter={() => setIsAutoPlay(false)}
+                    onMouseLeave={() => setIsAutoPlay(true)}
+                  />
+                </motion.div>
+              </AnimatePresence>
+            </motion.div>
           )}
+
+          {/* Game list/carousel section */}
+          <motion.div
+            className={`${isMobileView ? "w-full" : "w-1/3"}`}
+            initial={{ x: 100, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ duration: 0.6 }}
+          >
+            {isMobileView ? (
+              <div className="w-full">
+                <AnimatePresence>
+                  {" "}
+                  <CardCarousel
+                    gameData={gameData}
+                    onRatingClick={handleRating}
+                  />
+                </AnimatePresence>
+              </div>
+            ) : (
+              <SideGameList
+                currentIndex={currentIndex}
+                gameData={gameData}
+                onGameSelect={handleGameSelect}
+              />
+            )}
+          </motion.div>
         </motion.div>
       </div>
     </section>

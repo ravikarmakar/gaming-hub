@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { motion, useScroll } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { useLocation } from "react-router-dom";
@@ -19,20 +19,17 @@ const iconVariants = {
 };
 
 const NavbarContent = () => {
-  const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
   const location = useLocation();
   const { scrollY } = useScroll();
   const { user, checkingAuth } = useAuthStore();
   const { activeMenu, setActiveMenu, closeAllMenus } = useMenu();
 
   const isMobileMenuOpen = activeMenu === "mobile";
-  // console.log(isMobileMenuOpen);
 
   // Handle menu close on outside click or scroll
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
-      event.preventDefault(); // Add this line
+      event.preventDefault();
       const mobileMenu = document.querySelector(".mobile-menu");
       const mobileMenuButton = document.querySelector(".mobile-menu-button");
       const profileMenu = document.querySelector(".profile-menu");
@@ -40,7 +37,7 @@ const NavbarContent = () => {
 
       // Check if click is inside the mobile menu button
       if (mobileMenuButton?.contains(target)) {
-        event.stopPropagation(); // Add this line
+        event.stopPropagation();
         setActiveMenu(isMobileMenuOpen ? null : "mobile");
         return;
       }
@@ -52,10 +49,6 @@ const NavbarContent = () => {
     };
 
     const handleScroll = throttle(() => {
-      const currentScrollY = scrollY.get();
-      setIsVisible(currentScrollY <= lastScrollY || currentScrollY <= 50);
-      setLastScrollY(currentScrollY);
-
       // Close all menus on scroll
       closeAllMenus();
     }, 50);
@@ -68,18 +61,14 @@ const NavbarContent = () => {
       unsubscribe();
       handleScroll.cancel();
     };
-  }, [scrollY, lastScrollY, closeAllMenus, isMobileMenuOpen, setActiveMenu]);
+  }, [scrollY, closeAllMenus, isMobileMenuOpen, setActiveMenu]);
 
   return (
     <header className="relative z-50">
-      <motion.nav
-        initial={{ y: -100 }}
-        animate={{ y: isVisible ? 0 : -100 }}
-        transition={{ duration: 0.2, ease: "easeInOut" }}
+      <nav
         className={`
-          fixed w-full 
-          bg-gradient-to-b from-gray-800/95 to-gray border-b border-gray-800/95
-          backdrop-blur-md shadow-lg
+          fixed w-full top-0 left-0 right-0 h-16 bg-[#0a0a0a]/95
+          border-b border-purple-900/30 backdrop-blur-md shadow-lg z-50
           transition-all duration-300
         `}
         role="navigation"
@@ -87,9 +76,9 @@ const NavbarContent = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 lg:h-20">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center">
               <motion.button
-                className="mobile-menu-button md:hidden p-2 rounded-lg hover:bg-gray-800 transition-colors"
+                className="mobile-menu-button md:hidden p-2 rounded-lg hover:text-purple-500 transition-colors duration-200"
                 whileTap={{ scale: 0.95 }}
                 aria-label="Toggle menu"
               >
@@ -99,9 +88,9 @@ const NavbarContent = () => {
                   transition={{ duration: 0.2 }}
                 >
                   {isMobileMenuOpen ? (
-                    <X className="w-6 h-6" />
+                    <X className="w-6 h-6 text-purple-500 z-100" />
                   ) : (
-                    <Menu className="w-6 h-6" />
+                    <Menu className="w-6 h-6 text-purple-700" />
                   )}
                 </motion.div>
               </motion.button>
@@ -133,7 +122,7 @@ const NavbarContent = () => {
 
         {/* Mobile Menu */}
         <MobileMenu isOpen={isMobileMenuOpen} onClose={() => closeAllMenus()} />
-      </motion.nav>
+      </nav>
     </header>
   );
 };

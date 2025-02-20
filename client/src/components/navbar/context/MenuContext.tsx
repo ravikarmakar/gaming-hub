@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from "react";
 
 interface MenuContextType {
   activeMenu: string | null;
@@ -20,10 +20,11 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useMenu = () => {
   const context = useContext(MenuContext);
   if (context === undefined) {
-    throw new Error('useMenu must be used within a MenuProvider');
+    throw new Error("useMenu must be used within a MenuProvider");
   }
   return context;
 };

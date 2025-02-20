@@ -21,17 +21,12 @@ export const NavLink = ({
       to={href}
       onClick={onClick}
       className={cn(
-        "relative px-3 py-2 text-sm font-medium transition-colors duration-200",
-        "hover:text-white focus:outline-none focus-visible:ring-2",
-        isActive ? "text-cyan-400" : "text-gray-300",
-        className,
-        // Add underline animation for desktop only
-        "lg:after:absolute lg:after:left-0 lg:after:bottom-0 lg:after:h-0.5 lg:after:w-full lg:after:origin-center",
-        "lg:after:scale-x-0 lg:hover:after:scale-x-100",
-        "lg:after:transition-transform lg:after:duration-200 lg:after:ease-out",
+        "px-4 py-2 text-sm font-medium rounded-lg",
+        "transition-colors duration-200",
         isActive
-          ? "text-cyan-400 border-b-2 border-cyan-500"
-          : "lg:after:bg-gray-300"
+          ? "text-purple-500 bg-purple-500/10"
+          : "text-gray-300 hover:text-purple-400",
+        className
       )}
     >
       {name}

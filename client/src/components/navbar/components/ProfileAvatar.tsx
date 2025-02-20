@@ -6,11 +6,11 @@ import { useAuthStore } from "@/store/useAuthStore";
 
 // Navigation options stored in a variable
 const navigationOptions = [
-  {
-    icon: User,
-    label: "View Profile",
-    path: "/profile",
-  },
+  // {
+  //   icon: User,
+  //   label: "View Profile",
+  //   path: "/profile",
+  // },
   {
     icon: Users,
     label: "Team Profile",
@@ -19,6 +19,7 @@ const navigationOptions = [
 ];
 
 export const ProfileAvatar = () => {
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const { activeMenu, setActiveMenu } = useMenu();
   const isOpen = activeMenu === "profile";
@@ -35,14 +36,14 @@ export const ProfileAvatar = () => {
   return (
     <div className="relative profile-menu">
       <div className="flex justify-center items-center gap-6">
-        <Link to="/notification">
+        <Link to="/notifications">
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
-            className="relative text-gray-200 hover:text-white transition-colors"
+            className="relative text-gray-200 hover:text-purple-500 transition-colors duration-200"
           >
             <Bell className="w-6 h-6" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs text-gray-200 flex items-center justify-center">
               3
             </span>
           </motion.button>
@@ -72,6 +73,22 @@ export const ProfileAvatar = () => {
             className="absolute right-0 mt-3 w-72 rounded-xl bg-gray-900 shadow-lg ring-1 ring-gray-700 backdrop-blur-sm"
           >
             <div className="p-2">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: navigationOptions.length * 0.05 }}
+                onClick={() => setActiveMenu(null)}
+              >
+                <Link to={`/profile/${user?._id}`}>
+                  <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors group">
+                    <User className="w-5 h-5 text-gray-400 group-hover:text-cyan-400" />
+                    <span className="text-sm font-medium text-gray-200 group-hover:text-white">
+                      View Profile
+                    </span>
+                  </div>
+                </Link>
+              </motion.div>
+
               {navigationOptions.map((option, index) => (
                 <motion.div
                   key={option.path}
