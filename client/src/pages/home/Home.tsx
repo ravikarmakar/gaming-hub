@@ -7,6 +7,7 @@ import FeaturedEvents from "../events/FeaturedEvents";
 import RankingsSection from "../team/player/ranking/RankingsSection";
 import TrendingEvents from "../events/trending/TrendingEvents";
 import { eventData } from "@/lib/constants";
+import EsportsRankings from "@/components/esports-rankings/EsportsRankings";
 
 const Home = () => {
   return (
@@ -16,6 +17,7 @@ const Home = () => {
       <TrendingEvents events={eventData} />
       <GameStore />
       <FeaturedEvents />
+      <EsportsRankings />
       <RankingsSection />
       <CommunitySection />
       <ServicesPage />
