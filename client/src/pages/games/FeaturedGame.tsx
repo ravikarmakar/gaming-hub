@@ -143,7 +143,7 @@ const GameStore: React.FC = () => {
           }}
         >
           <motion.h1 className="text-4xl sm:text-4xl md:text-5xl font-bold mb-2 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-red-500 via-purple-500 to-pink-600">
-            Featured Games
+            Favourite Games
           </motion.h1>
           <motion.p
             className="text-gray-300 max-w-2xl mx-auto text-sm sm:text-base"

@@ -96,7 +96,6 @@ const TrendingEvents = ({ className = "", events }: TrendingEventsProps) => {
         {/* Gaming-themed accent lines */}
         <div className="absolute inset-0">
           <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
-          <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
           <div className="absolute -left-40 top-0 w-[500px] h-[500px] bg-violet-500/10 rounded-full blur-3xl" />
           <div className="absolute -right-40 bottom-0 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-3xl" />
         </div>
