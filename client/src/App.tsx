@@ -105,7 +105,7 @@ export default function App() {
                   element={<SuperAdminDashboard />}
                 />
 
-                <Route path={"/*"} element={<NotFound />} />
+                <Route path={ROUTES.NOTFOUND} element={<NotFound />} />
               </Routes>
             </Suspense>
             <Toaster />

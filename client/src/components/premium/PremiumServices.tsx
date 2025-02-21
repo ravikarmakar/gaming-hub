@@ -72,7 +72,7 @@ const premiumPlans = [
 
 const PremiumServices = () => {
   return (
-    <section className="relative py-20 overflow-hidden">
+    <section className="relative py-40 overflow-hidden">
       {/* Background Effects */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f1d] via-[#150b2e] to-[#0a0f1d]" />
       <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-30" />

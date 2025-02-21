@@ -67,9 +67,11 @@ const NavbarContent = () => {
     <header className="relative z-50">
       <nav
         className={`
-          fixed w-full top-0 left-0 right-0 h-16 bg-[#0a0a0a]/95
-          border-b border-purple-900/30 backdrop-blur-md shadow-lg z-50
+          fixed w-full top-0 left-0 right-0 h-16 bg-black/30
+          border-b border-purple-500/20 backdrop-blur-lg shadow-lg z-50
           transition-all duration-300
+          before:absolute before:inset-0 before:bg-gradient-to-r before:from-purple-900/10 before:via-transparent before:to-purple-900/10
+          before:pointer-events-none before:-z-10
         `}
         role="navigation"
         aria-label="Main Navigation"

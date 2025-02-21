@@ -16,6 +16,7 @@ export const ROUTES = {
   MAXADMIN: "/admin/super",
   NOTIFICATION: "/notifications",
   PLAYER: "/players",
+  NOTFOUND: "/*",
 };
 
 // Nav Links

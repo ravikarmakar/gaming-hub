@@ -102,7 +102,7 @@ const ProfileHeader = ({ user }: ProfileHeaderProps) => {
   };
 
   return (
-    <div className="relative w-full overflow-hidden py-10">
+    <div className="relative w-full overflow-hidden mt-[64px]">
       {/* Animated Background Gradients */}
       <motion.div
         initial={{ opacity: 0, scale: 1.1 }}
@@ -116,7 +116,7 @@ const ProfileHeader = ({ user }: ProfileHeaderProps) => {
 
       {/* Cover Image */}
       <motion.div
-        className="relative w-full h-[32vh] md:h-[50vh]"
+        className="relative w-full h-[32vh] md:h-[50vh] -mt-[64px]"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}

@@ -270,89 +270,91 @@ const ProfilePage: React.FC = () => {
   if (!selectedUser) return <p>Loading user data...</p>;
 
   return (
-    <section className="relative min-h-screen bg-[#0A0A1F]">
+    <section className="relative w-full bg-[#0A0A1F]">
       {/* Animated Background Gradients */}
       <motion.div
         initial={{ opacity: 0, scale: 1.1 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 1 }}
-        className="absolute inset-0"
+        className="absolute inset-0 pointer-events-none"
       >
         <div className="absolute top-0 left-[-10%] w-[40%] h-[40%] bg-blue-600/20 blur-[120px] rounded-full animate-pulse" />
         <div className="absolute top-[20%] right-[-5%] w-[35%] h-[35%] bg-purple-600/20 blur-[120px] rounded-full animate-pulse delay-1000" />
       </motion.div>
 
-      {/* Profile Header (Previous Implementation) */}
-      <ProfileHeader user={selectedUser} />
+      <div className="relative w-full">
+        {/* Profile Header */}
+        <ProfileHeader user={selectedUser} />
 
-      {/* Quick Views */}
-      <QuickView />
+        {/* Quick Views */}
+        <QuickView />
 
-      {/* Navigation Tabs */}
-      <motion.nav
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="sticky top-0 z-30 bg-[#0A0A1F]/80 backdrop-blur-lg border-b border-white/10"
-      >
-        <div className="max-w-7xl mx-auto px-4 md:px-8">
-          <div className="flex overflow-x-auto hide-scrollbar">
-            <TabButton
-              active={activeTab === "overview"}
-              onClick={() => setActiveTab("overview")}
-            >
-              Overview
-            </TabButton>
-            <TabButton
-              active={activeTab === "statistics"}
-              onClick={() => setActiveTab("statistics")}
-            >
-              Statistics
-            </TabButton>
-            <TabButton
-              active={activeTab === "loadout"}
-              onClick={() => setActiveTab("loadout")}
-            >
-              Loadout
-            </TabButton>
-            <TabButton
-              active={activeTab === "achievements"}
-              onClick={() => setActiveTab("achievements")}
-            >
-              Achievements
-            </TabButton>
-            <TabButton
-              active={activeTab === "tournaments"}
-              onClick={() => setActiveTab("tournaments")}
-            >
-              Tournaments
-            </TabButton>
+        {/* Navigation Tabs */}
+        <motion.nav
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="sticky top-[64px] z-40 bg-[#0A0A1F]/80 backdrop-blur-lg border-b border-white/10 w-full"
+        >
+          <div className="max-w-7xl mx-auto px-4 md:px-8">
+            <div className="flex gap-4 overflow-x-auto scrollbar-none">
+              <TabButton
+                active={activeTab === "overview"}
+                onClick={() => setActiveTab("overview")}
+              >
+                Overview
+              </TabButton>
+              <TabButton
+                active={activeTab === "statistics"}
+                onClick={() => setActiveTab("statistics")}
+              >
+                Statistics
+              </TabButton>
+              <TabButton
+                active={activeTab === "loadout"}
+                onClick={() => setActiveTab("loadout")}
+              >
+                Loadout
+              </TabButton>
+              <TabButton
+                active={activeTab === "achievements"}
+                onClick={() => setActiveTab("achievements")}
+              >
+                Achievements
+              </TabButton>
+              <TabButton
+                active={activeTab === "tournaments"}
+                onClick={() => setActiveTab("tournaments")}
+              >
+                Tournaments
+              </TabButton>
+            </div>
           </div>
+        </motion.nav>
+
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
+          <AnimatedSection show={activeTab === "overview"}>
+            <Overview playerData={playerData} />
+          </AnimatedSection>
+
+          <AnimatedSection show={activeTab === "statistics"}>
+            <Statistics playerData={playerData} />
+          </AnimatedSection>
+
+          <AnimatedSection show={activeTab === "loadout"}>
+            <Loadout playerData={playerData} />
+          </AnimatedSection>
+
+          <AnimatedSection show={activeTab === "achievements"}>
+            <Achievements playerData={playerData} />
+          </AnimatedSection>
+
+          <AnimatedSection show={activeTab === "tournaments"}>
+            <Tournaments playerData={playerData} />
+          </AnimatedSection>
         </div>
-      </motion.nav>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 md:px-8 py-8">
-        <AnimatedSection show={activeTab === "overview"}>
-          <Overview playerData={playerData} />
-        </AnimatedSection>
-
-        <AnimatedSection show={activeTab === "statistics"}>
-          <Statistics playerData={playerData} />
-        </AnimatedSection>
-
-        <AnimatedSection show={activeTab === "loadout"}>
-          <Loadout playerData={playerData} />
-        </AnimatedSection>
-
-        <AnimatedSection show={activeTab === "achievements"}>
-          <Achievements playerData={playerData} />
-        </AnimatedSection>
-
-        <AnimatedSection show={activeTab === "tournaments"}>
-          <Tournaments playerData={playerData} />
-        </AnimatedSection>
-      </main>
+      </div>
     </section>
   );
 };
