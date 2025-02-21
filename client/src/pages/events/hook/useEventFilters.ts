@@ -4,10 +4,10 @@ import { eventData } from "@/lib/constants";
 export function useEventFilters() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
-    eventType: "all", // Options: 'all', 'new', 'last-month'
-    startDate: "", // Filter by start date
-    endDate: "", // Filter by end date
-    minPrize: "", // Minimum prize pool filter (as string)
+    eventType: "all",
+    startDate: "",
+    endDate: "",
+    minPrize: "",
   });
 
   const filteredEvents = useMemo(() => {

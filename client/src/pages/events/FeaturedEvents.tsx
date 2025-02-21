@@ -2,8 +2,9 @@ import { motion } from "framer-motion";
 import { useLocation, Link } from "react-router-dom";
 import { eventData } from "@/lib/constants";
 import EventGrid from "./components/EventGrid";
-import { memo, lazy, Suspense } from "react";
+import { memo, lazy, Suspense, useState, useEffect } from "react";
 import { ErrorBoundary } from "react-error-boundary";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 // Types
 interface FeaturedEventsProps {
@@ -22,6 +23,27 @@ const FeaturedEvents: React.FC<FeaturedEventsProps> = memo(
   ({ className = "" }) => {
     const location = useLocation();
     const isRoot = location.pathname === "/";
+    const [currentSlide, setCurrentSlide] = useState(0);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+      const handleResize = () => {
+        setIsMobile(window.innerWidth < 768);
+      };
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    const featuredEvents = eventData.slice(0, 6);
+    const mobileSlides = Math.ceil(featuredEvents.length / 2);
+
+    const nextSlide = () => {
+      setCurrentSlide((prev) => (prev + 1) % mobileSlides);
+    };
+
+    const prevSlide = () => {
+      setCurrentSlide((prev) => (prev - 1 + mobileSlides) % mobileSlides);
+    };
 
     return (
       <ErrorBoundary
@@ -32,18 +54,29 @@ const FeaturedEvents: React.FC<FeaturedEventsProps> = memo(
           className={`py-12 sm:py-16 md:py-20 bg-black relative overflow-hidden ${className}`}
           aria-label="Featured Events Section"
         >
-          {/* Animated background gradient - with reduced opacity for better contrast */}
-          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-purple-500/5 to-transparent blur-3xl" />
+          {/* Animated gaming-themed background */}
+          <div className="absolute inset-0">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_#2563eb_0%,_transparent_50%)] opacity-20" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,_#7c3aed_0%,_transparent_50%)] opacity-20" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,_#0891b2_0%,_transparent_50%)] opacity-20" />
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-purple-500/10 to-blue-500/10"
+              animate={{
+                backgroundPosition: ["0% 0%", "100% 100%"],
+              }}
+              transition={{
+                duration: 20,
+                repeat: Infinity,
+                repeatType: "reverse",
+              }}
+            />
+          </div>
 
-          {/* Optimized gradients with better performance */}
-          <div className="absolute top-0 left-0 right-0 h-16 sm:h-24 lg:h-32 bg-gradient-to-b from-black to-transparent pointer-events-none" />
-          <div className="absolute bottom-0 left-0 right-0 h-16 sm:h-24 lg:h-32 bg-gradient-to-t from-black to-transparent pointer-events-none" />
-
-          {/* Main COntainer */}
-          <div className="container max-w-[1400px] mx-auto px-4  sm:px-6 relative">
+          {/* Content Container */}
+          <div className="container max-w-[1400px] mx-auto px-4 sm:px-6 relative">
             {isRoot && (
               <motion.div
-                className="text-center mb-16 mx-10"
+                className="text-center mb-16"
                 initial={{ y: 60, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{
@@ -51,12 +84,12 @@ const FeaturedEvents: React.FC<FeaturedEventsProps> = memo(
                   ease: [0.6, -0.05, 0.01, 0.99],
                 }}
               >
-                <h1 className="text-4xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold mb-4 tracking-tight">
-                  Latest Events
+                <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-cyan-400 via-purple-400 to-blue-400 text-transparent bg-clip-text">
+                  Featured Events
                 </h1>
-                <p className="text-gray-400 max-w-2xl mx-auto text-sm sm:text-base">
-                  Join the most exciting events and create unforgettable
-                  memories with your friends!
+                <p className="text-gray-400 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
+                  Join the most epic gaming tournaments and create legendary
+                  moments with fellow gamers!
                 </p>
               </motion.div>
             )}
@@ -64,16 +97,40 @@ const FeaturedEvents: React.FC<FeaturedEventsProps> = memo(
             <Suspense
               fallback={
                 <div className="min-h-[400px] flex items-center justify-center">
-                  Loading events...
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500"></div>
                 </div>
               }
             >
-              <EventGrid events={eventData} />
+              <div className="relative">
+                {isMobile && featuredEvents.length > 2 && (
+                  <>
+                    <button
+                      onClick={prevSlide}
+                      className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 z-10 p-2 rounded-full bg-gray-900/80 text-white hover:bg-gray-800 transition-colors"
+                      aria-label="Previous slide"
+                    >
+                      <ChevronLeft size={24} />
+                    </button>
+                    <button
+                      onClick={nextSlide}
+                      className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 z-10 p-2 rounded-full bg-gray-900/80 text-white hover:bg-gray-800 transition-colors"
+                      aria-label="Next slide"
+                    >
+                      <ChevronRight size={24} />
+                    </button>
+                  </>
+                )}
+                <EventGrid
+                  events={featuredEvents}
+                  currentSlide={currentSlide}
+                  isMobile={isMobile}
+                />
+              </div>
             </Suspense>
 
             {isRoot && (
               <motion.div
-                className="mt-8 sm:mt-12 text-center"
+                className="mt-12 sm:mt-16 text-center"
                 variants={itemVariants}
                 initial="hidden"
                 whileInView="visible"
@@ -81,16 +138,23 @@ const FeaturedEvents: React.FC<FeaturedEventsProps> = memo(
               >
                 <Link
                   to="/events"
-                  className="inline-block"
+                  className="inline-block group"
                   aria-label="View all events"
                 >
-                  <button
-                    className="px-6 sm:px-8 py-2.5 sm:py-3 rounded-full bg-gradient-to-r from-cyan-600/95 to-purple-600/75 text-white font-semibold 
-                    hover:from-cyan-600 hover:to-purple-600 transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 
-                    focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-black"
+                  <motion.button
+                    className="px-8 py-4 rounded-xl bg-gradient-to-r from-cyan-600 via-purple-600 to-blue-600 text-white font-bold 
+                    relative overflow-hidden shadow-lg hover:shadow-cyan-500/25 transition-shadow duration-300"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    View All Events
-                  </button>
+                    <span className="relative z-10">Explore All Events</span>
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-purple-400 to-blue-400"
+                      initial={{ x: "100%" }}
+                      whileHover={{ x: "0%" }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </motion.button>
                 </Link>
               </motion.div>
             )}
@@ -100,7 +164,5 @@ const FeaturedEvents: React.FC<FeaturedEventsProps> = memo(
     );
   }
 );
-
-FeaturedEvents.displayName = "FeaturedEvents";
 
 export default FeaturedEvents;

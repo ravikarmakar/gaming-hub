@@ -1,32 +1,24 @@
-import FeaturedEvents from "../events/FeaturedEvents";
 import GameStore from "../games/FeaturedGame";
-// import HeroSection from "./Hero";
 import HeroSection from "./HeroSection";
-import AboutSection from "../../components/AboutSection";
-import RankingsSection from "../team/player/ranking/RankingsSection";
-
-// temp
-
-import { TournamentsSection } from "@/components/tournaments-section";
-import { ContactSection } from "@/components/contact-section";
-
 import ServicesPage from "../service/Service";
 import CommunitySection from "../community/CommunitySection";
 import WhatsNew from "./WhatsNew";
+import FeaturedEvents from "../events/FeaturedEvents";
+import RankingsSection from "../team/player/ranking/RankingsSection";
+import TrendingEvents from "../events/trending/TrendingEvents";
+import { eventData } from "@/lib/constants";
 
 const Home = () => {
   return (
     <>
       <HeroSection />
       <WhatsNew />
-      <GameStore />
       <FeaturedEvents />
+      <TrendingEvents events={eventData} />
+      <GameStore />
       <RankingsSection />
       <CommunitySection />
       <ServicesPage />
-      <AboutSection />
-      <TournamentsSection />
-      <ContactSection />
     </>
   );
 };

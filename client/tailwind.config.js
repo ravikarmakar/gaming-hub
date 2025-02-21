@@ -9,6 +9,10 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        orbitron: ['Orbitron', 'sans-serif'],
+        poppins: ['Poppins', 'sans-serif'],
+      },
       borderRadius: {
         lg: "var(--radius, 0.5rem)", // Fallback to 0.5rem if --radius is not defined
         md: "calc(var(--radius, 0.5rem) - 2px)", // Adjust with fallback
