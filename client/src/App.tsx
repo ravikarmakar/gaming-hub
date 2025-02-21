@@ -19,6 +19,7 @@ import SuperAdminDashboard from "./pages/admin/SuperAdmin";
 // import FindPlayers from "./pages/team/player/FindPlayers";
 import AllPlayers from "./pages/user/all-players/AllPlayers";
 import MainLayout from "./components/MainLayout";
+import NotFound from "./components/NotFound";
 
 // Lazy-loaded components
 const Home = lazy(() => import("./pages/home/Home"));
@@ -103,6 +104,8 @@ export default function App() {
                   path={ROUTES.MAXADMIN}
                   element={<SuperAdminDashboard />}
                 />
+
+                <Route path={"/*"} element={<NotFound />} />
               </Routes>
             </Suspense>
             <Toaster />

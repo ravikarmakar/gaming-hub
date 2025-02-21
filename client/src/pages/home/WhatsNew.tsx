@@ -9,21 +9,21 @@ const WhatsNew: React.FC = () => {
   // Custom button styles for each feature
   const buttonStyles = {
     players: {
-      background: "bg-gradient-to-r from-violet-600 to-fuchsia-600",
+      background: "bg-gradient-to-r from-violet-600/80 to-fuchsia-600",
       hover: "hover:from-fuchsia-600 hover:to-violet-600",
       shadow: "shadow-violet-500/25",
       icon: "→",
     },
     tournaments: {
-      background: "bg-gradient-to-r from-cyan-500 to-blue-600",
+      background: "bg-gradient-to-r from-cyan-500/80 to-blue-600",
       hover: "hover:from-blue-600 hover:to-cyan-500",
       shadow: "shadow-cyan-500/25",
       icon: "↗",
     },
     team: {
-      background: "bg-gradient-to-r from-emerald-500 to-teal-600",
+      background: "bg-gradient-to-r from-emerald-500/80 to-teal-600",
       hover: "hover:from-teal-600 hover:to-emerald-500",
-      shadow: "shadow-emerald-500/25",
+      shadow: "shadow-emerald-500/20",
       icon: "⚡",
     },
   };
