@@ -8,6 +8,9 @@ export interface Event {
   participants: number;
   prizePool: string;
   trending?: boolean;
+  game: string;
+  host: string;
+  mode: 'online' | 'offline';
 }
 
 export interface EventsResponse {

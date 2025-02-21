@@ -1,11 +1,6 @@
-import {
-  motion,
-  AnimatePresence,
-  useScroll,
-  useTransform,
-} from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
-import { ChevronLeft, ChevronRight, TrendingUp, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Event } from "@/types/event";
 import { cn } from "@/lib/utils";
 import TrendingEventCard from "./TrendingEventCard";
@@ -21,15 +16,6 @@ const TrendingEvents = ({ className = "", events }: TrendingEventsProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // Parallax scroll effects
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start end", "end start"],
-  });
-
-  const y = useTransform(scrollYProgress, [0, 1], [100, -100]);
-  const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -88,62 +74,57 @@ const TrendingEvents = ({ className = "", events }: TrendingEventsProps) => {
         events[(currentIndex + 2) % events.length],
       ];
 
+  const totalDots = isMobile ? events.length : Math.ceil(events.length / 3);
+
+  const handleDotClick = (idx: number) => {
+    const newIndex = isMobile ? idx : idx * 3;
+    const newDirection = newIndex > currentIndex ? 1 : -1;
+    setDirection(newDirection);
+    setCurrentIndex(newIndex);
+  };
+
   return (
     <section
       ref={containerRef}
       className={cn("relative py-24 overflow-hidden", className)}
     >
       {/* Dynamic background */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,#1a0b2e,#2d1b4e)]">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
-        <motion.div
-          className="absolute inset-0"
+      <div className="absolute inset-0 bg-[#030304]">
+        {/* Noise texture */}
+        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-5" />
+
+        {/* Gaming-themed accent lines */}
+        <div className="absolute inset-0">
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
+          <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
+          <div className="absolute -left-40 top-0 w-[500px] h-[500px] bg-violet-500/10 rounded-full blur-3xl" />
+          <div className="absolute -right-40 bottom-0 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-3xl" />
+        </div>
+
+        {/* Animated grid */}
+        <div
+          className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.02]"
           style={{
-            background:
-              "radial-gradient(circle at 50% 50%, rgba(124, 58, 237, 0.1) 0%, transparent 50%)",
-            y,
-          }}
-        />
-        <motion.div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.1) 0%, transparent 50%)",
-            y: useTransform(y, (value) => value * -1),
+            maskImage: "radial-gradient(circle at 50% 50%, black, transparent)",
+            WebkitMaskImage:
+              "radial-gradient(circle at 50% 50%, black, transparent)",
           }}
         />
       </div>
 
-      <motion.div
-        style={{ opacity }}
-        className="container max-w-7xl mx-auto px-4 relative"
-      >
+      <motion.div className="container max-w-7xl mx-auto px-4 relative">
         {/* Header section */}
-        <div className="flex flex-col md:flex-row items-center justify-between mb-16 gap-8">
-          <motion.div
-            initial={{ x: -50, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="flex items-center gap-4"
-          >
-            <div className="relative">
-              <div className="absolute inset-0 blur-xl bg-violet-500/30 rounded-full" />
-              <div className="relative bg-gradient-to-br from-violet-600 to-fuchsia-600 p-3 rounded-full">
-                <TrendingUp className="w-8 h-8 text-white" />
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Sparkles className="w-4 h-4 text-violet-400" />
-                <span className="text-violet-400 font-medium">
-                  Hot & Trending
-                </span>
-              </div>
-              <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-violet-200 via-fuchsia-200 to-pink-200 bg-clip-text text-transparent">
-                Featured Events
-              </h2>
-            </div>
+        <div className="flex flex-col items-center justify-center mb-16 gap-4 text-center">
+          <motion.div className="relative">
+            <div className="absolute inset-0 blur-xl bg-violet-500/20 rounded-full" />
+            <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-violet-200 via-fuchsia-200 to-pink-200 bg-clip-text text-transparent">
+              Trending Events
+            </h2>
           </motion.div>
+          <p className="text-gray-400 max-w-2xl mx-auto">
+            Discover the hottest gaming tournaments and events happening right
+            now
+          </p>
         </div>
 
         {/* Events carousel */}
@@ -194,56 +175,39 @@ const TrendingEvents = ({ className = "", events }: TrendingEventsProps) => {
               {/* Arrow Navigation */}
               <div className="flex items-center gap-4">
                 <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
                   onClick={() => navigate(-1)}
-                  className="p-3 rounded-full bg-gray-800/50 hover:bg-gray-700/50 transition-colors border border-gray-700/50 backdrop-blur-sm group"
+                  className="p-3 rounded-full bg-gray-800/50 border border-gray-700/50 backdrop-blur-sm group"
                 >
-                  <ChevronLeft className="w-6 h-6 text-gray-300 group-hover:text-violet-400 transition-colors" />
+                  <ChevronLeft className="w-6 h-6 text-gray-300 group" />
                 </motion.button>
 
                 <div className="flex items-center gap-3 justify-center w-full">
-                  {events.map((_, idx) => (
-                    <motion.button
+                  {Array.from({ length: totalDots }, (_, idx) => (
+                    <button
                       key={idx}
-                      onClick={() => {
-                        const newDirection = idx > currentIndex ? 1 : -1;
-                        setDirection(newDirection);
-                        setCurrentIndex(idx);
-                      }}
-                      className="relative group"
+                      onClick={() => handleDotClick(idx)}
+                      className="relative py-4 px-2"
                     >
-                      <motion.div
+                      <div
                         className={cn(
-                          "w-2 h-2 rounded-full transition-all duration-300",
-                          currentIndex === idx
-                            ? "bg-violet-400"
-                            : "bg-gray-600 hover:bg-gray-500"
+                          "w-3 h-3 rounded-full transition-all duration-300 ease-in-out",
+                          (
+                            isMobile
+                              ? currentIndex === idx
+                              : Math.floor(currentIndex / 3) === idx
+                          )
+                            ? "bg-violet-400 scale-110"
+                            : "bg-gray-600/50 hover:bg-gray-500/50"
                         )}
-                        whileHover={{ scale: 1.2 }}
-                        whileTap={{ scale: 0.9 }}
-                        animate={
-                          currentIndex === idx ? { scale: [1, 1.2, 1] } : {}
-                        }
-                        transition={{ repeat: Infinity, duration: 2 }}
                       />
-                      {currentIndex === idx && (
-                        <motion.div
-                          className="absolute -inset-2 rounded-full bg-violet-400/20"
-                          layoutId="activeDot"
-                          transition={{ type: "spring", bounce: 0.2 }}
-                        />
-                      )}
-                    </motion.button>
+                    </button>
                   ))}
                 </div>
                 <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
                   onClick={() => navigate(1)}
-                  className="p-3 rounded-full bg-gray-800/50 hover:bg-gray-700/50 transition-colors border border-gray-700/50 backdrop-blur-sm group"
+                  className="p-3 rounded-full bg-gray-800/50 border border-gray-700/50 backdrop-blur-sm group"
                 >
-                  <ChevronRight className="w-6 h-6 text-gray-300 group-hover:text-violet-400 transition-colors" />
+                  <ChevronRight className="w-6 h-6 text-gray-300 group" />
                 </motion.button>
               </div>
             </div>

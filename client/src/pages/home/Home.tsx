@@ -13,9 +13,9 @@ const Home = () => {
     <>
       <HeroSection />
       <WhatsNew />
-      <FeaturedEvents />
       <TrendingEvents events={eventData} />
       <GameStore />
+      <FeaturedEvents />
       <RankingsSection />
       <CommunitySection />
       <ServicesPage />
