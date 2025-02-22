@@ -4,6 +4,7 @@ dotenv.config();
 import express, { json } from "express";
 import cookieParese from "cookie-parser";
 import cors from "cors";
+import morgan from "morgan";
 
 import connectDB from "./config/db.js";
 
@@ -29,6 +30,7 @@ app.use(
   })
 );
 
+app.use(morgan("combined"));
 app.use(cookieParese());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

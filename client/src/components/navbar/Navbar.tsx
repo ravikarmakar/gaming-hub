@@ -21,7 +21,7 @@ const iconVariants = {
 const NavbarContent = () => {
   const location = useLocation();
   const { scrollY } = useScroll();
-  const { user, checkingAuth } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const { activeMenu, setActiveMenu, closeAllMenus } = useMenu();
 
   const isMobileMenuOpen = activeMenu === "mobile";
@@ -113,11 +113,7 @@ const NavbarContent = () => {
 
             {/* Profile Section */}
             <div className="flex items-center gap-4">
-              {checkingAuth ? null : user ? (
-                <ProfileAvatar />
-              ) : (
-                <UnknowProfile />
-              )}
+              {isAuthenticated ? <ProfileAvatar /> : <UnknowProfile />}
             </div>
           </div>
         </div>

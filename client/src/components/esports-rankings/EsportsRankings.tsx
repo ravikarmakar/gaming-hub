@@ -29,7 +29,7 @@ const mockData: RankingItem[] = [
   },
   {
     rank: 3,
-    name: "FaZe Clan",
+    name: "FaZe Clanxxx",
     score: 9500,
     image:
       "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8bWVufGVufDB8fDB8fHww",
@@ -37,16 +37,16 @@ const mockData: RankingItem[] = [
   },
   {
     rank: 4,
-    name: "FaZe Clan",
+    name: "FaZe Clannn",
     score: 9500,
     image:
       "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8bWVufGVufDB8fDB8fHww",
-    category: "Organization",
+    category: "Player",
   },
 
   {
-    rank: 5,
-    name: "FaZe Clan",
+    rank: 8,
+    name: "FaZe Cla",
     score: 9500,
     image:
       "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8bWVufGVufDB8fDB8fHww",

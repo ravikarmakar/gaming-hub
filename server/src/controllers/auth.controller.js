@@ -1,5 +1,6 @@
 import User from "../models/user.model.js";
 import generateTokenAndSetCookie from "../utils/tokenGenerator.js";
+import jwt from "jsonwebtoken";
 
 export const registerUser = async (req, res) => {
   try {
@@ -37,8 +38,8 @@ export const registerUser = async (req, res) => {
       role: "user",
     });
 
-    generateTokenAndSetCookie(newUser._id, res);
     await newUser.save();
+    const token = generateTokenAndSetCookie(newUser._id, res);
 
     res.status(201).json({
       user: {
@@ -46,6 +47,7 @@ export const registerUser = async (req, res) => {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
+        token,
       },
     });
   } catch (error) {
@@ -69,12 +71,14 @@ export const loginUser = async (req, res) => {
 
     // Check if user exists and the password matches
     if (user && (await user.matchPassword(password))) {
-      generateTokenAndSetCookie(user._id, res);
+      const token = generateTokenAndSetCookie(user._id, res);
+
       res.status(200).json({
         _id: user._id,
         email: user.email,
         name: user.name,
         role: user.role,
+        token,
       });
     } else {
       res.status(401).json({ message: "Invalid email or password." });
@@ -104,20 +108,19 @@ export const logoutUser = (req, res) => {
 };
 
 export const getUserProfile = async (req, res) => {
+  const token = req.headers.authorization?.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ message: "No token provided" });
+  }
+
   try {
-    const userId = req.user._id;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Fetch user details while excluding the password field
-    const user = await User.findById(userId).select("-password");
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.status(200).json(user);
+    res.json({ valid: true, user: decoded });
   } catch (error) {
-    console.error(`Error in userProfile: ${error.message}`);
-    res.status(500).json({ message: "Server error" });
+    console.error("JWT Verification Error:", error);
+    res.status(401).json({ message: "Invalid token" });
   }
 };
 

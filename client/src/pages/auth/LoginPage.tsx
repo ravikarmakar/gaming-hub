@@ -48,7 +48,10 @@ export const LoginPage: React.FC = () => {
 
     try {
       await logIn(formData);
-      // Save email if "Remember Me" is checked
+
+      const storedToken = localStorage.getItem("gamingHubToken");
+      if (!storedToken) throw new Error("Token not found after login");
+
       if (rememberMe) {
         localStorage.setItem("rememberMeEmail", formData.email);
       } else {
@@ -92,8 +95,8 @@ export const LoginPage: React.FC = () => {
               <p className="text-red-500 text-sm text-center">{error}</p>
             </motion.div>
           )}
-          
-          <motion.div 
+
+          <motion.div
             className="space-y-4"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -121,7 +124,7 @@ export const LoginPage: React.FC = () => {
             />
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -145,13 +148,17 @@ export const LoginPage: React.FC = () => {
             </a>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="pt-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            <AuthButton type="submit" isLoading={isLoading} onClick={handleSubmit}>
+            <AuthButton
+              type="submit"
+              isLoading={isLoading}
+              onClick={handleSubmit}
+            >
               Login to GameVerse
             </AuthButton>
           </motion.div>
@@ -168,7 +175,7 @@ export const LoginPage: React.FC = () => {
             />
           </motion.div>
 
-          <motion.p 
+          <motion.p
             className="text-center text-gray-400 text-sm sm:text-base pt-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

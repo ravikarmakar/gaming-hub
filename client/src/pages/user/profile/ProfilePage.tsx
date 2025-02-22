@@ -5,6 +5,7 @@ import ProfileHeader from "./elements/ProfileHeader";
 import QuickView from "./elements/QuickView";
 import { useParams } from "react-router-dom";
 import useUserStore from "@/store/useUserStore";
+import { useAuthStore } from "@/store/useAuthStore";
 
 // Extended player data
 interface PlayerData {
@@ -261,13 +262,14 @@ const ProfilePage: React.FC = () => {
   const { getOneUser, selectedUser } = useUserStore();
   const [activeTab, setActiveTab] = useState("overview");
 
-  useEffect(() => {
-    if (id) {
-      getOneUser(id);
-    }
-  }, [id, getOneUser]);
+  const { user } = useAuthStore();
 
-  if (!selectedUser) return <p>Loading user data...</p>;
+  if (!user)
+    return (
+      <p className="h-screen flex justify-center items-center">
+        Loading user data...
+      </p>
+    );
 
   return (
     <section className="relative w-full bg-[#0A0A1F]">
@@ -284,7 +286,7 @@ const ProfilePage: React.FC = () => {
 
       <div className="relative w-full">
         {/* Profile Header */}
-        <ProfileHeader user={selectedUser} />
+        <ProfileHeader user={user} />
 
         {/* Quick Views */}
         <QuickView />

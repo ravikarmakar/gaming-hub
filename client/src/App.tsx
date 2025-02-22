@@ -1,4 +1,5 @@
-import { useEffect, Suspense, lazy, useCallback } from "react";
+/* eslint-disable react-hooks/exhaustive-deps */
+import { useEffect, Suspense, useState, lazy } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Routes, Route } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
@@ -9,9 +10,6 @@ import { Toaster } from "react-hot-toast";
 import LoadingSpinner from "./components/LoadingSpinner";
 import FreeEvents from "./pages/events/free-tournaments/FreeEvents";
 
-// AuthRoutes
-// import { ProtectedRoute } from "./providers/AuthProvider";
-import { useAuthStore } from "./store/useAuthStore";
 // import TournamentOrgProfile from "./pages/user/tournament-org-profile/TournamentOrgProfile";
 import ScrimsPage from "./pages/events/scrims/ScrimsPage";
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -20,6 +18,8 @@ import SuperAdminDashboard from "./pages/admin/SuperAdmin";
 import AllPlayers from "./pages/user/all-players/AllPlayers";
 import MainLayout from "./components/MainLayout";
 import NotFound from "./components/NotFound";
+import { useAuthStore } from "./store/useAuthStore";
+import ProtectedRoute from "./providers/AuthProvider";
 
 // Lazy-loaded components
 const Home = lazy(() => import("./pages/home/Home"));
@@ -46,21 +46,25 @@ function ErrorFallback({ error }: { error: unknown }) {
   );
 }
 
-export default function App() {
-  const { checkAuth, checkingAuth } = useAuthStore();
-
-  const memoizedCheckAuth = useCallback(() => {
-    checkAuth();
-  }, [checkAuth]);
+const App = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { checkAuth } = useAuthStore();
 
   useEffect(() => {
-    memoizedCheckAuth();
-  }, [memoizedCheckAuth]);
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+  }, []);
 
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
       <AnimatePresence mode="wait">
-        {checkingAuth ? (
+        {isLoading ? (
           <LoadingSpinner />
         ) : (
           <motion.div
@@ -75,7 +79,14 @@ export default function App() {
               <Routes>
                 <Route element={<MainLayout />}>
                   <Route path={ROUTES.HOME} element={<Home />} />
-                  <Route path={"/profile/:id"} element={<ProfilePage />} />
+                  <Route
+                    path={ROUTES.PROFILE}
+                    element={
+                      <ProtectedRoute>
+                        <ProfilePage />{" "}
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route path={ROUTES.TEAMPROFILE} element={<TeamProfile />} />
                   <Route
                     path={ROUTES.FREE_TOURNAMENTS}
@@ -114,4 +125,6 @@ export default function App() {
       </AnimatePresence>
     </ErrorBoundary>
   );
-}
+};
+
+export default App;

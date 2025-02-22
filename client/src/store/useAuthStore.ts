@@ -5,22 +5,26 @@ import { formDataType } from "@/pages/auth/LoginPage";
 import { axiosInstance } from "@/lib/axios";
 import { AxiosError } from "axios";
 import toast from "react-hot-toast";
+import { jwtDecode } from "jwt-decode";
 
 interface AuthStoreState {
   user: User | null;
+  token: string | null;
   isLoading: boolean;
   error: string | null;
-  checkingAuth: boolean;
+  isAuthenticated: boolean;
   checkAuth: () => Promise<void>;
   register: (userData: FormDataType) => Promise<void>;
   logIn: (userData: formDataType) => Promise<void>;
   logOut: () => Promise<void>;
+  setToken: (token: string) => void;
 }
 
 export const useAuthStore = create<AuthStoreState>((set) => ({
   user: null,
+  token: null,
   isLoading: false,
-  checkingAuth: false,
+  isAuthenticated: false,
   error: null,
 
   register: async (formData: formDataType) => {
@@ -30,7 +34,6 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
       const response = await axiosInstance.post("/auth/register", formData, {
         headers: { "Content-Type": "application/json" },
       });
-      set({ user: response.data });
 
       if (response.status === 201) {
         toast.success("Registration successful!");
@@ -53,10 +56,20 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
         headers: { "Content-Type": "application/json" },
         withCredentials: true,
       });
-      set({ user: response.data });
-      if (response.status === 200) {
-        toast.success("Login successful!");
-      }
+
+      const { token, ...user } = response.data;
+
+      if (!token) throw new Error("Token not received from server");
+
+      localStorage.setItem("gamingHubToken", token);
+
+      axiosInstance.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${token}`;
+
+      set({ user, token, isAuthenticated: true });
+
+      toast.success("Login successful!");
     } catch (error) {
       if (error instanceof AxiosError) {
         set({ error: error.response?.data.message });
@@ -70,7 +83,14 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
   logOut: async () => {
     try {
       await axiosInstance.post("/auth/logout");
-      set({ user: null });
+
+      localStorage.removeItem("gamingHubToken");
+
+      delete axiosInstance.defaults.headers.common["Authorization"];
+
+      set({ user: null, token: null, isAuthenticated: false });
+
+      toast.success("Logged out successfully!");
     } catch (error) {
       if (error instanceof AxiosError) {
         set({ error: error.response?.data.message });
@@ -80,24 +100,52 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
   },
 
   checkAuth: async () => {
-    set({ checkingAuth: true });
+    const token = localStorage.getItem("gamingHubToken");
+    if (!token) {
+      set({ token: null, user: null, isAuthenticated: false });
+      return;
+    }
+
     try {
       const response = await axiosInstance.get("/auth/profile", {
-        withCredentials: true,
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (response?.data) {
-        set({ user: response.data });
+
+      if (response.data.valid) {
+        set({ token, user: response.data.user, isAuthenticated: true });
+
+        axiosInstance.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${token}`;
       } else {
-        set({ user: null });
+        throw new Error("Invalid token");
       }
     } catch (error) {
-      if (error instanceof AxiosError) {
-        set({ error: error.response?.data.message });
-      } else {
-        console.error("Unknown error:", error);
-      }
-    } finally {
-      set({ checkingAuth: false });
+      console.error("Auth check failed:", error);
+      localStorage.removeItem("gamingHubToken");
+      delete axiosInstance.defaults.headers.common["Authorization"];
+      set({ token: null, user: null, isAuthenticated: false });
+    }
+  },
+
+  setToken: (token: string) => {
+    try {
+      const decoded = jwtDecode<User>(token);
+
+      // ✅ Token ko localStorage me save karo
+      localStorage.setItem("gamingHubToken", token);
+
+      // ✅ Authorization header set karo
+      axiosInstance.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${token}`;
+
+      set({ user: decoded, token, isAuthenticated: true });
+    } catch (error) {
+      console.error("Invalid token:", error);
+      localStorage.removeItem("gamingHubToken");
+      delete axiosInstance.defaults.headers.common["Authorization"];
+      set({ user: null, token: null, isAuthenticated: false });
     }
   },
 }));
