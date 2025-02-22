@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from "react";
 import { Trophy, Target, Shield, Crown, Medal, Flame } from "lucide-react";
 import { motion } from "framer-motion";
@@ -5,7 +6,6 @@ import ProfileHeader from "./elements/ProfileHeader";
 import QuickView from "./elements/QuickView";
 import { useParams } from "react-router-dom";
 import useUserStore from "@/store/useUserStore";
-import { useAuthStore } from "@/store/useAuthStore";
 
 // Extended player data
 interface PlayerData {
@@ -258,18 +258,23 @@ const itemVariants = {
 
 const ProfilePage: React.FC = () => {
   const { id } = useParams();
-
   const { getOneUser, selectedUser } = useUserStore();
   const [activeTab, setActiveTab] = useState("overview");
 
-  const { user } = useAuthStore();
+  useEffect(() => {
+    if (id) {
+      getOneUser(id);
+    }
+  }, [id]);
 
-  if (!user)
+  if (!selectedUser)
     return (
       <p className="h-screen flex justify-center items-center">
         Loading user data...
       </p>
     );
+
+  console.log("Data logged in ProfilePage.tsx", selectedUser);
 
   return (
     <section className="relative w-full bg-[#0A0A1F]">
@@ -286,7 +291,7 @@ const ProfilePage: React.FC = () => {
 
       <div className="relative w-full">
         {/* Profile Header */}
-        <ProfileHeader user={user} />
+        <ProfileHeader user={selectedUser} />
 
         {/* Quick Views */}
         <QuickView />

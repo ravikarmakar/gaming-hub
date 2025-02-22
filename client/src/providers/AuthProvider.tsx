@@ -8,12 +8,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { setToken, logOut } = useAuthStore();
-  const [isLoading, setIsLoading] = useState(true); // ✅ Loading state to prevent flickering
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = () => {
       const token = localStorage.getItem("gamingHubToken");
-      console.log("🔹 Token from LocalStorage:", token);
 
       if (!token) {
         if (!location.pathname.startsWith("/login")) {
