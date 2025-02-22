@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import ProfileHeader from "./elements/ProfileHeader";
 import QuickView from "./elements/QuickView";
 import { useParams } from "react-router-dom";
-import useUserStore from "@/store/useUserStore";
+import useUserStore from "@/store/usePlayerStore";
 
 // Extended player data
 interface PlayerData {
