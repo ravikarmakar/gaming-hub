@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { User } from "../types/index";
 import { FormDataType } from "@/pages/auth/SignUpPage";
-import { formDataType } from "@/pages/auth/LoginPage";
+import { LoginFormDataType } from "@/pages/auth/LoginPage";
 import { axiosInstance } from "@/lib/axios";
 import { AxiosError } from "axios";
 import toast from "react-hot-toast";
@@ -15,7 +15,7 @@ interface AuthStoreState {
   isAuthenticated: boolean;
   checkAuth: () => Promise<void>;
   register: (userData: FormDataType) => Promise<void>;
-  logIn: (userData: formDataType) => Promise<void>;
+  logIn: (userData: LoginFormDataType) => Promise<void>;
   logOut: () => Promise<void>;
   setToken: (token: string) => void;
 }
@@ -27,7 +27,7 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
   isAuthenticated: false,
   error: null,
 
-  register: async (formData: formDataType) => {
+  register: async (formData: FormDataType) => {
     set({ isLoading: true, error: null });
 
     try {
@@ -48,7 +48,7 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
     }
   },
 
-  logIn: async (formData: formDataType) => {
+  logIn: async (formData: LoginFormDataType) => {
     set({ isLoading: true, error: null });
 
     try {

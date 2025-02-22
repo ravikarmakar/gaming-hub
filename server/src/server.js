@@ -5,6 +5,7 @@ import express, { json } from "express";
 import cookieParese from "cookie-parser";
 import cors from "cors";
 import morgan from "morgan";
+// import csrf from "csurf";
 
 import connectDB from "./config/db.js";
 
@@ -34,6 +35,13 @@ app.use(morgan("combined"));
 app.use(cookieParese());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// // Apply CSRF Protection
+// const csrfProtection = csrf({ cookie: true });
+
+// app.get("/api/auth/csrf-token", csrfProtection, (req, res) => {
+//   res.json({ csrfToken: req.csrfToken() });
+// });
 
 // ALL ROUTER
 app.use("/api/auth", authRouter);

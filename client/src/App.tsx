@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useEffect, Suspense, useState, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Routes, Route } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
@@ -18,8 +18,9 @@ import SuperAdminDashboard from "./pages/admin/SuperAdmin";
 import AllPlayers from "./pages/user/all-players/AllPlayers";
 import MainLayout from "./components/MainLayout";
 import NotFound from "./components/NotFound";
-import { useAuthStore } from "./store/useAuthStore";
+// import { useAuthStore } from "./store/useAuthStore";
 import ProtectedRoute from "./providers/AuthProvider";
+import { useAuthStore } from "./store/useAuthStore";
 
 // Lazy-loaded components
 const Home = lazy(() => import("./pages/home/Home"));
@@ -37,91 +38,71 @@ const TeamProfile = lazy(() => import("./pages/user/teamProfile/TeamProfile"));
 const Notification = lazy(() => import("./pages/notifications/Notification"));
 
 // Error fallback component
-function ErrorFallback({ error }: { error: unknown }) {
-  return (
-    <div role="alert" className="text-red-500 p-4">
-      <p>Something went wrong:</p>
-      <pre>{String(error)}</pre>
-    </div>
-  );
-}
+const ErrorFallback = () => (
+  <div className="p-4 text-red-500">
+    Authentication error - Please refresh or <a href="/login">login again</a>
+  </div>
+);
 
 const App = () => {
-  const [isLoading, setIsLoading] = useState(false);
   const { checkAuth } = useAuthStore();
 
   useEffect(() => {
     checkAuth();
   }, []);
 
-  useEffect(() => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-  }, []);
-
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback}>
+      {/* <Toaster position="top-center" /> */}
       <AnimatePresence mode="wait">
-        {isLoading ? (
-          <LoadingSpinner />
-        ) : (
-          <motion.div
-            key="content"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            className="bg-gradient-to-br from-indigo-900/10 via-purple-900/20 to-blue-900/30"
-          >
-            <Suspense fallback={<LoadingSpinner />}>
-              <Routes>
-                <Route element={<MainLayout />}>
-                  <Route path={ROUTES.HOME} element={<Home />} />
-                  <Route
-                    path={ROUTES.PROFILE}
-                    element={
-                      <ProtectedRoute>
-                        <ProfilePage />{" "}
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route path={ROUTES.TEAMPROFILE} element={<TeamProfile />} />
-                  <Route
-                    path={ROUTES.FREE_TOURNAMENTS}
-                    element={<FreeEvents />}
-                  />
-                  <Route path={ROUTES.BLOG} element={<BlogPage />} />
-                  <Route path={ROUTES.BLOG_POST} element={<BlogPostPage />} />
-                  <Route path={ROUTES.TEAMS} element={<TeamFinderPage />} />
-                  <Route path={ROUTES.EVENT} element={<EventPostPage />} />
-                  <Route path={ROUTES.EVENTS} element={<EventPage />} />
-                  <Route path={ROUTES.SCRIMSPAGE} element={<ScrimsPage />} />
-                  <Route path={ROUTES.PLAYER} element={<AllPlayers />} />
-                  <Route
-                    path={ROUTES.NOTIFICATION}
-                    element={<Notification />}
-                  />
-
-                  {/* Authantication */}
-                  <Route path={ROUTES.LOGIN} element={<LoginPage />} />
-                  <Route path={ROUTES.SIGNUP} element={<SignupPage />} />
-                </Route>
-
-                {/* Admin and max-admin */}
-                <Route path={ROUTES.ADMIN} element={<AdminDashboard />} />
+        <motion.div
+          key="content"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-gradient-to-br from-indigo-900/10 via-purple-900/20 to-blue-900/30"
+        >
+          <Suspense fallback={<LoadingSpinner />}>
+            <Routes>
+              <Route element={<MainLayout />}>
+                <Route path={ROUTES.HOME} element={<Home />} />
                 <Route
-                  path={ROUTES.MAXADMIN}
-                  element={<SuperAdminDashboard />}
+                  path={ROUTES.PROFILE}
+                  element={
+                    <ProtectedRoute>
+                      <ProfilePage />
+                    </ProtectedRoute>
+                  }
                 />
+                <Route path={ROUTES.TEAMPROFILE} element={<TeamProfile />} />
+                <Route
+                  path={ROUTES.FREE_TOURNAMENTS}
+                  element={<FreeEvents />}
+                />
+                <Route path={ROUTES.BLOG} element={<BlogPage />} />
+                <Route path={ROUTES.BLOG_POST} element={<BlogPostPage />} />
+                <Route path={ROUTES.TEAMS} element={<TeamFinderPage />} />
+                <Route path={ROUTES.EVENT} element={<EventPostPage />} />
+                <Route path={ROUTES.EVENTS} element={<EventPage />} />
+                <Route path={ROUTES.SCRIMSPAGE} element={<ScrimsPage />} />
+                <Route path={ROUTES.PLAYER} element={<AllPlayers />} />
+                <Route path={ROUTES.NOTIFICATION} element={<Notification />} />
 
-                <Route path={ROUTES.NOTFOUND} element={<NotFound />} />
-              </Routes>
-            </Suspense>
-            <Toaster />
-          </motion.div>
-        )}
+                {/* Authantication */}
+                <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+                <Route path={ROUTES.SIGNUP} element={<SignupPage />} />
+              </Route>
+
+              {/* Admin and max-admin */}
+              <Route path={ROUTES.ADMIN} element={<AdminDashboard />} />
+              <Route path={ROUTES.MAXADMIN} element={<SuperAdminDashboard />} />
+
+              <Route path={ROUTES.NOTFOUND} element={<NotFound />} />
+            </Routes>
+          </Suspense>
+          <Toaster position="top-center" />
+        </motion.div>
       </AnimatePresence>
     </ErrorBoundary>
   );

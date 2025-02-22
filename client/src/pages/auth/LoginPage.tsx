@@ -9,13 +9,16 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { motion } from "framer-motion";
 import { SocialLogin } from "./components/SocialLogin";
 
-export interface formDataType {
+export interface LoginFormDataType {
   email: string;
   password: string;
 }
 
 export const LoginPage: React.FC = () => {
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [formData, setFormData] = useState<LoginFormDataType>({
+    email: "",
+    password: "",
+  });
   const [rememberMe, setRememberMe] = useState(false);
   // const [error, setError] = useState<string | null>(null);
   const { logIn, isLoading, error } = useAuthStore();

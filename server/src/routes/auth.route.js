@@ -28,7 +28,6 @@ router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/logout", logoutUser);
 
-// Protected routes
 router.get("/profile", protectRoute, checkBlockedStatus, getUserProfile);
 router.put("/block-user/:id", protectRoute, protectMaxAdmin, blockUser);
 router.put("/unblock-user/:id", protectRoute, protectMaxAdmin, unblockUser);
