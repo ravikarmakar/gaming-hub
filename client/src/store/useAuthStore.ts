@@ -132,10 +132,8 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
     try {
       const decoded = jwtDecode<User>(token);
 
-      // ✅ Token ko localStorage me save karo
       localStorage.setItem("gamingHubToken", token);
 
-      // ✅ Authorization header set karo
       axiosInstance.defaults.headers.common[
         "Authorization"
       ] = `Bearer ${token}`;

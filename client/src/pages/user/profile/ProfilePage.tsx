@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from "react";
 import { Trophy, Target, Shield, Crown, Medal, Flame } from "lucide-react";
 import { motion } from "framer-motion";
@@ -258,14 +257,13 @@ const itemVariants = {
 
 const ProfilePage: React.FC = () => {
   const { id } = useParams();
+
   const { getOneUser, selectedUser } = useUserStore();
   const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
-    if (id) {
-      getOneUser(id);
-    }
-  }, [id]);
+    if (id) getOneUser(id);
+  }, [id, getOneUser]);
 
   if (!selectedUser)
     return (
@@ -273,8 +271,9 @@ const ProfilePage: React.FC = () => {
         Loading user data...
       </p>
     );
-
-  console.log("Data logged in ProfilePage.tsx", selectedUser);
+  // console.log("Data from AuthChecking", user);
+  // console.log("Parames  user daata", selectedUser);
+  console.log("LoggedIn user data", selectedUser);
 
   return (
     <section className="relative w-full bg-[#0A0A1F]">

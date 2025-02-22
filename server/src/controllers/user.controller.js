@@ -4,6 +4,10 @@ export const getUserProfile = async (req, res) => {
   try {
     const { id } = req.params;
 
+    if (!id) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+
     const user = await User.findById(id).select("-password");
 
     if (!user) {
