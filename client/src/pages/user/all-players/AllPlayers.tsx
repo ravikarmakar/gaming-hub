@@ -1,8 +1,10 @@
-import { useEffect } from "react";
+/* eslint-disable react-hooks/exhaustive-deps */
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Gamepad2, Trophy, Star, Users, Activity } from "lucide-react";
 import { Link } from "react-router-dom";
 import usePlayerStore from "@/store/usePlayerStore";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -48,36 +50,37 @@ const statsVariants = {
 };
 
 const AllPlayers = () => {
-  const { fetchPlayers, hasMore, players, cursor, searchTerm, setSearchTerm } =
-    usePlayerStore();
+  const {
+    fetchPlayers,
+    hasMore,
+    players,
+    searchTerm,
+    setSearchTerm,
+    error,
+    isLoading,
+  } = usePlayerStore();
+
+  const [query, setQuery] = useState(searchTerm);
+  const debouncedSearchTerm = useDebounce(query, 500);
 
   useEffect(() => {
-    if (players.length === 0) fetchPlayers(true);
-  }, []);
+    setSearchTerm(debouncedSearchTerm);
+  }, [debouncedSearchTerm]);
 
   useEffect(() => {
-    console.log("Players State Updated:", players);
-  }, [players]);
+    if (players.length === 0) {
+      fetchPlayers(true);
+    }
+  }, [players.length]);
 
   useEffect(() => {
-    console.log("Has More Updated:", hasMore);
-  }, [hasMore]);
-
-  console.log(hasMore, cursor);
-
-  console.log(players);
+    fetchPlayers(true);
+  }, [searchTerm]);
 
   if (!players)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-bule-900 to-pink-800">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ repeat: Infinity, duration: 1.5 }}
-          className="text-2xl text-purple-400 font-semibold"
-        >
-          Loading Players...
-        </motion.div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-violet-500"></div>
       </div>
     );
 
@@ -111,14 +114,41 @@ const AllPlayers = () => {
           </motion.p>
         </div>
 
-        {/* 🔍 Search Input */}
-        <input
-          type="text"
-          placeholder="Search Players..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full p-2 border rounded mb-4"
-        />
+        {/* Error Message */}
+        {error && (
+          <div className="max-w-2xl mx-auto mb-8">
+            <div
+              className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded relative"
+              role="alert"
+            >
+              <span className="block sm:inline">{error}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Search Input with improved styling */}
+        <div className="max-w-2xl mx-auto mb-8 relative">
+          <input
+            type="text"
+            placeholder="Search Players..."
+            defaultValue={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all duration-200"
+          />
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+            <svg
+              className="h-5 w-5 text-gray-400"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+        </div>
 
         <motion.div
           variants={containerVariants}
@@ -169,7 +199,7 @@ const AllPlayers = () => {
                       <div>
                         <p className="text-sm text-gray-400">Tournaments</p>
                         <p className="text-lg font-semibold text-violet-400">
-                          {player.tournaments}
+                          {player.globalRank}
                         </p>
                       </div>
                     </motion.div>
@@ -181,7 +211,7 @@ const AllPlayers = () => {
                       <div>
                         <p className="text-sm text-gray-400">Rating</p>
                         <p className="text-lg font-semibold text-fuchsia-400">
-                          {player.rating}
+                          {player.globalRank}
                         </p>
                       </div>
                     </motion.div>
@@ -197,7 +227,7 @@ const AllPlayers = () => {
                     <div className="flex items-center space-x-2 text-gray-400">
                       <Activity className="w-4 h-4" />
                       <span className="text-sm">
-                        Experience: {player.experience} years
+                        Experience: {player.playstyle} years
                       </span>
                     </div>
                   </div>
@@ -206,18 +236,35 @@ const AllPlayers = () => {
             </Link>
           ))}
         </motion.div>
-      </motion.div>
 
-      <div className="flex items-center justify-center">
-        {hasMore && (
-          <button
-            onClick={(e) => fetchPlayers()}
-            className="text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
-          >
-            See More
-          </button>
-        )}
-      </div>
+        <div className="flex items-center justify-center mt-8 mb-12">
+          {hasMore && (
+            <button
+              onClick={() => fetchPlayers()}
+              disabled={isLoading}
+              className={`px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2 ${
+                isLoading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+            >
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                  <span>Loading...</span>
+                </>
+              ) : (
+                <>
+                  <span>Load More Players</span>
+                  {players.length > 0 && (
+                    <span className="text-sm opacity-75">
+                      ({players.length} shown)
+                    </span>
+                  )}
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 };
