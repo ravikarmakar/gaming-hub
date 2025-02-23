@@ -89,7 +89,7 @@ const useEventStore = create<EventStore>((set, get) => ({
   getOneEvent: async (id: string) => {
     try {
       const res = await axiosInstance.get(`/events/${id}`);
-      set({ selectedEvent: res.data });
+      set({ selectedEvent: res.data.event });
     } catch (error) {
       console.error("Error fetching event:", error);
       throw error;

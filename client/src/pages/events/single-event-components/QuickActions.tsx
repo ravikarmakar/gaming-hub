@@ -12,7 +12,7 @@ type ActionButtonProps = {
   inactiveColor: string;
 };
 
-const ActionButton: React.FC<ActionButtonProps> = ({
+export const ActionButton: React.FC<ActionButtonProps> = ({
   isActive,
   onClick,
   icon: Icon,
@@ -26,13 +26,13 @@ const ActionButton: React.FC<ActionButtonProps> = ({
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
       onClick={onClick}
-      className={`p-4 rounded-full backdrop-blur-lg transition-all duration-300 ${
+      className={`p-4 rounded-full backdrop-blur-lg transition-all duration-300 shadow-lg ${
         isActive ? activeBg : inactiveBg
       }`}
     >
       <motion.div
         animate={{ scale: isActive ? [1, 1.2, 1] : 1 }}
-        className={`w-6 h-6 ${isActive ? activeColor : inactiveColor}`}
+        className={`w-5 h-5 ${isActive ? activeColor : inactiveColor}`}
       >
         <Icon fill={isActive ? "currentColor" : "none"} />
       </motion.div>
