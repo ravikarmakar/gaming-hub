@@ -49,7 +49,7 @@ app.use("/api/users", userRouter);
 app.use("/api/teams", teamRouter);
 
 // events related outer
-app.use("/api/event", eventRouter);
+app.use("/api/events", eventRouter);
 app.use("/api/prize", prizeRouter);
 app.use("/api/rounds", roundsRouter);
 app.use("/api/groups", groupsRouter);

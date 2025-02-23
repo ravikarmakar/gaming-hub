@@ -1,12 +1,42 @@
-import { useEventFilters } from "./hook/useEventFilters";
 import PageLayout from "../PageLayout";
-
-import { EventSearch } from "./components/EventSearch";
-
 import { motion } from "framer-motion";
+import useEventStore from "@/store/useEventStore";
+import { useEffect, useState } from "react";
+import { Search, Loader2 } from "lucide-react";
+import { useDebounce } from "@/hooks/useDebounce";
+import { Link } from "react-router-dom";
 
 const EventsPage = () => {
-  const { events, searchQuery, setSearchQuery } = useEventFilters();
+  const {
+    events,
+    fetchEvents,
+    hasMore,
+    setSearchQuery,
+    searchQuery,
+    loadMoreEvents,
+    isLoading,
+  } = useEventStore();
+
+  const [query, setQuery] = useState(searchQuery);
+  const debouncedQuery = useDebounce(query, 500);
+
+  useEffect(() => {
+    if (debouncedQuery !== searchQuery) {
+      setSearchQuery(debouncedQuery);
+    }
+  }, [debouncedQuery, searchQuery, setSearchQuery]);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents, searchQuery]);
+
+  const handleLoadMore = async () => {
+    if (hasMore) {
+      await loadMoreEvents();
+    }
+  };
+
+  console.log(events);
 
   return (
     <PageLayout
@@ -20,29 +50,41 @@ const EventsPage = () => {
         <div className="flex-1">
           <div className="relative">
             <motion.div
-              className="absolute inset-0 bg-purple-500/20 blur-xl"
-              animate={{
-                opacity: [0.1, 0.2, 0.1],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-            />
-            <EventSearch
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-            />
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mb-8"
+            >
+              <div className="relative max-w-2xl mx-auto">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search events by title, game, or organizer..."
+                  className="w-full px-6 py-4 bg-gray-900/50 rounded-2xl text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all placeholder-gray-500 pl-14"
+                />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-6 h-6" />
+              </div>
+            </motion.div>
           </div>
         </div>
       </div>
+
+      {/* Loading Animation */}
+      {isLoading && (
+        <div className="flex items-center justify-center mb-4">
+          <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
+          <span className="ml-2 text-gray-600 dark:text-gray-400">
+            Loading events...
+          </span>
+        </div>
+      )}
 
       {/* Events Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {events.map((event, index) => (
           <motion.div
-            key={event.id || index}
+            key={event._id || index}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
@@ -92,23 +134,55 @@ const EventsPage = () => {
                 <div className="flex items-center space-x-2">
                   <span className="w-2 h-2 bg-purple-500 rounded-full" />
                   <span className="text-purple-400 text-sm">
-                    {event.date || "Coming Soon"}
+                    {event.startDate || "Coming Soon"}
                   </span>
                 </div>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  className="px-4 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm font-medium hover:bg-purple-500/30 transition-colors"
-                >
-                  View Details
-                </motion.button>
+                <Link to={`/events/${event._id}`}>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    className="px-4 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm font-medium hover:bg-purple-500/30 transition-colors"
+                  >
+                    View Details
+                  </motion.button>
+                </Link>
               </div>
             </div>
           </motion.div>
         ))}
+
+        <div className="flex items-center justify-center mt-8 mb-12 cursor-pointer">
+          {hasMore && (
+            <button
+              onClick={handleLoadMore}
+              disabled={isLoading}
+              className={`px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2 cursor-pointer ${
+                isLoading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+            >
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                  <span>Loading...</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm cursor-pointer">
+                    Load More Events
+                  </span>
+                  {events.length > 0 && (
+                    <span className="text-sm opacity-75 cursor-pointer">
+                      ({events.length} shown)
+                    </span>
+                  )}
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Empty State */}
-      {events.length === 0 && (
+      {events.length === 0 && !isLoading && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

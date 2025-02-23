@@ -11,10 +11,12 @@ const router = express.Router();
 
 // Event Routes
 router.get("/", getAllEvents);
-router.get("/:id", getSingleEvent);
-router.get("/organizer/:id");
 router.post("/create", createEvent);
+router.get("/:id", getSingleEvent);
 router.put("/:eventId", updateEvent);
 router.delete("/:eventId", deleteEvent);
+// router.get("/featured", featuredEvents);
+// router.get("/trending", TrendingEvents);
+// router.get("/organizer/:id");
 
 export default router;

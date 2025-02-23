@@ -18,7 +18,8 @@ import {
   TabsTrigger,
 } from "./single-event-components/EventTabs";
 import { Sponsors } from "./single-event-components/Sponsers";
-import { useEvent } from "./Event";
+import useEventStore from "@/store/useEventStore";
+import { useEffect } from "react";
 
 //  ALl Interface
 export interface PrizeDistribution {
@@ -67,59 +68,64 @@ export interface Event {
 // Badge Component
 const EventDisplay = () => {
   const { id } = useParams();
+  const { getOneEvent, selectedEvent } = useEventStore();
 
-  const oneEvent = useEvent(id);
+  useEffect(() => {
+    if (id) {
+      getOneEvent(id);
+    }
+  }, [id, getOneEvent]);
 
-  // console.log(oneEvent);
+  console.log(selectedEvent);
 
-  const event: Event[] = {
-    id: "1",
-    title: "Cyber Gaming Championship 2025",
-    game: "Free Fire",
-    organizer: "ProPlayz Esports",
-    mode: "Esports",
-    location: "India",
-    slots: "100",
-    description:
-      "The ultimate gaming showdown featuring elite teams from across the globe",
-    image:
-      "https://images.unsplash.com/photo-1593305841991-05c297ba4575?q=80&w=1957&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  // const event: Event[] = {
+  //   id: "1",
+  //   title: "Cyber Gaming Championship 2025",
+  //   game: "Free Fire",
+  //   organizer: "ProPlayz Esports",
+  //   mode: "Esports",
+  //   location: "India",
+  //   slots: "100",
+  //   description:
+  //     "The ultimate gaming showdown featuring elite teams from across the globe",
+  //   image:
+  //     "https://images.unsplash.com/photo-1593305841991-05c297ba4575?q=80&w=1957&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
 
-    date: "March 15-20, 2025",
-    venue: "CyberArena, Silicon Valley",
-    status: "registration-open",
-    prize: {
-      total: "250,000 INR",
-      distribution: [
-        {
-          position: "1st Place",
-          prize: "₹5,00,000",
-          color: "from-yellow-400 to-yellow-600",
-          icon: "",
-        },
-        {
-          position: "2nd Place",
-          prize: "₹3,00,000",
-          color: "from-gray-300 to-gray-500",
-          icon: "",
-        },
-        {
-          position: "3rd Place",
-          prize: "₹1,50,000",
-          color: "from-amber-600 to-amber-800",
-          icon: "",
-        },
-      ],
-    },
+  //   date: "March 15-20, 2025",
+  //   venue: "CyberArena, Silicon Valley",
+  //   status: "registration-open",
+  //   prize: {
+  //     total: "250,000 INR",
+  //     distribution: [
+  //       {
+  //         position: "1st Place",
+  //         prize: "₹5,00,000",
+  //         color: "from-yellow-400 to-yellow-600",
+  //         icon: "",
+  //       },
+  //       {
+  //         position: "2nd Place",
+  //         prize: "₹3,00,000",
+  //         color: "from-gray-300 to-gray-500",
+  //         icon: "",
+  //       },
+  //       {
+  //         position: "3rd Place",
+  //         prize: "₹1,50,000",
+  //         color: "from-amber-600 to-amber-800",
+  //         icon: "",
+  //       },
+  //     ],
+  //   },
 
-    // optional
-    stats: {
-      registeredTeams: 64,
-      totalPlayers: 320,
-      viewerCount: "4.2M",
-      prizePool: "250K",
-    },
-  };
+  //   // optional
+  //   stats: {
+  //     registeredTeams: 64,
+  //     totalPlayers: 320,
+  //     viewerCount: "4.2M",
+  //     prizePool: "250K",
+  //   },
+  // };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -131,7 +137,7 @@ const EventDisplay = () => {
     },
   };
 
-  if (!oneEvent) {
+  if (!selectedEvent) {
     return <div>Loading...</div>;
   }
 
@@ -148,12 +154,12 @@ const EventDisplay = () => {
         className="relative max-w-7xl mx-auto px-4 py-20 space-y-8"
       >
         {/* Hero Section */}
-        <SingleEventHeader event={oneEvent} />
+        <SingleEventHeader event={selectedEvent} />
 
         {/* Quick actions Buttons*/}
         <div className="flex items-center gap-4">
           {/* Event Status*/}
-          <EventStatus status={oneEvent.status} />
+          {/* <EventStatus status={oneEvent.status} /> */}
 
           <QuickAction />
         </div>
@@ -162,11 +168,11 @@ const EventDisplay = () => {
         {/* <EventStats event={event} /> */}
 
         {/* Event Details */}
-        <EventDetails event={oneEvent} />
+        <EventDetails event={selectedEvent} />
         {/* <GamingEventPortal eventStats={eventStats} /> */}
 
         {/* Prize Pool */}
-        <PrizeTiers event={event.prize} />
+        {/* <PrizeTiers event={event.prize} /> */}
 
         {/* Top winners  */}
         {/* <TopWinners /> */}
