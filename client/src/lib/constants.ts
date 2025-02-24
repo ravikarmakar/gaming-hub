@@ -1,8 +1,11 @@
 // Centralized routes
 export const ROUTES = {
   HOME: "/",
-  PROFILE: "/profile/:id",
-  TEAMPROFILE: "/team/team-profile",
+  PROFILE: "/profile",
+  USERPROFILE: "/profile/:id",
+  CREATE_TEAM: "/create-team",
+  TEAMPROFILE: "/team-profile",
+  USERTEAMPROFILE: "/team-profiile/:id",
   EVENTS: "/events", // /events/:type
   EVENT: "/events/:id",
   FREE_TOURNAMENTS: "/free-tournaments",

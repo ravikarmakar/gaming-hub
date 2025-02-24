@@ -5,11 +5,13 @@ export interface Badge {
 }
 
 export interface User {
-  _id: string;
+  _id?: string;
   name: string;
   email: string;
   termsAccepted: boolean;
   isOrganisation: boolean;
+  isVerified: boolean;
+  activeTeam: string | null;
   avatar?: string;
   rank: number;
   role: "admin" | "max admin" | "user";

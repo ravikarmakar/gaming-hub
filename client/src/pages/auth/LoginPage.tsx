@@ -52,9 +52,6 @@ export const LoginPage: React.FC = () => {
     try {
       await logIn(formData);
 
-      const storedToken = localStorage.getItem("gamingHubToken");
-      if (!storedToken) throw new Error("Token not found after login");
-
       if (rememberMe) {
         localStorage.setItem("rememberMeEmail", formData.email);
       } else {

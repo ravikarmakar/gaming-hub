@@ -36,7 +36,7 @@ const EventsPage = () => {
     }
   };
 
-  console.log(events);
+  // console.log(events);
 
   return (
     <PageLayout

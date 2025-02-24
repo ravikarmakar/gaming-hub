@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Event from "../models/event-model/event.model.js";
 
 // Get All Events
@@ -105,6 +106,14 @@ export const createEvent = async (req, res) => {
 
 // Get Single Event by ID
 export const getSingleEvent = async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid event ID" });
+  }
+
   try {
     const event = await Event.findById(req.params.id)
       .populate("prize")

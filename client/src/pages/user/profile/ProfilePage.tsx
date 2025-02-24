@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from "react";
 import { Trophy, Target, Shield, Crown, Medal, Flame } from "lucide-react";
 import { motion } from "framer-motion";
@@ -5,6 +6,8 @@ import ProfileHeader from "./elements/ProfileHeader";
 import QuickView from "./elements/QuickView";
 import { useParams } from "react-router-dom";
 import useUserStore from "@/store/usePlayerStore";
+import { useAuthStore } from "@/store/useAuthStore";
+import { User } from "@/types";
 
 // Extended player data
 interface PlayerData {
@@ -257,23 +260,36 @@ const itemVariants = {
 
 const ProfilePage: React.FC = () => {
   const { id } = useParams();
+  const { user } = useAuthStore();
+  const [profileData, setProfileData] = useState<User | null>(null);
 
   const { getOneUser, selectedUser } = useUserStore();
   const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
-    if (id) getOneUser(id);
-  }, [id, getOneUser]);
+    if (id) {
+      getOneUser(id);
+    } else {
+      setProfileData(user);
+    }
+  }, [id, getOneUser, user]);
 
-  if (!selectedUser)
+  useEffect(() => {
+    if (id && selectedUser) {
+      setProfileData(selectedUser);
+    }
+  }, [selectedUser]);
+
+  const isOwnProfile = user?._id === profileData?._id;
+
+  console.log(isOwnProfile);
+
+  if (!profileData)
     return (
       <p className="h-screen flex justify-center items-center">
         Loading user data...
       </p>
     );
-  // console.log("Data from AuthChecking", user);
-  // console.log("Parames  user daata", selectedUser);
-  console.log("LoggedIn user data", selectedUser);
 
   return (
     <section className="relative w-full bg-[#0A0A1F]">
@@ -290,7 +306,7 @@ const ProfilePage: React.FC = () => {
 
       <div className="relative w-full">
         {/* Profile Header */}
-        <ProfileHeader user={selectedUser} />
+        <ProfileHeader user={profileData} />
 
         {/* Quick Views */}
         <QuickView />

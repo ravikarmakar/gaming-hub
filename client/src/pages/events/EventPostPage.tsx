@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useParams } from "react-router-dom";
 import useEventStore from "@/store/useEventStore";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   Trophy,
   MapPin,
@@ -15,13 +15,10 @@ import {
   Users2,
   Heart,
 } from "lucide-react";
-import { ActionButton } from "./single-event-components/QuickActions";
 
 const EventDisplay = () => {
   const { id } = useParams();
   const { getOneEvent, selectedEvent } = useEventStore();
-
-  const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
     if (id) {

@@ -74,10 +74,14 @@ export const loginUser = async (req, res) => {
       const token = generateTokenAndSetCookie(user._id, res);
 
       res.status(200).json({
-        _id: user._id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
+        success: true,
+        user: {
+          _id: user._id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          activeTeam: user.activeTeam,
+        },
         token,
       });
     } else {
@@ -113,7 +117,7 @@ export const getUserProfile = async (req, res) => {
       return res.status(401).json({ message: "Unauthorized: No user found" });
     }
 
-    res.json({ valid: true, user: req.user });
+    res.json({ valid: true, user: req.user, isAuthenicated: true });
   } catch (error) {
     console.error("JWT Verification Error:", error);
     res.status(401).json({ message: "Invalid token" });

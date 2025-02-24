@@ -4,13 +4,11 @@ import bcrypt from "bcryptjs";
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true, index: true },
     password: { type: String, required: true },
-    avatar: {
-      type: String,
-      default: null,
-    },
-    termsAccepted: { type: Boolean, default: false }, // New termsAccepted
+    avatar: { type: String, default: null },
+    termsAccepted: { type: Boolean, default: false },
+    isVerified: { type: Boolean, default: false },
     rank: { type: Number, default: 0 },
     role: {
       type: String,
@@ -19,25 +17,76 @@ const userSchema = new mongoose.Schema(
     },
     esportsRole: { type: String, default: "player" },
     isOrganizer: { type: Boolean, default: false },
-    blocked: { type: Boolean, default: false }, // New blocked field
+    blocked: { type: Boolean, default: false },
     globalRank: { type: Number, default: 0 },
     country: { type: String, default: null },
     device: { type: String, default: null },
     playstyle: { type: String, default: null },
-    team: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
-    game: {
-      type: String,
+
+    // Team Management
+    activeTeam: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Team",
+      default: null,
     },
+    isCaptain: { type: Boolean, default: false },
+    createdTeamCount: { type: Number, default: 0 },
+    maxTeamCreationLimit: { type: Number, default: 3 },
+
+    joinedTeamsHistory: [
+      {
+        teamId: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
+        role: { type: String, enum: ["player", "captain", "substitute"] },
+        joinedAt: { type: Date, default: Date.now },
+        leftAt: { type: Date, default: null },
+      },
+    ],
+    maxTeamJoinLimit: { type: Number, default: 5 },
+
+    // Notification System
+    notifications: [
+      {
+        type: {
+          type: String,
+          enum: ["invite", "request", "match", "announcement"],
+        },
+        message: { type: String },
+        relatedId: {
+          type: mongoose.Schema.Types.ObjectId,
+          refPath: "notifications.type",
+        },
+        status: { type: String, enum: ["unread", "read"], default: "unread" },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    // Invite System
+    sentInvites: [
+      {
+        inviteId: { type: mongoose.Schema.Types.ObjectId, auto: true },
+        teamId: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
+        sentTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        status: {
+          type: String,
+          enum: ["pending", "accepted", "rejected"],
+          default: "pending",
+        },
+        sentAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    // Invites & Requests
+    invitesReceived: [{ type: mongoose.Schema.Types.ObjectId, ref: "Invite" }],
+    joinRequestsSent: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "JoinRequest" },
+    ],
+
+    game: { type: String },
     blogs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Blog" }],
     achievements: [
       { type: mongoose.Schema.Types.ObjectId, ref: "Achievement" },
     ],
-    eventHistory: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Event",
-      },
-    ],
+    eventHistory: [{ type: mongoose.Schema.Types.ObjectId, ref: "Event" }],
     badges: [
       {
         badgeName: { type: String },

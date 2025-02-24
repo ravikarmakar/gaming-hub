@@ -10,9 +10,21 @@ const eventSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    likes: {
+      type: Number,
+      default: 0,
+    },
+    views: {
+      type: Number,
+      default: 0,
+    },
     startDate: {
       type: Date,
       required: true,
+    },
+    attendees: {
+      type: Number,
+      default: 0,
     },
     mode: {
       type: String,
@@ -57,10 +69,7 @@ const eventSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    attendees: {
-      type: Number,
-      default: 0,
-    },
+
     status: {
       type: String,
       enum: ["registration-open", "registration-closed", "completed", "live"],
