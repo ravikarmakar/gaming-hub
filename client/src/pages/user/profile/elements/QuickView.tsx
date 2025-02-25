@@ -217,46 +217,18 @@ const playerData: PlayerData = {
 const QuickView = () => {
   return (
     <div className="">
-      <div className="flex gap-6 mt-4 justify-center">
-        <div className="text-center">
-          <LucideIcon
-            icon="Flame"
-            className="w-5 h-5 text-orange-500 mx-auto mb-1"
-          />
-          <p className="font-bold">{playerData.totalMatches}</p>
-          <p className="text-xs text-gray-400">Matches</p>
-        </div>
-
-        <div className="text-center">
-          <LucideIcon
-            icon="Target"
-            className="w-5 h-5 text-red-500 mx-auto mb-1"
-          />
-          <p className="font-bold">{playerData.killStats.total}</p>
-          <p className="text-xs text-gray-400">Kills</p>
-        </div>
-        <div className="text-center">
-          <LucideIcon
-            icon="Trophy"
-            className="w-5 h-5 text-yellow-500 mx-auto mb-1"
-          />
-          <p className="font-bold">{playerData.winRate}%</p>
-          <p className="text-xs text-gray-400">Win Rate</p>
-        </div>
-      </div>
-
       {/* Quick Content */}
       <div className="max-w-6xl mx-auto px-4">
-        <div className="mt-20 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Left Column - Player Stats */}
           <div className="space-y-6">
-            <div className="bg-black/40 backdrop-blur rounded-xl p-6">
+            <div className="bg-white/5 rounded-xl p-6">
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <Trophy className="text-yellow-500" />
                 Season Stats
               </h2>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-black/30 p-4 rounded-lg">
+                <div className="bg-black/40 p-4 rounded-lg">
                   <p className="text-gray-300 text-sm">K/D Ratio</p>
                   <p className="text-2xl font-bold text-yellow-500">6.82</p>
                 </div>
