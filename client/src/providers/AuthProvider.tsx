@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuthStore } from "@/store/useAuthStore";
+import useAuthStore from "@/store/useAuthStore";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {

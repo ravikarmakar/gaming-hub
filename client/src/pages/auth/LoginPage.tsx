@@ -5,7 +5,7 @@ import { AuthInput } from "./components/AuthInput";
 import { AuthButton } from "./components/AuthButton";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { useAuthStore } from "@/store/useAuthStore";
+import useAuthStore from "@/store/useAuthStore";
 import { motion } from "framer-motion";
 import { SocialLogin } from "./components/SocialLogin";
 

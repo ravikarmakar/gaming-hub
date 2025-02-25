@@ -6,7 +6,7 @@ import ProfileHeader from "./elements/ProfileHeader";
 import QuickView from "./elements/QuickView";
 import { useParams } from "react-router-dom";
 import useUserStore from "@/store/usePlayerStore";
-import { useAuthStore } from "@/store/useAuthStore";
+import useAuthStore from "@/store/useAuthStore";
 import { User } from "@/types";
 
 // Extended player data

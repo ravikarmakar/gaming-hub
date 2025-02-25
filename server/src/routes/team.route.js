@@ -13,7 +13,7 @@ const router = express.Router();
 
 // Team Creation & Retrieval ------------------------------------------------------
 router.post("/", protectRoute, createTeams); // works
-router.get("/", protectRoute, getAllTeams); // works
+router.get("/", getAllTeams); // works
 router.get("/:teamId", protectRoute, getOneTeam); // works
 router.delete("/:teamId", protectRoute, deleteTeam);
 // router.put("/:teamId", protectRoute, updateTeam);

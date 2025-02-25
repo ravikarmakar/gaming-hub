@@ -5,7 +5,7 @@ export const ROUTES = {
   USERPROFILE: "/profile/:id",
   CREATE_TEAM: "/create-team",
   TEAMPROFILE: "/team-profile",
-  USERTEAMPROFILE: "/team-profiile/:id",
+  USERTEAMPROFILE: "/team-profile/:id",
   EVENTS: "/events", // /events/:type
   EVENT: "/events/:id",
   FREE_TOURNAMENTS: "/free-tournaments",
@@ -25,7 +25,7 @@ export const ROUTES = {
 // Nav Links
 export const NAV_LINKS = [
   { name: "Events", href: "/events" },
-  { name: "Scrims", href: "/scrims" },
+  // { name: "Scrims", href: "/scrims" },
   { name: "Free Tournaments", href: "/free-tournaments" },
   { name: "Find Teams", href: "/teams" },
   { name: "Community", href: "/blog" },

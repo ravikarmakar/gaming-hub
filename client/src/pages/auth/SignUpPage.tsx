@@ -5,7 +5,7 @@ import { AuthLayout } from "./components/AuthLayout";
 import { AuthInput } from "./components/AuthInput";
 import { AuthButton } from "./components/AuthButton";
 import { motion } from "framer-motion";
-import { useAuthStore } from "@/store/useAuthStore";
+import useAuthStore from "@/store/useAuthStore";
 import { SocialLogin } from "./components/SocialLogin";
 import toast from "react-hot-toast";
 
@@ -88,7 +88,7 @@ export const SignupPage = () => {
             </motion.div>
           )}
 
-          <motion.div 
+          <motion.div
             className="space-y-4"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -127,7 +127,7 @@ export const SignupPage = () => {
             />
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="space-y-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -161,13 +161,17 @@ export const SignupPage = () => {
             </div>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="pt-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
-            <AuthButton type="submit" onClick={handleSubmit} isLoading={isLoading}>
+            <AuthButton
+              type="submit"
+              onClick={handleSubmit}
+              isLoading={isLoading}
+            >
               Create Account
             </AuthButton>
           </motion.div>
@@ -179,12 +183,14 @@ export const SignupPage = () => {
           >
             <SocialLogin
               onGoogleLogin={() => toast.success("Google signup coming soon!")}
-              onDiscordLogin={() => toast.success("Discord signup coming soon!")}
+              onDiscordLogin={() =>
+                toast.success("Discord signup coming soon!")
+              }
               onGithubLogin={() => toast.success("Github signup coming soon!")}
             />
           </motion.div>
 
-          <motion.p 
+          <motion.p
             className="text-center text-gray-400 text-sm sm:text-base pt-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

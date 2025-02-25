@@ -20,7 +20,7 @@ import {
   UserPlus,
   Check,
 } from "lucide-react";
-import { useAuthStore } from "@/store/useAuthStore";
+import useAuthStore from "@/store/useAuthStore";
 import { useTeamStore } from "@/store/useTeamStore";
 import { useNavigate } from "react-router-dom";
 

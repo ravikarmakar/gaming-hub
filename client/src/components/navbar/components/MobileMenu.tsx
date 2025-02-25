@@ -4,9 +4,18 @@ import { NavLink } from "./NavLinks";
 import { NAV_LINKS } from "@/lib/constants";
 import { Logo } from "@/components/navbar/components/Logo";
 import { X } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export const MobileMenu = memo(
-  ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => (
+  ({
+    isOpen,
+    onClose,
+    isAuthenticated,
+  }: {
+    isAuthenticated: boolean;
+    isOpen: boolean;
+    onClose: () => void;
+  }) => (
     <AnimatePresence>
       {isOpen && (
         <>
@@ -26,7 +35,7 @@ export const MobileMenu = memo(
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "tween", duration: 0.3 }}
-            className="fixed left-0 top-16 w-72 h-[calc(100vh-4rem)] md:hidden mobile-menu z-50"
+            className="fixed left-0 top-0 w-72 h-[calc(100vh)] md:hidden mobile-menu z-50"
           >
             <div className="h-full bg-[#0a0a0a]/40 backdrop-blur-xl border-r border-purple-900/20 flex flex-col">
               {/* Header with Logo and Close */}
@@ -55,14 +64,22 @@ export const MobileMenu = memo(
               </nav>
 
               {/* Auth Buttons */}
-              <div className="p-4 border-t border-purple-900/20 space-y-3">
-                <button className="w-full py-2.5 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200">
-                  Sign Up
-                </button>
-                <button className="w-full py-2.5 px-4 border border-purple-600/50 hover:bg-purple-500/10 text-purple-500 rounded-lg font-medium transition-colors duration-200">
-                  Login
-                </button>
-              </div>
+              {isAuthenticated ? (
+                ""
+              ) : (
+                <div className="p-4 border-t border-purple-900/20">
+                  <Link to="/signup" onClick={onClose}>
+                    <button className="w-full py-2.5 px-4 bg-purple-600/50 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200 mb-4">
+                      Sign Up
+                    </button>
+                  </Link>
+                  <Link to="/login" onClick={onClose}>
+                    <button className="w-full py-2.5 px-4 border border-purple-600/50 hover:bg-purple-500/10 text-purple-500 rounded-lg font-medium transition-colors duration-200">
+                      Login
+                    </button>
+                  </Link>
+                </div>
+              )}
             </div>
           </motion.div>
         </>

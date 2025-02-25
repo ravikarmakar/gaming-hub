@@ -52,6 +52,8 @@ export const createTeams = async (req, res) => {
 
     const { teamName } = req.body;
 
+    console.log(teamName);
+
     if (!teamName) {
       return res
         .status(400)
@@ -66,6 +68,8 @@ export const createTeams = async (req, res) => {
         message: "You have already created a team.",
       });
     }
+
+    console.log(user);
 
     // Check if team with the same name exists
     const existingTeam = await Team.findOne({ teamName });

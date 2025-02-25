@@ -26,6 +26,7 @@ export const useTeamStore = create<TeamState>((set) => ({
         { teamName },
         {
           headers: { "Content-Type": "application/json" },
+          withCredentials: true,
         }
       );
 
@@ -43,11 +44,15 @@ export const useTeamStore = create<TeamState>((set) => ({
   fetchTeams: async () => {
     set({ isLoading: true });
     try {
-      const response = await axiosInstance.get("/teams");
+      const response = await axiosInstance.get("/teams", {
+        withCredentials: true,
+      });
 
-      set({ teams: response.data });
+      set({ teams: response.data.teams });
     } catch (error) {
       console.log("Error fetching team:", error);
+    } finally {
+      set({ isLoading: false });
     }
   },
 
@@ -55,11 +60,15 @@ export const useTeamStore = create<TeamState>((set) => ({
     set({ isLoading: true });
 
     try {
-      const response = await axiosInstance.get(`/teams/${id}`);
+      const response = await axiosInstance.get(`/teams/${id}`, {
+        withCredentials: true,
+      });
 
       set({ seletedTeam: response.data.team });
     } catch (error) {
       console.log("Error to Fetching Single team details", error);
+    } finally {
+      set({ isLoading: false });
     }
   },
 }));
