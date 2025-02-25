@@ -24,7 +24,7 @@ const teamSchema = new mongoose.Schema(
       },
     ],
     isVerified: { type: Boolean, default: false }, // Future verification system
-    // teamCode: { type: String, unique: true, required: true }, // Unique code for team joining
+
     maxMembers: { type: Number, default: 6 },
     pendingRequests: [
       { type: mongoose.Schema.Types.ObjectId, ref: "JoinRequest" },

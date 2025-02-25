@@ -2,15 +2,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { User, LogOut, Users, Bell } from "lucide-react";
 import { useMenu } from "../context/MenuContext";
-import { useAuthStore } from "@/store/useAuthStore";
+import useAuthStore from "@/store/useAuthStore";
 
 // Navigation options stored in a variable
 const navigationOptions = [
-  // {
-  //   icon: User,
-  //   label: "View Profile",
-  //   path: "/profile",
-  // },
+  {
+    icon: User,
+    label: "View Profile",
+    path: "/profile",
+  },
   {
     icon: Users,
     label: "Team Profile",
@@ -21,12 +21,12 @@ const navigationOptions = [
 export const ProfileAvatar = () => {
   const navigate = useNavigate();
   const { activeMenu, setActiveMenu } = useMenu();
+
   const isOpen = activeMenu === "profile";
 
-  const { logOut } = useAuthStore();
+  const { logOut, user, isAuthenticated } = useAuthStore();
 
   const handleLogout = () => {
-    // Add your logout logic here
     logOut();
     setActiveMenu(null);
     navigate("/");
@@ -48,18 +48,35 @@ export const ProfileAvatar = () => {
           </motion.button>
         </Link>
 
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setActiveMenu(isOpen ? null : "profile")}
-          className="focus:outline-none"
-        >
-          <img
-            src="https://plus.unsplash.com/premium_photo-1682089877310-b2308b0dc719?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-            alt="Profile Avatar"
-            className="w-10 h-10 rounded-full object-cover"
-          />
-        </motion.button>
+        {isAuthenticated ? (
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setActiveMenu(isOpen ? null : "profile")}
+            className="focus:outline-none bg-white rounded-full"
+          >
+            <img
+              src={
+                user?.avatar ||
+                "https://api.dicebear.com/7.x/avataaars/svg?seed=John"
+              }
+              alt="Profile Avatar"
+              className="w-10 h-10 rounded-full object-cover"
+            />
+          </motion.button>
+        ) : (
+          <Link to="/login">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="focus:outline-none"
+            >
+              <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center">
+                <User className="w-5 h-5 text-gray-200" />
+              </div>
+            </motion.button>
+          </Link>
+        )}
       </div>
 
       <AnimatePresence>
@@ -69,25 +86,9 @@ export const ProfileAvatar = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-0 mt-3 w-72 rounded-xl bg-gray-900 shadow-lg ring-1 ring-gray-700 backdrop-blur-sm"
+            className="absolute right-0 mt-3 w-60 rounded-xl bg-gray-900 shadow-lg ring-1 ring-gray-700 backdrop-blur-sm"
           >
             <div className="p-2">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: navigationOptions.length * 0.05 }}
-                onClick={() => setActiveMenu(null)}
-              >
-                <Link to="/profile">
-                  <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors group">
-                    <User className="w-5 h-5 text-gray-400 group-hover:text-cyan-400" />
-                    <span className="text-sm font-medium text-gray-200 group-hover:text-white">
-                      View Profile
-                    </span>
-                  </div>
-                </Link>
-              </motion.div>
-
               {navigationOptions.map((option, index) => (
                 <motion.div
                   key={option.path}
@@ -131,25 +132,6 @@ export const ProfileAvatar = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-};
-
-export const UnknowProfile = () => {
-  return (
-    <div>
-      {/* Profile Button */}
-      <Link to="/login">
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="focus:outline-none"
-        >
-          <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center">
-            <User className="w-5 h-5 text-gray-200" />
-          </div>
-        </motion.button>
-      </Link>
     </div>
   );
 };

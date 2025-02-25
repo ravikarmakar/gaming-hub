@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
@@ -19,7 +20,7 @@ import {
   Award,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useAuthStore } from "@/store/useAuthStore";
+import useAuthStore from "@/store/useAuthStore";
 import { useTeamStore } from "@/store/useTeamStore";
 import { Team } from "@/types/team";
 
@@ -142,17 +143,19 @@ const TeamProfile: React.FC = () => {
 
   console.log(activeTeam);
 
-  // useEffect(() => {
-  //   if (activeTeam === null) {
-  //     navigate("/create-team");
-  //   }
-  // }, [activeTeam, navigate]);
+  useEffect(() => {
+    if (id) {
+      fetchOneTeam(id);
+    } else if (activeTeam) {
+      fetchOneTeam(activeTeam);
+    } else {
+      navigate("/create-team");
+    }
+  }, [id, activeTeam]);
 
-  // useEffect(() => {
-  //   if (activeTeam && !seletedTeam) {
-  //     fetchOneTeam(teamId);
-  //   }
-  // }, [activeTeam, seletedTeam, fetchOneTeam]);
+  const isQwnTeam = user?.activeTeam === seletedTeam?._id;
+
+  console.log(isQwnTeam);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -183,7 +186,7 @@ const TeamProfile: React.FC = () => {
           alt="Team Cover"
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#0A0A1F]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#070715]" />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-32 relative z-10">

@@ -6,7 +6,7 @@ import ProfileHeader from "./elements/ProfileHeader";
 import QuickView from "./elements/QuickView";
 import { useParams } from "react-router-dom";
 import useUserStore from "@/store/usePlayerStore";
-import { useAuthStore } from "@/store/useAuthStore";
+import useAuthStore from "@/store/useAuthStore";
 import { User } from "@/types";
 
 // Extended player data
@@ -293,20 +293,9 @@ const ProfilePage: React.FC = () => {
 
   return (
     <section className="relative w-full bg-[#0A0A1F]">
-      {/* Animated Background Gradients */}
-      <motion.div
-        initial={{ opacity: 0, scale: 1.1 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 1 }}
-        className="absolute inset-0 pointer-events-none"
-      >
-        <div className="absolute top-0 left-[-10%] w-[40%] h-[40%] bg-blue-600/20 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute top-[20%] right-[-5%] w-[35%] h-[35%] bg-purple-600/20 blur-[120px] rounded-full animate-pulse delay-1000" />
-      </motion.div>
-
       <div className="relative w-full">
         {/* Profile Header */}
-        <ProfileHeader user={profileData} />
+        <ProfileHeader user={profileData} isOwnProfile={isOwnProfile} />
 
         {/* Quick Views */}
         <QuickView />
@@ -316,7 +305,7 @@ const ProfilePage: React.FC = () => {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="sticky top-[64px] z-40 bg-[#0A0A1F]/80 backdrop-blur-lg border-b border-white/10 w-full"
+          className="sticky top-[64px] z-40 bg-[#0A0A1F]/80 backdrop-blur-lg border-b border-white/10 max-w-7xl mx-auto mt-4"
         >
           <div className="max-w-7xl mx-auto px-4 md:px-8">
             <div className="flex gap-4 overflow-x-auto scrollbar-none">

@@ -11,6 +11,7 @@ import { NavLink } from "./components/NavLinks";
 import { MobileMenu } from "./components/MobileMenu";
 import { ProfileAvatar } from "./components/ProfileAvatar";
 import { MenuProvider, useMenu } from "./context/MenuContext";
+import useAuthStore from "@/store/useAuthStore";
 
 const iconVariants = {
   closed: { rotate: 0 },
@@ -21,6 +22,7 @@ const NavbarContent = () => {
   const location = useLocation();
   const { scrollY } = useScroll();
   const { activeMenu, setActiveMenu, closeAllMenus } = useMenu();
+  const { isAuthenticated } = useAuthStore();
 
   const isMobileMenuOpen = activeMenu === "mobile";
 
@@ -115,7 +117,11 @@ const NavbarContent = () => {
         </div>
 
         {/* Mobile Menu */}
-        <MobileMenu isOpen={isMobileMenuOpen} onClose={() => closeAllMenus()} />
+        <MobileMenu
+          isAuthenticated={isAuthenticated}
+          isOpen={isMobileMenuOpen}
+          onClose={() => closeAllMenus()}
+        />
       </nav>
     </header>
   );
