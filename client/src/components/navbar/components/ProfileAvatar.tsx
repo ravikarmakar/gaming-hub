@@ -14,12 +14,11 @@ const navigationOptions = [
   {
     icon: Users,
     label: "Team Profile",
-    path: "/team/team-profile",
+    path: "/team-profile",
   },
 ];
 
 export const ProfileAvatar = () => {
-  const { user } = useAuthStore();
   const navigate = useNavigate();
   const { activeMenu, setActiveMenu } = useMenu();
   const isOpen = activeMenu === "profile";
@@ -79,7 +78,7 @@ export const ProfileAvatar = () => {
                 transition={{ delay: navigationOptions.length * 0.05 }}
                 onClick={() => setActiveMenu(null)}
               >
-                <Link to={`/profile/${user?._id}`}>
+                <Link to="/profile">
                   <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 transition-colors group">
                     <User className="w-5 h-5 text-gray-400 group-hover:text-cyan-400" />
                     <span className="text-sm font-medium text-gray-200 group-hover:text-white">

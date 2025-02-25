@@ -9,8 +9,7 @@ import throttle from "lodash.throttle";
 import { Logo } from "./components/Logo";
 import { NavLink } from "./components/NavLinks";
 import { MobileMenu } from "./components/MobileMenu";
-import { ProfileAvatar, UnknowProfile } from "./components/ProfileAvatar";
-import { useAuthStore } from "@/store/useAuthStore";
+import { ProfileAvatar } from "./components/ProfileAvatar";
 import { MenuProvider, useMenu } from "./context/MenuContext";
 
 const iconVariants = {
@@ -21,7 +20,6 @@ const iconVariants = {
 const NavbarContent = () => {
   const location = useLocation();
   const { scrollY } = useScroll();
-  const { isAuthenticated } = useAuthStore();
   const { activeMenu, setActiveMenu, closeAllMenus } = useMenu();
 
   const isMobileMenuOpen = activeMenu === "mobile";
@@ -112,9 +110,7 @@ const NavbarContent = () => {
             </div>
 
             {/* Profile Section */}
-            <div className="flex items-center gap-4">
-              {isAuthenticated ? <ProfileAvatar /> : <UnknowProfile />}
-            </div>
+            <div className="flex items-center gap-4">{<ProfileAvatar />}</div>
           </div>
         </div>
 

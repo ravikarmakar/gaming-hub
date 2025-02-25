@@ -7,51 +7,50 @@ interface PageLayoutProps {
   children: React.ReactNode;
 }
 
-const fadeInUp = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5, ease: "easeOut" }
-};
-
-const fadeIn = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  transition: { duration: 0.4, ease: "easeOut" }
-};
-
-const PageLayout: React.FC<PageLayoutProps> = ({ children, title, description }) => {
+const PageLayout: React.FC<PageLayoutProps> = ({
+  children,
+  title,
+  description,
+}) => {
   return (
-    <motion.div
-      {...fadeIn}
-      className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black pt-20"
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <motion.div
-          {...fadeInUp}
-          className="text-center mb-12 space-y-4"
-        >
-          <h1 
-            className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-500 to-purple-500"
-            aria-label={title}
+    <div className="min-h-screen bg-gradient-to-b from-[#1a0b2e]/30 via-[#2d1b4e]/50 to-[#1a0b2e]/90 text-white">
+      {/* Hero Section */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="pt-24 pb-12 relative"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center space-y-4"
           >
-            {title}
-          </h1>
-          <p 
-            className="text-gray-400 text-base sm:text-lg max-w-2xl mx-auto"
-            aria-label={description}
-          >
-            {description}
-          </p>
-        </motion.div>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight">
+              <span className="bg-gradient-to-r from-purple-600 via-orange-500 to-blue-500 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
+                {title}
+              </span>
+            </h1>
+            <p className="text-purple-200/80 max-w-2xl mx-auto text-base sm:text-lg">
+              {description}
+            </p>
+          </motion.div>
+        </div>
+      </motion.div>
 
-        <motion.div 
-          {...fadeIn}
-          className="w-full"
-        >
+      {/* Main Content */}
+      <motion.main
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12"
+      >
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-900/20 via-fuchsia-900/20 to-violet-900/20 blur-3xl" />
           {children}
-        </motion.div>
-      </div>
-    </motion.div>
+        </div>
+      </motion.main>
+    </div>
   );
 };
 

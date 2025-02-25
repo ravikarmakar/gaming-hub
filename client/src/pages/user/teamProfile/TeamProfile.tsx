@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Users,
@@ -18,6 +18,10 @@ import {
   Clock,
   Award,
 } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useTeamStore } from "@/store/useTeamStore";
+import { Team } from "@/types/team";
 
 // Dummy data (would typically come from backend/state management)
 const teamData = {
@@ -52,7 +56,7 @@ const teamData = {
       },
     },
     {
-      id: 2,
+      id: 3,
       name: "ShadowSniper",
       avatar:
         "https://images.unsplash.com/photo-1535223289827-42f1e9919769?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTF8fGdhbWluZ3xlbnwwfHwwfHx8MA%3D%3D",
@@ -63,7 +67,7 @@ const teamData = {
       },
     },
     {
-      id: 2,
+      id: 4,
       name: "ShadowSniper",
       avatar:
         "https://images.unsplash.com/photo-1535223289827-42f1e9919769?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTF8fGdhbWluZ3xlbnwwfHwwfHx8MA%3D%3D",
@@ -74,7 +78,7 @@ const teamData = {
       },
     },
     {
-      id: 2,
+      id: 5,
       name: "ShadowSniper",
       avatar:
         "https://images.unsplash.com/photo-1535223289827-42f1e9919769?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTF8fGdhbWluZ3xlbnwwfHwwfHx8MA%3D%3D",
@@ -85,7 +89,7 @@ const teamData = {
       },
     },
     {
-      id: 2,
+      id: 6,
       name: "ShadowSniper",
       avatar:
         "https://images.unsplash.com/photo-1535223289827-42f1e9919769?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTF8fGdhbWluZ3xlbnwwfHwwfHx8MA%3D%3D",
@@ -125,8 +129,30 @@ const teamStats = {
 };
 
 const TeamProfile: React.FC = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const { seletedTeam, fetchOneTeam } = useTeamStore();
+  const [activeTab, setActiveTab] = useState("overview");
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [teamProfileData, setTeamProfileData] = useState<Team | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+
+  const activeTeam = user?.activeTeam || null;
+
+  console.log(activeTeam);
+
+  // useEffect(() => {
+  //   if (activeTeam === null) {
+  //     navigate("/create-team");
+  //   }
+  // }, [activeTeam, navigate]);
+
+  // useEffect(() => {
+  //   if (activeTeam && !seletedTeam) {
+  //     fetchOneTeam(teamId);
+  //   }
+  // }, [activeTeam, seletedTeam, fetchOneTeam]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -181,7 +207,7 @@ const TeamProfile: React.FC = () => {
                 />
                 <div className="text-center md:text-left mt-4 md:mt-0">
                   <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-500 to-purple-400 bg-clip-text text-transparent">
-                    {teamData.name}
+                    {seletedTeam?.teamName}
                   </h1>
                   <p className="text-lg text-gray-300 mt-2">
                     {teamData.description}

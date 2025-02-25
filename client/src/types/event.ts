@@ -10,7 +10,7 @@ export interface Event {
   trending?: boolean;
   game: string;
   host: string;
-  mode: 'online' | 'offline';
+  mode: "online" | "offline";
 }
 
 export interface EventsResponse {

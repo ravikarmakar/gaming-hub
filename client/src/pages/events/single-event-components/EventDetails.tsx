@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Trophy, Calendar, MapPin, Gamepad2 } from "lucide-react";
-import { Event } from "../EventPostPage";
+import { Event } from "@/types";
 
 interface EventDetailsProps {
   event: Event;
@@ -65,7 +65,7 @@ export default function EventDetails({ event }: EventDetailsProps) {
             >
               <span className="text-gray-400">Organized By - </span>
               <span className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                {event.organizer}
+                {event.slots}
               </span>
             </motion.h2>
 
@@ -73,8 +73,8 @@ export default function EventDetails({ event }: EventDetailsProps) {
               { icon: MapPin, text: event.location },
               { icon: Gamepad2, text: event.mode },
               // { icon: Clock, text: event.time },
-              { icon: Trophy, text: event.prize.total },
-              { icon: Calendar, text: event.date },
+              { icon: Trophy, text: event.category },
+              { icon: Calendar, text: event.attendees },
             ].map((item, index) => (
               <motion.div
                 key={index}

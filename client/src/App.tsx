@@ -21,6 +21,8 @@ import NotFound from "./components/NotFound";
 // import { useAuthStore } from "./store/useAuthStore";
 import ProtectedRoute from "./providers/AuthProvider";
 import { useAuthStore } from "./store/useAuthStore";
+import CreateTeam from "./pages/auth/CreateTeam";
+// import TeamProfile from "./components/TeamProfile";
 
 // Lazy-loaded components
 const Home = lazy(() => import("./pages/home/Home"));
@@ -75,7 +77,17 @@ const App = () => {
                     </ProtectedRoute>
                   }
                 />
-                <Route path={ROUTES.TEAMPROFILE} element={<TeamProfile />} />
+
+                <Route
+                  path={ROUTES.TEAMPROFILE}
+                  element={
+                    <ProtectedRoute>
+                      <TeamProfile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path={ROUTES.USERPROFILE} element={<ProfilePage />} />
+
                 <Route
                   path={ROUTES.FREE_TOURNAMENTS}
                   element={<FreeEvents />}
@@ -92,6 +104,7 @@ const App = () => {
                 {/* Authantication */}
                 <Route path={ROUTES.LOGIN} element={<LoginPage />} />
                 <Route path={ROUTES.SIGNUP} element={<SignupPage />} />
+                <Route path={ROUTES.CREATE_TEAM} element={<CreateTeam />} />
               </Route>
 
               {/* Admin and max-admin */}

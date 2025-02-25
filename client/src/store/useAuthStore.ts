@@ -5,26 +5,22 @@ import { LoginFormDataType } from "@/pages/auth/LoginPage";
 import { axiosInstance } from "@/lib/axios";
 import { AxiosError } from "axios";
 import toast from "react-hot-toast";
-import { jwtDecode } from "jwt-decode";
 
 interface AuthStoreState {
   user: User | null;
-  token: string | null;
+  isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  isAuthenticated: boolean;
   checkAuth: () => Promise<void>;
   register: (userData: FormDataType) => Promise<void>;
   logIn: (userData: LoginFormDataType) => Promise<void>;
   logOut: () => Promise<void>;
-  setToken: (token: string) => void;
 }
 
 export const useAuthStore = create<AuthStoreState>((set) => ({
   user: null,
-  token: null,
-  isLoading: false,
   isAuthenticated: false,
+  isLoading: false,
   error: null,
 
   register: async (formData: FormDataType) => {
@@ -33,6 +29,7 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
     try {
       const response = await axiosInstance.post("/auth/register", formData, {
         headers: { "Content-Type": "application/json" },
+        withCredentials: true,
       });
 
       if (response.status === 201) {
@@ -57,19 +54,10 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
         withCredentials: true,
       });
 
-      const { token, ...user } = response.data;
-
-      if (!token) throw new Error("Token not received from server");
-
-      localStorage.setItem("gamingHubToken", token);
-
-      axiosInstance.defaults.headers.common[
-        "Authorization"
-      ] = `Bearer ${token}`;
-
-      set({ user, token, isAuthenticated: true });
-
-      toast.success("Login successful!");
+      if (response.status === 200) {
+        toast.success("Login successful!");
+        await useAuthStore.getState().checkAuth(); //Login ke baad auth check karo
+      }
     } catch (error) {
       if (error instanceof AxiosError) {
         set({ error: error.response?.data.message });
@@ -81,14 +69,15 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
   },
 
   logOut: async () => {
+    set({ isLoading: true, error: null });
+
     try {
-      await axiosInstance.post("/auth/logout");
+      await axiosInstance.post("/auth/logout", {}, { withCredentials: true });
 
-      localStorage.removeItem("gamingHubToken");
-
-      delete axiosInstance.defaults.headers.common["Authorization"];
-
-      set({ user: null, token: null, isAuthenticated: false });
+      set({
+        user: null,
+        isAuthenticated: false,
+      });
 
       toast.success("Logged out successfully!");
     } catch (error) {
@@ -96,56 +85,32 @@ export const useAuthStore = create<AuthStoreState>((set) => ({
         set({ error: error.response?.data.message });
         toast.error(error.response?.data.message);
       }
+    } finally {
+      set({ isLoading: false });
     }
   },
 
   checkAuth: async () => {
-    const token = localStorage.getItem("gamingHubToken");
-    if (!token) {
-      set({ token: null, user: null, isAuthenticated: false });
-      return;
-    }
+    set({ isLoading: true, error: null });
 
     try {
       const response = await axiosInstance.get("/auth/profile", {
-        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
       });
 
-      if (response.data.valid) {
-        set({ token, user: response.data.user, isAuthenticated: true });
-
-        axiosInstance.defaults.headers.common[
-          "Authorization"
-        ] = `Bearer ${token}`;
+      if (response.status === 200) {
+        set({
+          user: response.data.user,
+          isAuthenticated: true,
+        });
       } else {
-        throw new Error("Invalid token");
+        throw new Error("User Not Authenticated");
       }
     } catch (error) {
       console.error("Auth check failed:", error);
-      localStorage.removeItem("gamingHubToken");
-      delete axiosInstance.defaults.headers.common["Authorization"];
-      set({ token: null, user: null, isAuthenticated: false });
-    }
-  },
-
-  setToken: (token: string) => {
-    try {
-      const decoded = jwtDecode<User>(token);
-
-      // ✅ Token ko localStorage me save karo
-      localStorage.setItem("gamingHubToken", token);
-
-      // ✅ Authorization header set karo
-      axiosInstance.defaults.headers.common[
-        "Authorization"
-      ] = `Bearer ${token}`;
-
-      set({ user: decoded, token, isAuthenticated: true });
-    } catch (error) {
-      console.error("Invalid token:", error);
-      localStorage.removeItem("gamingHubToken");
-      delete axiosInstance.defaults.headers.common["Authorization"];
-      set({ user: null, token: null, isAuthenticated: false });
+      set({ user: null, isAuthenticated: false });
+    } finally {
+      set({ isLoading: false });
     }
   },
 }));

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Event } from "../components/types";
+import { Event } from "@/types";
 
 interface SingleEventHeaderProps {
   event: Event;

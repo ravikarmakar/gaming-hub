@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const teamSchema = new mongoose.Schema(
   {
     teamName: { type: String, required: true, trim: true, unique: true },
+    owner: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     captain: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User", // Reference to the User model (team captain)
@@ -17,12 +18,17 @@ const teamSchema = new mongoose.Schema(
         },
         role: {
           type: String,
-          enum: ["player", "substitute"],
+          enum: ["owner", "captain", "player", "substitute"],
           default: "player",
         },
       },
     ],
-    maxPlayers: { type: Number, default: 6 }, // Limit the number of players
+    isVerified: { type: Boolean, default: false }, // Future verification system
+    // teamCode: { type: String, unique: true, required: true }, // Unique code for team joining
+    maxMembers: { type: Number, default: 6 },
+    pendingRequests: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "JoinRequest" },
+    ],
     playedTournaments: [
       {
         type: mongoose.Schema.Types.ObjectId,
