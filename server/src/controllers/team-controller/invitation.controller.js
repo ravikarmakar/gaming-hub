@@ -26,22 +26,22 @@ export const getAllInvitations = async (req, res) => {
   }
 };
 
-export const getUserInvitations = async (req, res) => {
-  try {
-    const userId = req.user._id; // Authenticated user ID
+// export const getUserInvitations = async (req, res) => {
+//   try {
+//     const userId = req.user._id; // Authenticated user ID
 
-    // Find invitations where the user is the receiver
-    const invitations = await Invitation.find({ receiver: userId })
-      .populate("teamId", "teamName") // Populate team details
-      .populate("sender", "username email") // Populate sender details
-      .exec();
+//     // Find invitations where the user is the receiver
+//     const invitations = await Invitation.find({ receiver: userId })
+//       .populate("teamId", "teamName") // Populate team details
+//       .populate("sender", "username email") // Populate sender details
+//       .exec();
 
-    res.status(200).json({ success: true, invitations });
-  } catch (error) {
-    console.error("Error fetching user invitations:", error);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
-  }
-};
+//     res.status(200).json({ success: true, invitations });
+//   } catch (error) {
+//     console.error("Error fetching user invitations:", error);
+//     res.status(500).json({ success: false, message: "Internal Server Error" });
+//   }
+// };
 
 // export const acceptInvite = async (req, res) => {
 //   try {
@@ -57,110 +57,155 @@ export const getUserInvitations = async (req, res) => {
 //   }
 // };
 
+// export const respondToInvite = async (req, res) => {
+//   try {
+//     const { invitationId } = req.params;
+//     const { status } = req.body;
+//     const userId = req.user._id;
+
+//     console.log(invitationId);
+
+//     // Validate status
+//     if (!["accepted", "rejected"].includes(status)) {
+//       return res.status(400).json({ message: "Invalid status" });
+//     }
+
+//     console.log("Invitation ID:", invitationId);
+//     console.log("User ID:", userId);
+
+//     // Find the invite
+//     const invitation = await Invitation.findById(invitationId).populate(
+//       "teamId"
+//     );
+
+//     if (!invitation) {
+//       return res.status(404).json({ message: "Invite not found" });
+//     }
+
+//     // Validate user authorization
+//     if (invitation.receiver.toString() !== userId.toString()) {
+//       return res
+//         .status(403)
+//         .json({ message: "You are not authorized to respond to this invite" });
+//     }
+
+//     // Validate invite status (prevent double responses)
+//     if (invitation.status !== "pending") {
+//       return res
+//         .status(400)
+//         .json({ message: "Invite has already been responded to" });
+//     }
+
+//     // Update the invite status
+//     invitation.status = status;
+//     await invite.save();
+
+//     if (status === "accepted") {
+//       // Create a team member record
+//       const teamMember = new TeamMember({
+//         teamId: invite.teamId._id,
+//         userId: userId,
+//       });
+//       await teamMember.save();
+
+//       //Create notification for the team owner.
+//       const team = await Team.findById(invite.teamId._id);
+//       const ownerNotification = new Notification({
+//         userId: team.ownerId,
+//         message: `${req.user.username} has accepted your invite to join team ${team.name}.`,
+//         type: "team_update",
+//         relatedId: invite.teamId._id,
+//       });
+//       await ownerNotification.save();
+//     }
+
+//     // Continue with the rest of the logic...
+//   } catch (error) {
+//     console.error("Error accepting invitation:", error);
+//     res.status(500).json({ message: "Error accepting invitation", error });
+//   }
+// };
+
 export const acceptInvite = async (req, res) => {
   try {
     const { invitationId } = req.params;
-    const userId = req.user;
+    const userId = req.user._id;
 
-    console.log("Invitation ID:", invitationId);
-    console.log("User ID:", userId);
+    // return console.log(invitationId, userId);
 
+    // Invitation find karo
     const invitation = await Invitation.findById(invitationId);
-    if (!invitation) {
-      console.log("Invitation not found");
+
+    if (!invitation || invitation.receiver.toString() !== userId.toString()) {
       return res.status(404).json({
         success: false,
         message: "Invitation not found or unauthorized",
       });
     }
 
-    if (invitation.receiver.toString() !== userId.toString()) {
-      console.log("Unauthorized access attempt");
-      return res.status(403).json({
-        success: false,
-        message: "Unauthorized access",
-      });
+    // return console.log(invitation._id);
+
+    // Team find karo
+    const team = await Team.findById(invitation.teamId);
+    if (!team) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Team not found" });
     }
 
-    // Continue with the rest of the logic...
+    // return console.log(team);
+
+    // Check if user already in a team
+    const existingUser = await User.findById(userId);
+    if (existingUser.activeTeam) {
+      return res
+        .status(400)
+        .json({ success: false, message: "You are already in a team." });
+    }
+
+    // Update the user activeTeam filed
+    existingUser.activeTeam = team._id;
+    await existingUser.save();
+
+    // Team me member add karo
+    team.members.push({ userId, role: "player" });
+    await team.save();
+
+    // Invitation delete karo
+    await Invitation.findByIdAndDelete(invitation._id);
+
+    // Notification Create
+    const notification = new TeamNotification({
+      user: invitation.sender,
+      type: "accept",
+      message: `${
+        req.user.name || req.user.username
+      } has accepted your team invite.`,
+      relatedId: team._id,
+    });
+
+    await notification.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Invitation accepted successfully.",
+      invitation,
+      notification,
+    });
   } catch (error) {
-    console.error("Error accepting invitation:", error);
-    res.status(500).json({ message: "Error accepting invitation", error });
+    console.error("Error accepting invite:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
-// export const acceptInvite = async (req, res) => {
-//   try {
-//     const { invitationId } = req.params;
-//     const userId = req.user;
-
-//     // return console.log(invitationId, userId);
-
-//     // Invitation find karo
-//     const invitation = await Invitation.findById(invitationId);
-//     if (!invitation || invitation.receiver.toString() !== userId.toString()) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Invitation not found or unauthorized",
-//       });
-//     }
-
-//     // Team find karo
-//     const team = await Team.findById(invitation.team);
-//     if (!team) {
-//       return res
-//         .status(404)
-//         .json({ success: false, message: "Team not found" });
-//     }
-
-//     // Check if user already in a team
-//     const existingUser = await User.findById(userId);
-//     if (existingUser.activeTeam) {
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "You are already in a team." });
-//     }
-
-//     // User ka active team update karo
-//     existingUser.activeTeam = team._id;
-//     existingUser.teamRole = "member"; // Default role
-//     await existingUser.save();
-
-//     // Team me member add karo
-//     team.members.push({ userId, role: "member" });
-//     await team.save();
-
-//     // Invitation delete karo
-//     await Invitation.findByIdAndDelete(inviteId);
-
-//     // Notification Create
-//     const notification = new TeamNotification({
-//       user: invitation.sender,
-//       type: "match",
-//       message: `${
-//         req.user.name || req.user.username
-//       } has accepted your team invite.`,
-//       relatedId: team._id,
-//     });
-
-//     await notification.save();
-
-//     res
-//       .status(200)
-//       .json({ success: true, message: "Invitation accepted successfully." });
-//   } catch (error) {
-//     console.error("Error accepting invite:", error);
-//     res.status(500).json({ success: false, message: "Internal server error" });
-//   }
-// };
-
 export const rejectInvite = async (req, res) => {
   try {
-    const { inviteId } = req.params;
+    const { invitationId } = req.params;
     const userId = req.user._id;
 
     // Invitation find karo
-    const invitation = await Invitation.findById(inviteId);
+    const invitation = await Invitation.findById(invitationId);
+
     if (!invitation || invitation.receiver.toString() !== userId.toString()) {
       return res.status(404).json({
         success: false,
@@ -169,23 +214,25 @@ export const rejectInvite = async (req, res) => {
     }
 
     // Invitation delete karo
-    await Invitation.findByIdAndDelete(inviteId);
+    await Invitation.findByIdAndDelete(invitationId);
 
     // Notification Create
     const notification = new TeamNotification({
       user: invitation.sender,
-      type: "announcement",
+      type: "reject",
       message: `${
         req.user.name || req.user.username
       } has rejected your team invite.`,
-      relatedId: inviteId,
+      relatedId: invitationId,
     });
 
     await notification.save();
 
-    res
-      .status(200)
-      .json({ success: true, message: "Invitation rejected successfully." });
+    res.status(200).json({
+      success: true,
+      message: "Invitation rejected successfully.",
+      notification,
+    });
   } catch (error) {
     console.error("Error rejecting invite:", error);
     res.status(500).json({ success: false, message: "Internal server error" });

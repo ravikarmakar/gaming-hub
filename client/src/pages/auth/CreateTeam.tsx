@@ -1,12 +1,21 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+import useAuthStore from "@/store/useAuthStore";
 import { useTeamStore } from "@/store/useTeamStore";
 import { Plus } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const CreateTeam = () => {
   const navigate = useNavigate();
   const [teamName, setTeamName] = useState("");
+  const { user } = useAuthStore();
   const { createTeam, isLoading } = useTeamStore();
+
+  useEffect(() => {
+    if (user?.activeTeam !== null) {
+      navigate("/team-profile");
+    }
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTeamName(e.target.value);
