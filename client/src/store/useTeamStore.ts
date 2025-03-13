@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { axiosInstance } from "@/lib/axios";
 import toast from "react-hot-toast";
 import { Team } from "@/types/team";
@@ -6,15 +7,18 @@ import { create } from "zustand";
 interface TeamState {
   teams: Team[];
   isLoading: boolean;
+  error: null | string;
   seletedTeam: Team | null;
   createTeam: (teamName: string) => Promise<void>;
   fetchTeams: () => Promise<void>;
   fetchOneTeam: (id: string) => Promise<void>;
+  inviteMember: (playerId: string, teamId: string) => Promise<void>;
 }
 
 export const useTeamStore = create<TeamState>((set) => ({
   teams: [],
   isLoading: false,
+  error: null,
   seletedTeam: null,
 
   createTeam: async (teamName: string) => {
@@ -69,6 +73,30 @@ export const useTeamStore = create<TeamState>((set) => ({
       console.log("Error to Fetching Single team details", error);
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  inviteMember: async (playerId, teamId) => {
+    try {
+      set({ isLoading: true, error: null });
+      const res = await axiosInstance.post(
+        `/teams/${teamId}/invite-member`,
+        { playerId },
+        {
+          withCredentials: true,
+        }
+      );
+
+      if (res.status === 201) {
+        toast.success(res.data.message);
+      }
+
+      set({ isLoading: false });
+    } catch (error: any) {
+      set({
+        error: error instanceof Error ? error.message : error,
+        isLoading: false,
+      });
     }
   },
 }));

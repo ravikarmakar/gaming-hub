@@ -131,9 +131,7 @@ export const acceptInvite = async (req, res) => {
     const { invitationId } = req.params;
     const userId = req.user._id;
 
-    // return console.log(invitationId, userId);
-
-    // Invitation find karo
+    // Find the Invitation
     const invitation = await Invitation.findById(invitationId);
 
     if (!invitation || invitation.receiver.toString() !== userId.toString()) {
@@ -143,17 +141,13 @@ export const acceptInvite = async (req, res) => {
       });
     }
 
-    // return console.log(invitation._id);
-
-    // Team find karo
+    // Find the team
     const team = await Team.findById(invitation.teamId);
     if (!team) {
       return res
         .status(404)
         .json({ success: false, message: "Team not found" });
     }
-
-    // return console.log(team);
 
     // Check if user already in a team
     const existingUser = await User.findById(userId);
@@ -167,11 +161,11 @@ export const acceptInvite = async (req, res) => {
     existingUser.activeTeam = team._id;
     await existingUser.save();
 
-    // Team me member add karo
+    // Add member into a team
     team.members.push({ userId, role: "player" });
     await team.save();
 
-    // Invitation delete karo
+    // Delete the Invitation from DB
     await Invitation.findByIdAndDelete(invitation._id);
 
     // Notification Create
@@ -236,5 +230,129 @@ export const rejectInvite = async (req, res) => {
   } catch (error) {
     console.error("Error rejecting invite:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// option for future
+
+export const respondToInvite = async (req, res) => {
+  try {
+    const { invitationId, response } = req.body; // response = "accepted" | "rejected"
+    const userId = req.user._id; // Current logged-in user
+
+    const invitation = await Invitation.findById(invitationId).populate("team");
+    if (!invitation)
+      return res
+        .status(404)
+        .json({ success: false, message: "Invitation not found." });
+
+    // Check if the user is the receiver
+    if (invitation.receiver.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to respond to this invitation.",
+      });
+    }
+
+    let message = "";
+    if (response === "accepted") {
+      // Add user to the team
+      await Team.findByIdAndUpdate(invitation.team._id, {
+        $push: { members: { userId, role: "player" } },
+      });
+
+      // Update user's active team
+      await User.findByIdAndUpdate(userId, {
+        activeTeam: invitation.team._id,
+        teamRole: "player",
+      });
+
+      invitation.status = "accepted";
+      message = `${req.user.username} has accepted your team invitation.`;
+    } else {
+      invitation.status = "rejected";
+      message = `${req.user.username} has rejected your team invitation.`;
+    }
+
+    await invitation.save();
+
+    // Create Notification for Captain/Owner**
+    const notification = new TeamNotification({
+      user: invitation.sender, // Captain/Owner
+      type: "invite",
+      message,
+      relatedId: invitation._id,
+    });
+
+    await notification.save();
+
+    res.status(200).json({ success: true, message: `Invitation ${response}.` });
+  } catch (error) {
+    console.error("Error responding to invite:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while responding to invite.",
+    });
+  }
+};
+
+export const respondToInvite2 = async (req, res) => {
+  try {
+    const { invitationId, response } = req.body; // response = "accepted" | "rejected"
+    const userId = req.user._id; // Current logged-in user
+
+    const invitation = await Invitation.findById(invitationId).populate("team");
+    if (!invitation)
+      return res
+        .status(404)
+        .json({ success: false, message: "Invitation not found." });
+
+    // Check if the user is the receiver
+    if (invitation.receiver.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to respond to this invitation.",
+      });
+    }
+
+    let message = "";
+    if (response === "accepted") {
+      // Add user to the team
+      await Team.findByIdAndUpdate(invitation.team._id, {
+        $push: { members: { userId, role: "player" } },
+      });
+
+      // Update user's active team
+      await User.findByIdAndUpdate(userId, {
+        activeTeam: invitation.team._id,
+        teamRole: "player",
+      });
+
+      invitation.status = "accepted";
+      message = `${req.user.username} has accepted your team invitation.`;
+    } else {
+      invitation.status = "rejected";
+      message = `${req.user.username} has rejected your team invitation.`;
+    }
+
+    await invitation.save();
+
+    // ✅ **Create Notification for Captain/Owner**
+    const notification = new TeamNotification({
+      user: invitation.sender, // Captain/Owner
+      type: "invite",
+      message,
+      relatedId: invitation._id,
+    });
+
+    await notification.save();
+
+    res.status(200).json({ success: true, message: `Invitation ${response}.` });
+  } catch (error) {
+    console.error("Error responding to invite:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while responding to invite.",
+    });
   }
 };

@@ -1,31 +1,34 @@
-import React from "react";
+/* eslint-disable react-hooks/exhaustive-deps */
+import React, { useEffect } from "react";
 import { motion } from "framer-motion";
 import { useMediaQuery } from "react-responsive";
+import useNotificationStore from "@/store/useNotificationStore";
+import { formatDistanceToNowStrict } from "date-fns";
 
 // Mock data
-const notifications = [
-  {
-    id: 1,
-    type: "team_request",
-    message: 'John Doe wants to join your team "Pro Gamers"',
-    time: "2m ago",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=John",
-  },
-  {
-    id: 2,
-    type: "rejection",
-    message: 'Your request to join "Elite Squad" was declined',
-    time: "1h ago",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Elite",
-  },
-  {
-    id: 3,
-    type: "tournament",
-    message: "New tournament: Winter Championship 2024 is starting soon!",
-    time: "3h ago",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Tournament",
-  },
-];
+// const notificationss = [
+//   {
+//     id: 1,
+//     type: "team_request",
+//     message: 'John Doe wants to join your team "Pro Gamers"',
+//     time: "2m ago",
+//     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=John",
+//   },
+//   {
+//     id: 2,
+//     type: "rejection",
+//     message: 'Your request to join "Elite Squad" was declined',
+//     time: "1h ago",
+//     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Elite",
+//   },
+//   {
+//     id: 3,
+//     type: "tournament",
+//     message: "New tournament: Winter Championship 2024 is starting soon!",
+//     time: "3h ago",
+//     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Tournament",
+//   },
+// ];
 
 const suggestedPlayers = [
   {
@@ -68,6 +71,9 @@ const suggestedTeams = [
 const NotificationPage: React.FC = () => {
   const isMobile = useMediaQuery({ maxWidth: 1024 });
 
+  const { notifications, isLoading, fetchNotification } =
+    useNotificationStore();
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -84,6 +90,12 @@ const NotificationPage: React.FC = () => {
       transition: { type: "spring", stiffness: 100 },
     },
   };
+
+  useEffect(() => {
+    fetchNotification();
+  }, []);
+
+  console.log(notifications);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-[#1a1b2e] to-gray-900 text-white pt-20">
@@ -143,40 +155,61 @@ const NotificationPage: React.FC = () => {
               Notifications
             </h1>
 
-            <div className="space-y-4">
-              {notifications.map((notification) => (
-                <motion.div
-                  key={notification.id}
-                  variants={itemVariants}
-                  className="group relative"
-                >
-                  <div className="flex items-start space-x-4 p-4 rounded-2xl bg-white/5 backdrop-blur-sm hover:bg-white/10 transition-all duration-300">
-                    <img
-                      src={notification.avatar}
-                      alt=""
-                      className="w-12 h-12 rounded-full bg-purple-500/20"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-gray-200 mb-1">
-                        {notification.message}
-                      </p>
-                      <span className="text-sm text-gray-400">
-                        {notification.time}
-                      </span>
+            {isLoading ? (
+              <div>Loading...</div>
+            ) : (
+              <div className="space-y-4">
+                {notifications.map((notification) => (
+                  <motion.div
+                    key={notification?._id}
+                    variants={itemVariants}
+                    className="group relative"
+                  >
+                    <div className="flex items-start space-x-4 p-4 rounded-2xl bg-white/5 backdrop-blur-sm hover:bg-white/10 transition-all duration-300">
+                      <img
+                        src={
+                          notification?.user ||
+                          "https://api.dicebear.com/7.x/avataaars/svg?seed=John"
+                        }
+                        alt=""
+                        className="w-12 h-12 rounded-full bg-purple-500/20"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-gray-200 mb-1">
+                          {notification.message}
+                        </p>
+                        <span className="text-sm text-gray-400">
+                          {formatDistanceToNowStrict(
+                            new Date(notification.createdAt)
+                          )}{" "}
+                          ago
+                        </span>
+
+                        {notification.type === "invite" && (
+                          <div className="mt-2">
+                            <button className="px-3 py-1 bg-green-500/20 text-green-500 rounded-lg text-xs">
+                              Accept
+                            </button>
+                            <button className="px-3 py-1 bg-red-500/20 text-red-500 rounded-lg text-xs ml-2">
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div
+                        className={`w-2 h-2 rounded-full ${
+                          notification.type === "join_request"
+                            ? "bg-green-500"
+                            : notification.type === "reject"
+                            ? "bg-red-500"
+                            : "bg-purple-500"
+                        }`}
+                      />
                     </div>
-                    <div
-                      className={`w-2 h-2 rounded-full ${
-                        notification.type === "team_request"
-                          ? "bg-green-500"
-                          : notification.type === "rejection"
-                          ? "bg-red-500"
-                          : "bg-purple-500"
-                      }`}
-                    />
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </motion.div>
 
           {/* Right Sidebar */}

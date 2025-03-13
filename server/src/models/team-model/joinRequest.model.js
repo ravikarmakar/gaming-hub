@@ -7,12 +7,12 @@ const joinRequestSchema = new mongoose.Schema(
       ref: "Team",
       required: true,
     },
-    userId: {
+    senderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     }, // Request sender
-    requestedBy: {
+    receivedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,

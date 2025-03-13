@@ -52,3 +52,17 @@ export interface Event {
   updatedAt: string;
   __v: number;
 }
+
+export interface Notification {
+  _id: string;
+  user: string;
+  type: "invite" | "join_request" | "team_update" | "accept" | "reject";
+  message: string;
+  relatedId: string;
+  status: "unread" | "read";
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export default Notification;

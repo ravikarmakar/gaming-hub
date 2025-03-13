@@ -1,6 +1,6 @@
 import Team from "../models/team.model.js";
 import TeamNotification from "../models/notification-model/team.notification.model.js";
-import Request from "../models/team-model/joinRequest.model.js";
+import JoinRequest from "../models/team-model/joinRequest.model.js";
 import Invitation from "../models/team-model/invitation.model.js";
 import mongoose from "mongoose";
 import User from "../models/user.model.js";
@@ -377,39 +377,47 @@ export const deleteMember = async (req, res) => {
       .status(200)
       .json({ success: true, message: "Member kicked successfully" });
   } catch (error) {
-    console.error("Error kicking member:", error);
+    console.error("Error in kicking member:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 }; // working
 
-//
-//
-//
-//
-///
-//
-//
-//
-
-////
-//
-//
-///
-//
-////
-//
-////
-
 export const requestToJoinTeam = async (req, res) => {
   try {
-    const { teamId } = req.body;
+    const { teamId } = req.params;
     const playerId = req.user._id;
 
+    // Find the team
+    const team = await Team.findById(teamId);
+
+    if (!team) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Team not found" });
+    }
+
+    // if Player already in Other Team
+    if (playerId.activeTeam) {
+      return res
+        .status(404)
+        .json({ success: false, message: "You are already in other team" });
+    }
+
+    // Check if the sender is alredy an Owner or Captain
+    if (
+      playerId.toString() === team.captain.toString() &&
+      playerId.toString() === team.owner.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You can't send join request to in own team",
+      });
+    }
+
     // Check if the request already exists
-    const existingRequest = await Request.findOne({
+    const existingRequest = await JoinRequest.findOne({
       teamId,
       senderId: playerId,
-      type: "join",
       status: "pending",
     });
     if (existingRequest) {
@@ -420,150 +428,31 @@ export const requestToJoinTeam = async (req, res) => {
     }
 
     // Create a new join request
-    const newRequest = new Request({
+    const newJoinRequest = new JoinRequest({
       teamId,
       senderId: playerId,
-      receiverId: (await Team.findById(teamId)).captainId,
-      type: "join",
+      receivedBy: team.owner,
+      relatedId: teamId,
     });
-    await newRequest.save();
+    await newJoinRequest.save();
 
     // Notify the captain
-    const notification = new Notification({
-      userId: newRequest.receiverId,
-      message: `Player requested to join your team: ${teamId}.`,
+    const notification = new TeamNotification({
+      user: newJoinRequest.receivedBy,
+      type: "join_request",
+      message: `${req.user.name} requested to join your team: ${team.teamName}.`,
+      relatedId: playerId,
     });
     await notification.save();
 
     res.status(201).json({
       success: true,
       message: "Join request sent successfully",
-      request: newRequest,
+      joinRequest: newJoinRequest,
+      notification,
     });
   } catch (error) {
     console.error("Error requesting to join team:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
-};
-
-export const respondToInvite = async (req, res) => {
-  try {
-    const { invitationId, response } = req.body; // response = "accepted" | "rejected"
-    const userId = req.user._id; // Current logged-in user
-
-    const invitation = await Invitation.findById(invitationId).populate("team");
-    if (!invitation)
-      return res
-        .status(404)
-        .json({ success: false, message: "Invitation not found." });
-
-    // Check if the user is the receiver
-    if (invitation.receiver.toString() !== userId.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: "You are not authorized to respond to this invitation.",
-      });
-    }
-
-    let message = "";
-    if (response === "accepted") {
-      // Add user to the team
-      await Team.findByIdAndUpdate(invitation.team._id, {
-        $push: { members: { userId, role: "player" } },
-      });
-
-      // Update user's active team
-      await User.findByIdAndUpdate(userId, {
-        activeTeam: invitation.team._id,
-        teamRole: "player",
-      });
-
-      invitation.status = "accepted";
-      message = `${req.user.username} has accepted your team invitation.`;
-    } else {
-      invitation.status = "rejected";
-      message = `${req.user.username} has rejected your team invitation.`;
-    }
-
-    await invitation.save();
-
-    // Create Notification for Captain/Owner**
-    const notification = new TeamNotification({
-      user: invitation.sender, // Captain/Owner
-      type: "invite",
-      message,
-      relatedId: invitation._id,
-    });
-
-    await notification.save();
-
-    res.status(200).json({ success: true, message: `Invitation ${response}.` });
-  } catch (error) {
-    console.error("Error responding to invite:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while responding to invite.",
-    });
-  }
-};
-
-export const respondToInvite2 = async (req, res) => {
-  try {
-    const { invitationId, response } = req.body; // response = "accepted" | "rejected"
-    const userId = req.user._id; // Current logged-in user
-
-    const invitation = await Invitation.findById(invitationId).populate("team");
-    if (!invitation)
-      return res
-        .status(404)
-        .json({ success: false, message: "Invitation not found." });
-
-    // Check if the user is the receiver
-    if (invitation.receiver.toString() !== userId.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: "You are not authorized to respond to this invitation.",
-      });
-    }
-
-    let message = "";
-    if (response === "accepted") {
-      // Add user to the team
-      await Team.findByIdAndUpdate(invitation.team._id, {
-        $push: { members: { userId, role: "player" } },
-      });
-
-      // Update user's active team
-      await User.findByIdAndUpdate(userId, {
-        activeTeam: invitation.team._id,
-        teamRole: "player",
-      });
-
-      invitation.status = "accepted";
-      message = `${req.user.username} has accepted your team invitation.`;
-    } else {
-      invitation.status = "rejected";
-      message = `${req.user.username} has rejected your team invitation.`;
-    }
-
-    await invitation.save();
-
-    // ✅ **Create Notification for Captain/Owner**
-    const notification = new TeamNotification({
-      user: invitation.sender, // Captain/Owner
-      type: "invite",
-      message,
-      relatedId: invitation._id,
-    });
-
-    await notification.save();
-
-    res.status(200).json({ success: true, message: `Invitation ${response}.` });
-  } catch (error) {
-    console.error("Error responding to invite:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while responding to invite.",
-    });
-  }
-};
+}; // working
