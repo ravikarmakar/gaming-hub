@@ -5,7 +5,14 @@ const teamNotificationSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Receiver
     type: {
       type: String,
-      enum: ["invite", "request", "match", "announcement"],
+      enum: [
+        "invite",
+        "join_request",
+        "team_update",
+        "accept",
+        "reject",
+        "announcement",
+      ],
       required: true,
     },
     message: { type: String, required: true },

@@ -15,6 +15,7 @@ import teamRouter from "./routes/team.route.js";
 import userRouter from "./routes/user.route.js";
 import notificationRouter from "./routes/notifications-route/team.notification.route.js";
 import invitationRouter from "./routes/team-routes/invitation.route.js";
+import joinRequestRouter from "./routes/team-routes/joinRequest.route.js";
 
 // Event Routes
 import eventRouter from "./routes/event.route.js";
@@ -33,7 +34,7 @@ app.use(
   })
 );
 
-app.use(morgan("combined"));
+app.use(morgan("dev"));
 app.use(cookieParese());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -51,6 +52,7 @@ app.use("/api/users", userRouter);
 app.use("/api/teams", teamRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/invitations", invitationRouter);
+app.use("/api/join-requests", joinRequestRouter);
 
 // events related outer
 app.use("/api/events", eventRouter);

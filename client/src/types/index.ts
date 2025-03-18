@@ -16,6 +16,7 @@ export interface User {
   rank: number;
   role: "admin" | "max admin" | "user";
   blocked: boolean;
+  notificationCount: number;
   globalRank: number;
   country?: string | null;
   device?: string | null;
@@ -51,4 +52,16 @@ export interface Event {
   createdAt: string;
   updatedAt: string;
   __v: number;
+}
+
+export interface Notification {
+  _id: string;
+  user: string;
+  type: "invite" | "join_request" | "team_update" | "accept" | "reject";
+  message: string;
+  relatedId: string;
+  status: "unread" | "read";
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

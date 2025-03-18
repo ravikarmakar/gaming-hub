@@ -16,12 +16,13 @@ const userSchema = new mongoose.Schema(
       default: "user",
     },
     esportsRole: { type: String, default: "player" },
-    isOrganizer: { type: Boolean, default: false },
+    // isOrganizer: { type: Boolean, default: false },
     blocked: { type: Boolean, default: false },
     globalRank: { type: Number, default: 0 },
     country: { type: String, default: null },
     device: { type: String, default: null },
     playstyle: { type: String, default: null },
+    notificationCount: { type: Number, default: 0 },
 
     // Team Management
     activeTeam: {
@@ -29,7 +30,7 @@ const userSchema = new mongoose.Schema(
       ref: "Team",
       default: null,
     },
-    isCaptain: { type: Boolean, default: false },
+    teamCreator: { type: Boolean, default: false },
     createdTeamCount: { type: Number, default: 0 },
     maxTeamCreationLimit: { type: Number, default: 3 },
 
@@ -42,44 +43,6 @@ const userSchema = new mongoose.Schema(
       },
     ],
     maxTeamJoinLimit: { type: Number, default: 5 },
-
-    // Notification System
-    notifications: [
-      {
-        type: {
-          type: String,
-          enum: ["invite", "request", "match", "announcement"],
-        },
-        message: { type: String },
-        relatedId: {
-          type: mongoose.Schema.Types.ObjectId,
-          refPath: "notifications.type",
-        },
-        status: { type: String, enum: ["unread", "read"], default: "unread" },
-        createdAt: { type: Date, default: Date.now },
-      },
-    ],
-
-    // Invite System
-    sentInvites: [
-      {
-        inviteId: { type: mongoose.Schema.Types.ObjectId, auto: true },
-        teamId: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
-        sentTo: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        status: {
-          type: String,
-          enum: ["pending", "accepted", "rejected"],
-          default: "pending",
-        },
-        sentAt: { type: Date, default: Date.now },
-      },
-    ],
-
-    // Invites & Requests
-    invitesReceived: [{ type: mongoose.Schema.Types.ObjectId, ref: "Invite" }],
-    joinRequestsSent: [
-      { type: mongoose.Schema.Types.ObjectId, ref: "JoinRequest" },
-    ],
 
     game: { type: String },
     blogs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Blog" }],

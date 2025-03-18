@@ -1,6 +1,5 @@
 import User from "../models/user.model.js";
 import generateTokenAndSetCookie from "../utils/tokenGenerator.js";
-import jwt from "jsonwebtoken";
 
 export const registerUser = async (req, res) => {
   try {
@@ -35,19 +34,18 @@ export const registerUser = async (req, res) => {
       email,
       password,
       termsAccepted,
-      role: "user",
     });
 
     await newUser.save();
     const token = generateTokenAndSetCookie(newUser._id, res);
 
     res.status(201).json({
+      success: true,
+      token,
       user: {
         _id: newUser._id,
         name: newUser.name,
         email: newUser.email,
-        role: newUser.role,
-        token,
       },
     });
   } catch (error) {
@@ -79,7 +77,6 @@ export const loginUser = async (req, res) => {
           _id: user._id,
           email: user.email,
           name: user.name,
-          role: user.role,
           activeTeam: user.activeTeam,
         },
         token,

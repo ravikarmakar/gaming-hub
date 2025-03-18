@@ -157,7 +157,7 @@ const AllPlayers = () => {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8"
         >
           {players.map((player) => (
-            <Link to={`/profile/${player._id}`} key={player._id}>
+            <Link key={player._id} to={`/profile/${player._id}`}>
               <motion.div
                 variants={cardVariants}
                 whileHover="hover"
