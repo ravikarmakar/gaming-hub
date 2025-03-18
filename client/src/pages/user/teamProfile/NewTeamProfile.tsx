@@ -6,19 +6,13 @@ import {
   Users,
   Star,
   Target,
-  Shield,
-  Gamepad2,
   Medal,
   Sword,
   Crown,
-  Flame,
   ChevronRight,
   Calendar,
   Clock,
-  MapPin,
-  DollarSign,
   UserPlus,
-  Check,
 } from "lucide-react";
 import useAuthStore from "@/store/useAuthStore";
 import { useTeamStore } from "@/store/useTeamStore";
@@ -38,7 +32,7 @@ const NewTeamProfile: React.FC = () => {
     fetchUser();
   }, []);
 
-  const teamId = user?.teamId ?? null;
+  const teamId = user?.activeTeam ?? null;
 
   useEffect(() => {
     if (teamId === null) {
@@ -56,6 +50,8 @@ const NewTeamProfile: React.FC = () => {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 },
   };
+
+  console.log(seletedTeam);
 
   const renderOverviewTab = () => (
     <motion.div

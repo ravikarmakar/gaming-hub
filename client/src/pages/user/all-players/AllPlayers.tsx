@@ -2,12 +2,9 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Gamepad2, Trophy, Star, Users, Activity } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import usePlayerStore from "@/store/usePlayerStore";
 import { useDebounce } from "@/hooks/useDebounce";
-import useAuthStore from "@/store/useAuthStore";
-import { useTeamStore } from "@/store/useTeamStore";
-import toast from "react-hot-toast";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -53,8 +50,6 @@ const statsVariants = {
 };
 
 const AllPlayers = () => {
-  const navigate = useNavigate();
-
   const {
     fetchPlayers,
     hasMore,
@@ -64,9 +59,6 @@ const AllPlayers = () => {
     error,
     isLoading,
   } = usePlayerStore();
-
-  const { user, checkAuth } = useAuthStore();
-  const { inviteMember, isLoading: isSending } = useTeamStore();
 
   const [query, setQuery] = useState(searchTerm);
   const debouncedSearchTerm = useDebounce(query, 500);
@@ -84,28 +76,6 @@ const AllPlayers = () => {
   useEffect(() => {
     fetchPlayers(true);
   }, [searchTerm]);
-
-  const handleInviteTeamMember = async (playerId: string | undefined) => {
-    if (!user) {
-      await checkAuth();
-    }
-
-    if (!playerId) {
-      return toast.error("Invalid player selection!");
-    }
-
-    const teamId = user?.activeTeam;
-
-    if (!teamId) {
-      toast.error("You need to create a team first!");
-      return navigate("/create-team");
-    }
-
-    await inviteMember(playerId, teamId);
-
-    console.log("This is player Id: ", playerId);
-    console.log("This is team Id: ", teamId);
-  };
 
   if (!players)
     return (
@@ -187,98 +157,83 @@ const AllPlayers = () => {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8"
         >
           {players.map((player) => (
-            <motion.div
-              variants={cardVariants}
-              whileHover="hover"
-              key={player._id}
-              className="relative group overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a1b23] to-[#13141a] border border-violet-900/20 backdrop-blur-xl"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-violet-600/10 to-fuchsia-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
+            <Link key={player._id} to={`/profile/${player._id}`}>
+              <motion.div
+                variants={cardVariants}
+                whileHover="hover"
+                className="relative group overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a1b23] to-[#13141a] border border-violet-900/20 backdrop-blur-xl"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-violet-600/10 to-fuchsia-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
 
-              <div className="p-6 relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="relative">
-                      <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-violet-500/30">
-                        <img
-                          src={player?.avatar}
-                          alt={player.name}
-                          className="w-full h-full object-cover"
-                        />
+                <div className="p-6 relative z-10">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="relative">
+                        <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-violet-500/30">
+                          <img
+                            src={player?.avatar}
+                            alt={player.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="absolute -bottom-1 -right-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full p-1">
+                          <Gamepad2 className="w-4 h-4 text-white" />
+                        </div>
                       </div>
-                      <div className="absolute -bottom-1 -right-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full p-1">
-                        <Gamepad2 className="w-4 h-4 text-white" />
+                      <div className="text-left">
+                        <h3 className="text-xl font-semibold text-white group-hover:text-violet-400 transition-colors">
+                          {player.name}
+                        </h3>
+                        <p className="text-gray-400 text-sm">{player?.name}</p>
                       </div>
                     </div>
-                    <div className="text-left">
-                      <h3 className="text-xl font-semibold text-white group-hover:text-violet-400 transition-colors">
-                        {player.name}
-                      </h3>
-                      <p className="text-gray-400 text-sm">{player?.name}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-6">
+                    <motion.div
+                      variants={statsVariants}
+                      className="flex items-center space-x-2 bg-violet-950/30 rounded-lg p-3"
+                    >
+                      <Trophy className="w-5 h-5 text-violet-400" />
+                      <div>
+                        <p className="text-sm text-gray-400">Tournaments</p>
+                        <p className="text-lg font-semibold text-violet-400">
+                          {player.globalRank}
+                        </p>
+                      </div>
+                    </motion.div>
+                    <motion.div
+                      variants={statsVariants}
+                      className="flex items-center space-x-2 bg-fuchsia-950/30 rounded-lg p-3"
+                    >
+                      <Star className="w-5 h-5 text-fuchsia-400" />
+                      <div>
+                        <p className="text-sm text-gray-400">Rating</p>
+                        <p className="text-lg font-semibold text-fuchsia-400">
+                          {player.globalRank}
+                        </p>
+                      </div>
+                    </motion.div>
+                  </div>
+
+                  <div className="mt-6 space-y-2">
+                    <div className="flex items-center space-x-2 text-gray-400">
+                      <Users className="w-4 h-4" />
+                      <span className="text-sm">
+                        Team: {player.team || "Solo Player"}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-gray-400">
+                      <Activity className="w-4 h-4" />
+                      <span className="text-sm">
+                        Experience: {player.playstyle} years
+                      </span>
                     </div>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4 mt-6">
-                  <motion.div
-                    variants={statsVariants}
-                    className="flex items-center space-x-2 bg-violet-950/30 rounded-lg p-3"
-                  >
-                    <Trophy className="w-5 h-5 text-violet-400" />
-                    <div>
-                      <p className="text-sm text-gray-400">Tournaments</p>
-                      <p className="text-lg font-semibold text-violet-400">
-                        {player.globalRank}
-                      </p>
-                    </div>
-                  </motion.div>
-                  <motion.div
-                    variants={statsVariants}
-                    className="flex items-center space-x-2 bg-fuchsia-950/30 rounded-lg p-3"
-                  >
-                    <Star className="w-5 h-5 text-fuchsia-400" />
-                    <div>
-                      <p className="text-sm text-gray-400">Rating</p>
-                      <p className="text-lg font-semibold text-fuchsia-400">
-                        {player.globalRank}
-                      </p>
-                    </div>
-                  </motion.div>
-                </div>
-
-                <div className="mt-6 space-y-2">
-                  <div className="flex items-center space-x-2 text-gray-400">
-                    <Users className="w-4 h-4" />
-                    <span className="text-sm">
-                      Team: {player.team || "Solo Player"}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-gray-400">
-                    <Activity className="w-4 h-4" />
-                    <span className="text-sm">
-                      Experience: {player.playstyle} years
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-6 flex justify-between items-center">
-                  <Link to={`/profile/${player._id}`}>
-                    <button className="bg-gray-900/20 px-4 py-2 rounded-xl text-blue-700/50 font-medium hover:bg-blue-600/40 hover:text-white transition-all duration-200">
-                      View Profile
-                    </button>
-                  </Link>
-
-                  <button
-                    className="bg-blue-800/40 px-4 py-2 rounded-xl text-gray hover:bg-blue-600/40 hover:text-white transition-all duration-200"
-                    key={player._id}
-                    onClick={() => handleInviteTeamMember(player?._id)}
-                  >
-                    {isSending ? "Inviting" : "Add in team"}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </Link>
           ))}
         </motion.div>
 

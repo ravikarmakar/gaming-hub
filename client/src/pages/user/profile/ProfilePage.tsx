@@ -4,10 +4,10 @@ import { Trophy, Target, Shield, Crown, Medal, Flame } from "lucide-react";
 import { motion } from "framer-motion";
 import ProfileHeader from "./elements/ProfileHeader";
 import QuickView from "./elements/QuickView";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import useUserStore from "@/store/usePlayerStore";
-import useAuthStore from "@/store/useAuthStore";
 import { User } from "@/types";
+import useAuthStore from "@/store/useAuthStore";
 
 // Extended player data
 interface PlayerData {
@@ -259,6 +259,7 @@ const itemVariants = {
 };
 
 const ProfilePage: React.FC = () => {
+  const navigate = useNavigate();
   const { id } = useParams();
   const { user } = useAuthStore();
   const [profileData, setProfileData] = useState<User | null>(null);
@@ -266,6 +267,9 @@ const ProfilePage: React.FC = () => {
   const { getOneUser, selectedUser } = useUserStore();
   const [activeTab, setActiveTab] = useState("overview");
 
+  const loggedInUser = user?._id === profileData?._id;
+
+  // fetching User data
   useEffect(() => {
     if (id) {
       getOneUser(id);
@@ -278,11 +282,11 @@ const ProfilePage: React.FC = () => {
     if (id && selectedUser) {
       setProfileData(selectedUser);
     }
-  }, [selectedUser]);
 
-  const isOwnProfile = user?._id === profileData?._id;
-
-  console.log(isOwnProfile);
+    if (loggedInUser) {
+      navigate("/profile");
+    }
+  }, [selectedUser, loggedInUser, navigate]);
 
   if (!profileData)
     return (
@@ -295,7 +299,7 @@ const ProfilePage: React.FC = () => {
     <section className="relative w-full bg-[#0A0A1F]">
       <div className="relative w-full">
         {/* Profile Header */}
-        <ProfileHeader user={profileData} isOwnProfile={isOwnProfile} />
+        <ProfileHeader user={profileData} isOwnProfile={loggedInUser} />
 
         {/* Quick Views */}
         <QuickView />

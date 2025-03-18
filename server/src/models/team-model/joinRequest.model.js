@@ -19,7 +19,7 @@ const joinRequestSchema = new mongoose.Schema(
     }, // Captain/Owner
     status: {
       type: String,
-      enum: ["pending", "approved", "declined"],
+      enum: ["pending", "accepted", "rejected"],
       default: "pending",
     },
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Player who approved

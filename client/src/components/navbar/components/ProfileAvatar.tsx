@@ -42,9 +42,14 @@ export const ProfileAvatar = () => {
             className="relative text-gray-200 hover:text-purple-500 transition-colors duration-200"
           >
             <Bell className="w-6 h-6" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs text-gray-200 flex items-center justify-center">
-              3
-            </span>
+
+            {user?.notificationCount === 0 ? (
+              ""
+            ) : (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs text-gray-100 flex items-center justify-center">
+                {user?.notificationCount}
+              </span>
+            )}
           </motion.button>
         </Link>
 

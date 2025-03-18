@@ -12,7 +12,12 @@ interface TeamState {
   createTeam: (teamName: string) => Promise<void>;
   fetchTeams: () => Promise<void>;
   fetchOneTeam: (id: string) => Promise<void>;
-  inviteMember: (playerId: string, teamId: string) => Promise<void>;
+
+  // Team Mng
+  inviteMember: (playerId: string) => Promise<void>;
+  responseToInvite: (action: string) => void;
+  teamJoinRequest: (teamId: string) => void;
+  respondToJoinRequest: (action: string) => void;
 }
 
 export const useTeamStore = create<TeamState>((set) => ({
@@ -64,7 +69,7 @@ export const useTeamStore = create<TeamState>((set) => ({
     set({ isLoading: true });
 
     try {
-      const response = await axiosInstance.get(`/teams/${id}`, {
+      const response = await axiosInstance.get(`/teams/${id}/profile`, {
         withCredentials: true,
       });
 
@@ -76,15 +81,14 @@ export const useTeamStore = create<TeamState>((set) => ({
     }
   },
 
-  inviteMember: async (playerId, teamId) => {
+  inviteMember: async (playerId) => {
     try {
       set({ isLoading: true, error: null });
+
       const res = await axiosInstance.post(
-        `/teams/${teamId}/invite-member`,
+        "invitations/invite-member",
         { playerId },
-        {
-          withCredentials: true,
-        }
+        { withCredentials: true }
       );
 
       if (res.status === 201) {
@@ -93,10 +97,94 @@ export const useTeamStore = create<TeamState>((set) => ({
 
       set({ isLoading: false });
     } catch (error: any) {
+      console.error("Invite Member Error:", error);
+
+      toast.error(error.response?.data?.message || "Failed to send invite.");
+
       set({
-        error: error instanceof Error ? error.message : error,
+        error: error instanceof Error ? error.message : String(error),
         isLoading: false,
       });
+    }
+  },
+
+  responseToInvite: async (action) => {
+    try {
+      set({ isLoading: true, error: null });
+
+      const res = await axiosInstance.put(
+        "/invitations/response-invite",
+        { action },
+        { withCredentials: true }
+      );
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+      }
+    } catch (error: any) {
+      console.error("Error in responding to invite:", error);
+
+      const errorMessage =
+        error?.response?.data?.message || `Failed to ${action} invite.`;
+
+      toast.error(errorMessage);
+      set({ error: errorMessage });
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  teamJoinRequest: async (teamId) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const res = await axiosInstance.post(
+        "/join-requests",
+        { teamId },
+        {
+          withCredentials: true,
+        }
+      );
+
+      if (res.status === 201) {
+        toast.success(res.data.message);
+      }
+    } catch (error: any) {
+      console.error("Error in sending join request:", error);
+
+      const errorMessage =
+        error?.response?.data?.message || `Failed to send join request.`;
+
+      toast.error(errorMessage);
+      set({ error: errorMessage });
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  respondToJoinRequest: async (action) => {
+    try {
+      set({ isLoading: true, error: null });
+
+      const res = await axiosInstance.put(
+        "join-requests/respond",
+        { action },
+        { withCredentials: true }
+      );
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+      }
+    } catch (error: any) {
+      console.error("Error in responding to join request:", error);
+
+      const errorMessage =
+        error?.response?.data?.message || `Failed to ${action} join request.`;
+
+      toast.error(errorMessage);
+      set({ error: errorMessage });
+    } finally {
+      set({ isLoading: false });
     }
   },
 }));

@@ -7,7 +7,6 @@ const teamSchema = new mongoose.Schema(
     captain: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User", // Reference to the User model (team captain)
-      required: true,
     },
     members: [
       {
@@ -24,11 +23,10 @@ const teamSchema = new mongoose.Schema(
       },
     ],
     isVerified: { type: Boolean, default: false }, // Future verification system
-
     maxMembers: { type: Number, default: 6 },
-    pendingRequests: [
-      { type: mongoose.Schema.Types.ObjectId, ref: "JoinRequest" },
-    ],
+    // pendingRequests: [
+    //   { type: mongoose.Schema.Types.ObjectId, ref: "JoinRequest" },
+    // ],
     playedTournaments: [
       {
         type: mongoose.Schema.Types.ObjectId,

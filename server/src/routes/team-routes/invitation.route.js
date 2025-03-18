@@ -2,14 +2,14 @@ import { Router } from "express";
 import { protectRoute } from "../../middleware/authMiddleware.js";
 import {
   getAllInvitations,
-  acceptInvite,
-  rejectInvite,
+  responseToInvite,
+  inviteMemberInTeam,
 } from "../../controllers/team-controller/invitation.controller.js";
 
 const router = Router();
 
-router.get("/", protectRoute, getAllInvitations); // working
-router.put("/accept/:invitationId", protectRoute, acceptInvite); // working
-router.put("/reject/:invitationId", protectRoute, rejectInvite); // working
+router.get("/", protectRoute, getAllInvitations);
+router.post("/invite-member", protectRoute, inviteMemberInTeam);
+router.put("/response-invite", protectRoute, responseToInvite);
 
 export default router;

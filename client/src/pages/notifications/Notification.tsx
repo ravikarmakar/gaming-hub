@@ -4,6 +4,9 @@ import { motion } from "framer-motion";
 import { useMediaQuery } from "react-responsive";
 import useNotificationStore from "@/store/useNotificationStore";
 import { formatDistanceToNowStrict } from "date-fns";
+import useAuthStore from "@/store/useAuthStore";
+import { useTeamStore } from "@/store/useTeamStore";
+import { Trash2 } from "lucide-react";
 
 // Mock data
 // const notificationss = [
@@ -70,9 +73,19 @@ const suggestedTeams = [
 
 const NotificationPage: React.FC = () => {
   const isMobile = useMediaQuery({ maxWidth: 1024 });
+  const { user } = useAuthStore();
+  const {
+    responseToInvite,
+    isLoading: isPending,
+    respondToJoinRequest,
+  } = useTeamStore();
 
-  const { notifications, isLoading, fetchNotification } =
-    useNotificationStore();
+  const {
+    notifications,
+    isLoading,
+    markAsReadNotification,
+    fetchNotification,
+  } = useNotificationStore();
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -91,11 +104,18 @@ const NotificationPage: React.FC = () => {
     },
   };
 
+  // Check if notification Count 0 don't need to call backend
+  const notificationCount = user?.notificationCount || 0;
+
   useEffect(() => {
     fetchNotification();
   }, []);
 
-  console.log(notifications);
+  useEffect(() => {
+    if (notificationCount > 0) {
+      markAsReadNotification();
+    }
+  }, [notificationCount]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-[#1a1b2e] to-gray-900 text-white pt-20">
@@ -187,10 +207,32 @@ const NotificationPage: React.FC = () => {
 
                         {notification.type === "invite" && (
                           <div className="mt-2">
-                            <button className="px-3 py-1 bg-green-500/20 text-green-500 rounded-lg text-xs">
+                            <button
+                              onClick={() => responseToInvite("accept")}
+                              className="px-3 py-1 bg-green-500/20 text-green-500 rounded-lg text-xs"
+                            >
+                              {isPending ? "Accepting.." : "Accept"}
+                            </button>
+                            <button
+                              onClick={() => responseToInvite("reject")}
+                              className="px-3 py-1 bg-red-500/20 text-red-500 rounded-lg text-xs ml-2"
+                            >
+                              {isPending ? "Rejecting.." : "Reject"}
+                            </button>
+                          </div>
+                        )}
+                        {notification.type === "join_request" && (
+                          <div>
+                            <button
+                              className="px-3 py-1 bg-green-500/20 text-green-500 rounded-lg text-xs"
+                              onClick={() => respondToJoinRequest("accept")}
+                            >
                               Accept
                             </button>
-                            <button className="px-3 py-1 bg-red-500/20 text-red-500 rounded-lg text-xs ml-2">
+                            <button
+                              className="px-3 py-1 bg-red-500/20 text-red-500 rounded-lg text-xs ml-2"
+                              onClick={() => respondToJoinRequest("reject")}
+                            >
                               Reject
                             </button>
                           </div>
@@ -205,6 +247,9 @@ const NotificationPage: React.FC = () => {
                             : "bg-purple-500"
                         }`}
                       />
+                      <button className="cursor-pointer ">
+                        <Trash2 className="size-4 text-red-500/70 hover:text-red-600" />
+                      </button>
                     </div>
                   </motion.div>
                 ))}

@@ -1,5 +1,5 @@
 import { axiosInstance } from "@/lib/axios";
-import Notification from "@/types";
+import { Notification } from "@/types";
 import { create } from "zustand";
 
 interface NotificationStore {
@@ -7,6 +7,7 @@ interface NotificationStore {
   isLoading: boolean;
   error: string | null;
   fetchNotification: () => Promise<void>;
+  markAsReadNotification: () => void;
 }
 
 const useNotificationStore = create<NotificationStore>((set) => ({
@@ -32,6 +33,20 @@ const useNotificationStore = create<NotificationStore>((set) => ({
         notifications: [],
         isLoading: false,
       });
+    }
+  },
+
+  markAsReadNotification: async () => {
+    try {
+      await axiosInstance.put(
+        "/notifications/mark-read",
+        {},
+        {
+          withCredentials: true,
+        }
+      );
+    } catch (error) {
+      console.log("Error to make as a read all notifications", error);
     }
   },
 }));

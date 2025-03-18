@@ -1,28 +1,26 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Users,
   Trophy,
-  Plus,
-  Share2,
+  // Plus,
   UserPlus,
-  Twitter,
-  Instagram,
   Gamepad2,
   Shield,
   Medal,
-  Heart,
+  // Heart,
   Star,
   TrendingUp,
   Calendar,
   Clock,
   Award,
 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import useAuthStore from "@/store/useAuthStore";
 import { useTeamStore } from "@/store/useTeamStore";
-import { Team } from "@/types/team";
+// import { Team } from "@/types/team";
+// import { User } from "@/types";
 
 // Dummy data (would typically come from backend/state management)
 const teamData = {
@@ -133,15 +131,14 @@ const TeamProfile: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { seletedTeam, fetchOneTeam } = useTeamStore();
-  const [activeTab, setActiveTab] = useState("overview");
-  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
-  const [teamProfileData, setTeamProfileData] = useState<Team | null>(null);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const { seletedTeam, fetchOneTeam, teamJoinRequest } = useTeamStore();
+  // const [activeTab, setActiveTab] = useState("overview");
+  // const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  // const [teamProfileData, setTeamProfileData] = useState<Team | null>(null);
+  // const [isFollowing, setIsFollowing] = useState(false);
+  // const [member, setMember] = useState<null | User>(null);
 
   const activeTeam = user?.activeTeam || null;
-
-  console.log(activeTeam);
 
   useEffect(() => {
     if (id) {
@@ -153,9 +150,22 @@ const TeamProfile: React.FC = () => {
     }
   }, [id, activeTeam]);
 
-  const isQwnTeam = user?.activeTeam === seletedTeam?._id;
+  const isTeamMember = user?.activeTeam === seletedTeam?._id;
 
-  console.log(isQwnTeam);
+  useEffect(() => {
+    if (isTeamMember) {
+      navigate("/team-profile");
+    }
+  }, [isTeamMember]);
+
+  const handleTeamJoinRequest = () => {
+    if (!seletedTeam?._id) {
+      console.log("No team selected");
+      return;
+    }
+
+    teamJoinRequest(seletedTeam?._id);
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -229,7 +239,7 @@ const TeamProfile: React.FC = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4">
-                <motion.button
+                {/* <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setIsFollowing(!isFollowing)}
@@ -244,15 +254,20 @@ const TeamProfile: React.FC = () => {
                     size={20}
                   />
                   <span>{isFollowing ? "Following" : "Follow Team"}</span>
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-blue-500 px-6 py-3 rounded-full flex items-center justify-center space-x-2"
-                >
-                  <UserPlus size={20} />
-                  <span>Join Team</span>
-                </motion.button>
+                </motion.button> */}
+                {isTeamMember ? (
+                  ""
+                ) : (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleTeamJoinRequest}
+                    className="bg-blue-500 px-6 py-3 rounded-full flex items-center justify-center space-x-2"
+                  >
+                    <UserPlus size={20} />
+                    <span>Join Team</span>
+                  </motion.button>
+                )}
               </div>
             </div>
           </motion.div>
@@ -304,33 +319,35 @@ const TeamProfile: React.FC = () => {
               <h2 className="text-2xl font-semibold flex items-center">
                 <Users className="mr-3" /> Team Members
               </h2>
-              <motion.button
+              {/* <motion.button
                 onClick={() => setIsAddMemberModalOpen(true)}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 className="bg-purple-600 text-white p-3 rounded-full"
               >
-                <Plus />
-              </motion.button>
+                {seletedTeam?.owner ? <Plus /> : <TbDoorExit />}
+              </motion.button> */}
             </div>
 
             <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-6">
-              {teamData.members.map((member) => (
-                <motion.div
-                  key={member.id}
-                  whileHover={{ scale: 1.05 }}
-                  className="p-2 rounded-xl text-center"
-                >
-                  <img
-                    src={member.avatar}
-                    alt={member.name}
-                    className="lg:w-32 lg:h-32 h-24 w-24 rounded-full mx-auto mb-4 border-3 object-cover border-yellow-400"
-                  />
-                  <h3 className="text-md sm:text-lg font-bold">
-                    {member.name}
-                  </h3>
-                  <p className="text-sm sm:text-base">{member.role}</p>
-                </motion.div>
+              {seletedTeam?.members.map((member) => (
+                <Link to={`/profile/${member?.userId?._id}`}>
+                  <motion.div
+                    key={member?.userId._id}
+                    whileHover={{ scale: 1.05 }}
+                    className="p-2 rounded-xl text-center"
+                  >
+                    <img
+                      src={member.userId?.avatar}
+                      alt={member.role}
+                      className="lg:w-32 lg:h-32 h-24 w-24 rounded-full mx-auto mb-4 border-3 object-cover border-yellow-400"
+                    />
+                    <h3 className="text-md sm:text-lg font-bold">
+                      {member.userId.name}
+                    </h3>
+                    <p className="text-sm sm:text-base">{member.role}</p>
+                  </motion.div>
+                </Link>
               ))}
             </div>
           </motion.div>

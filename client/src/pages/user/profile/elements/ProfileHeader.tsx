@@ -1,6 +1,16 @@
 import React, { useState } from "react";
-import { Clock, Gamepad2, Share2, Target, Trophy, Users2 } from "lucide-react";
+import {
+  Clock,
+  Gamepad2,
+  Share2,
+  Target,
+  Trophy,
+  Users2,
+  LoaderCircle,
+} from "lucide-react";
 import { User } from "@/types";
+import { FaPlus } from "react-icons/fa";
+import { useTeamStore } from "@/store/useTeamStore";
 
 const playerData = {
   id: "FF_123456",
@@ -74,6 +84,14 @@ const IconButton = React.memo(({ icon }: IconButtonProps) => (
 const ProfileHeader = ({ user, isOwnProfile }: ProfileHeaderProps) => {
   const [isFollowing, setIsFollowing] = useState(false);
 
+  const { inviteMember, isLoading, seletedTeam } = useTeamStore();
+
+  const handleInviteTeamMember = async (playerId: string | undefined) => {
+    if (!playerId) return;
+
+    await inviteMember(playerId);
+  };
+
   return (
     <div className="relative w-full overflow-hidden mt-16">
       {/* Static Background Gradient */}
@@ -135,7 +153,11 @@ const ProfileHeader = ({ user, isOwnProfile }: ProfileHeaderProps) => {
                   </span>
                   <span className="flex items-center font-semibold gap-2 bg-white/5 px-3 py-1 rounded-full hover:bg-white/10 transition-colors duration-200">
                     <Users2 className="w-4 h-4 text-yellow-400" />
-                    {playerData.temaName}
+                    {user?.activeTeam ? (
+                      <p>{seletedTeam?.teamName || "Team Not found"}</p>
+                    ) : (
+                      "Add me In Team"
+                    )}
                   </span>
                 </div>
 
@@ -144,7 +166,7 @@ const ProfileHeader = ({ user, isOwnProfile }: ProfileHeaderProps) => {
                   <div className="mt-4 flex flex-wrap items-center justify-center md:justify-start gap-3">
                     <button
                       onClick={() => setIsFollowing(!isFollowing)}
-                      className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 hover:scale-105 ${
+                      className={`px-6 py-2 rounded-full font-semibold transition-all duration-200 ${
                         isFollowing
                           ? "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
                           : "bg-purple-500/60 text-white hover:bg-purple-600"
@@ -152,9 +174,29 @@ const ProfileHeader = ({ user, isOwnProfile }: ProfileHeaderProps) => {
                     >
                       {isFollowing ? "Following" : "Follow"}
                     </button>
-                    <button className="px-6 py-2 rounded-full font-semibold bg-white/10 text-white hover:bg-white/20 hover:scale-105 transition-all duration-200">
+
+                    <button className="px-6 py-2 rounded-full font-semibold bg-green-800/50 text-white hover:bg-green-800/70  transition-all duration-200">
                       Message
                     </button>
+
+                    {user.activeTeam ? (
+                      <button
+                        disabled
+                        className="px-6 py-2 rounded-full font-semibold bg-white/10 text-white transition-all duration-200"
+                      >
+                        <span className="flex items-center gap-2">In Team</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleInviteTeamMember(user._id)}
+                        className="px-6 py-2 rounded-full font-semibold bg-white/10 text-white hover:bg-white/20 transition-all duration-200"
+                      >
+                        <span className="flex items-center gap-2">
+                          <p>{isLoading ? <LoaderCircle /> : <FaPlus />}</p>
+                          <p>{user?.activeTeam ? "In Team" : "Add Player"}</p>
+                        </span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

@@ -16,6 +16,7 @@ export interface User {
   rank: number;
   role: "admin" | "max admin" | "user";
   blocked: boolean;
+  notificationCount: number;
   globalRank: number;
   country?: string | null;
   device?: string | null;
@@ -64,5 +65,3 @@ export interface Notification {
   createdAt: string;
   updatedAt: string;
 }
-
-export default Notification;

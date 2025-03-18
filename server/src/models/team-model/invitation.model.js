@@ -19,7 +19,7 @@ const invitationSchema = new mongoose.Schema(
     }, // Invite sender (Owner/Captain)
     status: {
       type: String,
-      enum: ["pending", "accepted", "declined"],
+      enum: ["pending", "accepted", "rejected"],
       default: "pending",
     },
 

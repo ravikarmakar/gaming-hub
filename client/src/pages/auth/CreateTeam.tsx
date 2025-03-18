@@ -31,7 +31,7 @@ const CreateTeam = () => {
       await createTeam(teamName);
 
       setTeamName("");
-      navigate("/team/team-profile");
+      navigate("/team-profile");
     } catch (error) {
       console.error("Error creating team:", error);
     }
