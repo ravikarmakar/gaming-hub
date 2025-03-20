@@ -1,26 +1,31 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { axiosInstance } from "@/lib/axios";
 import { Event } from "@/types";
+import toast from "react-hot-toast";
 import { create } from "zustand";
 
 export interface EventStore {
   events: Event[];
   isLoading: boolean;
+  error: string | null;
   selectedEvent: Event | null;
   searchQuery: string;
   isSearching: boolean;
+  hasMore: boolean;
+  cursor: string | null;
+  limit: number;
   fetchEvents: (reset?: boolean) => Promise<void>;
   setSearchQuery: (query: string) => void;
   loadMoreEvents: () => Promise<void>;
   getOneEvent: (id: string) => Promise<void>;
-  hasMore: boolean;
-  cursor: string | null;
-  limit: number;
+  regitserEvent: (id: string) => Promise<void>;
+  cancelRegistration: (id: string) => void;
 }
 
 const useEventStore = create<EventStore>((set, get) => ({
   events: [],
   cursor: null,
+  error: null,
   hasMore: true,
   selectedEvent: null,
   isLoading: false,
@@ -89,10 +94,60 @@ const useEventStore = create<EventStore>((set, get) => ({
   getOneEvent: async (id: string) => {
     try {
       const res = await axiosInstance.get(`/events/${id}`);
-      set({ selectedEvent: res.data.event });
+      set({ selectedEvent: res.data.events });
     } catch (error) {
       console.error("Error fetching event:", error);
       throw error;
+    }
+  },
+
+  regitserEvent: async (id) => {
+    try {
+      set({ isLoading: true, error: null });
+
+      const res = await axiosInstance.post(
+        `/events/register/${id}`,
+        {},
+        { withCredentials: true }
+      );
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+      }
+    } catch (error: any) {
+      console.error("Error in registering event:", error);
+      const errorMessage =
+        error.response?.data?.message || "Failed to register";
+      toast.error(errorMessage);
+      set({
+        error: errorMessage,
+      });
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  cancelRegistration: async (id) => {
+    try {
+      set({ isLoading: true, error: null });
+
+      const res = await axiosInstance.put(
+        `/events/unregister/${id}`,
+        {},
+        { withCredentials: true }
+      );
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+      }
+    } catch (error: any) {
+      console.log("Error in unregister event", error);
+      const errorMessage =
+        error.response?.data?.message || "Failed to unregister";
+      toast.error(errorMessage);
+      set({ error: errorMessage });
+    } finally {
+      set({ isLoading: false });
     }
   },
 }));

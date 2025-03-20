@@ -9,15 +9,20 @@ import morgan from "morgan";
 
 import connectDB from "./config/db.js";
 
-// IMPORTED ALL ROUTES
+// user & Auth Imports
 import authRouter from "./routes/auth.route.js";
-import teamRouter from "./routes/team.route.js";
 import userRouter from "./routes/user.route.js";
+
+// Organization Imports
+import organizationRouter from "./routes/organization-routes/organization.route.js";
+
+// Team Imports
+import teamRouter from "./routes/team.route.js";
 import notificationRouter from "./routes/notifications-route/team.notification.route.js";
 import invitationRouter from "./routes/team-routes/invitation.route.js";
 import joinRequestRouter from "./routes/team-routes/joinRequest.route.js";
 
-// Event Routes
+// Event Imports
 import eventRouter from "./routes/event.route.js";
 import prizeRouter from "./routes/event-routes/prize.route.js";
 import roundsRouter from "./routes/event-routes/round.route.js";
@@ -46,15 +51,20 @@ app.use(express.urlencoded({ extended: true }));
 //   res.json({ csrfToken: req.csrfToken() });
 // });
 
-// ALL ROUTER
+// All Router
 app.use("/api/auth", authRouter);
 app.use("/api/users", userRouter);
+
+// Organization Router
+app.use("/api/organizations", organizationRouter);
+
+// Team Router
 app.use("/api/teams", teamRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/invitations", invitationRouter);
 app.use("/api/join-requests", joinRequestRouter);
 
-// events related outer
+// Events Router
 app.use("/api/events", eventRouter);
 app.use("/api/prize", prizeRouter);
 app.use("/api/rounds", roundsRouter);

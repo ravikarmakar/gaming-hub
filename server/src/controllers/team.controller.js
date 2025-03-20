@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Team from "../models/team.model.js";
 import TeamNotification from "../models/notification-model/team.notification.model.js";
 import User from "../models/user.model.js";
+import { rolesPermissions } from "../models/user.model.js";
 
 export const getAllTeams = async (req, res) => {
   try {
@@ -22,7 +23,8 @@ export const getTeamProfile = async (req, res) => {
   try {
     const team = await Team.findById(teamId)
       .populate("captain", "username email")
-      .populate("members.userId", "name email");
+      .populate("members.userId", "name email")
+      .populate("playedTournaments", "title");
 
     if (!team) {
       return res
@@ -37,19 +39,79 @@ export const getTeamProfile = async (req, res) => {
   }
 };
 
+// Use this when using MongoDB Atles
+// export const createTeams = async (req, res) => {
+//   const session = await mongoose.startSession(); // Transaction start
+//   session.startTransaction();
+
+//   try {
+//     const loggedInUser = req.user;
+//     const { teamName } = req.body;
+
+//     if (!teamName) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Team name is required." });
+//     }
+
+//     if (loggedInUser.activeTeam) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "You have already created a team.",
+//       });
+//     }
+
+//     const existingTeam = await Team.findOne({ teamName }).session(session);
+//     if (existingTeam) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Team name already exists." });
+//     }
+
+//     // Creating New Team
+//     const newTeam = await new Team({
+//       teamName,
+//       owner: loggedInUser._id,
+//       members: [{ userId: loggedInUser._id, role: "owner" }],
+//     }).save({ session });
+
+//     // Update User role
+//     await User.findByIdAndUpdate(
+//       loggedInUser._id,
+//       {
+//         $set: { role: "team", permissions: rolesPermissions["team"], activeTeam: newTeam._id, teamCreator: true },
+//         $inc: { createdTeamCount: 1 },
+//       },
+//       { new: true, session }
+//     );
+
+//     await session.commitTransaction(); // Transaction commit
+//     session.endSession();
+
+//     res.status(201).json({
+//       success: true,
+//       message: "Team created successfully",
+//       team: newTeam,
+//     });
+//   } catch (error) {
+//     await session.abortTransaction(); // Rollback if error
+//     session.endSession();
+//     console.error("Error creating team:", error);
+//     res.status(500).json({ success: false, message: "Internal Server Error" });
+//   }
+// };
+
 export const createTeams = async (req, res) => {
   try {
     const loggedInUser = req.user;
     const { teamName } = req.body;
 
-    // Checking Empty field
     if (!teamName) {
       return res
         .status(400)
         .json({ success: false, message: "Team name is required." });
     }
 
-    // Prevent user from creating multiple teams
     if (loggedInUser.activeTeam) {
       return res.status(400).json({
         success: false,
@@ -57,7 +119,6 @@ export const createTeams = async (req, res) => {
       });
     }
 
-    // Check if team with the same name exists
     const existingTeam = await Team.findOne({ teamName });
     if (existingTeam) {
       return res
@@ -69,10 +130,7 @@ export const createTeams = async (req, res) => {
     const newTeam = new Team({
       teamName,
       owner: loggedInUser._id,
-      members: {
-        userId: loggedInUser._id,
-        role: "owner",
-      },
+      members: [{ userId: loggedInUser._id, role: "owner" }],
     });
 
     const savedTeam = await newTeam.save();
@@ -81,12 +139,12 @@ export const createTeams = async (req, res) => {
       loggedInUser._id,
       {
         $set: {
+          role: "team",
+          permissions: rolesPermissions["team"],
           activeTeam: savedTeam._id,
           teamCreator: true,
         },
-        $inc: {
-          createdTeamCount: 1,
-        },
+        $inc: { createdTeamCount: 1 },
       },
       { new: true }
     );
@@ -98,7 +156,7 @@ export const createTeams = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating team:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
 
@@ -453,3 +511,5 @@ export const assignTeamCaptain = async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error." });
   }
 }; // to-do
+
+// to-do  - whatif memeber left the team ? automatic letf form the evenst register and what?

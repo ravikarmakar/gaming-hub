@@ -16,9 +16,10 @@ import {
   Heart,
 } from "lucide-react";
 
-const EventDisplay = () => {
+const EventPostPage = () => {
   const { id } = useParams();
-  const { getOneEvent, selectedEvent } = useEventStore();
+  const { getOneEvent, selectedEvent, regitserEvent, isLoading } =
+    useEventStore();
 
   useEffect(() => {
     if (id) {
@@ -36,9 +37,6 @@ const EventDisplay = () => {
       </div>
     );
   }
-  console.log(selectedEvent);
-
-  console.log("Selected Event Title:", selectedEvent.title);
 
   return (
     <div className="relative min-h-screen bg-transparent-to-b from-gray-900 via-transparent to-transparent">
@@ -93,10 +91,11 @@ const EventDisplay = () => {
         <div className="flex gap-4 -mt-16 mb-8 relative z-10">
           <motion.button
             whileHover={{ scale: 1.05 }}
+            onClick={() => regitserEvent(selectedEvent._id)}
             className="px-6 py-3 bg-purple-800/40 rounded-lg flex items-center gap-2 text-white font-semibold shadow-lg hover:bg-purple-800/60 transition-colors"
           >
             <UserPlus className="h-5 w-5" />
-            Register Now
+            {isLoading ? "Registering..." : "Register Now"}
           </motion.button>
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -265,4 +264,4 @@ const EventDisplay = () => {
   );
 };
 
-export default EventDisplay;
+export default EventPostPage;

@@ -19,8 +19,6 @@ import {
 import { Link, useNavigate, useParams } from "react-router-dom";
 import useAuthStore from "@/store/useAuthStore";
 import { useTeamStore } from "@/store/useTeamStore";
-// import { Team } from "@/types/team";
-// import { User } from "@/types";
 
 // Dummy data (would typically come from backend/state management)
 const teamData = {
@@ -136,7 +134,6 @@ const TeamProfile: React.FC = () => {
   // const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   // const [teamProfileData, setTeamProfileData] = useState<Team | null>(null);
   // const [isFollowing, setIsFollowing] = useState(false);
-  // const [member, setMember] = useState<null | User>(null);
 
   const activeTeam = user?.activeTeam || null;
 
@@ -331,9 +328,11 @@ const TeamProfile: React.FC = () => {
 
             <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-6">
               {seletedTeam?.members.map((member) => (
-                <Link to={`/profile/${member?.userId?._id}`}>
+                <Link
+                  to={`/profile/${member?.userId?._id}`}
+                  key={member?.userId?._id}
+                >
                   <motion.div
-                    key={member?.userId._id}
                     whileHover={{ scale: 1.05 }}
                     className="p-2 rounded-xl text-center"
                   >

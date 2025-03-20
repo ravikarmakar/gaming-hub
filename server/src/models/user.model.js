@@ -1,6 +1,16 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
+export const rolesPermissions = {
+  user: [],
+  team: ["join-tournament"],
+  organizer: ["create-event", "manage-teams", "edit-profile"],
+  staff: ["manage-users", "create-event"],
+  moderator: ["manage-content", "manage-users"],
+  admin: ["manage-everything"],
+  maxAdmin: ["manage-everything", "full-access"],
+};
+
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -12,11 +22,16 @@ const userSchema = new mongoose.Schema(
     rank: { type: Number, default: 0 },
     role: {
       type: String,
-      enum: ["admin", "max admin", "user", "staff", "moderator"],
+      enum: Object.keys(rolesPermissions), // Automatically enums update
       default: "user",
     },
+    permissions: { type: [String], default: [] }, // Dynamic permissions
+    activeOrganizer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organizer",
+      default: null,
+    },
     esportsRole: { type: String, default: "player" },
-    // isOrganizer: { type: Boolean, default: false },
     blocked: { type: Boolean, default: false },
     globalRank: { type: Number, default: 0 },
     country: { type: String, default: null },
@@ -60,6 +75,34 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Auto-assign permissions
+userSchema.pre("save", function (next) {
+  if (this.isNew) {
+    this.permissions = rolesPermissions[this.role] || [];
+  }
+  next();
+});
+
+// Auto-assign permissions when role is assigned or changed
+userSchema.pre("save", function (next) {
+  if (this.isModified("role")) {
+    this.permissions = rolesPermissions[this.role] || [];
+  }
+  next();
+});
+
+// Default Esports Role Organizers ? Optional
+userSchema.pre("save", function (next) {
+  if (this.isModified("role")) {
+    this.permissions = rolesPermissions[this.role] || [];
+
+    if (this.role === "organizer") {
+      this.esportsRole = "organizer";
+    }
+  }
+  next();
+});
 
 // Pre-save middleware to hash passwords before saving
 userSchema.pre("save", async function (next) {

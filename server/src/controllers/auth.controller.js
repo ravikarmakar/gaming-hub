@@ -1,5 +1,6 @@
 import User from "../models/user.model.js";
 import generateTokenAndSetCookie from "../utils/tokenGenerator.js";
+import { rolesPermissions } from "../models/user.model.js";
 
 export const registerUser = async (req, res) => {
   try {
@@ -34,6 +35,7 @@ export const registerUser = async (req, res) => {
       email,
       password,
       termsAccepted,
+      role: "user",
     });
 
     await newUser.save();
@@ -175,5 +177,25 @@ export const unblockUser = async (req, res) => {
   } catch (error) {
     console.error(`Error in unblockUser: ${error.message}`);
     res.status(500).json({ message: "Server error while unblocking user" });
+  }
+};
+
+export const changeUserRole = async (req, res) => {
+  try {
+    const { userId, newRole } = req.body;
+
+    if (!rolesPermissions[newRole]) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.role = newRole;
+    await user.save(); // `pre("save")` middleware permissions auto-update karega
+
+    res.json({ message: `User is now a ${newRole}`, user });
+  } catch (error) {
+    res.status(500).json({ message: "Something went wrong", error });
   }
 };

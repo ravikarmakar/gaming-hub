@@ -35,23 +35,26 @@ export const protectRoute = async (req, res, next) => {
   }
 };
 
-// Middleware to check if the user is an admin or max admin
-export const protectAdmin = (req, res, next) => {
-  if (req.user && req.user.role === "admin") {
-    next(); // User is admin, proceed to the next middleware
-  } else {
-    res.status(403).json({ message: "Not authorized as admin" });
-  }
-};
+// Role-based access control middleware
+export const authorizeRoles =
+  (...allowedRoles) =>
+  (req, res, next) => {
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ message: "Access Denied! Unauthorized" });
+    }
+    next();
+  };
 
-// Middleware to check if the user is a max admin
-export const protectMaxAdmin = (req, res, next) => {
-  if (req.user && req.user.role === "max admin") {
-    next(); // User is max admin, proceed to the next middleware
-  } else {
-    res.status(403).json({ message: "Not authorized as max admin" });
-  }
-};
+export const restrictAccess =
+  (...restrictedRoles) =>
+  (req, res, next) => {
+    if (restrictedRoles.includes(req.user.role)) {
+      return res
+        .status(403)
+        .json({ message: "Access Denied! Cannot view user profile" });
+    }
+    next();
+  };
 
 // Middleware for check Blocked User
 export const checkBlockedStatus = async (req, res, next) => {

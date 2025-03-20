@@ -1,46 +1,43 @@
 import mongoose from "mongoose";
+import { rolesPermissions } from "./user.model.js";
 
-const OrganizerSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  description: {
-    type: String,
-    trim: true,
-  },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User", // Jo user organizer hai
-    required: true,
-  },
-  members: [
-    {
-      userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-      role: {
-        type: String,
-        enum: ["admin", "moderator", "member"],
-        default: "member",
+const OrganizerSchema = new mongoose.Schema(
+  {
+    ownerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+    },
+    isVerified: { type: Boolean, default: false },
+    members: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        role: {
+          type: String,
+          enum: Object.keys(rolesPermissions),
+          default: "staff",
+        },
       },
-    },
-  ],
-  events: [
-    {
-      eventId: { type: mongoose.Schema.Types.ObjectId, ref: "Event" },
-      name: String,
-      date: Date,
-    },
-  ],
-  createdAt: {
-    type: Date,
-    default: Date.now,
+    ],
+    events: [
+      {
+        eventId: { type: mongoose.Schema.Types.ObjectId, ref: "Event" },
+        name: String,
+        date: Date,
+      },
+    ],
   },
-  updatedAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+  { timestamps: true }
+);
 
 const Organizer = mongoose.model("Organizer", OrganizerSchema);
 

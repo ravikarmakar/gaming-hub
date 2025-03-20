@@ -28,7 +28,7 @@ export const NAV_LINKS = [
   // { name: "Scrims", href: "/scrims" },
   { name: "Free Tournaments", href: "/free-tournaments" },
   { name: "Find Teams", href: "/teams" },
-  { name: "Community", href: "/blog" },
+  { name: "Find Players", href: "/players" },
 ] as const;
 
 // Tags

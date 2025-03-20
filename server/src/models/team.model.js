@@ -30,7 +30,7 @@ const teamSchema = new mongoose.Schema(
     playedTournaments: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Tournament", // Reference to tournaments the team is registered in
+        ref: "Event", // Reference to tournaments the team is registered in
       },
     ],
   },
