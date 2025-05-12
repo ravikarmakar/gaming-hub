@@ -295,6 +295,8 @@ const ProfilePage: React.FC = () => {
       </p>
     );
 
+  // console.log(user);
+
   return (
     <section className="relative w-full bg-[#0A0A1F]">
       <div className="relative w-full">

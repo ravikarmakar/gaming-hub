@@ -18,6 +18,7 @@ import AllTeams from "./components/AllTeams";
 import CreateTeam from "./pages/auth/CreateTeam";
 import AdminDashboard from "./pages/admin/Dashboard";
 import SuperAdminDashboard from "./pages/admin/SuperAdmin";
+import OrganizerRoutes from "./routes/OrganizerRoutes";
 
 // Lazy-loaded components (Rarely used or page-specific)
 const Home = lazy(() => import("./pages/home/Home"));
@@ -115,6 +116,12 @@ const App = () => {
               <Route path={ROUTES.ADMIN} element={<AdminDashboard />} />
               <Route path={ROUTES.MAXADMIN} element={<SuperAdminDashboard />} />
               <Route path={ROUTES.NOTFOUND} element={<NotFound />} />
+
+              {/* Organizer Routes  */}
+              <Route
+                path={ROUTES.ORGANIZER_DASHBOARD}
+                element={<OrganizerRoutes />}
+              />
             </Routes>
           </Suspense>
           <Toaster position="top-center" />

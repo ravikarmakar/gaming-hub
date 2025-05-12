@@ -13,30 +13,13 @@ const eventSchema = new mongoose.Schema(
     prizePool: { type: Number, default: 0 },
     image: { type: String, required: true },
     description: { type: String, required: true },
-
     status: {
       type: String,
       enum: ["registration-open", "registration-closed", "live", "completed"],
       default: "registration-open",
     },
-
-    teams: [
-      {
-        teamId: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
-        registeredAt: { type: Date, default: Date.now },
-      },
-    ],
-
-    rounds: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Round",
-      },
-    ],
-
     likes: { type: Number, default: 0 },
     views: { type: Number, default: 0 },
-
     organizerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organizer",
@@ -63,10 +46,6 @@ export default Event;
 //     attendees: {
 //       type: Number,
 //       default: 0,
-//     },
-//     slots: {
-//       type: String,
-//       required: true,
 //     },
 //     venue: {
 //       type: String,

@@ -1,3 +1,4 @@
+import Event from "../../models/event-model/event.model.js";
 import Organizer from "../../models/organizer.model.js";
 
 export const createOrganization = async (req, res) => {
@@ -67,5 +68,41 @@ export const organizationProfile = async (req, res) => {
   } catch (error) {
     console.log("Error in organizationProfile:", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+/**
+ * @desc    Get all events created by a specific organizer
+ * @route   GET /api/events/organizer/:organizerId
+ * @access  Private (Only Organizer)
+ */
+export const allEventsOfOrganizer = async (req, res) => {
+  try {
+    const { organizerId } = req.params;
+
+    // ✅ 1. Check if organizerId is provided
+    if (!organizerId) {
+      return res.status(400).json({ message: "Organizer ID is required!" });
+    }
+
+    // ✅ 2. Fetch all events of the given organizer
+    const events = await Event.find({ organizerId }).sort({ createdAt: -1 });
+
+    // ✅ 3. Check if events exist
+    if (events.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No events found for this organizer!" });
+    }
+
+    // ✅ 4. Return the events
+    return res.status(200).json({
+      message: "Events fetched successfully!",
+      totalEvents: events.length,
+      events,
+    });
+  } catch (error) {
+    console.error("Error in allEventsOfOrganizer:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };

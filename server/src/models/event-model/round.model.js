@@ -5,27 +5,32 @@ const roundSchema = new mongoose.Schema(
     eventId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Event",
+      required: true,
     },
     roundName: {
       type: String,
       required: true,
-      default: "Round-1",
     },
-
-    groups: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Group",
-      },
-    ],
-
+    // groups: [{ type: mongoose.Schema.Types.ObjectId, ref: "Group" }],
     status: {
-      type: Boolean,
-      default: false,
+      type: String,
+      enum: ["pending", "ongoing", "completed"],
+      default: "pending",
     },
   },
   { timestamps: true }
 );
+
+// Auto-generate round name
+roundSchema.pre("save", async function (next) {
+  if (!this.roundName) {
+    const roundCount = await mongoose
+      .model("Round")
+      .countDocuments({ eventId: this.eventId });
+    this.roundName = `Round-${roundCount + 1}`;
+  }
+  next();
+});
 
 const Round = mongoose.model("Round", roundSchema);
 
