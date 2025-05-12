@@ -22,10 +22,10 @@ const userSchema = new mongoose.Schema(
     rank: { type: Number, default: 0 },
     role: {
       type: String,
-      enum: Object.keys(rolesPermissions), // Automatically enums update
+      enum: Object.keys(rolesPermissions),
       default: "user",
     },
-    permissions: { type: [String], default: [] }, // Dynamic permissions
+    permissions: { type: [String], default: [] },
     activeOrganizer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organizer",

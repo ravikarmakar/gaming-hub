@@ -2,13 +2,22 @@ import express from "express";
 import {
   getRounds,
   createRound,
-  getOneRound,
+  getRoundDetails,
 } from "../../controllers/event-controllers/round.controller.js";
+import {
+  protectRoute,
+  authorizeRoles,
+} from "../../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/:eventId/round", createRound);
+router.post(
+  "/create",
+  protectRoute,
+  authorizeRoles("organizer", "moderator", "staff"),
+  createRound
+);
+router.get("/:roundId", protectRoute, getRoundDetails);
 router.get("/", getRounds);
-router.get("/:roundId", getOneRound);
 
 export default router;

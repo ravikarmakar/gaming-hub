@@ -1,33 +1,44 @@
 import mongoose from "mongoose";
 
-// Leaderboard Schema for each Tournament
 const leaderboardSchema = new mongoose.Schema(
   {
-    teamId: {
+    groupId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Team", // Reference to User (or Team if you're storing teams)
+      ref: "Group",
       required: true,
+      index: true, // ✅ Index for faster retrieval
     },
-    rank: {
-      type: String,
-    },
-    totalPoints: {
-      type: String,
-    },
-    matchesPlayed: {
-      type: String,
-    },
-    kills: {
-      type: String,
-    },
-
-    wins: {
-      type: String,
-    },
+    teamScore: [
+      {
+        teamId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Team",
+          index: true, // ✅ Index added for faster team queries
+        },
+        score: { type: Number, default: 0 },
+        position: { type: Number, index: true }, // ✅ Position index
+        kills: { type: Number, default: 0 },
+        wins: { type: Number, default: 0 },
+        totalPoints: { type: Number, default: 0 },
+        matchesPlayed: { type: Number, default: 0 },
+      },
+    ],
   },
   { timestamps: true }
 );
 
-const LeaderboardTeams = mongoose.model("Leaderboard", leaderboardSchema);
+// 🔹 **Auto-Update `totalPoints` & `matchesPlayed` Before Save**
+leaderboardSchema.pre("save", async function (next) {
+  const updates = this.teamScore.map(async (team) => {
+    team.totalPoints = team.score + team.kills * 2 + team.wins * 5;
+    team.matchesPlayed = await mongoose
+      .model("Match")
+      .countDocuments({ teamId: team.teamId });
+  });
 
-export default LeaderboardTeams;
+  await Promise.all(updates);
+  next();
+});
+
+const Leaderboard = mongoose.model("Leaderboard", leaderboardSchema);
+export default Leaderboard;

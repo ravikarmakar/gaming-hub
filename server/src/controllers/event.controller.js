@@ -169,12 +169,12 @@ export const registerEvent = async (req, res) => {
     }
 
     // Check if team has at least 4 players
-    if (team.members.length < 4) {
-      return res.status(400).json({
-        success: false,
-        message: "Your team must have at least 4 players to register",
-      });
-    }
+    // if (team.members.length < 4) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Your team must have at least 4 players to register",
+    //   });
+    // }
 
     // Fetch the event
     const event = await Event.findById(eventId);
@@ -342,6 +342,35 @@ export const leaveEvent = async (req, res) => {
       message: "Internal server error",
       error: error.message,
     });
+  }
+};
+
+export const closeRegistration = async (req, res) => {
+  try {
+    // Event ID from params
+    const { eventId } = req.params;
+
+    // Event find karo
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Check if already closed
+    if (event.status === "registration_closed") {
+      return res.status(400).json({ message: "Registration already closed" });
+    }
+
+    // Registration close karna
+    event.status = "registration_closed";
+    await event.save();
+
+    res.status(200).json({
+      message: "Registration closed successfully",
+      event,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error", error });
   }
 };
 

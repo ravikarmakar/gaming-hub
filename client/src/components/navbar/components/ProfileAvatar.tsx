@@ -32,9 +32,19 @@ export const ProfileAvatar = () => {
     navigate("/");
   };
 
+  const isOrganizer = user?.activeOrganizer;
+
   return (
     <div className="relative profile-menu">
       <div className="flex justify-center items-center gap-6">
+        {isOrganizer && (
+          <Link to={`/dashboard`}>
+            <button className="bg-gray-900/80 hover:bg-gray-800 text-slate-400 font-semibold py-2 px-4 rounded-lg shadow-md transition-all duration-300">
+              View Dashboard
+            </button>
+          </Link>
+        )}
+
         <Link to="/notifications">
           <motion.button
             whileHover={{ scale: 1.1 }}

@@ -4,17 +4,27 @@ export interface Badge {
   awarded: boolean;
 }
 
+export type Role =
+  | "owner"
+  | "user"
+  | "admin"
+  | "staff"
+  | "moderator"
+  | "maxAdmin"
+  | "team"
+  | "organizer";
+
 export interface User {
   _id?: string;
   name: string;
   email: string;
   termsAccepted: boolean;
-  isOrganisation: boolean;
+  activeOrganizer: boolean;
   isVerified: boolean;
   activeTeam: string | null;
   avatar?: string;
   rank: number;
-  role: "admin" | "max admin" | "user";
+  role: Role;
   blocked: boolean;
   notificationCount: number;
   globalRank: number;

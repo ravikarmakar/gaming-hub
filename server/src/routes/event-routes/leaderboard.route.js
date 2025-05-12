@@ -1,12 +1,15 @@
 import express from "express";
 import {
-  createLeaderboardEntry,
+  createLeaderboardForRoundsGroups,
   getLeaderboardEntries,
+  getLeaderboardByGroup,
 } from "../../controllers/event-controllers/leaderboard.controller.js";
+import { protectRoute } from "../../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/:groupId/leaderboard", createLeaderboardEntry); // Create a new leaderboard entry
-router.get("/", getLeaderboardEntries); // Fetch all leaderboard entries
+router.post("/create", createLeaderboardForRoundsGroups);
+router.get("/", getLeaderboardEntries);
+router.get("/:groupId", protectRoute, getLeaderboardByGroup);
 
 export default router;

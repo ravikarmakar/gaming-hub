@@ -5,42 +5,52 @@ const groupSchema = new mongoose.Schema(
     roundId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Round",
+      required: true,
+      index: true, // ⚡ Faster queries
     },
-    name: {
+    groupName: {
       type: String,
       required: true,
-      default: "Group-A",
     },
     status: {
-      type: Boolean,
-      default: false,
+      type: String,
+      enum: ["pending", "ongoing", "completed", "cancelled"],
+      default: "pending",
     },
-
     matchTime: {
       type: Date,
+      default: () => new Date(Date.now() + 24 * 60 * 60 * 1000), // ⚡ Default: Next day
     },
     totalMatch: {
-      type: String,
+      type: Number,
+      default: 1,
     },
-    SelectedTeams: {
-      type: String,
+    roomId: {
+      type: Number,
     },
-    // teams: [
-    //   {
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: "Team", // Reference to the Team model
-    //   },
-    // ],
-    leaderboard: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "LeaderboardTeams",
-      },
-    ],
+    roomPassword: {
+      type: Number,
+    },
+    isDeleted: { type: Boolean, default: false }, // ⚡ Soft delete
   },
-  {}
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-const Group = mongoose.model("Group", groupSchema);
+// Virtual Field: isUpcoming**
+groupSchema.virtual("isUpcoming").get(function () {
+  return this.matchTime > new Date();
+});
 
+// **Pre-save hook for Auto Group Name**
+groupSchema.pre("save", async function (next) {
+  if (!this.groupName) {
+    const groupCount = await mongoose
+      .model("Group")
+      .countDocuments({ roundId: this.roundId });
+    this.groupName = `Group-${groupCount + 1}`;
+  }
+  next();
+});
+
+const Group = mongoose.model("Group", groupSchema);
 export default Group;

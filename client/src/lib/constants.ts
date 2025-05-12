@@ -20,6 +20,7 @@ export const ROUTES = {
   NOTIFICATION: "/notifications",
   PLAYER: "/players",
   NOTFOUND: "/*",
+  ORGANIZER_DASHBOARD: "/dashboard/*",
 };
 
 // Nav Links
