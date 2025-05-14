@@ -65,7 +65,7 @@ export const login = TryCatchHandler(async (req, res, next) => {
 
   const { accessToken, refreshToken } = generateTokens(user._id, user.role);
 
-  // store refresh token in redis
+  // store only refresh token in redis
   await storeRefreshToken(user._id, refreshToken);
   setCookies(res, accessToken, refreshToken);
 
@@ -100,9 +100,7 @@ export const logout = TryCatchHandler(async (req, res, next) => {
 
   if (accessToken) {
     try {
-      await redis.set(`blacklist_token:${accessToken}`, true, {
-        EX: 15 * 60, // 15 minutes = typical access token expiry
-      });
+      await redis.setex(`blacklist_token:${accessToken}`, 15 * 60, "true");
     } catch (err) {
       console.error("Failed to blacklist access token", err);
     }

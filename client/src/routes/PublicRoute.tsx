@@ -5,7 +5,6 @@ const PublicRoute = () => {
   const { user } = useUserStore();
 
   if (user) {
-    // already logged in → redirect to home or profile
     return <Navigate to="/" replace />;
   }
 

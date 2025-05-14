@@ -1,5 +1,6 @@
 import { axiosInstance } from "@/lib/axios";
 import { create } from "zustand";
+import "../lib/axiosInterceptor";
 
 export interface User {
   _id: string;
@@ -28,11 +29,11 @@ interface UserStateTypes {
   checkAuth: () => Promise<void>;
 }
 
-export const useUserStore = create<UserStateTypes>((set, get) => ({
+export const useUserStore = create<UserStateTypes>((set) => ({
   user: null,
   error: null,
   isLoading: false,
-  checkingAuth: true,
+  checkingAuth: false,
   accessToken: null,
 
   register: async (username, email, password) => {
@@ -43,19 +44,10 @@ export const useUserStore = create<UserStateTypes>((set, get) => ({
         email,
         password,
       });
-
-      set({
-        user: response.data.user,
-        accessToken: response.data.accessToken,
-        isLoading: false,
-      });
+      set({ user: response.data.user, isLoading: false });
       return response.data.user;
-    } catch (error) {
-      console.log(error);
-      set({
-        error: "Error while register",
-        isLoading: false,
-      });
+    } catch {
+      set({ error: "Error while register", isLoading: false });
       return null;
     }
   },
@@ -66,11 +58,7 @@ export const useUserStore = create<UserStateTypes>((set, get) => ({
         identifier,
         password,
       });
-      set({
-        user: response.data.user,
-        accessToken: response.data.accessToken,
-        isLoading: false,
-      });
+      set({ user: response.data.user, isLoading: false });
       return true;
     } catch {
       set({ error: "Error while login", isLoading: false });
@@ -89,33 +77,17 @@ export const useUserStore = create<UserStateTypes>((set, get) => ({
   checkAuth: async () => {
     set({ checkingAuth: true, error: null });
     try {
-      const token = get().accessToken;
-      if (!token) throw new Error("No access token found in state");
-
-      const response = await axiosInstance.get("/auth/get-profile", {
-        headers: {
-          Authorization: `Bearer $${token}`,
-        },
-      });
-
-      const { user, accessToken } = response.data;
-
-      if (user) {
-        set({ user, accessToken, checkingAuth: false });
-      } else {
-        set({ user: null, accessToken: null, checkingAuth: false });
-      }
+      const response = await axiosInstance.get("/auth/get-profile");
+      set({ user: response.data.user, checkingAuth: false });
     } catch {
       set({
-        error: "Error while checking loggedin user",
+        error: "Error while checking loggedin user or unauthorized (401)",
         checkingAuth: false,
         user: null,
       });
     }
   },
   refreshToken: async () => {
-    if (get().checkingAuth) return;
-
     set({ checkingAuth: true });
     try {
       const response = await axiosInstance.post("/auth/refresh-token");

@@ -266,16 +266,14 @@ const ProfilePage: React.FC = () => {
 
   const { user } = useUserStore();
 
-  console.log(user);
-
   const loggedInUser = user?._id === profileData?._id;
 
-  if (!profileData)
-    return (
-      <p className="h-screen flex justify-center items-center">
-        Loading user data...
-      </p>
-    );
+  // if (!profileData)
+  //   return (
+  //     <p className="h-screen flex justify-center items-center">
+  //       Loading user data...
+  //     </p>
+  //   );
 
   // console.log(user);
 
@@ -283,7 +281,7 @@ const ProfilePage: React.FC = () => {
     <section className="relative w-full bg-[#0A0A1F]">
       <div className="relative w-full">
         {/* Profile Header */}
-        <ProfileHeader user={profileData} isOwnProfile={loggedInUser} />
+        {/* <ProfileHeader user={profileData} isOwnProfile={loggedInUser} /> */}
 
         {/* Quick Views */}
         <QuickView />

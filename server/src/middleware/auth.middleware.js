@@ -12,8 +12,6 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
     req.cookies.accessToken ||
     (req.headers.authorization && req.headers.authorization.split(" ")[1]);
 
-  console.log("Protect middleware acces token:", accessToken);
-
   if (!accessToken)
     return next(new CustomError("Unauthorized: No token provided", 401));
 

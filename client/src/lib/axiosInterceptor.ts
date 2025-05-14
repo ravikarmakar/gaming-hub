@@ -1,25 +1,5 @@
-import { useUserStore } from "@/store/useUserStore";
 import { axiosInstance } from "./axios";
-
-// axiosInstance.interceptors.response.use(
-//   (res) => res,
-//   async (error) => {
-//     const originalRequest = error.config;
-//     if (error.response?.status === 401 && !originalRequest._retry) {
-//       originalRequest._retry = true;
-
-//       try {
-//         await useUserStore.getState().refreshToken(); // call refresh
-//         return axiosInstance(originalRequest); // retry original
-//       } catch (err) {
-//         useUserStore.getState().logout(); // logout if failed
-//         return Promise.reject(err);
-//       }
-//     }
-
-//     return Promise.reject(error);
-//   }
-// );
+import { useUserStore } from "@/store/useUserStore";
 
 let refreshPromise: Promise<void> | null = null;
 

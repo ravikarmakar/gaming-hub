@@ -8,8 +8,6 @@ export const rateLimiter =
       const clientIp =
         req.headers["x-forwarded-for"] || req.socket.remoteAddress;
 
-      console.log(clientIp);
-
       const fullKey = `rate_limit:${key}:${clientIp}`;
       const requestCount = await redis.incr(fullKey);
 

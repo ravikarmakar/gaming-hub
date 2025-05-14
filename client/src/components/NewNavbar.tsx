@@ -16,8 +16,10 @@ import {
   MessageSquare,
   Crown,
   HelpCircle,
+  Loader2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useUserStore } from "@/store/useUserStore";
 
 const GamingNavbar = () => {
   const navigate = useNavigate();
@@ -25,7 +27,7 @@ const GamingNavbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const user = false;
+  const { user, logout, isLoading } = useUserStore();
 
   // Check if user has scrolled
   useEffect(() => {
@@ -162,7 +164,15 @@ const GamingNavbar = () => {
       icon: <HelpCircle className="w-4 h-4" />,
       href: "#support",
     },
-    { name: "Log Out", icon: <LogOut className="w-4 h-4" />, href: "#logout" },
+    {
+      name: isLoading ? "Logging out..." : "Log Out",
+      icon: isLoading ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        <LogOut className="w-4 h-4" />
+      ),
+      onClick: () => logout(),
+    },
   ];
 
   return (
@@ -372,29 +382,32 @@ const GamingNavbar = () => {
                     >
                       <div className="p-3 border-b border-gray-700">
                         <p className="text-sm font-medium text-gray-200">
-                          PlayerXYZ
+                          {user?.username}
                         </p>
                         <p className="text-xs text-gray-400">
                           Level 42 • Premium
                         </p>
                       </div>
-                      <div>
+                      <ul>
                         {profileOptions.map((option) => (
-                          <motion.a
+                          <motion.li
                             key={option.name}
-                            href={option.href}
+                            onClick={() => {
+                              if (option.onClick) option.onClick();
+                              else if (option.href) navigate(option.href);
+                            }}
                             whileHover={{
                               backgroundColor: "rgba(139, 92, 246, 0.1)",
                             }}
-                            className="flex items-center px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700"
+                            className="flex items-center cursor-pointer px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700"
                           >
                             <span className="mr-3 text-gray-400">
                               {option.icon}
                             </span>
                             {option.name}
-                          </motion.a>
+                          </motion.li>
                         ))}
-                      </div>
+                      </ul>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -402,16 +415,16 @@ const GamingNavbar = () => {
             )}
 
             {/* Login Button (hidden when authenticated) */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate("/login")}
-              className={`${
-                !user ? "" : "hidden"
-              } px-4 py-2 text-sm font-medium rounded-md text-white bg-gradient-to-r from-purple-800 to-indigo-900 hover:from-purple-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-900 shadow-md shadow-purple-900/20`}
-            >
-              Login
-            </motion.button>
+            {!user && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate("/login")}
+                className={`px-4 py-2 text-sm font-medium rounded-md text-white bg-gradient-to-r from-purple-800 to-indigo-900 hover:from-purple-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-900 shadow-md shadow-purple-900/20`}
+              >
+                Login
+              </motion.button>
+            )}
 
             {/* Mobile Menu Button */}
             <div className="md:hidden">
@@ -487,11 +500,14 @@ const GamingNavbar = () => {
                     {profileOptions.map((option, i) => (
                       <motion.li
                         key={option.name}
-                        onClick={() => navigate(option.href)}
+                        onClick={() => {
+                          if (option.onClick) option.onClick();
+                          else if (option.href) navigate(option.href);
+                        }}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: (i + navItems.length) * 0.1 }}
-                        className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800"
+                        className="flex items-center cursor-point px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800"
                       >
                         <span className="mr-3 text-gray-400">
                           {option.icon}
