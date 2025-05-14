@@ -1,11 +1,10 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from "react";
 import { Trophy, Target, Shield, Crown, Medal, Flame } from "lucide-react";
 import { motion } from "framer-motion";
 import ProfileHeader from "./elements/ProfileHeader";
 import QuickView from "./elements/QuickView";
 import { useNavigate, useParams } from "react-router-dom";
-import useUserStore from "@/store/usePlayerStore";
+import { useUserStore } from "@/store/useUserStore";
 import { User } from "@/types";
 import useAuthStore from "@/store/useAuthStore";
 
@@ -261,32 +260,15 @@ const itemVariants = {
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { user } = useAuthStore();
   const [profileData, setProfileData] = useState<User | null>(null);
 
-  const { getOneUser, selectedUser } = useUserStore();
   const [activeTab, setActiveTab] = useState("overview");
 
+  const { user } = useUserStore();
+
+  console.log(user);
+
   const loggedInUser = user?._id === profileData?._id;
-
-  // fetching User data
-  useEffect(() => {
-    if (id) {
-      getOneUser(id);
-    } else {
-      setProfileData(user);
-    }
-  }, [id, getOneUser, user]);
-
-  useEffect(() => {
-    if (id && selectedUser) {
-      setProfileData(selectedUser);
-    }
-
-    if (loggedInUser) {
-      navigate("/profile");
-    }
-  }, [selectedUser, loggedInUser, navigate]);
 
   if (!profileData)
     return (

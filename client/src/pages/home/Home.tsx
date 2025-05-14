@@ -6,11 +6,13 @@ import TrendingEvents from "../events/trending/TrendingEvents";
 import { eventData } from "@/lib/constants";
 import EsportsRankings from "@/components/esports-rankings/EsportsRankings";
 import PremiumServices from "@/components/premium/PremiumServices";
+import NewHeroSection from "./NewHeroSection";
 
 const Home = () => {
   return (
     <>
-      <HeroSection />
+      <NewHeroSection />
+      {/* <HeroSection /> */}
       <WhatsNew />
       <TrendingEvents events={eventData} />
       <GameStore />

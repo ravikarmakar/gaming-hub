@@ -10,9 +10,10 @@ export type Role =
   | "admin"
   | "staff"
   | "moderator"
-  | "maxAdmin"
+  | "super_admin"
   | "team"
-  | "organizer";
+  | "organizer"
+  | "player";
 
 export interface User {
   _id?: string;

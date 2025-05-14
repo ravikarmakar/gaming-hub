@@ -1,28 +1,3 @@
-// Centralized routes
-export const ROUTES = {
-  HOME: "/",
-  PROFILE: "/profile",
-  USERPROFILE: "/profile/:id",
-  CREATE_TEAM: "/create-team",
-  TEAMPROFILE: "/team-profile",
-  USERTEAMPROFILE: "/team-profile/:id",
-  EVENTS: "/events", // /events/:type
-  EVENT: "/events/:id",
-  FREE_TOURNAMENTS: "/free-tournaments",
-  BLOG: "/blog",
-  BLOG_POST: "/blog/:id",
-  SCRIMSPAGE: "/scrims",
-  TEAMS: "/teams",
-  LOGIN: "/login",
-  SIGNUP: "/signup",
-  ADMIN: "/admin/dashboard",
-  MAXADMIN: "/admin/super",
-  NOTIFICATION: "/notifications",
-  PLAYER: "/players",
-  NOTFOUND: "/*",
-  ORGANIZER_DASHBOARD: "/dashboard/*",
-};
-
 // Nav Links
 export const NAV_LINKS = [
   { name: "Events", href: "/events" },

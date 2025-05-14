@@ -1,133 +1,62 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import { Suspense, lazy, useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { Routes, Route } from "react-router-dom";
-import { ErrorBoundary } from "react-error-boundary";
-import { ROUTES } from "@/lib/constants";
-import { Toaster } from "react-hot-toast";
-
-// Stores
-import useAuthStore from "./store/useAuthStore";
-
-// Frequently Used Components (Direct Import for Performance)
-import LoadingSpinner from "./components/LoadingSpinner";
+import { Route, Routes } from "react-router-dom";
+import Home from "./pages/home/Home";
+import { AuthLayout } from "./components/auth/AuthLayout";
+import LoginPage from "./pages/auth/LoginPage";
+import SignupPage from "./pages/auth/SignUpPage";
 import MainLayout from "./components/MainLayout";
-import NotFound from "./components/NotFound";
-import ProtectedRoute from "./providers/AuthProvider";
-import AllTeams from "./components/AllTeams";
-import CreateTeam from "./pages/auth/CreateTeam";
-import AdminDashboard from "./pages/admin/Dashboard";
-import SuperAdminDashboard from "./pages/admin/SuperAdmin";
-import OrganizerRoutes from "./routes/OrganizerRoutes";
-
-// Lazy-loaded components (Rarely used or page-specific)
-const Home = lazy(() => import("./pages/home/Home"));
-const EventPage = lazy(() => import("./pages/events/EventPage"));
-const LoginPage = lazy(() => import("./pages/auth/LoginPage"));
-const SignupPage = lazy(() => import("./pages/auth/SignUpPage"));
-const BlogPage = lazy(() => import("./pages/blog/BlogPage"));
-const BlogPostPage = lazy(() => import("./pages/blog/BlogPostPage"));
-const EventPostPage = lazy(() => import("./pages/events/EventPostPage"));
-const ProfilePage = lazy(() => import("./pages/user/profile/ProfilePage"));
-const TeamProfile = lazy(() => import("./pages/user/teamProfile/TeamProfile"));
-const Notification = lazy(() => import("./pages/notifications/Notification"));
-const FreeEvents = lazy(
-  () => import("./pages/events/free-tournaments/FreeEvents")
-);
-const ScrimsPage = lazy(() => import("./pages/events/scrims/ScrimsPage"));
-const AllPlayers = lazy(() => import("./pages/user/all-players/AllPlayers"));
-
-// Error Fallback Component
-const ErrorFallback = () => (
-  <div className="p-4 text-red-500">
-    Authentication error - Please refresh or <a href="/login">login again</a>
-  </div>
-);
+import ProfilePage from "./pages/user/profile/ProfilePage";
+import TeamProfile from "./pages/user/teamProfile/TeamProfile";
+import ProtectedRoute from "./routes/ProtectedRoute";
+import { useUserStore } from "./store/useUserStore";
+import { useEffect } from "react";
+import LoadingSpinner from "./components/LoadingSpinner";
+import PublicRoute from "./routes/PublicRoute";
+import { ROUTES } from "./constants/routes";
 
 const App = () => {
-  const { checkAuth, isAuthenticated } = useAuthStore();
-
+  const { user, checkAuth, checkingAuth, accessToken } = useUserStore();
   useEffect(() => {
     checkAuth();
-  }, [isAuthenticated]);
+    console.log("backend called");
+  }, [checkAuth]);
+
+  console.log("Root data", user);
+  console.log("AccessToken", accessToken);
+
+  if (checkingAuth) return <LoadingSpinner />;
 
   return (
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key="content"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-gradient-to-br from-indigo-900/10 via-purple-900/20 to-blue-900/30"
-        >
-          <Suspense fallback={<LoadingSpinner />}>
-            <Routes>
-              <Route element={<MainLayout />}>
-                <Route path={ROUTES.HOME} element={<Home />} />
-                <Route
-                  path={ROUTES.PROFILE}
-                  element={
-                    <ProtectedRoute>
-                      <ProfilePage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path={ROUTES.TEAMPROFILE}
-                  element={
-                    <ProtectedRoute>
-                      <TeamProfile />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path={ROUTES.USERTEAMPROFILE}
-                  element={<TeamProfile />}
-                />
-                <Route path={ROUTES.USERPROFILE} element={<ProfilePage />} />
-                <Route
-                  path={ROUTES.FREE_TOURNAMENTS}
-                  element={<FreeEvents />}
-                />
-                <Route path={ROUTES.BLOG} element={<BlogPage />} />
-                <Route path={ROUTES.BLOG_POST} element={<BlogPostPage />} />
-                <Route path={ROUTES.TEAMS} element={<AllTeams />} />
-                <Route path={ROUTES.EVENT} element={<EventPostPage />} />
-                <Route path={ROUTES.EVENTS} element={<EventPage />} />
-                <Route path={ROUTES.SCRIMSPAGE} element={<ScrimsPage />} />
-                <Route path={ROUTES.PLAYER} element={<AllPlayers />} />
-                <Route path={ROUTES.NOTIFICATION} element={<Notification />} />
+    <Routes>
+      {/* Routes with Navbar & Footer */}
+      <Route element={<MainLayout />}>
+        <Route index element={<Home />} />
 
-                {/* Authentication */}
-                <Route
-                  path={ROUTES.LOGIN}
-                  element={isAuthenticated ? <Home /> : <LoginPage />}
-                />
-                <Route
-                  path={ROUTES.SIGNUP}
-                  element={isAuthenticated ? <Home /> : <SignupPage />}
-                />
-                <Route path={ROUTES.CREATE_TEAM} element={<CreateTeam />} />
-              </Route>
+        {/* Normal Protected Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
+          <Route path="team-profile" element={<TeamProfile />} />
+        </Route>
+      </Route>
 
-              {/* Admin Routes */}
-              <Route path={ROUTES.ADMIN} element={<AdminDashboard />} />
-              <Route path={ROUTES.MAXADMIN} element={<SuperAdminDashboard />} />
-              <Route path={ROUTES.NOTFOUND} element={<NotFound />} />
+      {/* Admin Routes */}
+      {/* <Route element={<ProtectedAdminRoute />}>
+      <Route path="admin/dashboard" element={<AdminDashboard />} />
+      <Route path="admin/settings" element={<AdminSettings />} />
+    </Route> */}
 
-              {/* Organizer Routes  */}
-              <Route
-                path={ROUTES.ORGANIZER_DASHBOARD}
-                element={<OrganizerRoutes />}
-              />
-            </Routes>
-          </Suspense>
-          <Toaster position="top-center" />
-        </motion.div>
-      </AnimatePresence>
-    </ErrorBoundary>
+      {/* Super Admin Routes */}
+      {/* <Route element={<ProtectedSuperAdminRoute />}>
+        <Route path="super-admin/users" element={<UserManagement />} />
+        <Route path="super-admin/settings" element={<SuperAdminSettings />} />
+      </Route> */}
+
+      <Route element={<PublicRoute />}>
+        <Route element={<AuthLayout />}>
+          <Route path="login" element={<LoginPage />} />
+          <Route path="register" element={<SignupPage />} />
+        </Route>
+      </Route>
+    </Routes>
   );
 };
 

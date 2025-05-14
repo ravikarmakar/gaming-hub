@@ -2,9 +2,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { User, LogOut, Users, Bell } from "lucide-react";
 import { useMenu } from "../context/MenuContext";
-import useAuthStore from "@/store/useAuthStore";
+import { useUserStore } from "@/store/useUserStore";
 
-// Navigation options stored in a variable
 const navigationOptions = [
   {
     icon: User,
@@ -21,18 +20,17 @@ const navigationOptions = [
 export const ProfileAvatar = () => {
   const navigate = useNavigate();
   const { activeMenu, setActiveMenu } = useMenu();
-
+  const { logout, user } = useUserStore();
   const isOpen = activeMenu === "profile";
 
-  const { logOut, user, isAuthenticated } = useAuthStore();
-
   const handleLogout = () => {
-    logOut();
+    logout();
     setActiveMenu(null);
     navigate("/");
   };
 
-  const isOrganizer = user?.activeOrganizer;
+  // const isOrganizer = user?.activeOrganizer;
+  const isOrganizer = false;
 
   return (
     <div className="relative profile-menu">
@@ -63,7 +61,7 @@ export const ProfileAvatar = () => {
           </motion.button>
         </Link>
 
-        {isAuthenticated ? (
+        {user?._id ? (
           <motion.button
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.95 }}

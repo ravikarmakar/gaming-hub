@@ -20,7 +20,6 @@ const OrganizerRoutes = () => {
       <Routes>
         <Route
           element={
-            // <ProtectedRoute>
             <DashboardLayout>
               <Outlet />
             </DashboardLayout>

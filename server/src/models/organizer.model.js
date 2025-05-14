@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { rolesPermissions } from "./user.model.js";
+import { rolesPermissions } from "../config/rolesPermissions.js";
 
 const OrganizerSchema = new mongoose.Schema(
   {
