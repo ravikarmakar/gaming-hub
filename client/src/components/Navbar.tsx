@@ -21,7 +21,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "@/store/useUserStore";
 
-const GamingNavbar = () => {
+const Navbar = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -147,7 +147,7 @@ const GamingNavbar = () => {
     {
       name: "View Profile",
       icon: <User className="w-4 h-4" />,
-      href: "#profile",
+      href: "/profile",
     },
     {
       name: "Messages",
@@ -186,7 +186,7 @@ const GamingNavbar = () => {
           : "bg-gray-900 border-b border-purple-900/30"
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
@@ -269,8 +269,28 @@ const GamingNavbar = () => {
             ))}
           </div>
 
-          {/* Right side - Notifications, Profile and Login */}
+          {/* Right side - Dashboard, Notifications, Profile and Login */}
           <div className="flex items-center">
+            {/* Dashboard Button */}
+            {user &&
+              (user.role === "organiser" || user.role === "super-admin") && (
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    if (user?.role === "super-admin") {
+                      navigate("/super-admin");
+                    } else if (user?.role === "admin") {
+                      navigate("/admin");
+                    }
+                  }}
+                  className="px-4 py-2 mr-4 border border-purple-700/70 bg-gray-900/50 hover:bg-gray-800/50 text-gray-200 font-medium rounded-lg flex items-center"
+                >
+                  <span>
+                    {user?.role === "super-admin" ? "Super Admin" : "Organiser"}
+                  </span>
+                </motion.button>
+              )}
+
             {/* Notification Icon */}
             {user && (
               <div className="relative mr-2">
@@ -467,7 +487,7 @@ const GamingNavbar = () => {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-200">
-                      PlayerXYZ
+                      {user?.username}
                     </p>
                     <p className="text-xs text-gray-400">Level 42 • Premium</p>
                   </div>
@@ -526,4 +546,4 @@ const GamingNavbar = () => {
   );
 };
 
-export default GamingNavbar;
+export default Navbar;

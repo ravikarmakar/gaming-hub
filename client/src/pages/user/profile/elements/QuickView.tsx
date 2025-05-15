@@ -1,4 +1,3 @@
-import { LucideIcon } from "@/components/LucideIcon";
 import {
   Trophy,
   Users,

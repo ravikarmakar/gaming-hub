@@ -33,7 +33,7 @@ export const useUserStore = create<UserStateTypes>((set) => ({
   user: null,
   error: null,
   isLoading: false,
-  checkingAuth: false,
+  checkingAuth: true,
   accessToken: null,
 
   register: async (username, email, password) => {

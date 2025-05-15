@@ -1,17 +1,18 @@
 import { Route, Routes } from "react-router-dom";
 import { ROUTES } from "./constants/routes";
-import { AuthLayout } from "./components/auth/AuthLayout";
+import AuthLayout from "./components/layouts/AuthLayout";
+import MainLayout from "./components/layouts/MainLayout";
 import Home from "./pages/home/Home";
 import LoginPage from "./pages/auth/LoginPage";
 import SignupPage from "./pages/auth/SignUpPage";
-import MainLayout from "./components/MainLayout";
 import ProfilePage from "./pages/user/profile/ProfilePage";
 import TeamProfile from "./pages/user/teamProfile/TeamProfile";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import PublicRoute from "./routes/PublicRoute";
 import { useEffect, useRef } from "react";
 import { useUserStore } from "./store/useUserStore";
-import ProtectedAdminRoute from "./routes/ProtectedAdminRoute";
+import SuperAdminRoutes from "./routes/SuperAdminRoutes";
+import OrganizerRoutes from "./routes/OrganizerRoutes";
 
 const App = () => {
   const hasCalled = useRef(false);
@@ -37,17 +38,10 @@ const App = () => {
         </Route>
       </Route>
 
-      {/* Admin/Organiser Routes */}
-      <Route element={<ProtectedAdminRoute />}>
-        {/* <Route path="admin/dashboard" element={<AdminDashboard />} /> */}
-        {/* <Route path="admin/settings" element={<AdminSettings />} /> */}
-      </Route>
-
+      {/* Organizer Routes */}
+      {OrganizerRoutes()}
       {/* Super Admin Routes */}
-      {/* <Route element={<ProtectedSuperAdminRoute />}>
-        <Route path="super-admin/users" element={<UserManagement />} />
-        <Route path="super-admin/settings" element={<SuperAdminSettings />} />
-      </Route> */}
+      {SuperAdminRoutes()}
 
       <Route element={<PublicRoute />}>
         <Route element={<AuthLayout />}>

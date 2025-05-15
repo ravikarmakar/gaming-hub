@@ -2,7 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 
-export const AuthLayout = () => {
+export default function AuthLayout() {
   const location = useLocation();
   const isLogin = location.pathname.includes("login");
 
@@ -60,7 +60,7 @@ export const AuthLayout = () => {
       </motion.div>
     </div>
   );
-};
+}
 
 export const BackgroundAnimation = () => {
   return (
