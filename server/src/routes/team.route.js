@@ -21,8 +21,8 @@ router.delete("/", protectRoute, deleteTeam);
 // router.put("/:teamId", protectRoute, updateTeam);
 
 router.put("/leave-team", protectRoute, memberleaveTeam);
-router.delete("/remove-member", protectRoute, deleteMember); // to-do
-router.put("/transfer-role", protectRoute, transferRole); // to-do
-router.put("/assign-captain", protectRoute, assignTeamCaptain); // to-do
+router.delete("/remove-member", protectRoute, deleteMember);
+router.put("/transfer-role", protectRoute, transferRole);
+router.put("/assign-captain", protectRoute, assignTeamCaptain);
 
 export default router;

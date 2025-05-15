@@ -93,7 +93,7 @@ const ProfileHeader = ({ user, isOwnProfile }: ProfileHeaderProps) => {
   };
 
   return (
-    <div className="relative w-full overflow-hidden mt-16">
+    <div className="relative w-full overflow-hidden py-16">
       {/* Static Background Gradient */}
       <div className="absolute inset-0 z-0">
         <div className="absolute top-0 left-[-10%] w-[40%] h-[40%] bg-blue-600/10 blur-[100px] rounded-full" />

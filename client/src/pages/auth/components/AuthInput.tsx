@@ -7,6 +7,7 @@ interface AuthInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   icon: React.ReactNode;
   error?: string | null;
   name: string;
+  autocomplete?: string;
 }
 
 export const AuthInput = ({

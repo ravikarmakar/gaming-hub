@@ -1,45 +1,51 @@
 import expores from "express";
-import {
-  protectRoute,
-  checkBlockedStatus,
-  authorizeRoles,
-} from "../middleware/authMiddleware.js";
 
 import {
-  registerUser,
-  loginUser,
-  logoutUser,
-  getUserProfile,
-  blockUser,
-  unblockUser,
-  changeUserRole,
+  register,
+  login,
+  logout,
+  refreshToken,
+  getProfile,
 } from "../controllers/auth.controller.js";
+import { isAuthenticated } from "../middleware/auth.middleware.js";
+import { rateLimiter } from "../middleware/rateLimiter.middleware.js";
 
 const router = expores.Router();
 
-// Public routes
-router.post("/register", registerUser);
-router.post("/login", loginUser);
-router.post("/logout", logoutUser);
+router.post(
+  "/register",
+  rateLimiter({ limit: 10, timer: 60, key: "register" }),
+  register
+);
+router.post(
+  "/login",
+  rateLimiter({ limit: 5, timer: 60, key: "login" }),
+  login
+);
+router.post("/refresh-token", refreshToken);
 
-router.get("/profile", protectRoute, checkBlockedStatus, getUserProfile);
-router.put(
-  "/block-user/:id",
-  protectRoute,
-  authorizeRoles("admin", "max admin"),
-  blockUser
-);
-router.put(
-  "/unblock-user/:id",
-  protectRoute,
-  authorizeRoles("admin", "max admin"),
-  unblockUser
-);
-router.put(
-  "/change-role",
-  protectRoute,
-  authorizeRoles("admin", "max admin"),
-  changeUserRole
-);
+router.use(isAuthenticated);
+
+router.post("/logout", logout);
+router.get("/get-profile", getProfile);
+
+// router.put(
+//   "/block-user/:id",
+//   protectRoute,
+//   authorizeRoles("admin", "max admin"),
+//   blockUser
+// );
+// router.put(
+//   "/unblock-user/:id",
+//   protectRoute,
+//   authorizeRoles("admin", "max admin"),
+//   unblockUser
+// );
+// router.put(
+//   "/change-role",
+//   protectRoute,
+//   authorizeRoles("admin", "max admin"),
+//   changeUserRole
+// );
 
 export default router;

@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import Team from "../models/team.model.js";
 import TeamNotification from "../models/notification-model/team.notification.model.js";
 import User from "../models/user.model.js";
-import { rolesPermissions } from "../models/user.model.js";
+import { rolesPermissions } from "../config/rolesPermissions.js";
 
 export const getAllTeams = async (req, res) => {
   try {

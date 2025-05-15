@@ -56,7 +56,7 @@ const useAuthStore = create<AuthStoreState>((set) => ({
 
       if (response.status === 200) {
         toast.success("Login successful!");
-        await useAuthStore.getState().checkAuth(); //Login ke baad auth check karo
+        await useAuthStore.getState().checkAuth();
       }
     } catch (error) {
       if (error instanceof AxiosError) {
