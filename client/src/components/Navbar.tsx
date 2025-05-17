@@ -186,10 +186,10 @@ const Navbar = () => {
           : "bg-gray-900 border-b border-purple-900/30"
       }`}
     >
-      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="px-4 mx-auto max-w-8xl sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex-shrink-0 flex items-center">
+          <div className="flex items-center flex-shrink-0">
             <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -200,16 +200,16 @@ const Navbar = () => {
                 whileHover="hover"
                 animate="rest"
                 variants={glow}
-                className="flex items-center justify-center p-1 rounded-full bg-gray-800"
+                className="flex items-center justify-center p-1 bg-gray-800 rounded-full"
               >
-                <Gamepad2 className="h-8 w-8 text-purple-400" />
+                <Gamepad2 className="w-8 h-8 text-purple-400" />
               </motion.div>
               <motion.span
                 initial="rest"
                 whileHover="hover"
                 animate="rest"
                 variants={glowText}
-                className="ml-2 text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-indigo-300"
+                className="ml-2 text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-300"
               >
                 NEXUS
               </motion.span>
@@ -232,21 +232,21 @@ const Navbar = () => {
                   initial="rest"
                   whileHover="hover"
                   variants={glow}
-                  className="flex items-center text-gray-300 cursor-pointer hover:text-purple-300 px-3 py-2 text-sm font-medium rounded-md m-1 transition-colors"
+                  className="flex items-center px-3 py-2 m-1 text-sm font-medium text-gray-300 transition-colors rounded-md cursor-pointer hover:text-purple-300"
                 >
                   <span className="mr-1">{item.icon}</span>
                   {item.name}
-                  {item.hasDropdown && <ChevronDown className="ml-1 w-4 h-4" />}
+                  {item.hasDropdown && <ChevronDown className="w-4 h-4 ml-1" />}
                 </motion.li>
 
                 {/* Dropdown Menu */}
                 {item.hasDropdown && (
-                  <div className="absolute hidden group-hover:block mt-1 w-48 z-10">
+                  <div className="absolute z-10 hidden w-48 mt-1 group-hover:block">
                     <motion.div
                       initial="hidden"
                       animate="visible"
                       variants={dropdownVariants}
-                      className="py-1 bg-gray-800 border border-purple-900/50 rounded-md shadow-lg overflow-hidden shadow-purple-900/20 backdrop-blur-lg"
+                      className="py-1 overflow-hidden bg-gray-800 border rounded-md shadow-lg border-purple-900/50 shadow-purple-900/20 backdrop-blur-lg"
                     >
                       {["Action", "Adventure", "RPG", "Strategy", "Sports"].map(
                         (genre) => (
@@ -283,7 +283,7 @@ const Navbar = () => {
                       navigate("/admin");
                     }
                   }}
-                  className="px-4 py-2 mr-4 border border-purple-700/70 bg-gray-900/50 hover:bg-gray-800/50 text-gray-200 font-medium rounded-lg flex items-center"
+                  className="flex items-center px-4 py-2 mr-4 font-medium text-gray-200 border rounded-lg border-purple-700/70 bg-gray-900/50 hover:bg-gray-800/50"
                 >
                   <span>
                     {user?.role === "super-admin" ? "Super Admin" : "Organiser"}
@@ -302,10 +302,10 @@ const Navbar = () => {
                     setShowNotifications(!showNotifications);
                     setShowProfile(false);
                   }}
-                  className="p-2 rounded-full text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 focus:outline-none relative"
+                  className="relative p-2 text-gray-300 bg-gray-800 rounded-full hover:text-white hover:bg-gray-700 focus:outline-none"
                 >
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-gray-800"></span>
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute top-0 right-0 block w-2 h-2 bg-red-500 rounded-full ring-2 ring-gray-800"></span>
                 </motion.button>
 
                 {/* Notifications Dropdown */}
@@ -316,7 +316,7 @@ const Navbar = () => {
                       animate="visible"
                       exit="exit"
                       variants={dropdownVariants}
-                      className="absolute right-0 mt-2 w-80 bg-gray-800 border border-purple-900/50 rounded-lg shadow-lg shadow-purple-900/20 overflow-hidden z-10"
+                      className="absolute right-0 z-10 mt-2 overflow-hidden bg-gray-800 border rounded-lg shadow-lg w-80 border-purple-900/50 shadow-purple-900/20"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="p-2 border-b border-gray-700">
@@ -324,7 +324,7 @@ const Navbar = () => {
                           Notifications
                         </p>
                       </div>
-                      <div className="max-h-96 overflow-y-auto">
+                      <div className="overflow-y-auto max-h-96">
                         {notifications.map((notification) => (
                           <motion.a
                             key={notification.id}
@@ -335,8 +335,8 @@ const Navbar = () => {
                             className="block p-3 border-b border-gray-700 hover:bg-gray-700"
                           >
                             <div className="flex items-start">
-                              <div className="flex-shrink-0 mr-3 mt-1">
-                                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-700">
+                              <div className="flex-shrink-0 mt-1 mr-3">
+                                <div className="flex items-center justify-center w-8 h-8 bg-gray-700 rounded-full">
                                   {notification.icon}
                                 </div>
                               </div>
@@ -347,7 +347,7 @@ const Navbar = () => {
                                 <p className="text-xs text-gray-400">
                                   {notification.message}
                                 </p>
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="mt-1 text-xs text-gray-500">
                                   {notification.time}
                                 </p>
                               </div>
@@ -357,7 +357,7 @@ const Navbar = () => {
                       </div>
                       <a
                         href="#all-notifications"
-                        className="block p-2 text-center text-sm font-medium text-purple-400 hover:text-purple-300 bg-gray-800 hover:bg-gray-700"
+                        className="block p-2 text-sm font-medium text-center text-purple-400 bg-gray-800 hover:text-purple-300 hover:bg-gray-700"
                       >
                         View All Notifications
                       </a>
@@ -378,13 +378,13 @@ const Navbar = () => {
                     setShowProfile(!showProfile);
                     setShowNotifications(false);
                   }}
-                  className="flex items-center p-1 rounded-full text-gray-300 hover:text-white focus:outline-none"
+                  className="flex items-center p-1 text-gray-300 rounded-full hover:text-white focus:outline-none"
                 >
-                  <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-purple-500">
+                  <div className="w-10 h-10 overflow-hidden border-2 rounded-full border-purple-500/30">
                     <img
-                      src="/api/placeholder/32/32"
+                      src={user?.avatar}
                       alt="Profile"
-                      className="w-full h-full object-cover"
+                      className="object-cover w-full h-full"
                     />
                   </div>
                 </motion.button>
@@ -397,7 +397,7 @@ const Navbar = () => {
                       animate="visible"
                       exit="exit"
                       variants={dropdownVariants}
-                      className="absolute right-0 mt-2 w-56 bg-gray-800 border border-purple-900/50 rounded-lg shadow-lg shadow-purple-900/20 overflow-hidden z-10"
+                      className="absolute right-0 z-10 w-56 mt-2 overflow-hidden bg-gray-800 border rounded-lg shadow-lg border-purple-900/50 shadow-purple-900/20"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="p-3 border-b border-gray-700">
@@ -419,7 +419,7 @@ const Navbar = () => {
                             whileHover={{
                               backgroundColor: "rgba(139, 92, 246, 0.1)",
                             }}
-                            className="flex items-center cursor-pointer px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-700"
+                            className="flex items-center px-4 py-2 text-sm text-gray-300 cursor-pointer hover:text-white hover:bg-gray-700"
                           >
                             <span className="mr-3 text-gray-400">
                               {option.icon}
@@ -451,12 +451,12 @@ const Navbar = () => {
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setIsOpen(!isOpen)}
-                className="p-2 rounded-md text-gray-300 hover:text-white focus:outline-none"
+                className="p-2 text-gray-300 rounded-md hover:text-white focus:outline-none"
               >
                 {isOpen ? (
-                  <X className="h-6 w-6" />
+                  <X className="w-6 h-6" />
                 ) : (
-                  <Menu className="h-6 w-6" />
+                  <Menu className="w-6 h-6" />
                 )}
               </motion.button>
             </div>
@@ -472,17 +472,17 @@ const Navbar = () => {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="md:hidden bg-gray-900 border-t border-gray-800"
+            className="bg-gray-900 border-t border-gray-800 md:hidden"
           >
             <div className="px-2 pt-2 pb-3 space-y-1">
               {/* Profile Info (Mobile) */}
               {user && (
-                <div className="p-3 mb-2 border-b border-gray-800 flex items-center">
-                  <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-purple-500 mr-3">
+                <div className="flex items-center p-3 mb-2 border-b border-gray-800">
+                  <div className="w-10 h-10 mr-3 overflow-hidden border-2 border-purple-500 rounded-full">
                     <img
                       src="/api/placeholder/40/40"
                       alt="Profile"
-                      className="w-full h-full object-cover"
+                      className="object-cover w-full h-full"
                     />
                   </div>
                   <div>
@@ -505,7 +505,7 @@ const Navbar = () => {
                 >
                   <li
                     onClick={() => navigate(item.href)}
-                    className="flex items-center text-gray-300 hover:text-white hover:bg-gray-800 px-3 py-2 rounded-md text-base font-medium"
+                    className="flex items-center px-3 py-2 text-base font-medium text-gray-300 rounded-md hover:text-white hover:bg-gray-800"
                   >
                     <span className="mr-3">{item.icon}</span>
                     {item.name}
@@ -527,7 +527,7 @@ const Navbar = () => {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: (i + navItems.length) * 0.1 }}
-                        className="flex items-center cursor-point px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800"
+                        className="flex items-center px-3 py-2 text-base font-medium text-gray-300 rounded-md cursor-point hover:text-white hover:bg-gray-800"
                       >
                         <span className="mr-3 text-gray-400">
                           {option.icon}

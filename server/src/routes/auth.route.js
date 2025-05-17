@@ -6,6 +6,7 @@ import {
   logout,
   refreshToken,
   getProfile,
+  googleLogin,
 } from "../controllers/auth.controller.js";
 import { isAuthenticated } from "../middleware/auth.middleware.js";
 import { rateLimiter } from "../middleware/rateLimiter.middleware.js";
@@ -23,6 +24,7 @@ router.post(
   login
 );
 router.post("/refresh-token", refreshToken);
+router.get("/google", googleLogin);
 
 router.use(isAuthenticated);
 

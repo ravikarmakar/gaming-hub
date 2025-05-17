@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { User } from "../types/index";
-import { FormDataType } from "@/pages/auth/SignUpPage";
-import { LoginFormDataType } from "@/pages/auth/LoginPage";
+import { FormDataType } from "@/pages/auth/SignUp";
+import { LoginFormDataType } from "@/pages/auth/Login";
 import { axiosInstance } from "@/lib/axios";
 import { AxiosError } from "axios";
 import toast from "react-hot-toast";

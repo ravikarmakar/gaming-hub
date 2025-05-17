@@ -1,10 +1,10 @@
 import { Route, Routes } from "react-router-dom";
 import { ROUTES } from "./constants/routes";
-import AuthLayout from "./components/layouts/AuthLayout";
+import AuthLayout from "./components/layouts/auth-layout";
 import MainLayout from "./components/layouts/MainLayout";
 import Home from "./pages/home/Home";
-import LoginPage from "./pages/auth/LoginPage";
-import SignupPage from "./pages/auth/SignUpPage";
+import Login from "./pages/auth/login";
+import SignupPage from "./pages/auth/signup";
 import ProfilePage from "./pages/user/profile/ProfilePage";
 import TeamProfile from "./pages/user/teamProfile/TeamProfile";
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -45,7 +45,7 @@ const App = () => {
 
       <Route element={<PublicRoute />}>
         <Route element={<AuthLayout />}>
-          <Route path="login" element={<LoginPage />} />
+          <Route path="login" element={<Login />} />
           <Route path="register" element={<SignupPage />} />
         </Route>
       </Route>

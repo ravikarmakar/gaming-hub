@@ -27,6 +27,7 @@ interface UserStateTypes {
   logout: () => Promise<void>;
   refreshToken: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  googleAuth: (code: string) => Promise<User | null>;
 }
 
 export const useUserStore = create<UserStateTypes>((set) => ({
@@ -99,6 +100,17 @@ export const useUserStore = create<UserStateTypes>((set) => ({
     } catch (error) {
       set({ user: null, checkingAuth: false, error: "Session expired" });
       throw error;
+    }
+  },
+  googleAuth: async (code) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosInstance.get(`/auth/google?code=${code}`);
+      set({ user: response.data.user, isLoading: false });
+      return response.data.user;
+    } catch {
+      set({ error: "Error while Google Register!", isLoading: false });
+      return null;
     }
   },
 }));

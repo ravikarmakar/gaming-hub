@@ -9,6 +9,8 @@ import {
   setCookies,
   storeRefreshToken,
 } from "../utils/generateTokens.js";
+import { oauth2Client } from "../config/googleConfig.js";
+import axios from "axios";
 
 export const register = TryCatchHandler(async (req, res, next) => {
   const { username, email, password } = req.body;
@@ -158,6 +160,41 @@ export const refreshToken = TryCatchHandler(async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+export const googleLogin = TryCatchHandler(async (req, res, next) => {
+  const { code } = req.query;
+
+  const { tokens } = await oauth2Client.getToken(code);
+  oauth2Client.setCredentials(tokens);
+
+  const { data } = await axios.get(
+    `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${tokens.access_token}`
+  );
+
+  const { email, name, picture } = data;
+
+  let user = await User.findOne({ email });
+  if (!user) {
+    user = await User.create({
+      username: name,
+      email,
+      avatar: picture,
+    });
+  }
+
+  const { accessToken, refreshToken } = generateTokens(user._id, user.role);
+  await storeRefreshToken(user._id, refreshToken);
+  setCookies(res, accessToken, refreshToken);
+
+  const userObj = user.toObject();
+  delete userObj.password;
+
+  res.status(201).json({
+    success: true,
+    message: "User logged in successfully",
+    user: userObj,
+  });
 });
 
 export const getProfile = TryCatchHandler(async (req, res, next) => {
