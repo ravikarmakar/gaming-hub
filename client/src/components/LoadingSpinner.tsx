@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { Gamepad2 } from "lucide-react";
 
-const hexagonPath = "M17.547 0l17.547 10.137v20.274L17.547 40.548 0 30.41V10.137L17.547 0z";
+const hexagonPath =
+  "M17.547 0l17.547 10.137v20.274L17.547 40.548 0 30.41V10.137L17.547 0z";
 
 export default function LoadingSpinner() {
   return (
@@ -10,7 +11,7 @@ export default function LoadingSpinner() {
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#4f46e510,transparent_50%)] animate-pulse" />
         <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,#4f46e510,transparent_100px)] opacity-10" />
-        <motion.div 
+        <motion.div
           className="absolute inset-0 bg-[linear-gradient(45deg,#00ff8705,#60efff05,#ff3d8705)]"
           animate={{
             backgroundPosition: ["0% 0%", "100% 100%"],
@@ -18,7 +19,7 @@ export default function LoadingSpinner() {
           transition={{
             duration: 10,
             repeat: Infinity,
-            ease: "linear"
+            ease: "linear",
           }}
         />
       </div>
@@ -26,7 +27,7 @@ export default function LoadingSpinner() {
       <motion.div
         initial={{ opacity: 0, scale: 0.5 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="flex flex-col items-center space-y-8 relative"
+        className="relative flex flex-col items-center space-y-8"
       >
         {/* Hexagon container */}
         <div className="relative w-32 h-32">
@@ -65,13 +66,13 @@ export default function LoadingSpinner() {
           {/* Center gamepad with glow */}
           <motion.div
             className="absolute inset-0 flex items-center justify-center"
-            animate={{ 
+            animate={{
               scale: [1, 1.1, 1],
             }}
-            transition={{ 
+            transition={{
               duration: 2,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
           >
             <div className="relative">
@@ -139,7 +140,7 @@ export default function LoadingSpinner() {
             <motion.div
               className="h-full"
               initial={{ width: "0%" }}
-              animate={{ 
+              animate={{
                 width: "100%",
                 background: [
                   "linear-gradient(to right, #4f46e5, #60efff, #4f46e5)",
@@ -162,7 +163,7 @@ export default function LoadingSpinner() {
               }}
             />
           </motion.div>
-          
+
           {/* Floating particles */}
           {[...Array(5)].map((_, i) => (
             <motion.div

@@ -109,6 +109,15 @@ const Login: React.FC = () => {
     flow: "auth-code",
   });
 
+  const handleDiscordLogin = () => {
+    const clientId = import.meta.env.VITE_DISCORD_CLIENT_ID;
+    const redirectUri = encodeURIComponent(
+      "http://localhost:5173/auth/discord/callback"
+    );
+
+    window.location.href = `https://discord.com/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=identify%20email`;
+  };
+
   return (
     <motion.div initial="hidden" animate="visible" variants={containerVariants}>
       <form
@@ -198,12 +207,12 @@ const Login: React.FC = () => {
             </span>
           </label>
 
-          <Link
-            to="/forgot-password"
-            className="text-purple-400 transition-all duration-200 hover:text-purple-300 hover:underline underline-offset-2"
+          <p
+            onClick={() => navigate("/forgot-password")}
+            className="text-purple-400 transition-all duration-200 cursor-pointer hover:text-purple-300 hover:underline underline-offset-2"
           >
             Forgot password?
-          </Link>
+          </p>
         </motion.div>
 
         <motion.div variants={itemVariants}>
@@ -243,7 +252,7 @@ const Login: React.FC = () => {
         <motion.div variants={itemVariants}>
           <SocialLogin
             onGoogleLogin={loginWithGoogle}
-            onDiscordLogin={() => toast.success("Discord login coming soon!")}
+            onDiscordLogin={handleDiscordLogin}
           />
         </motion.div>
 

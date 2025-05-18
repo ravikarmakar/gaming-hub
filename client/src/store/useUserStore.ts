@@ -1,6 +1,7 @@
 import { axiosInstance } from "@/lib/axios";
 import { create } from "zustand";
 import "../lib/axiosInterceptor";
+import axios from "axios";
 
 export interface User {
   _id: string;
@@ -8,6 +9,11 @@ export interface User {
   email: string;
   avatar: string;
   role: string;
+  isAccountVerified: boolean;
+  verifyOtp: string;
+  verifyOtpExpireAt: number;
+  resetOtp: string;
+  resetOtpExpireAt: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -17,7 +23,7 @@ interface UserStateTypes {
   error: string | null;
   checkingAuth: boolean;
   isLoading: boolean;
-  accessToken: string | null;
+  isVerifying: boolean;
   register: (
     username: string,
     email: string,
@@ -28,15 +34,25 @@ interface UserStateTypes {
   refreshToken: () => Promise<void>;
   checkAuth: () => Promise<void>;
   googleAuth: (code: string) => Promise<User | null>;
+  loginWithDiscord: (code: string) => Promise<User | null>;
+  sendVerifyOtp: () => Promise<{ success: boolean; message: string }>;
+  verifyEmail: (otp: string) => Promise<{ success: boolean; message: string }>;
+  sendPassResetOtp: (
+    email: string
+  ) => Promise<{ success: boolean; message: string }>;
+  resetPassword: (
+    email: string,
+    otp: string,
+    newPassword: string
+  ) => Promise<{ success: boolean; message: string }>;
 }
 
 export const useUserStore = create<UserStateTypes>((set) => ({
   user: null,
   error: null,
   isLoading: false,
+  isVerifying: false,
   checkingAuth: true,
-  accessToken: null,
-
   register: async (username, email, password) => {
     set({ isLoading: true, error: null });
     try {
@@ -67,7 +83,7 @@ export const useUserStore = create<UserStateTypes>((set) => ({
     }
   },
   logout: async () => {
-    set({ isLoading: true, error: null, accessToken: null });
+    set({ isLoading: true, error: null });
     try {
       await axiosInstance.post("/auth/logout");
       set({ user: null, isLoading: false });
@@ -111,6 +127,125 @@ export const useUserStore = create<UserStateTypes>((set) => ({
     } catch {
       set({ error: "Error while Google Register!", isLoading: false });
       return null;
+    }
+  },
+  loginWithDiscord: async (code) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosInstance.post(`/auth/discord?code=${code}`);
+      set({ user: response.data.user, isLoading: false });
+      return response.data.user;
+    } catch {
+      set({ isLoading: false, error: "Error while Discord Register & login!" });
+      return null;
+    }
+  },
+  sendVerifyOtp: async () => {
+    set({ isVerifying: true, error: null });
+    try {
+      const response = await axiosInstance.post("/auth/send-verify-otp");
+      set({ isVerifying: false });
+
+      if (!response.data.success) {
+        const errorMsg = response.data.message || "Something went wrong";
+        set({ error: errorMsg });
+        return { success: false, message: errorMsg };
+      }
+
+      return {
+        success: true,
+        message: response.data.message,
+      };
+    } catch (error) {
+      const errMsg = axios.isAxiosError(error)
+        ? error.response?.data?.message || "Failed to send OTP"
+        : "Something went wrong";
+
+      set({ error: errMsg, isVerifying: false });
+      return { success: false, message: errMsg };
+    }
+  },
+  verifyEmail: async (otp) => {
+    set({ isVerifying: true, error: null });
+    try {
+      const response = await axiosInstance.post("/auth/verify-account", {
+        otp,
+      });
+      set({ isVerifying: false });
+
+      if (!response.data.success) {
+        const errorMsg = response.data.message || "Something went wrong";
+        set({ error: errorMsg });
+        return { success: false, message: errorMsg };
+      }
+
+      return {
+        success: true,
+        message: response.data.message,
+      };
+    } catch (error) {
+      const errMsg = axios.isAxiosError(error)
+        ? error.response?.data?.message || "Failed to send OTP"
+        : "Something went wrong";
+
+      set({ error: errMsg, isVerifying: false });
+      return { success: false, message: errMsg };
+    }
+  },
+  sendPassResetOtp: async (email) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosInstance.post("/auth/send-reset-otp", {
+        email,
+      });
+      set({ isLoading: false });
+
+      if (!response.data.success) {
+        const errorMsg = response.data.message || "Something went wrong";
+        set({ error: errorMsg });
+        return { success: false, message: errorMsg };
+      }
+
+      return {
+        success: true,
+        message: response.data.message,
+      };
+    } catch (error) {
+      const errMsg = axios.isAxiosError(error)
+        ? error.response?.data?.message || "Failed to send passward reset OTP"
+        : "Something went wrong";
+
+      set({ error: errMsg, isLoading: false });
+      return { success: false, message: errMsg };
+    }
+  },
+  resetPassword: async (email, otp, newPassword) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosInstance.post("/auth/reset-password", {
+        email,
+        otp,
+        newPassword,
+      });
+      set({ isLoading: false });
+
+      if (!response.data.success) {
+        const errorMsg = response.data.message || "Something went wrong";
+        set({ error: errorMsg });
+        return { success: false, message: errorMsg };
+      }
+
+      return {
+        success: true,
+        message: response.data.message,
+      };
+    } catch (error) {
+      const errMsg = axios.isAxiosError(error)
+        ? error.response?.data?.message || "Failed to reset passward! Try again"
+        : "Something went wrong";
+
+      set({ error: errMsg, isLoading: false });
+      return { success: false, message: errMsg };
     }
   },
 }));

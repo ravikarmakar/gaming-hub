@@ -158,6 +158,15 @@ const Signup = () => {
     flow: "auth-code",
   });
 
+  const handleDiscordLogin = () => {
+    const clientId = import.meta.env.VITE_DISCORD_CLIENT_ID;
+    const redirectUri = encodeURIComponent(
+      "http://localhost:5173/auth/discord/callback"
+    );
+
+    window.location.href = `https://discord.com/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=identify%20email`;
+  };
+
   return (
     <motion.div initial="hidden" animate="visible" variants={containerVariants}>
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -340,7 +349,7 @@ const Signup = () => {
         <motion.div variants={itemVariants}>
           <SocialLogin
             onGoogleLogin={signInWithGoogle}
-            onDiscordLogin={() => toast.success("Discord login coming soon!")}
+            onDiscordLogin={handleDiscordLogin}
           />
         </motion.div>
 

@@ -26,14 +26,19 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      // required: [true, "Password is required"],
+      required: function () {
+        return !this.oauthProvider;
+      },
       minlength: [6, "Password must be at least 6 characters"],
       select: false,
     },
-    avatar: {
-      type: String,
-      default: null,
-    },
+    oauthProvider: { type: String }, // "google", "discord", etc.
+    avatar: { type: String, default: null },
+    verifyOtp: { type: String, default: "" },
+    verifyOtpExpireAt: { type: Number, default: 0 },
+    isAccountVerified: { type: Boolean, default: false },
+    resetOtp: { type: String, default: "" },
+    resetOtpExpireAt: { type: Number, default: 0 },
     role: {
       type: String,
       enum: {
@@ -53,6 +58,7 @@ userSchema.pre("save", async function (next) {
 
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
+  next();
 });
 
 userSchema.methods.matchPassword = async function (enteredPassword) {

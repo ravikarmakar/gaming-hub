@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useUserStore } from "@/store/useUserStore";
 import { useEffect } from "react";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 const ProtectedRoute = () => {
   const location = useLocation();
@@ -11,11 +12,7 @@ const ProtectedRoute = () => {
   }, [user, checkAuth]);
 
   if (checkingAuth) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <span className="text-white">Loading...</span>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!user) {

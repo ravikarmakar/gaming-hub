@@ -17,9 +17,11 @@ import {
   Crown,
   HelpCircle,
   Loader2,
+  KeyRound,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "@/store/useUserStore";
+import toast from "react-hot-toast";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -27,7 +29,8 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const { user, logout, isLoading } = useUserStore();
+  const { user, logout, isLoading, sendVerifyOtp, isVerifying } =
+    useUserStore();
 
   // Check if user has scrolled
   useEffect(() => {
@@ -53,6 +56,17 @@ const Navbar = () => {
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
+
+  const sendVerificationOtp = async () => {
+    const { success, message } = await sendVerifyOtp();
+    if (success) {
+      toast.success(message);
+      navigate("/verify-account");
+      setShowProfile(!showProfile);
+    } else {
+      toast.error(message);
+    }
+  };
 
   // Animation variants
   const navbarVariants = {
@@ -148,6 +162,16 @@ const Navbar = () => {
       name: "View Profile",
       icon: <User className="w-4 h-4" />,
       href: "/profile",
+    },
+    {
+      name: "Email",
+      icon: <KeyRound className="w-4 h-4" />,
+      type: "email_verify",
+      onClick: () => {
+        if (!user?.isAccountVerified) {
+          sendVerificationOtp();
+        }
+      },
     },
     {
       name: "Messages",
@@ -419,12 +443,56 @@ const Navbar = () => {
                             whileHover={{
                               backgroundColor: "rgba(139, 92, 246, 0.1)",
                             }}
-                            className="flex items-center px-4 py-2 text-sm text-gray-300 cursor-pointer hover:text-white hover:bg-gray-700"
+                            className={`flex items-center justify-between px-4 py-2 text-sm cursor-pointer
+                              ${
+                                option.type === "email_verify" &&
+                                !user?.isAccountVerified
+                                  ? "bg-yellow-200 text-yellow-500 font-semibold border border-yellow-500 rounded-md"
+                                  : "text-gray-300 hover:text-white hover:bg-gray-7700"
+                              }`}
                           >
-                            <span className="mr-3 text-gray-400">
-                              {option.icon}
-                            </span>
-                            {option.name}
+                            <div className="flex items-center">
+                              <span
+                                className={`mr-3 ${
+                                  option.type === "email_verify"
+                                    ? "text-yellow-500"
+                                    : "text-gray-400"
+                                }`}
+                              >
+                                {option.icon}
+                              </span>
+                              {option.name}
+                            </div>
+
+                            {/* Show "Verify" button only if user is NOT verified if show green button with "Verified"*/}
+                            {option.type === "email_verify" && (
+                              <div className="ml-auto">
+                                {!user?.isAccountVerified ? (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (option.onClick) {
+                                        option.onClick();
+                                      }
+                                    }}
+                                    className="flex px-2 py-1 text-xs text-white transition bg-yellow-500 rounded hover:bg-yellow-600"
+                                  >
+                                    {isVerifying ? (
+                                      <>
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        Sending OTP...
+                                      </>
+                                    ) : (
+                                      "Verify"
+                                    )}
+                                  </button>
+                                ) : (
+                                  <span className="px-2 py-1 text-xs font-medium text-green-800 bg-green-200 rounded">
+                                    Verified
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </motion.li>
                         ))}
                       </ul>

@@ -1,4 +1,6 @@
 import jwt from "jsonwebtoken";
+import axios from "axios";
+import qs from "qs";
 import User from "../models/user.model.js";
 import { redis } from "../config/redisClient.js";
 import { rolesPermissions } from "../config/rolesPermissions.js";
@@ -9,8 +11,9 @@ import {
   setCookies,
   storeRefreshToken,
 } from "../utils/generateTokens.js";
-import { oauth2Client } from "../config/googleConfig.js";
-import axios from "axios";
+import { oauth2Client } from "../config/google.config.js";
+import { discordOAuthConfig } from "../config/discord.config.js";
+import { transporter } from "../config/nodemailer.config.js";
 
 export const register = TryCatchHandler(async (req, res, next) => {
   const { username, email, password } = req.body;
@@ -36,6 +39,16 @@ export const register = TryCatchHandler(async (req, res, next) => {
   // remove password before sending user in response
   const userObj = user.toObject();
   delete userObj.password;
+
+  // Send Welcome Email
+  const mailOptions = {
+    from: process.env.SENDER_EMAIL,
+    to: email,
+    subject: "Welcome to Gaming-hub",
+    text: `Welcome to gaming-hub website, Your account has been created with email id: ${email}`,
+  };
+
+  await transporter.sendMail(mailOptions);
 
   res.status(201).json({
     success: true,
@@ -180,6 +193,8 @@ export const googleLogin = TryCatchHandler(async (req, res, next) => {
       username: name,
       email,
       avatar: picture,
+      oauthProvider: "google",
+      isAccountVerified: true,
     });
   }
 
@@ -195,6 +210,149 @@ export const googleLogin = TryCatchHandler(async (req, res, next) => {
     message: "User logged in successfully",
     user: userObj,
   });
+});
+
+export const discordLogin = TryCatchHandler(async (req, res, next) => {
+  const { code } = req.query;
+
+  try {
+    const data = {
+      client_id: discordOAuthConfig.client_id,
+      client_secret: discordOAuthConfig.client_secret,
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: discordOAuthConfig.redirect_uri,
+    };
+
+    // Get access token
+    const tokenRes = await axios.post(
+      discordOAuthConfig.token_url,
+      qs.stringify(data),
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+    );
+
+    const access_token = tokenRes.data.access_token;
+
+    // Get user info (with email)
+    const userRes = await axios.get(discordOAuthConfig.user_url, {
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+
+    const { username, avatar, email, verified } = userRes.data;
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "No email found with this Discord account.",
+      });
+    }
+
+    // Check if email is verified
+    if (!verified) {
+      return res.status(403).json({
+        success: false,
+        message: "Email not verified. Please verify your Discord email.",
+      });
+    }
+
+    // Save or find user in DB by email
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = await User.create({
+        username,
+        avatar,
+        email,
+        oauthProvider: "discord",
+        isAccountVerified: true,
+      });
+    }
+
+    // Generate JWT token
+    const { accessToken, refreshToken } = generateTokens(user._id, user.role);
+    await storeRefreshToken(user._id, refreshToken);
+    setCookies(res, accessToken, refreshToken);
+
+    const userObj = user.toObject();
+    delete userObj.password;
+
+    res.status(200).json({
+      success: true,
+      user: userObj,
+    });
+  } catch (error) {
+    console.error("Discord Login Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Login failed with Discord",
+      error: error.message,
+    });
+  }
+});
+
+export const sendVerifyOtp = TryCatchHandler(async (req, res, next) => {
+  const user = await User.findById(req.user.userId);
+  if (!user) return next(new CustomError("User not found", 404));
+  if (user.isAccountVerified) {
+    res
+      .status(200)
+      .json({ success: false, message: "Account Alraedy verified" });
+    return;
+  }
+  // Generate otp
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
+
+  user.verifyOtp = otp;
+  user.verifyOtpExpireAt = Date.now() + 10 * 60 * 1000; // 10 mins = 600000 ms
+
+  await user.save();
+
+  // Send Verification Email
+  const mailOptions = {
+    from: process.env.SENDER_EMAIL,
+    to: user.email,
+    subject: "Account verification OTP - Gaming-Hub",
+    text: `Welcome to Gaming-hub!\n\nYour One-Time Password (OTP) is: ${otp}\n\nPlease verify your account using this OTP. Note: This OTP is valid for only 10 minutes.`,
+  };
+
+  await transporter.sendMail(mailOptions);
+
+  res
+    .status(200)
+    .json({ success: true, message: "Verification OTP sent on Email" });
+});
+
+export const verifyEmail = TryCatchHandler(async (req, res, next) => {
+  const userId = req.user.userId;
+  const cacheKey = `user_profile:${userId}`;
+  const { otp } = req.body;
+  if (!otp)
+    return next(
+      new CustomError("Please provide the OTP sent to your email.", 400)
+    );
+
+  const user = await User.findById(userId);
+  if (!user) return next(new CustomError("User not found", 404));
+
+  // Invalidate cache
+  await redis.del(cacheKey);
+
+  if (user.verifyOtp !== otp)
+    return res.status(400).json({ success: false, message: "Invalid OTP" });
+
+  if (user.verifyOtpExpireAt < Date.now())
+    return res.status(400).json({ success: false, message: "OTP has expired" });
+
+  user.isAccountVerified = true;
+  user.verifyOtp = "";
+  user.verifyOtpExpireAt = 0;
+
+  await user.save();
+
+  // Update cache for 1 minute (adjust time as needed)
+  await redis.setex(cacheKey, 60, JSON.stringify(user));
+
+  res
+    .status(200)
+    .json({ success: true, message: "Your account verified successfully" });
 });
 
 export const getProfile = TryCatchHandler(async (req, res, next) => {
@@ -217,6 +375,77 @@ export const getProfile = TryCatchHandler(async (req, res, next) => {
   await redis.setex(cacheKey, 60, JSON.stringify(user));
 
   return res.status(200).json({ success: true, user });
+});
+
+export const sendResetPasswordOtp = TryCatchHandler(async (req, res, next) => {
+  const { email } = req.body;
+  if (!email) return next(new CustomError("Email is required", 400));
+
+  const user = await User.findOne({ email });
+  if (!user) return next(new CustomError("User not found", 404));
+
+  if (!user.isAccountVerified)
+    return next(new CustomError("You first need to verify your email", 401));
+
+  // Generate otp
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
+
+  user.resetOtp = otp;
+  user.resetOtpExpireAt = Date.now() + 10 * 60 * 1000; // 10 mins = 600000 ms
+
+  await user.save();
+
+  // Mail content
+  const mailOptions = {
+    from: process.env.SENDER_EMAIL,
+    to: email,
+    subject: "Password Reset OTP - Gaming Hub",
+    text: `Hello ${
+      user.username || "User"
+    },\n\nWe received a request to reset the password for your Gaming Hub account.\n\nYour One-Time Password (OTP) is: ${otp}\n\nPlease use this OTP to reset your password. This OTP is valid for only 10 minutes.\n\nIf you did not request a password reset, you can safely ignore this email.\n\nRegards,\nGaming Hub Team`,
+  };
+
+  await transporter.sendMail(mailOptions);
+
+  res.status(200).json({
+    success: true,
+    message:
+      "Reset password OTP has been sent to your email address. It will expire in 10 minutes.",
+  });
+});
+
+export const resetPassword = TryCatchHandler(async (req, res, next) => {
+  const { email, otp, newPassword } = req.body;
+
+  // Input validations
+  if (!email || !otp || !newPassword)
+    return next(
+      new CustomError("Email, OTP, and new password are required", 400)
+    );
+
+  const user = await User.findOne({ email }).select("+password");
+
+  if (!user) return next(new CustomError("User not found", 404));
+
+  // Checking if OTP matches and is not expired
+  if (
+    !user.resetOtp ||
+    user.resetOtp !== otp ||
+    user.resetOtpExpireAt < Date.now()
+  )
+    return next(new CustomError("Invalid or expired OTP", 400));
+
+  // Clear OTP fields
+  user.password = newPassword;
+  user.resetOtp = "";
+  user.resetOtpExpireAt = 0;
+
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Password has been reset successfully. You can now log in.",
+  });
 });
 
 export const blockUser = async (req, res) => {

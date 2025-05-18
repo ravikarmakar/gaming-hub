@@ -3,6 +3,7 @@ export const ROUTES = {
   LOGIN: "/login",
   REGISTER: "/register",
   PROFILE: "/profile",
+  EMAIL_VERIFY: "/verify-account",
   TEAM_PROFILE: "/team-profile",
   ADMIN_DASHBOARD: "/admin/dashboard",
 };
