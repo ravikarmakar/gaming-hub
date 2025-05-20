@@ -3,12 +3,21 @@ import { create } from "zustand";
 import "../lib/axiosInterceptor";
 import axios from "axios";
 
+interface Roles {
+  scope: "platform" | "org";
+  role: string;
+  orgId: string;
+}
+
 export interface User {
   _id: string;
   username: string;
   email: string;
   avatar: string;
-  role: string;
+  role: Roles[];
+  orgId: string;
+  teamId: string;
+  canCreateOrg: boolean;
   isAccountVerified: boolean;
   verifyOtp: string;
   verifyOtpExpireAt: number;
@@ -77,8 +86,11 @@ export const useUserStore = create<UserStateTypes>((set) => ({
       });
       set({ user: response.data.user, isLoading: false });
       return true;
-    } catch {
-      set({ error: "Error while login", isLoading: false });
+    } catch (error) {
+      const errMsg = axios.isAxiosError(error)
+        ? error.response?.data?.message || "Failed to login! Tray again!"
+        : "Something went wrong";
+      set({ error: errMsg, isLoading: false });
       return false;
     }
   },

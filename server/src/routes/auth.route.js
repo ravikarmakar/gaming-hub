@@ -78,23 +78,6 @@ router.post(
   verifyEmail
 );
 
-// router.put(
-//   "/block-user/:id",
-//   protectRoute,
-//   authorizeRoles("admin", "max admin"),
-//   blockUser
-// );
-// router.put(
-//   "/unblock-user/:id",
-//   protectRoute,
-//   authorizeRoles("admin", "max admin"),
-//   unblockUser
-// );
-// router.put(
-//   "/change-role",
-//   protectRoute,
-//   authorizeRoles("admin", "max admin"),
-//   changeUserRole
-// );
-
 export default router;
+
+// to-do ---->> update profile, block user, unblock user

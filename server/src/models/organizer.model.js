@@ -1,44 +1,23 @@
 import mongoose from "mongoose";
-import { rolesPermissions } from "../config/rolesPermissions.js";
 
-const OrganizerSchema = new mongoose.Schema(
+const organizerSchema = new mongoose.Schema(
   {
     ownerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    description: {
-      type: String,
-      trim: true,
-    },
+    imageUrl: { type: String, default: null },
+    name: { type: String, required: true, trim: true, unique: true },
+    email: { type: String, required: true, trim: true, lowercase: true },
+    description: { type: String, trim: true },
     isVerified: { type: Boolean, default: false },
-    members: [
-      {
-        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        role: {
-          type: String,
-          enum: Object.keys(rolesPermissions),
-          default: "staff",
-        },
-      },
-    ],
-    events: [
-      {
-        eventId: { type: mongoose.Schema.Types.ObjectId, ref: "Event" },
-        name: String,
-        date: Date,
-      },
-    ],
+    tag: { type: String, required: true },
   },
   { timestamps: true }
 );
 
-const Organizer = mongoose.model("Organizer", OrganizerSchema);
+const Organizer =
+  mongoose.models.Organizer || mongoose.model("Organizer", organizerSchema);
 
 export default Organizer;

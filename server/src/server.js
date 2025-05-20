@@ -5,15 +5,12 @@ import express from "express";
 import cookieParese from "cookie-parser";
 import cors from "cors";
 import morgan from "morgan";
-
 import { errorHandle } from "./middleware/error.middleware.js";
 import connectDB from "./config/db.js";
 
 import authRouter from "./routes/auth.route.js";
 import userRouter from "./routes/user.route.js";
-
-// Organization Imports
-import organizationRouter from "./routes/organization-routes/organization.route.js";
+import organizerRouter from "./routes/organizer.route.js";
 
 // Team Imports
 import teamRouter from "./routes/team.route.js";
@@ -43,10 +40,11 @@ app.get("/", (req, res) => {
   res.send("This is calling from gaming-hub backend");
 });
 
-app.use("/api/auth", authRouter); // working on only
+app.use("/api/auth", authRouter);
+app.use("/api/organizer", organizerRouter);
 
 app.use("/api/users", userRouter);
-app.use("/api/organizations", organizationRouter);
+// app.use("/api/organizations", organizationRouter);
 app.use("/api/teams", teamRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/invitations", invitationRouter);

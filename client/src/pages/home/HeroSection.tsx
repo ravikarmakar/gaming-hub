@@ -20,17 +20,17 @@ const HeroSection = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: [0.3, 0.5, 0.3] }}
         transition={{ duration: 5, repeat: Infinity }}
-        className="absolute top-1/4 -left-32 w-96 h-96 bg-purple-500/30 rounded-full blur-3xl"
+        className="absolute rounded-full top-1/4 -left-32 w-96 h-96 bg-purple-500/30 blur-3xl"
       />
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: [0.2, 0.4, 0.2] }}
         transition={{ duration: 7, repeat: Infinity, delay: 1 }}
-        className="absolute bottom-1/4 -right-32 w-96 h-96 bg-cyan-500/30 rounded-full blur-3xl"
+        className="absolute rounded-full bottom-1/4 -right-32 w-96 h-96 bg-cyan-500/30 blur-3xl"
       />
 
       {/* Main Content */}
-      <div className="relative z-10 container mx-auto px-4 h-full flex flex-col justify-center items-center">
+      <div className="container relative z-10 flex flex-col items-center justify-center h-full px-4 mx-auto">
         {/* Live Tournament Badge */}
         <motion.div
           initial={{ y: -50, opacity: 0 }}
@@ -40,13 +40,13 @@ const HeroSection = () => {
         >
           <motion.div
             whileHover={{ scale: 1.05 }}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 rounded-full border border-purple-500/20"
+            className="flex items-center gap-2 px-4 py-2 border rounded-full bg-purple-500/10 border-purple-500/20"
           >
             <Timer className="w-4 h-4 text-purple-400" />
-            <span className="text-purple-300 text-sm">
+            <span className="text-sm text-purple-300">
               Tournament Starting In
             </span>
-            <span className="text-purple-100 font-mono">02:14:33</span>
+            <span className="font-mono text-purple-100">02:14:33</span>
           </motion.div>
         </motion.div>
 
@@ -55,23 +55,23 @@ const HeroSection = () => {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="text-center max-w-4xl mx-auto mb-12"
+          className="max-w-4xl mx-auto mb-12 text-center"
         >
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6">
-            <span className="inline-block bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
+          <h1 className="mb-6 text-5xl font-bold md:text-6xl lg:text-7xl">
+            <span className="inline-block text-transparent bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text">
               Dominate
             </span>{" "}
-            <span className="inline-block bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+            <span className="inline-block text-transparent bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text">
               The Games
             </span>{" "}
-            <span className="inline-block bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent font-bold">
+            <span className="inline-block font-bold text-transparent bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text">
               with
             </span>{" "}
-            <span className="bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500 bg-clip-text text-transparent font-extrabold tracking-wider">
+            <span className="font-extrabold tracking-wider text-transparent bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500 bg-clip-text">
               GamerX
             </span>
           </h1>
-          <p className="text-gray-400 text-md md:text-xl max-w-2xl mx-auto">
+          <p className="max-w-2xl mx-auto text-gray-400 text-md md:text-xl">
             Join the ultimate gaming community. Compete in tournaments, earn
             rewards, and become a legend.
           </p>
@@ -82,12 +82,12 @@ const HeroSection = () => {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.6 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
+          className="flex flex-col items-center justify-center gap-4 mb-16 sm:flex-row"
         >
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="px-8 py-4 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-full text-white font-semibold flex items-center gap-2 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-shadow"
+            className="flex items-center gap-2 px-8 py-4 font-semibold text-white transition-shadow rounded-full shadow-lg bg-gradient-to-r from-purple-600 to-cyan-600 shadow-purple-500/25 hover:shadow-purple-500/40"
           >
             Start Gaming
             <motion.div
@@ -104,7 +104,7 @@ const HeroSection = () => {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="px-8 py-4 bg-gray-800/50 rounded-full text-gray-300 font-semibold border border-gray-700 hover:border-purple-500/50 transition-colors"
+            className="px-8 py-4 font-semibold text-gray-300 transition-colors border border-gray-700 rounded-full bg-gray-800/50 hover:border-purple-500/50"
           >
             Watch Tournaments
           </motion.button>
@@ -115,13 +115,13 @@ const HeroSection = () => {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.8 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto"
+          className="grid max-w-4xl grid-cols-2 gap-4 mx-auto md:grid-cols-4"
         >
           {stats.map((stat) => (
             <motion.div
               key={stat.label}
               whileHover={{ y: -5, scale: 1.02 }}
-              className="p-4 bg-gray-800/50 rounded-xl border border-gray-700 hover:border-purple-500/50 transition-all"
+              className="p-4 transition-all border border-gray-700 bg-gray-800/50 rounded-xl hover:border-purple-500/50"
             >
               <div className="flex items-center gap-2 mb-2">
                 {stat.icon}
@@ -129,7 +129,7 @@ const HeroSection = () => {
                   {stat.value}
                 </h3>
               </div>
-              <p className="text-gray-400 text-sm">{stat.label}</p>
+              <p className="text-sm text-gray-400">{stat.label}</p>
             </motion.div>
           ))}
         </motion.div>
@@ -139,17 +139,17 @@ const HeroSection = () => {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 1 }}
-          className="mt-16 flex flex-col items-center gap-4"
+          className="flex flex-col items-center gap-4 mt-16"
         >
           <div className="flex -space-x-4">
             {[...Array(5)].map((_, i) => (
               <motion.div key={i} whileHover={{ y: -5 }} className="relative">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 p-[2px]">
-                  <div className="w-full h-full rounded-full overflow-hidden">
+                  <div className="w-full h-full overflow-hidden rounded-full">
                     <img
                       src={`https://api.dicebear.com/6.x/avataaars/svg?seed=player${i}`}
                       alt="Player Avatar"
-                      className="w-full h-full object-cover bg-gray-800"
+                      className="object-cover w-full h-full bg-gray-800"
                     />
                   </div>
                 </div>
@@ -173,7 +173,7 @@ const HeroSection = () => {
           repeat: Infinity,
           ease: "easeInOut",
         }}
-        className="absolute bottom-10 right-10 text-purple-500/50 hidden sm:block"
+        className="absolute hidden bottom-10 right-10 text-purple-500/50 sm:block"
       >
         <Gamepad className="w-20 h-20" />
       </motion.div>
@@ -187,7 +187,7 @@ const HeroSection = () => {
           ease: "easeInOut",
           delay: 1,
         }}
-        className="absolute top-20 left-10 text-cyan-500/50 hidden sm:block"
+        className="absolute hidden top-20 left-10 text-cyan-500/50 sm:block"
       >
         <Sparkles className="w-16 h-16" />
       </motion.div>

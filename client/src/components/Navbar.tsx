@@ -22,6 +22,13 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "@/store/useUserStore";
 import toast from "react-hot-toast";
+import {
+  ORG_ADMIN_ROLES,
+  PLATFORM_SUPER_ADMIN_ROLES,
+  SCOPES,
+} from "@/constants/roles";
+import { ROUTES } from "@/constants/routes";
+import { hasAnyRole } from "@/lib/permissions";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -67,6 +74,14 @@ const Navbar = () => {
       toast.error(message);
     }
   };
+
+  // RBAC implementation
+  const isSuperAdmin = hasAnyRole(
+    user,
+    SCOPES.PLATFORM,
+    PLATFORM_SUPER_ADMIN_ROLES
+  );
+  const hasAnyOrgRole = hasAnyRole(user, SCOPES.ORG, ORG_ADMIN_ROLES);
 
   // Animation variants
   const navbarVariants = {
@@ -295,25 +310,33 @@ const Navbar = () => {
 
           {/* Right side - Dashboard, Notifications, Profile and Login */}
           <div className="flex items-center">
-            {/* Dashboard Button */}
-            {user &&
-              (user.role === "organiser" || user.role === "super-admin") && (
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    if (user?.role === "super-admin") {
-                      navigate("/super-admin");
-                    } else if (user?.role === "admin") {
-                      navigate("/admin");
-                    }
-                  }}
-                  className="flex items-center px-4 py-2 mr-4 font-medium text-gray-200 border rounded-lg border-purple-700/70 bg-gray-900/50 hover:bg-gray-800/50"
-                >
-                  <span>
-                    {user?.role === "super-admin" ? "Super Admin" : "Organiser"}
-                  </span>
-                </motion.button>
-              )}
+            {/* Request button to create org */}
+            {!user?.canCreateOrg && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate(ROUTES.CREATE_ORG)}
+                className="hidden px-4 py-2 mr-4 text-sm font-medium text-white rounded-md shadow-md md:inline-flex bg-gradient-to-r from-purple-800 to-indigo-900 hover:from-purple-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-900 shadow-purple-900/20"
+              >
+                Create Org
+              </motion.button>
+            )}
+            {/* Dashboard Button for RBAC */}
+            {(isSuperAdmin || hasAnyOrgRole) && (
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  if (isSuperAdmin) {
+                    navigate(ROUTES.SUPER_ADMIN_DASHBOARD);
+                  } else if (hasAnyOrgRole) {
+                    navigate(ROUTES.ORGANISER_DASHBOARD);
+                  }
+                }}
+                className="flex items-center px-4 py-2 mr-4 font-medium text-gray-200 border rounded-lg border-purple-700/70 bg-gray-900/50 hover:bg-gray-800/50"
+              >
+                <span> {isSuperAdmin ? "Super Admin" : "Organiser"}</span>
+              </motion.button>
+            )}
 
             {/* Notification Icon */}
             {user && (

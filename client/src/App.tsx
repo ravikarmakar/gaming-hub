@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Route, Routes, Navigate } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { ROUTES } from "./constants/routes";
 import AuthLayout from "./components/layouts/auth-layout";
 import MainLayout from "./components/layouts/MainLayout";
@@ -16,10 +16,13 @@ import OrganizerRoutes from "./routes/OrganizerRoutes";
 import DiscordCallback from "./pages/auth/discord-callback";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import VerifyEmail from "./pages/auth/VerifyEmail";
+import CreateOrg from "./pages/organiser/CreateOrg";
 
 const App = () => {
   const hasCalled = useRef(false);
   const { checkAuth, user } = useUserStore();
+
+  console.log(user);
 
   useEffect(() => {
     if (!hasCalled.current) {
@@ -38,12 +41,8 @@ const App = () => {
         <Route element={<ProtectedRoute />}>
           <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
           <Route path={ROUTES.TEAM_PROFILE} element={<TeamProfile />} />
-          <Route
-            path={ROUTES.EMAIL_VERIFY}
-            element={
-              user?.isAccountVerified ? <Navigate to="/" /> : <VerifyEmail />
-            }
-          />
+          <Route path={ROUTES.EMAIL_VERIFY} element={<VerifyEmail />} />
+          <Route path={ROUTES.CREATE_ORG} element={<CreateOrg />} />
         </Route>
       </Route>
 

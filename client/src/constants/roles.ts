@@ -1,83 +1,34 @@
-// roles.ts
-export const ROLES = {
-  USER: "user",
-  ADMIN: "admin",
-  SUPER_ADMIN: "super_admin",
+export const SCOPES = {
+  PLATFORM: "platform",
+  ORG: "org",
 };
 
-export const permissions = {
-  user: ["viewer"],
-  admin: ["viewer", "write"],
-  super_admin: ["viewer", "write", "delete"],
+export const PLATFORM_ROLES = {
+  SUPER_ADMIN: "platform:super_admin",
+  STAFF: "platform:staff",
+  USER: "platform:user",
 };
 
-//------------------->
+export const ORG_ROLES = {
+  OWNER: "org:owner",
+  MANAGER: "org:manager",
+  STAFF: "org:staff",
+  PLAYER: "org:player",
+};
 
-// accessUtils.ts
-// import { permissions } from '../auth/permissions';
+export const PLATFORM_SUPER_ADMIN_ROLES = [
+  PLATFORM_ROLES.SUPER_ADMIN,
+  PLATFORM_ROLES.STAFF,
+];
 
-// export const hasPermission = (role: string, action: string): boolean => {
-//   return permissions[role]?.includes(action);
-// };
+export const ORG_ADMIN_ROLES = [
+  ORG_ROLES.OWNER,
+  ORG_ROLES.MANAGER,
+  ORG_ROLES.STAFF,
+];
 
-//------------------->
-
-//  RoleContext.tsx
-// import { createContext, useContext } from 'react';
-
-// const RoleContext = createContext({ role: 'user' });
-
-// export const useRole = () => useContext(RoleContext);
-
-// export const RoleProvider = ({ children }: { children: React.ReactNode }) => {
-//   const userRole = 'editor'; // you get this from JWT/token/backend
-
-//   return (
-//     <RoleContext.Provider value={{ role: userRole }}>
-//       {children}
-//     </RoleContext.Provider>
-//   );
-// };
-
-// ---------------------------->
-
-// import { Navigate } from 'react-router-dom';
-// import { useRole } from '../auth/RoleContext';
-// import { hasPermission } from '../utils/accessUtils';
-
-// const ProtectedRoute = ({
-//   action,
-//   children,
-// }: {
-//   action: string;
-//   children: JSX.Element;
-// }) => {
-//   const { role } = useRole();
-
-//   if (!hasPermission(role, action)) {
-//     return <Navigate to="/unauthorized" />;
-//   }
-
-//   return children;
-// };
-
-// export default ProtectedRoute;
-
-// ----------------------->
-
-// <Route
-//   path="/dashboard"
-//   element={
-//     <ProtectedRoute action="write">
-//       <Dashboard />
-//     </ProtectedRoute>
-//   }
-// />
-
-// --------------------->
-
-// const { role } = useRole();
-
-// {hasPermission(role, 'delete') && (
-//   <button>Delete Post</button>
-// )}
+export const ROUTE_PERMISSIONS = {
+  "/organizer/manage-staff": ["org:owner", "org:manager"],
+  "/organizer/dashboard": ["org:owner", "org:manager", "org:staff"],
+  "/super-admin": ["platform:super_admin", "platform:staff"],
+};

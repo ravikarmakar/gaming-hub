@@ -5,13 +5,12 @@ export const ROUTES = {
   PROFILE: "/profile",
   EMAIL_VERIFY: "/verify-account",
   TEAM_PROFILE: "/team-profile",
-  ADMIN_DASHBOARD: "/admin/dashboard",
+  ORGANISER_DASHBOARD: "/organizer",
+  SUPER_ADMIN_DASHBOARD: "/super-admin",
+  CREATE_ORG: "/create-org",
 };
 
 // export const ROUTES = {
-//   LOGIN: "/login",
-//   SIGNUP: "/signup",
-//   HOME: "/",
 //   PROFILE: "/profile",
 //   USERPROFILE: "/profile/:id",
 //   CREATE_TEAM: "/create-team",

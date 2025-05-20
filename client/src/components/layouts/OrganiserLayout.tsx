@@ -5,6 +5,8 @@ import OrganizerSidebar from "../organiser/OrganizerSidebar";
 import { useUserStore } from "@/store/useUserStore";
 import { useEffect, useRef } from "react";
 import { Zap } from "lucide-react";
+import { ORG_ADMIN_ROLES, SCOPES } from "@/constants/roles";
+import { hasAnyRole } from "@/lib/permissions";
 
 export default function OrganizerLayout() {
   const { user, checkingAuth, checkAuth } = useUserStore();
@@ -16,6 +18,8 @@ export default function OrganizerLayout() {
       hasFetched.current = true;
     }
   }, [checkAuth]);
+
+  const hasPermission = hasAnyRole(user, SCOPES.ORG, ORG_ADMIN_ROLES);
 
   // Loading screen
   if (checkingAuth) {
@@ -37,12 +41,12 @@ export default function OrganizerLayout() {
       </div>
     );
   }
-  if (!user || user.role !== "organizer") {
+  if (!user || !hasPermission) {
     return <Navigate to="/" replace />;
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-950 text-white">
+    <div className="flex flex-col h-screen text-white bg-gray-950">
       {/* Header */}
       <div className="shrink-0">
         <DashboardHeader />
@@ -58,7 +62,7 @@ export default function OrganizerLayout() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
-          className="flex-1 overflow-y-auto p-8"
+          className="flex-1 p-8 overflow-y-auto"
         >
           <Outlet />
         </motion.main>

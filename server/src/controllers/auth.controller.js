@@ -3,7 +3,6 @@ import axios from "axios";
 import qs from "qs";
 import User from "../models/user.model.js";
 import { redis } from "../config/redisClient.js";
-import { rolesPermissions } from "../config/rolesPermissions.js";
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
 import {
@@ -387,6 +386,9 @@ export const sendResetPasswordOtp = TryCatchHandler(async (req, res, next) => {
   if (!user.isAccountVerified)
     return next(new CustomError("You first need to verify your email", 401));
 
+  if (user.oauthProvider)
+    return next(new CustomError("This email not valid to reset password", 400));
+
   // Generate otp
   const otp = String(Math.floor(100000 + Math.random() * 900000));
 
@@ -448,79 +450,4 @@ export const resetPassword = TryCatchHandler(async (req, res, next) => {
   });
 });
 
-export const blockUser = async (req, res) => {
-  try {
-    const userIdToBlock = req.params.id; // ID of the user to be blocked
-    const loggedInUser = req.user; // Logged-in user (max admin)
-
-    // Check if the logged-in user is a max admin
-    if (loggedInUser.role !== "max admin") {
-      return res
-        .status(403)
-        .json({ message: "You are not authorized to block users." });
-    }
-
-    // Find the user to block
-    const userToBlock = await User.findById(userIdToBlock);
-    if (!userToBlock) {
-      return res.status(404).json({ message: "User not found." });
-    }
-
-    // Block the user
-    userToBlock.blocked = true;
-    await userToBlock.save();
-
-    res
-      .status(200)
-      .json({ message: `User ${userToBlock.name} has been blocked.` });
-  } catch (error) {
-    console.error(`Error in blockUser: ${error.message}`);
-    res.status(500).json({ message: "Server error while blocking user." });
-  }
-};
-
-export const unblockUser = async (req, res) => {
-  try {
-    const userIdToUnblock = await User.findById(req.params.id);
-
-    if (!userIdToUnblock) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (!userIdToUnblock.blocked) {
-      return res.status(400).json({ message: "User is not blocked" });
-    }
-
-    // Unblock the user
-    userIdToUnblock.blocked = false;
-    await userIdToUnblock.save();
-
-    res.status(200).json({
-      message: `User ${userIdToUnblock.name} unblocked successfully`,
-      userIdToUnblock,
-    });
-  } catch (error) {
-    console.error(`Error in unblockUser: ${error.message}`);
-    res.status(500).json({ message: "Server error while unblocking user" });
-  }
-};
-
-export const changeUserRole = async (req, res) => {
-  try {
-    const { userId, newRole } = req.body;
-
-    if (!rolesPermissions[newRole]) {
-      return res.status(400).json({ message: "Invalid role" });
-    }
-
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    user.role = newRole;
-    await user.save(); // `pre("save")` middleware permissions auto-update karega
-
-    res.json({ message: `User is now a ${newRole}`, user });
-  } catch (error) {
-    res.status(500).json({ message: "Something went wrong", error });
-  }
-};
+// to-do --> user block, user unblock from platform

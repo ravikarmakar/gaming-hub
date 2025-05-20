@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import { rolesPermissions } from "../config/rolesPermissions.js";
+import roleSchema from "./role.model.js";
 
 const userSchema = new mongoose.Schema(
   {
@@ -39,13 +39,17 @@ const userSchema = new mongoose.Schema(
     isAccountVerified: { type: Boolean, default: false },
     resetOtp: { type: String, default: "" },
     resetOtpExpireAt: { type: Number, default: 0 },
+    orgId: { type: mongoose.Types.ObjectId, ref: "Organizer", default: null },
+    teamId: { type: mongoose.Types.ObjectId, ref: "Team", default: null },
+    canCreateOrg: { type: Boolean, default: false },
     role: {
-      type: String,
-      enum: {
-        values: Object.keys(rolesPermissions),
-        message: "Invalid role provided",
-      },
-      default: "user",
+      type: [roleSchema],
+      default: [
+        {
+          scope: "platform",
+          role: "platform:user",
+        },
+      ],
     },
   },
   { timestamps: true }

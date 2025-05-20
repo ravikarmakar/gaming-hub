@@ -5,6 +5,8 @@ import Sidebar from "@/components/super-admin/Sidebar";
 import Topbar from "@/components/super-admin/Topbar";
 import { useUserStore } from "@/store/useUserStore";
 import { Zap } from "lucide-react";
+import { hasAnyRole } from "@/lib/permissions";
+import { PLATFORM_SUPER_ADMIN_ROLES, SCOPES } from "@/constants/roles";
 
 export default function SuperAdminLayout() {
   const { user, checkingAuth, checkAuth } = useUserStore();
@@ -16,6 +18,12 @@ export default function SuperAdminLayout() {
       hasFetched.current = true;
     }
   }, [checkAuth]);
+
+  const hasPermission = hasAnyRole(
+    user,
+    SCOPES.PLATFORM,
+    PLATFORM_SUPER_ADMIN_ROLES
+  );
 
   // Loading screen
   if (checkingAuth) {
@@ -37,7 +45,7 @@ export default function SuperAdminLayout() {
       </div>
     );
   }
-  if (!user || user.role !== "super-admin") {
+  if (!user || !hasPermission) {
     return <Navigate to="/" replace />;
   }
 
@@ -45,7 +53,7 @@ export default function SuperAdminLayout() {
     <div className="flex h-screen">
       <Sidebar />
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex flex-col flex-1">
         <Topbar />
         <main className="p-4 overflow-y-auto bg-gray-900">
           <Outlet />

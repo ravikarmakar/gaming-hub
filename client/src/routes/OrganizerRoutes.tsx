@@ -1,12 +1,12 @@
 import { Route } from "react-router-dom";
-// import LoadingSpinner from "@/components/LoadingSpinner";
 import Dashboard from "@/pages/organiser/Dashboard";
 import OrganizerLayout from "@/components/layouts/OrganiserLayout";
+import { ROUTES } from "@/constants/routes";
 
 const OrganizerRoutes = () => {
   return (
     <>
-      <Route path="organizer" element={<OrganizerLayout />}>
+      <Route path={ROUTES.ORGANISER_DASHBOARD} element={<OrganizerLayout />}>
         <Route index element={<Dashboard />} />
         <Route path="users" element={<div className="text-white">Users</div>} />
         <Route path="events" element={<div>Events</div>} />

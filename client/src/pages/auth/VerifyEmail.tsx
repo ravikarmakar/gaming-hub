@@ -12,7 +12,7 @@ const VerifyEmail = () => {
   const [resendCooldown, setResendCooldown] = useState(0);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const { isVerifying, verifyEmail, user, sendVerifyOtp, error } =
+  const { isVerifying, verifyEmail, user, sendVerifyOtp, error, checkAuth } =
     useUserStore();
 
   // Handle cooldown timer
@@ -82,6 +82,7 @@ const VerifyEmail = () => {
       toast.success(message);
       setIsSuccess(success);
       navigate("/");
+      checkAuth();
     } else {
       toast.error(message);
       setOtp(new Array(6).fill(""));

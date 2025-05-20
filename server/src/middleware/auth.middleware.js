@@ -21,6 +21,7 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
+    console.log(decoded);
 
     req.user = {
       userId: decoded.userId,
@@ -39,6 +40,37 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
   }
 });
 
-export const isAdmin = () => {};
+export const requireRole = (requiredRole, requiredScope = "platform") => {
+  return (req, res, next) => {
+    const userRoles = req.user?.role || [];
 
-export const isSuperAdmin = () => {};
+    const hasRole = userRoles.some(
+      (r) => r.scope === requiredScope && r.role === requiredRole
+    );
+
+    if (!hasRole) {
+      return res
+        .status(403)
+        .json({ message: "Access Denied: Unauthorized role" });
+    }
+
+    next();
+  };
+};
+
+// This is for any role checking
+export const checkAnyRole = (rolesArray, scope = "platform") => {
+  return (req, res, next) => {
+    const userRoles = req.user?.role || [];
+
+    const authorized = rolesArray.some((role) =>
+      userRoles.some((r) => r.scope === scope && r.role === role)
+    );
+
+    if (!authorized) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    next();
+  };
+};
