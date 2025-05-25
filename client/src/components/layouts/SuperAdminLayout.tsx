@@ -4,9 +4,63 @@ import { Navigate, Outlet } from "react-router-dom";
 import Sidebar from "@/components/super-admin/Sidebar";
 import Topbar from "@/components/super-admin/Topbar";
 import { useUserStore } from "@/store/useUserStore";
-import { Zap } from "lucide-react";
+import {
+  BarChart2,
+  Package,
+  Settings,
+  Shield,
+  TrendingUp,
+  Users,
+  Users2,
+  Zap,
+} from "lucide-react";
 import { hasAnyRole } from "@/lib/permissions";
 import { PLATFORM_SUPER_ADMIN_ROLES, SCOPES } from "@/constants/roles";
+
+const sidebarLinks = [
+  {
+    id: "dashboard",
+    name: "Dashboard",
+    icon: <BarChart2 size={20} />,
+    href: "/super-admin",
+  },
+  {
+    id: "users",
+    name: "Users",
+    icon: <Users size={20} />,
+    href: "/super-admin/users",
+  },
+  {
+    id: "organisers",
+    name: "Organisers",
+    icon: <Users2 size={20} />,
+    href: "/super-admin/organisers",
+  },
+  {
+    id: "games",
+    name: "Games",
+    icon: <Package size={20} />,
+    href: "/super-admin/games",
+  },
+  {
+    id: "analytics",
+    name: "Analytics",
+    icon: <TrendingUp size={20} />,
+    href: "/super-admin/analytics",
+  },
+  {
+    id: "moderation",
+    name: "Moderation",
+    icon: <Shield size={20} />,
+    href: "/super-admin/moderation",
+  },
+  {
+    id: "settings",
+    name: "Settings",
+    icon: <Settings size={20} />,
+    href: "/super-admin/settings",
+  },
+];
 
 export default function SuperAdminLayout() {
   const { user, checkingAuth, checkAuth } = useUserStore();
@@ -51,7 +105,7 @@ export default function SuperAdminLayout() {
 
   return (
     <div className="flex h-screen">
-      <Sidebar />
+      <Sidebar links={sidebarLinks} title="Super Admin" />
 
       <div className="flex flex-col flex-1">
         <Topbar />

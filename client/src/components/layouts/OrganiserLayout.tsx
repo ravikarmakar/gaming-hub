@@ -1,15 +1,65 @@
 import { motion } from "framer-motion";
-import DashboardHeader from "../DashboardHeader";
 import { Navigate, Outlet } from "react-router-dom";
-import OrganizerSidebar from "../organiser/OrganizerSidebar";
 import { useUserStore } from "@/store/useUserStore";
-import { useEffect, useRef } from "react";
-import { Zap } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  BarChart,
+  BarChart2,
+  Bell,
+  Trophy,
+  Users,
+  Users2,
+  Zap,
+} from "lucide-react";
 import { ORG_ADMIN_ROLES, SCOPES } from "@/constants/roles";
 import { hasAnyRole } from "@/lib/permissions";
+import { Organizer, useOrganizerStore } from "@/store/useOrganizer";
+import Sidebar from "../super-admin/Sidebar";
+import Topbar from "../super-admin/Topbar";
+
+const sidebarLinks = [
+  {
+    id: "dashboard",
+    name: "Dashboard",
+    icon: <BarChart2 size={20} />,
+    href: "/organizer",
+  },
+  {
+    id: "members",
+    name: "Members",
+    icon: <Users size={20} />,
+    href: "/organizer/members",
+  },
+  {
+    id: "events",
+    name: "Events",
+    icon: <Users2 size={20} />,
+    href: "/organizer/events",
+  },
+  {
+    id: "tournaments",
+    name: "Tournaments",
+    icon: <Trophy size={20} />,
+    href: "/organizer/tournaments",
+  },
+  {
+    id: "analytics",
+    name: "Analytics",
+    icon: <BarChart size={20} />,
+    href: "/organizer/analytics",
+  },
+  {
+    id: "notifications",
+    name: "Notifications",
+    icon: <Bell size={20} />,
+    href: "/organizer/games",
+  },
+];
 
 export default function OrganizerLayout() {
   const { user, checkingAuth, checkAuth } = useUserStore();
+  const [orgData, setOrgData] = useState<Organizer | null>(null);
+  const { getOrgById } = useOrganizerStore();
   const hasFetched = useRef(false);
 
   useEffect(() => {
@@ -18,6 +68,18 @@ export default function OrganizerLayout() {
       hasFetched.current = true;
     }
   }, [checkAuth]);
+
+  useEffect(() => {
+    const fetchOrgData = async () => {
+      if (user?.orgId) {
+        const org = await getOrgById(user.orgId);
+        setOrgData(org);
+      }
+    };
+    fetchOrgData();
+  }, [user, getOrgById]);
+
+  console.log("Org Data:", orgData);
 
   const hasPermission = hasAnyRole(user, SCOPES.ORG, ORG_ADMIN_ROLES);
 
@@ -41,28 +103,21 @@ export default function OrganizerLayout() {
       </div>
     );
   }
-  if (!user || !hasPermission) {
+  if (!user || !hasPermission || !user.orgId) {
     return <Navigate to="/" replace />;
   }
 
   return (
-    <div className="flex flex-col h-screen text-white bg-gray-950">
-      {/* Header */}
-      <div className="shrink-0">
-        <DashboardHeader />
-      </div>
+    <div className="flex h-screen text-white bg-gray-950">
+      <Sidebar links={sidebarLinks} title="Organizer" />
 
-      {/* Sidebar + Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        <div className="shrink-0">
-          <OrganizerSidebar />
-        </div>
-
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <Topbar />
         <motion.main
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
-          className="flex-1 p-8 overflow-y-auto"
+          className="p-4 overflow-y-auto bg-gray-900"
         >
           <Outlet />
         </motion.main>

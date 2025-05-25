@@ -17,7 +17,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, "Email is required"],
       unique: true,
-      index: true,
       lowercase: true,
       match: [
         /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
@@ -33,15 +32,23 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
     oauthProvider: { type: String }, // "google", "discord", etc.
-    avatar: { type: String, default: null },
-    verifyOtp: { type: String, default: "" },
-    verifyOtpExpireAt: { type: Number, default: 0 },
+    avatar: {
+      type: String,
+      default: "https://default-avatar-url.com/avatar.png",
+    },
     isAccountVerified: { type: Boolean, default: false },
-    resetOtp: { type: String, default: "" },
-    resetOtpExpireAt: { type: Number, default: 0 },
+    verifyOtp: { type: String, default: "", select: false },
+    verifyOtpExpireAt: { type: Number, default: 0, select: false },
+    resetOtp: { type: String, default: "", select: false },
+    resetOtpExpireAt: { type: Number, default: 0, select: false },
     orgId: { type: mongoose.Types.ObjectId, ref: "Organizer", default: null },
     teamId: { type: mongoose.Types.ObjectId, ref: "Team", default: null },
     canCreateOrg: { type: Boolean, default: false },
+    esportsRole: {
+      type: String,
+      enum: ["rusher", "sniper", "support", "igl", "coach", "player"],
+      default: "player",
+    },
     role: {
       type: [roleSchema],
       default: [
@@ -51,9 +58,15 @@ const userSchema = new mongoose.Schema(
         },
       ],
     },
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
+
+// Indexes for performance on queries
+userSchema.index({ orgId: 1 });
+userSchema.index({ teamId: 1 });
+userSchema.index({ isDeleted: 1 });
 
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {

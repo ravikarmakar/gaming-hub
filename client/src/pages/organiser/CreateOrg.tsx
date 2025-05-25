@@ -1,64 +1,67 @@
 import React, { useState } from "react";
-// Using the existing Input component
 import { Building2, Tag, Mail, FileText } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import FileUpload from "@/components/ui/FileUpload";
 import Input from "@/components/ui/input";
 import { orgSchema } from "@/schemas/org/createOrg";
 import { ZodError } from "zod";
+import { useUserStore } from "@/store/useUserStore";
+import { Navigate, useNavigate } from "react-router-dom";
+import { useOrganizerStore } from "@/store/useOrganizer";
+import toast from "react-hot-toast";
 
 // Interface for organization data
 interface OrgFormData {
-  orgName: string;
-  orgTag: string;
-  orgEmail: string;
+  name: string;
+  tag: string;
+  email: string;
   image: File | null;
   description: string;
 }
 
 // Interface for validation errors
 interface OrgFormErrors {
-  orgName?: string[];
-  orgTag?: string[];
-  orgEmail?: string[];
-  logo?: string[];
+  name?: string[];
+  tag?: string[];
+  email?: string[];
+  image?: string[];
   description?: string[];
 }
 
 const CreateOrgForm: React.FC = () => {
-  // Form state
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<OrgFormData>({
-    orgName: "",
-    orgTag: "",
-    orgEmail: "",
+    name: "",
+    tag: "",
+    email: "",
     image: null,
     description: "",
   });
 
   const [errors, setErrors] = useState<OrgFormErrors>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const { user } = useUserStore();
+  const { createOrg, isLoading, error } = useOrganizerStore();
 
-  // Handle input changes
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "tag" ? value.toUpperCase() : value,
+    }));
 
     // Clear errors when field is edited
     if (errors[name as keyof OrgFormErrors]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
-
   // Handle file upload
   const handleFileUpload = (file: File | null) => {
-    setFormData((prev) => ({ ...prev, logo: file }));
-
-    // Clear logo error if it exists
-    if (errors.logo) {
-      setErrors((prev) => ({ ...prev, logo: undefined }));
+    setFormData((prev) => ({ ...prev, image: file }));
+    if (errors.image) {
+      setErrors((prev) => ({ ...prev, image: undefined }));
     }
   };
 
@@ -89,52 +92,42 @@ const CreateOrgForm: React.FC = () => {
       return;
     }
 
-    setIsSubmitting(true);
+    const orgData = new FormData();
+    Object.entries(formData).forEach(([key, value]) => {
+      if (key === "image" && value) {
+        orgData.append(key, value); // File object
+      } else if (value !== null && value !== undefined) {
+        orgData.append(key, value.toString());
+      }
+    });
 
-    try {
-      // Create form data for file upload
-      const formPayload = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        if (key === "logo" && value) {
-          formPayload.append(key, value);
-        } else if (typeof value === "string") {
-          formPayload.append(key, value);
-        }
-      });
+    for (const pair of orgData.entries()) {
+      console.log(pair[0], pair[1]);
+    }
 
-      // Example API call (replace with your actual API endpoint)
-      // const response = await fetch('/api/organizations', {
-      //   method: 'POST',
-      //   body: formPayload,
-      // });
+    if (!orgData) throw new Error("Form data is empty");
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Show success state
+    const result = await createOrg(orgData);
+    if (result) {
       setIsSuccess(true);
-
-      // Reset form after delay
-      setTimeout(() => {
-        setFormData({
-          orgName: "",
-          orgTag: "",
-          orgEmail: "",
-          image: null,
-          description: "",
-        });
-        setIsSuccess(false);
-      }, 3000);
-    } catch (error) {
-      console.error("Error creating organization:", error);
-      setErrors({
-        ...errors,
-        orgName: ["Failed to create organization. Please try again."],
+      navigate("/organizer");
+      toast.success("Organization created successfully!");
+      setFormData({
+        name: "",
+        tag: "",
+        email: "",
+        image: null,
+        description: "",
       });
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      setIsSuccess(false);
+      toast.error(error);
     }
   };
+
+  if (user?.orgId || !user?.canCreateOrg) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen px-4 pt-32 pb-20 bg-gradient-to-br from-purple-900/40 via-black to-purple-80/40">
@@ -166,13 +159,13 @@ const CreateOrgForm: React.FC = () => {
               transition={{ delay: 0.1 }}
             >
               <Input
-                name="orgName"
+                name="name"
                 label="Organization Name"
-                value={formData.orgName}
+                value={formData.name}
                 onChange={handleInputChange}
                 icon={<Building2 size={18} />}
                 placeholder="Acme Corporation"
-                error={errors.orgName}
+                error={errors.name}
                 required
               />
             </motion.div>
@@ -184,14 +177,14 @@ const CreateOrgForm: React.FC = () => {
               transition={{ delay: 0.2 }}
             >
               <Input
-                name="orgTag"
+                name="tag"
                 label="Organization Tag"
-                value={formData.orgTag}
+                value={formData.tag}
                 onChange={handleInputChange}
                 icon={<Tag size={18} />}
                 placeholder="ACM"
                 hint="2-5 uppercase letters"
-                error={errors.orgTag}
+                error={errors.tag}
                 required
                 maxLength={5}
                 autoCapitalize="characters"
@@ -210,14 +203,14 @@ const CreateOrgForm: React.FC = () => {
             transition={{ delay: 0.3 }}
           >
             <Input
-              name="orgEmail"
+              name="email"
               label="Contact Email"
               type="email"
-              value={formData.orgEmail}
+              value={formData.email}
               onChange={handleInputChange}
               icon={<Mail size={18} />}
               placeholder="contact@organization.com"
-              error={errors.orgEmail}
+              error={errors.email}
               required
             />
           </motion.div>
@@ -229,13 +222,13 @@ const CreateOrgForm: React.FC = () => {
             transition={{ delay: 0.5 }}
           >
             <FileUpload
-              label="Upload Image"
-              name="orgLogo"
+              label="Organization Logo"
+              name="image"
               accept="image/*"
-              maxSize={5 * 1024 * 1024} // 5MB
-              required={true}
+              maxSize={5 * 1024 * 1024}
+              error={errors.image}
               onChange={handleFileUpload}
-              hint="PNG, JPG, SVG (max 5MB)"
+              hint="SVG, PNG, JPG or GIF (max 5MB)"
             />
           </motion.div>
 
@@ -358,11 +351,11 @@ const CreateOrgForm: React.FC = () => {
               ) : (
                 <motion.button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isLoading}
                   className={`
                   w-full py-3 px-4 rounded-lg font-medium
                   transition-all duration-300 relative overflow-hidden
-                  ${isSubmitting ? "cursor-not-allowed" : "cursor-pointer"}
+                  ${isLoading ? "cursor-not-allowed" : "cursor-pointer"}
                   bg-gradient-to-r from-purple-600 to-blue-700
                   hover:from-purple-700 hover:to-blue-800
                   active:from-purple-800 active:to-blue-900
@@ -370,7 +363,7 @@ const CreateOrgForm: React.FC = () => {
                 `}
                   whileTap={{ scale: 0.98 }}
                 >
-                  {isSubmitting ? (
+                  {isLoading ? (
                     <div className="flex items-center justify-center">
                       <svg
                         className="w-4 h-4 mr-2 -ml-1 text-white animate-spin"

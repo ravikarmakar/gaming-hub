@@ -4,7 +4,7 @@ import { Bell, Settings, LogOut } from "lucide-react";
 export default function DashboardHeader() {
   return (
     <header className="bg-gray-900 border-b border-gray-800">
-      <div className="h-16 px-8 flex items-center justify-between">
+      <div className="flex items-center justify-between h-16 px-8">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -17,10 +17,10 @@ export default function DashboardHeader() {
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
-            className="relative text-gray-400 hover:text-white transition-colors"
+            className="relative text-gray-400 transition-colors hover:text-white"
           >
             <Bell className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs flex items-center justify-center">
+            <span className="absolute flex items-center justify-center w-4 h-4 text-xs bg-red-500 rounded-full -top-1 -right-1">
               3
             </span>
           </motion.button>
@@ -28,7 +28,7 @@ export default function DashboardHeader() {
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-gray-400 transition-colors hover:text-white"
           >
             <Settings className="w-5 h-5" />
           </motion.button>
@@ -36,7 +36,7 @@ export default function DashboardHeader() {
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-gray-400 transition-colors hover:text-white"
           >
             <LogOut className="w-5 h-5" />
           </motion.button>

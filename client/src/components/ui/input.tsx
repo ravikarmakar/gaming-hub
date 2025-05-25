@@ -11,6 +11,7 @@ interface AuthInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   autoComplete?: string;
   className?: string;
   hint?: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export const Input = ({
@@ -25,7 +26,7 @@ export const Input = ({
 }: AuthInputProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  const [isTouched, setIsTouched] = useState(false);
+  // const [isTouched, setIsTouched] = useState(false);
 
   const inputType = type === "password" && showPassword ? "text" : type;
 
@@ -104,7 +105,6 @@ export const Input = ({
             onFocus={() => setIsFocused(true)}
             onBlur={() => {
               setIsFocused(false);
-              setIsTouched(true);
             }}
             {...props}
           />
@@ -128,7 +128,7 @@ export const Input = ({
 
       {/* Error message with animation */}
       <AnimatePresence>
-        {error && isTouched && (
+        {error && (
           <motion.div
             initial={{ opacity: 0, y: -10, height: 0 }}
             animate={{ opacity: 1, y: 0, height: "auto" }}

@@ -1,4 +1,6 @@
+import { TryCatchHandler } from "../middleware/error.middleware.js";
 import User from "../models/user.model.js";
+import { CustomError } from "../utils/CustomError.js";
 
 export const getUserProfile = async (req, res) => {
   try {
@@ -47,3 +49,33 @@ export const getplayers = async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 };
+
+export const searchByUsername = TryCatchHandler(async (req, res, next) => {
+  const { username, page = 1, limit = 10 } = req.query;
+
+  if (!username || typeof username !== "string") {
+    return next(new CustomError("Username is required", 400));
+  }
+
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const [users, totalUsers] = await Promise.all([
+    User.find({
+      username: { $regex: username, $options: "i" },
+    })
+      .skip(skip)
+      .limit(Number(limit))
+      .select("username email _id avatar"),
+    User.countDocuments({
+      username: { $regex: username, $options: "i" },
+    }),
+  ]);
+
+  const hasMore = skip + users.length < totalUsers;
+
+  res.status(200).json({
+    success: true,
+    players: users,
+    hasMore,
+  });
+});

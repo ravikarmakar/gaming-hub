@@ -1,28 +1,32 @@
 import express from "express";
 import {
-  createTeams,
-  getAllTeams,
-  getTeamProfile,
+  createTeam,
+  fetchAllTeams,
+  fetchTeamDetails,
   deleteTeam,
-  memberleaveTeam,
-  deleteMember,
-  transferRole,
-  assignTeamCaptain,
+  leaveMember,
+  transferTeamOwnerShip,
+  updateTeam,
+  addMembers,
+  removeMember,
+  manageMemberRole,
 } from "../controllers/team.controller.js";
-import { protectRoute } from "../middleware/authMiddleware.js";
+import { isAuthenticated } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-// Team Creation & Management Routes
-router.post("/", protectRoute, createTeams);
-router.get("/", getAllTeams);
-router.get("/:teamId/profile", protectRoute, getTeamProfile);
-router.delete("/", protectRoute, deleteTeam);
-// router.put("/:teamId", protectRoute, updateTeam);
+router.get("/", fetchAllTeams);
+router.get("/details/:teamId", fetchTeamDetails);
 
-router.put("/leave-team", protectRoute, memberleaveTeam);
-router.delete("/remove-member", protectRoute, deleteMember);
-router.put("/transfer-role", protectRoute, transferRole);
-router.put("/assign-captain", protectRoute, assignTeamCaptain);
+router.use(isAuthenticated);
+
+router.post("/create-team", createTeam);
+router.put("/update-team", updateTeam);
+router.put("/add-members", addMembers);
+router.delete("/remove-member", removeMember);
+router.put("/leave-member", leaveMember);
+router.put("/transfer-owner", transferTeamOwnerShip);
+router.put("/manage-member-role", manageMemberRole);
+router.delete("/delete-team", deleteTeam);
 
 export default router;

@@ -1,116 +1,76 @@
 import { create } from "zustand";
-import { User } from "../types/index";
-import { FormDataType } from "@/pages/auth/SignUp";
-import { LoginFormDataType } from "@/pages/auth/Login";
 import { axiosInstance } from "@/lib/axios";
 import { AxiosError } from "axios";
-import toast from "react-hot-toast";
+import { User } from "./useUserStore";
 
 interface AuthStoreState {
-  user: User | null;
-  isAuthenticated: boolean;
+  players: User[] | null;
   isLoading: boolean;
   error: string | null;
-  checkAuth: () => Promise<void>;
-  register: (userData: FormDataType) => Promise<void>;
-  logIn: (userData: LoginFormDataType) => Promise<void>;
-  logOut: () => Promise<void>;
+  hasMore: boolean;
+  searchByUsername: (
+    username: string,
+    page: number,
+    limit: number
+  ) => Promise<User[] | null>;
 }
 
 const useAuthStore = create<AuthStoreState>((set) => ({
-  user: null,
-  isAuthenticated: false,
+  players: null,
   isLoading: false,
   error: null,
+  hasMore: false,
 
-  register: async (formData: FormDataType) => {
-    set({ isLoading: true, error: null });
+  searchByUsername: async (
+    username: string,
+    page = 1,
+    limit = 10
+  ): Promise<User[] | null> => {
+    if (!username.trim()) {
+      set({ players: [], hasMore: false, isLoading: false, error: null });
+      return [];
+    }
+
+    set((state) => ({
+      ...state,
+      isLoading: true,
+      error: null,
+      players: page === 1 ? [] : state.players,
+    }));
 
     try {
-      const response = await axiosInstance.post("/auth/register", formData, {
-        headers: { "Content-Type": "application/json" },
-        withCredentials: true,
+      const response = await axiosInstance.get(`/users/search-users`, {
+        params: { username, page, limit },
       });
 
-      if (response.status === 201) {
-        toast.success("Registration successful!");
-      }
+      const fetchedUsers: User[] = response.data.players;
+      const hasMore: boolean = response.data.hasMore;
+
+      set((state) => ({
+        ...state,
+        players:
+          page === 1
+            ? fetchedUsers
+            : [...(state.players || []), ...fetchedUsers],
+        hasMore,
+        isLoading: false,
+        error: null,
+      }));
+
+      return fetchedUsers;
     } catch (error) {
       if (error instanceof AxiosError) {
-        set({ error: error.response?.data.message });
-        toast.error(error.response?.data.message);
-      }
-    } finally {
-      set({ isLoading: false });
-    }
-  },
-
-  logIn: async (formData: LoginFormDataType) => {
-    set({ isLoading: true, error: null });
-
-    try {
-      const response = await axiosInstance.post("/auth/login", formData, {
-        headers: { "Content-Type": "application/json" },
-        withCredentials: true,
-      });
-
-      if (response.status === 200) {
-        toast.success("Login successful!");
-        await useAuthStore.getState().checkAuth();
-      }
-    } catch (error) {
-      if (error instanceof AxiosError) {
-        set({ error: error.response?.data.message });
-        toast.error(error.response?.data.message);
-      }
-    } finally {
-      set({ isLoading: false });
-    }
-  },
-
-  logOut: async () => {
-    set({ isLoading: true, error: null });
-
-    try {
-      await axiosInstance.post("/auth/logout", {}, { withCredentials: true });
-
-      set({
-        user: null,
-        isAuthenticated: false,
-      });
-
-      toast.success("Logged out successfully!");
-    } catch (error) {
-      if (error instanceof AxiosError) {
-        set({ error: error.response?.data.message });
-        toast.error(error.response?.data.message);
-      }
-    } finally {
-      set({ isLoading: false });
-    }
-  },
-
-  checkAuth: async () => {
-    set({ isLoading: true, error: null });
-
-    try {
-      const response = await axiosInstance.get("/auth/profile", {
-        withCredentials: true,
-      });
-
-      if (response.status === 200) {
         set({
-          user: response.data.user,
-          isAuthenticated: true,
+          error: error.response?.data.message || "Request failed",
+          isLoading: false,
         });
-      } else {
-        throw new Error("User Not Authenticated");
+        return [];
       }
-    } catch (error) {
-      console.error("Auth check failed:", error);
-      set({ user: null, isAuthenticated: false });
-    } finally {
-      set({ isLoading: false });
+      set({
+        error: "An unknown error occurred.",
+        isLoading: false,
+      });
+      return null;
     }
   },
 }));

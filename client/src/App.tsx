@@ -17,6 +17,7 @@ import DiscordCallback from "./pages/auth/discord-callback";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import VerifyEmail from "./pages/auth/VerifyEmail";
 import CreateOrg from "./pages/organiser/CreateOrg";
+import OrganizerProfile from "./pages/organiser/OrganizerProfile";
 
 const App = () => {
   const hasCalled = useRef(false);
@@ -36,6 +37,7 @@ const App = () => {
       {/* Routes with Navbar & Footer */}
       <Route element={<MainLayout />}>
         <Route index element={<Home />} />
+        <Route path={ROUTES.ORG_PROFILE} element={<OrganizerProfile />} />
 
         {/* Normal Protected Routes */}
         <Route element={<ProtectedRoute />}>

@@ -34,4 +34,21 @@ export const hasRoutePermission = (
   });
 };
 
+export const hasOrgRole = (
+  user: User | null,
+  roles: string[],
+  orgId?: string
+): boolean => {
+  if (!user) return false;
+
+  console.log("Checking org roles:", user.role, roles, orgId);
+
+  return user.role.some(
+    (r) =>
+      roles.includes(r.role) &&
+      r.scope === "org" &&
+      (orgId ? r.orgId === orgId : true)
+  );
+};
+
 type RoutePath = keyof typeof ROUTE_PERMISSIONS;

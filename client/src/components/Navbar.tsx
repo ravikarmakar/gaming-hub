@@ -178,6 +178,24 @@ const Navbar = () => {
       icon: <User className="w-4 h-4" />,
       href: "/profile",
     },
+    ...(user?.orgId
+      ? [
+          {
+            name: "Org Profile",
+            icon: <Users className="w-4 h-4" />,
+            href: ROUTES.ORG_PROFILE,
+          },
+        ]
+      : []),
+    ...(user?.teamId
+      ? [
+          {
+            name: "Team Profile",
+            icon: <Users className="w-4 h-4" />,
+            href: ROUTES.TEAM_PROFILE,
+          },
+        ]
+      : []),
     {
       name: "Email",
       icon: <KeyRound className="w-4 h-4" />,
@@ -311,7 +329,7 @@ const Navbar = () => {
           {/* Right side - Dashboard, Notifications, Profile and Login */}
           <div className="flex items-center">
             {/* Request button to create org */}
-            {!user?.canCreateOrg && (
+            {user?.canCreateOrg && (
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

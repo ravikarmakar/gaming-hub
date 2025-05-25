@@ -34,18 +34,16 @@ app.use(cors(corsOptions));
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(cookieParese());
-app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
   res.send("This is calling from gaming-hub backend");
 });
 
 app.use("/api/auth", authRouter);
-app.use("/api/organizer", organizerRouter);
-
-app.use("/api/users", userRouter);
-// app.use("/api/organizations", organizationRouter);
+app.use("/api/organizers", organizerRouter);
 app.use("/api/teams", teamRouter);
+app.use("/api/users", userRouter);
+
 app.use("/api/notifications", notificationRouter);
 app.use("/api/invitations", invitationRouter);
 app.use("/api/join-requests", joinRequestRouter);

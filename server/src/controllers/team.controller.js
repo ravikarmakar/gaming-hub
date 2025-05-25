@@ -1,515 +1,558 @@
 import mongoose from "mongoose";
 import Team from "../models/team.model.js";
-import TeamNotification from "../models/notification-model/team.notification.model.js";
 import User from "../models/user.model.js";
-import { rolesPermissions } from "../config/rolesPermissions.js";
+import { TryCatchHandler } from "../middleware/error.middleware.js";
+import { CustomError } from "../utils/CustomError.js";
+import { findUserById } from "../services/user.service.js";
+import {
+  checkTeamNameUnique,
+  createNewTeam,
+  findTeamById,
+} from "../services/team.service.js";
 
-export const getAllTeams = async (req, res) => {
-  try {
-    const teams = await Team.find({})
-      .populate("captain", "username email") // Populate captain details S
-      .populate("members.userId", "username email"); // Populate team members
+export const createTeam = TryCatchHandler(async (req, res, next) => {
+  const { teamName } = req.body;
+  const { userId } = req.user;
+  const imageFile = req.file;
 
-    res.status(200).json({ message: "Get all teams successfully", teams });
-  } catch (error) {
-    console.error(`Error in getAllTeams : ${error.message}`);
-    res.status(500).json({ message: "Server error while getting all teams" });
+  await checkTeamNameUnique(teamName);
+
+  const user = await findUserById(userId);
+  if (user.teamId)
+    return next(new CustomError("You are already in a team", 400));
+
+  if (!user.isAccountVerified)
+    return next(new CustomError("Account is not verified yet", 401));
+
+  // handle image uplaoding logic here
+  const imageUrl = "https://cloudinary/dummy-image-url";
+
+  const teamData = {
+    teamName,
+    captain: user._id,
+    imageUrl,
+    teamMembers: [{ user: user._id, roleInTeam: "igl" }],
+  };
+
+  const newTeam = await createNewTeam(teamData);
+
+  user.teamId = newTeam._id;
+
+  await user.save();
+
+  res.status(201).json({
+    success: true,
+    message: "Team created successfully",
+    team: newTeam,
+  });
+});
+
+export const updateTeam = TryCatchHandler(async (req, res, next) => {
+  const { teamName, bio } = req.body;
+  const { userId } = req.user;
+  const imageFile = true;
+
+  const user = await findUserById(userId);
+  if (!user.teamId)
+    return next(
+      new CustomError("You are not part of any team to update details.", 400)
+    );
+
+  if (!user.isAccountVerified)
+    return next(new CustomError("Account is not verified yet", 401));
+
+  const team = await findTeamById(user.teamId);
+  if (userId.toString() !== team.captain.toString())
+    return next(
+      new CustomError("You are not authorized to update this team.", 403)
+    );
+
+  // handle image uplaoding logic here
+  let imageUrl = team.imageUrl;
+  if (imageFile) {
+    // uplaoding logiic here
+    imageUrl = "https://cloudinary/dummy-image-url/updated-url";
   }
-};
 
-export const getTeamProfile = async (req, res) => {
+  if (teamName) team.teamName = teamName;
+  if (bio) team.bio = bio;
+  team.imageUrl = imageUrl;
+
+  await team.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Team updated successfully",
+    team,
+  });
+});
+
+export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
   const { teamId } = req.params;
 
-  try {
-    const team = await Team.findById(teamId)
-      .populate("captain", "username email")
-      .populate("members.userId", "name email")
-      .populate("playedTournaments", "title");
-
-    if (!team) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Team not found" });
-    }
-
-    res.status(200).json({ success: true, team: team });
-  } catch (error) {
-    console.error("Error fetching event:", error);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
-  }
-};
-
-// Use this when using MongoDB Atles
-// export const createTeams = async (req, res) => {
-//   const session = await mongoose.startSession(); // Transaction start
-//   session.startTransaction();
-
-//   try {
-//     const loggedInUser = req.user;
-//     const { teamName } = req.body;
-
-//     if (!teamName) {
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "Team name is required." });
-//     }
-
-//     if (loggedInUser.activeTeam) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "You have already created a team.",
-//       });
-//     }
-
-//     const existingTeam = await Team.findOne({ teamName }).session(session);
-//     if (existingTeam) {
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "Team name already exists." });
-//     }
-
-//     // Creating New Team
-//     const newTeam = await new Team({
-//       teamName,
-//       owner: loggedInUser._id,
-//       members: [{ userId: loggedInUser._id, role: "owner" }],
-//     }).save({ session });
-
-//     // Update User role
-//     await User.findByIdAndUpdate(
-//       loggedInUser._id,
-//       {
-//         $set: { role: "team", permissions: rolesPermissions["team"], activeTeam: newTeam._id, teamCreator: true },
-//         $inc: { createdTeamCount: 1 },
-//       },
-//       { new: true, session }
-//     );
-
-//     await session.commitTransaction(); // Transaction commit
-//     session.endSession();
-
-//     res.status(201).json({
-//       success: true,
-//       message: "Team created successfully",
-//       team: newTeam,
-//     });
-//   } catch (error) {
-//     await session.abortTransaction(); // Rollback if error
-//     session.endSession();
-//     console.error("Error creating team:", error);
-//     res.status(500).json({ success: false, message: "Internal Server Error" });
-//   }
-// };
-
-export const createTeams = async (req, res) => {
-  try {
-    const loggedInUser = req.user;
-    const { teamName } = req.body;
-
-    if (!teamName) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Team name is required." });
-    }
-
-    if (loggedInUser.activeTeam) {
-      return res.status(400).json({
-        success: false,
-        message: "You have already created a team.",
-      });
-    }
-
-    const existingTeam = await Team.findOne({ teamName });
-    if (existingTeam) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Team name already exists." });
-    }
-
-    // Creating New Team
-    const newTeam = new Team({
-      teamName,
-      owner: loggedInUser._id,
-      members: [{ userId: loggedInUser._id, role: "owner" }],
-    });
-
-    const savedTeam = await newTeam.save();
-
-    await User.findByIdAndUpdate(
-      loggedInUser._id,
-      {
-        $set: {
-          role: "team",
-          permissions: rolesPermissions["team"],
-          activeTeam: savedTeam._id,
-          teamCreator: true,
-        },
-        $inc: { createdTeamCount: 1 },
+  const team = await Team.aggregate([
+    {
+      $match: { isDeleted: false },
+    },
+    {
+      $match: { _id: new mongoose.Types.ObjectId(teamId) },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "teamMembers.user",
+        foreignField: "_id",
+        as: "membersInfo",
       },
-      { new: true }
+    },
+    {
+      $addFields: {
+        teamMembers: {
+          $map: {
+            input: "$teamMembers",
+            as: "member",
+            in: {
+              user: "$$member.user",
+              roleInTeam: "$$member.roleInTeam",
+              username: {
+                $arrayElemAt: [
+                  {
+                    $map: {
+                      input: {
+                        $filter: {
+                          input: "$membersInfo",
+                          as: "info",
+                          cond: {
+                            $eq: ["$$info._id", "$$member.user"],
+                          },
+                        },
+                      },
+                      as: "matchedUser",
+                      in: "$$matchedUser.username",
+                    },
+                  },
+                  0,
+                ],
+              },
+              avatar: {
+                $arrayElemAt: [
+                  {
+                    $map: {
+                      input: {
+                        $filter: {
+                          input: "$membersInfo",
+                          as: "info",
+                          cond: {
+                            $eq: ["$$info._id", "$$member.user"],
+                          },
+                        },
+                      },
+                      as: "matchedUser",
+                      in: "$$matchedUser.avatar",
+                    },
+                  },
+                  0,
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        membersInfo: 0, // remove temp joined data
+        __v: 0,
+      },
+    },
+  ]);
+
+  if (!team || team.length === 0) {
+    return next(new CustomError("Team not found", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Team details fetched successfully",
+    team: team[0],
+  });
+});
+
+export const fetchAllTeams = TryCatchHandler(async (req, res) => {
+  const teams = await Team.aggregate([
+    // 1. Lookup teamMembers.user => users
+    {
+      $match: { isDeleted: false },
+    },
+
+    {
+      $lookup: {
+        from: "users",
+        localField: "teamMembers.user",
+        foreignField: "_id",
+        as: "membersData",
+      },
+    },
+    // 2. Lookup captain => users
+    {
+      $lookup: {
+        from: "users",
+        localField: "captain",
+        foreignField: "_id",
+        as: "captainData",
+      },
+    },
+    // 3. Embed members data separately
+    {
+      $addFields: {
+        teamMembers: {
+          $map: {
+            input: "$teamMembers",
+            as: "member",
+            in: {
+              user: "$$member.user",
+              roleInTeam: "$$member.roleInTeam",
+              username: {
+                $let: {
+                  vars: {
+                    userObj: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: "$membersData",
+                            as: "u",
+                            cond: { $eq: ["$$u._id", "$$member.user"] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                  in: "$$userObj.username",
+                },
+              },
+              avatar: {
+                $let: {
+                  vars: {
+                    userObj: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: "$membersData",
+                            as: "u",
+                            cond: { $eq: ["$$u._id", "$$member.user"] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                  in: "$$userObj.avatar",
+                },
+              },
+            },
+          },
+        },
+        captain: {
+          $let: {
+            vars: {
+              c: { $arrayElemAt: ["$captainData", 0] },
+            },
+            in: {
+              _id: "$$c._id",
+              username: "$$c.username",
+              avatar: "$$c.avatar",
+            },
+          },
+        },
+      },
+    },
+    // 4. Remove extra lookup arrays
+    {
+      $project: {
+        membersData: 0,
+        captainData: 0,
+      },
+    },
+  ]);
+
+  res.status(200).json({
+    message: "Fetched all teams successfully",
+    teams,
+  });
+});
+
+export const addMembers = TryCatchHandler(async (req, res, next) => {
+  const { members } = req.body;
+
+  if (!Array.isArray(members) || members.length < 1)
+    return next(
+      new CustomError("Please provide at least one team member.", 400)
     );
 
-    res.status(201).json({
-      success: true,
-      message: "Team created successfully",
-      team: savedTeam,
-    });
-  } catch (error) {
-    console.error("Error creating team:", error);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
-  }
-};
+  const currentUser = await findUserById(req.user.userId);
+  if (!currentUser.teamId)
+    return next(new CustomError("You are not part of any team.", 400));
 
-export const deleteTeam = async (req, res) => {
-  const loggedInUser = req.user;
+  const team = await findTeamById(currentUser.teamId);
+  if (req.user.userId.toString() !== team.captain.toString())
+    return next(new CustomError("Only captain can add members.", 403));
 
-  try {
-    const team = await Team.findById(loggedInUser.activeTeam);
+  // Fetch all users and check in one go
+  const usersData = await Promise.all(members.map(findUserById));
 
-    if (!team) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Team not found" });
-    }
+  const issues = usersData.reduce(
+    (acc, user) => {
+      if (user.teamId) acc.withTeam.push(user.username);
+      if (!user.isAccountVerified) acc.unverified.push(user.username);
+      return acc;
+    },
+    { withTeam: [], unverified: [] }
+  );
 
-    const memberIds = team.members.map((member) => member.userId);
+  if (issues.withTeam.length)
+    return next(
+      new CustomError(
+        `Users with usernames: ${issues.withTeam.join(
+          ", "
+        )} already belong to a team.`,
+        400
+      )
+    );
 
-    // Notify members
-    for (const member of team.members) {
-      await TeamNotification.create({
-        user: member.userId,
-        type: "announcement",
-        message: `Your team ${team.teamName} has been deleted.`,
-        relatedId: team._id,
-      });
-    }
+  if (issues.unverified.length)
+    return next(
+      new CustomError(
+        `Users with usernames: ${issues.unverified.join(
+          ", "
+        )} have not verified their email.`,
+        400
+      )
+    );
 
-    await User.updateMany(
-      { _id: { $in: [...memberIds, team.owner, team.captain] } },
-      {
-        $unset: { activeTeam: null },
-        $set: { teamCreator: false },
-        $inc: { notificationCount: 1 },
+  // Add new members and update user.teamId
+  await Promise.all(
+    members.map(async (memberId) => {
+      if (
+        !team.teamMembers.some((m) => m.user.toString() === memberId.toString())
+      ) {
+        team.teamMembers.push({ user: memberId, roleInTeam: "player" });
+        await User.findByIdAndUpdate(memberId, { teamId: team._id });
       }
+    })
+  );
+
+  await team.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Members added successfully to the team.",
+    team,
+  });
+});
+
+export const removeMember = TryCatchHandler(async (req, res, next) => {
+  const { memberId } = req.body;
+
+  if (!memberId)
+    return next(new CustomError("Please provide a member ID to remove.", 400));
+
+  const currentUser = await findUserById(req.user.userId);
+  if (!currentUser.teamId)
+    return next(new CustomError("You are not part of any team.", 400));
+
+  const team = await findTeamById(currentUser.teamId);
+
+  // Only captain can remove members
+  if (req.user.userId.toString() !== team.captain.toString())
+    return next(new CustomError("Only captain can remove members.", 403));
+
+  // Prevent captain from removing himself
+  if (memberId.toString() === team.captain.toString())
+    return next(new CustomError("Captain cannot remove themselves.", 400));
+
+  // Check if the member exists in the team
+  const memberIndex = team.teamMembers.findIndex(
+    (m) => m.user.toString() === memberId.toString()
+  );
+
+  if (memberIndex === -1)
+    return next(new CustomError("Member not found in the team.", 404));
+
+  // Remove member from team
+  team.teamMembers.splice(memberIndex, 1);
+  await team.save();
+
+  // Clear the user's teamId
+  await User.findByIdAndUpdate(memberId, { teamId: null });
+
+  res.status(200).json({
+    success: true,
+    message: "Member removed successfully.",
+    team,
+  });
+});
+
+export const leaveMember = TryCatchHandler(async (req, res, next) => {
+  const user = await findUserById(req.user.userId);
+
+  // Check if user is part of a team
+  if (!user.teamId)
+    return next(new CustomError("You are not part of any team.", 400));
+
+  const team = await findTeamById(user.teamId);
+
+  // Check if the user is the captain
+  if (team.captain.toString() === user._id.toString()) {
+    return next(
+      new CustomError(
+        "You are the captain. Transfer captaincy or disband the team before leaving.",
+        403
+      )
+    );
+  }
+
+  // Remove user from teamMembers
+  team.teamMembers = team.teamMembers.filter(
+    (member) => member.user.toString() !== user._id.toString()
+  );
+
+  await team.save();
+
+  // Remove teamId from user
+  user.teamId = null;
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "You have successfully left the team.",
+  });
+});
+
+export const transferTeamOwnerShip = TryCatchHandler(async (req, res, next) => {
+  const { memberId } = req.body;
+
+  if (!memberId)
+    return next(
+      new CustomError("Please provide a member ID to assign as captain.", 400)
     );
 
-    // Ab team ko delete karte hain
-    await Team.findByIdAndDelete(team._id);
+  const user = await findUserById(req.user.userId);
+  if (!user.teamId)
+    return next(new CustomError("You are not part of any team.", 400));
 
-    res.status(200).json({
-      success: true,
-      message: "Team deleted successfully",
-    });
-  } catch (error) {
-    console.error(`Error in deleteTeam : ${error.message}`);
-    res
-      .status(500)
-      .json({ success: false, message: "Server error while deleting team" });
-  }
-};
+  const team = await findTeamById(user.teamId);
+  if (team.captain.toString() !== user._id.toString())
+    return next(new CustomError("Only captain can transfer ownership.", 403));
 
-export const memberleaveTeam = async (req, res) => {
-  try {
-    const loggedInUser = req.user;
+  // Check if the new member is part of the team
+  const isMember = team.teamMembers.some(
+    (m) => m.user.toString() === memberId.toString()
+  );
 
-    // Find the team
-    const team = await Team.findById(loggedInUser.activeTeam);
-    if (!team) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Team not found" });
-    }
-
-    // Find the user in members list
-    const userIndex = team.members.findIndex((member) =>
-      member.userId.equals(loggedInUser._id)
+  if (!isMember)
+    return next(
+      new CustomError("The selected member is not part of your team.", 400)
     );
 
-    if (userIndex === -1) {
-      return res.status(400).json({
-        success: false,
-        message: "You are not a member of this team.",
-      });
+  // Update roles: new captain and old captain
+  team.teamMembers = team.teamMembers.map((member) => {
+    if (member.user.toString() === memberId.toString()) {
+      return { ...member, roleInTeam: "igl" };
+    } else if (member.user.toString() === user._id.toString()) {
+      return { ...member, roleInTeam: "player" };
     }
+    return member;
+  });
 
-    const userRole = team.members[userIndex].role;
+  // Transfer igl
+  team.captain = memberId;
 
-    // If user is the Owner, they cannot leave without transferring ownership
-    if (team.owner.equals(loggedInUser._id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Owner cannot leave the team. Transfer ownership first.",
-      });
-    }
+  await team.save();
 
-    // If user is the Captain, ensure there is another Captain before leaving
-    if (userRole === "captain") {
-      return res.status(400).json({
-        success: false,
-        message: "Assign a new Captain before leaving the team.",
-      });
-    }
+  res.status(200).json({
+    success: true,
+    message: "Team ownership transferred successfully.",
+    team,
+  });
+});
 
-    // Remove the user from members array
-    team.members.splice(userIndex, 1);
-    await team.save();
-
-    // Update user schema
-    await User.findByIdAndUpdate(loggedInUser._id, {
-      activeTeam: null,
-    });
-
-    // Notify owner
-    await TeamNotification.create({
-      user: team.owner,
-      type: "team_update",
-      status: "unread",
-      message: `${loggedInUser.name} has left the team.`,
-      relatedId: team._id,
-    });
-
-    await User.findByIdAndUpdate(team.owner, {
-      $inc: { notificationCount: 1 },
-    });
-
-    res
-      .status(200)
-      .json({ success: true, message: "You have successfully left the team." });
-  } catch (error) {
-    console.error("Error leaving team:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error, please try again later.",
-    });
-  }
-};
-
-export const deleteMember = async (req, res) => {
-  try {
-    const loggedInUser = req.user;
-    const { memberId } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(memberId)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid Member ID" });
-    }
-
-    const member = await User.findById(memberId);
-    if (!member) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Member not found" });
-    }
-
-    // Find the team
-    const team = await Team.findById(loggedInUser.activeTeam);
-    if (!team) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Team not found" });
-    }
-
-    if (!team.owner.equals(loggedInUser._id)) {
-      return res.status(404).json({
-        success: false,
-        message: "You can't authorized to kick members",
-      });
-    }
-
-    // Find the role of logged-in user & target member
-    const userInTeam = team.members.find((m) =>
-      m.userId.equals(loggedInUser._id)
+export const manageMemberRole = TryCatchHandler(async (req, res, next) => {
+  const { memberId, role } = req.body;
+  if (!memberId) return next(new CustomError("Member ID is required.", 400));
+  if (!role) return next(new CustomError("Role is required.", 400));
+  if (role === "igl")
+    return next(
+      new CustomError("You cannot assign the 'igl' role manually.", 400)
     );
 
-    const targetMember = team.members.find((m) => m.userId.equals(memberId));
+  const currentUser = await findUserById(req.user.userId);
+  if (!currentUser.teamId)
+    return next(new CustomError("You are not part of any team.", 400));
 
-    if (!userInTeam || !targetMember) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Member not found in the team." });
-    }
-
-    const userRole = userInTeam.role; // Owner/Captain/Player/Substitute
-    const targetRole = targetMember.role; // Role of the member to be removed
-
-    // 🔹 Only Owner Can Remove Members
-    if (userRole !== "owner") {
-      return res.status(403).json({
-        success: false,
-        message: "Only the Owner can remove members.",
-      });
-    }
-
-    // 🔹 Owner Cannot Directly Remove Captain
-    if (targetRole === "captain") {
-      return res.status(403).json({
-        success: false,
-        message: "Transfer captain role before removing them.",
-      });
-    }
-
-    // 🔹 Remove Member from Team
-    team.members = team.members.filter((m) => !m.userId.equals(memberId));
-    await team.save();
-
-    // Update user schema
-    await User.findByIdAndUpdate(memberId, { activeTeam: null });
-
-    // Notify the kicked member
-    await TeamNotification.create({
-      user: member._id,
-      type: "team_update",
-      isRead: false,
-      message: `You have been removed from the team by ${loggedInUser.name}.`,
-      relatedId: team._id,
-    });
-
-    await User.findByIdAndUpdate(memberId, { $inc: { notificationCount: 1 } });
-
-    res
-      .status(200)
-      .json({ success: true, message: "Member removed successfully." });
-  } catch (error) {
-    console.error("Error removing member:", error);
-    res.status(500).json({ success: false, message: "Internal server error." });
-  }
-}; // to-do
-
-export const transferRole = async (req, res) => {
-  try {
-    const loggedInUser = req.user;
-    const { memberId } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(memberId)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid member ID" });
-    }
-
-    const member = await findById(memberId);
-    if (!member) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Member Not found" });
-    }
-
-    const team = await Team.findById(loggedInUser.activeTeam);
-    if (!team) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Team Not found" });
-    }
-
-    if (!team.owner.equals(loggedInUser._id)) {
-      return res.status(404).json({
-        success: false,
-        message: "You can't authorized to transfer role to member",
-      });
-    }
-
-    // Find the role of logged-in user & target member
-    const userInTeam = team.members.find((m) =>
-      m.userId.equals(loggedInUser._id)
+  const team = await findTeamById(currentUser.teamId);
+  if (req.user.userId.toString() !== team.captain.toString())
+    return next(
+      new CustomError("Only the team captain can manage member roles.", 403)
     );
 
-    const targetMember = team.members.find((m) => m.userId.equals(memberId));
+  const member = team.teamMembers.find(
+    (m) => m.user.toString() === memberId.toString()
+  );
 
-    if (!userInTeam || !targetMember) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Member not found in the team." });
-    }
-
-    const userRole = userInTeam.role; // Owner/Captain/Player/Substitute
-    const targetRole = targetMember.role; // Role of the member to be removed
-  } catch (error) {
-    console.error("Error transfer role :", error);
-    res.status(500).json({ success: false, message: "Internal server error." });
+  if (!member) {
+    return next(
+      new CustomError("The specified user is not a member of the team.", 404)
+    );
   }
-}; // to-do
-
-export const assignTeamCaptain = async (req, res) => {
-  try {
-    const { captainId } = req.body;
-    const loggedInUser = req.user;
-
-    if (!mongoose.Types.ObjectId.isValid(captainId)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid captain ID" });
-    }
-
-    // Logged-in user ki active team check karo
-    const team = await Team.findById(loggedInUser.activeTeam);
-    if (!team) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Team not found" });
-    }
-
-    // Agar logged-in user owner nahi hai, to deny karo
-    if (team.owner.toString() !== loggedInUser._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: "Only the team owner can assign a captain",
-      });
-    }
-
-    // Check karo ki captainId team ke members me hai ya nahi
-    const member = team.members.find((m) => m.userId.toString() === captainId);
-    if (!member) {
-      return res.status(400).json({
-        success: false,
-        message: "Selected user is not a team member",
-      });
-    }
-
-    // ✅ **Extra Check** - Agar member ka role pehle se "Captain" nahi hai to allow karein
-    if (member.role === "captain") {
-      return res.status(400).json({
-        success: false,
-        message: "User is already the team captain",
-      });
-    }
-
-    // ✅ **Fix for undefined captain error**
-    team.members = team.members.map((m) => {
-      if (team.captain && m.userId.toString() === team.captain.toString()) {
-        return { ...m.toObject(), role: "player" }; // Previous captain -> player
-      }
-      if (m.userId.toString() === captainId) {
-        return { ...m.toObject(), role: "captain" }; // New captain
-      }
-      return m;
-    });
-
-    // Naya captain assign karo
-    team.captain = captainId;
-    await team.save();
-
-    // ✅ **Notify new captain**
-    await TeamNotification.create({
-      user: captainId,
-      type: "team_update",
-      status: "unread",
-      message: `You are the new team captain.`,
-      relatedId: team._id,
-    });
-
-    // ✅ **Increment notification count for new captain**
-    await User.findByIdAndUpdate(captainId, {
-      $inc: { notificationCount: 1 },
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "New captain assigned successfully",
-    });
-  } catch (error) {
-    console.error("Error in assignTeamCaptain:", error);
-    res.status(500).json({ success: false, message: "Internal server error." });
+  if (
+    member.roleInTeam === "igl" &&
+    member.user.toString() === req.user.userId.toString()
+  ) {
+    return next(new CustomError("IGL cannot change their own role.", 403));
   }
-}; // to-do
+
+  member.roleInTeam = role;
+  await team.save();
+
+  res.status(200).json({
+    success: true,
+    message: `The member's role has been updated to '${role}'.`,
+    team,
+  });
+});
+
+export const deleteTeam = TryCatchHandler(async (req, res, next) => {
+  const user = await findUserById(req.user.userId);
+
+  if (!user.teamId)
+    return next(new CustomError("You are not part of any team.", 400));
+
+  const team = await findTeamById(user.teamId);
+
+  if (req.user.userId.toString() !== team.captain.toString())
+    return next(
+      new CustomError("Only the team captain can delete the team.", 403)
+    );
+
+  // Set teamId = null for all team members
+  const memberIds = team.teamMembers.map((member) => member.user);
+  await User.updateMany(
+    { _id: { $in: memberIds } },
+    {
+      $set: { teamId: null },
+    }
+  );
+
+  // Soft delete the team by setting isDeleted to true
+  team.isDeleted = true;
+  await team.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Team deleted successfully",
+  });
+});
 
 // to-do  - whatif memeber left the team ? automatic letf form the evenst register and what?
+// to-do  --> using socket.io emit real time events to users

@@ -1,4 +1,4 @@
-import expores from "express";
+import exporess from "express";
 import {
   register,
   login,
@@ -15,7 +15,7 @@ import {
 import { isAuthenticated } from "../middleware/auth.middleware.js";
 import { rateLimiter } from "../middleware/rateLimiter.middleware.js";
 
-const router = expores.Router();
+const router = exporess.Router();
 
 router.post(
   "/register",

@@ -2,22 +2,22 @@
 import { z } from "zod";
 
 export const orgSchema = z.object({
-  orgName: z
+  name: z
     .string()
     .min(3, "Organization name must be at least 3 characters")
     .nonempty("Organization name is required"),
 
-  orgTag: z
+  tag: z
     .string()
     .regex(/^[A-Z]{2,5}$/, "Tag must be 2-5 uppercase letters (e.g. 'KRM')")
     .nonempty("Organization tag is required"),
 
-  orgEmail: z
+  email: z
     .string()
     .email("Please enter a valid email address")
     .nonempty("Email is required"),
 
-  logo: z.custom<File>((file) => file instanceof File, {
+  image: z.custom<File>((file) => file instanceof File, {
     message: "Organization logo is required",
   }),
 

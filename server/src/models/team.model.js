@@ -2,60 +2,66 @@ import mongoose from "mongoose";
 
 const teamSchema = new mongoose.Schema(
   {
-    teamName: { type: String, required: true, trim: true, unique: true },
-    owner: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    teamName: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      minlength: 3,
+      maxlength: 50,
+    },
+    slug: { type: String, lowercase: true, trim: true },
     captain: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // Reference to the User model (team captain)
+      ref: "User",
+      required: true,
     },
-    members: [
+    teamMembers: [
       {
-        userId: {
+        user: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "User", // Reference to the User model (team members)
+          ref: "User",
           required: true,
         },
-        role: {
+        roleInTeam: {
           type: String,
-          enum: ["owner", "captain", "player", "substitute"],
-          default: "player",
+          enum: ["rusher", "sniper", "support", "igl", "player"],
+          required: true,
         },
       },
     ],
-    isVerified: { type: Boolean, default: false }, // Future verification system
-    maxMembers: { type: Number, default: 6 },
-    // pendingRequests: [
-    //   { type: mongoose.Schema.Types.ObjectId, ref: "JoinRequest" },
-    // ],
     playedTournaments: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Event", // Reference to tournaments the team is registered in
+        ref: "Event",
       },
     ],
+    imageUrl: { type: String, default: null, trim: true },
+    bio: { type: String, maxlength: 200, default: "", trim: true },
+    isVerified: { type: Boolean, default: false },
+    totalWins: { type: Number, default: 0, min: 0 },
+    isDeleted: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    versionKey: false,
+  }
 );
 
-// Add index for captain
+// Indexes for performance on queries
+teamSchema.index({ slug: 1 });
 teamSchema.index({ captain: 1 });
+teamSchema.index({ isVerified: 1 });
+teamSchema.index({ isDeleted: 1 });
 
+// Auto-generate slug from teamName before saving
 teamSchema.pre("save", function (next) {
-  // Check if there are duplicate members
-  const memberIds = this.members.map((member) => member.userId.toString());
-  const uniqueMemberIds = new Set(memberIds);
-  if (memberIds.length !== uniqueMemberIds.size) {
-    return next(new Error("Duplicate members are not allowed in the team."));
+  if (this.isModified("teamName")) {
+    this.slug = this.teamName.toLowerCase().replace(/\s+/g, "-");
   }
-
-  // Ensure maxPlayers limit is respected
-  if (this.members.length > this.maxPlayers) {
-    return next(new Error("Too many members in the team."));
-  }
-
   next();
 });
 
-const Team = mongoose.model("Team", teamSchema);
+const Team = mongoose.models.Team || mongoose.model("Team", teamSchema);
 
 export default Team;
