@@ -1,11 +1,11 @@
 import mongoose from "mongoose";
 import { Roles } from "../config/roles.js";
 
-const roleSchema = new mongoose.Schema(
+export const roleSchema = new mongoose.Schema(
   {
     scope: {
       type: String,
-      enum: ["platform", "org"],
+      enum: ["platform", "org", "team"],
       required: true,
     },
     role: {
@@ -18,18 +18,25 @@ const roleSchema = new mongoose.Schema(
         Roles.ORG.MANAGER,
         Roles.ORG.STAFF,
         Roles.ORG.PLAYER,
+        Roles.TEAM.OWNER,
+        Roles.TEAM.PLAYER,
       ],
       required: true,
     },
-    orgId: {
+    scopeId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Organization",
       required: function () {
-        return this.scope === "org";
+        return this.scope !== "platform";
+      },
+      refPath: "scopeModel",
+    },
+    scopeModel: {
+      type: String,
+      enum: ["Organization", "Team"],
+      required: function () {
+        return this.scope !== "platform";
       },
     },
   },
   { _id: false }
 );
-
-export default roleSchema;

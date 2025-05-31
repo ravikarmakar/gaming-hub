@@ -1,5 +1,4 @@
 import React from "react";
-import useAuthStore from "@/store/useAuthStore";
 import {
   Trophy,
   Users,
@@ -16,6 +15,7 @@ import {
   Loader2,
   BarChart, // For loading spinner
 } from "lucide-react";
+import { useUserStore } from "@/store/useUserStore";
 
 // Mock Data (replace with actual data fetching in a real application)
 const mockDashboardData = {
@@ -105,7 +105,7 @@ const mockDashboardData = {
 };
 
 const Dashboard = () => {
-  const { user } = useAuthStore();
+  const { user } = useUserStore();
   // In a real app, you'd fetch this data from an API
   const [dashboardData, setDashboardData] = React.useState(mockDashboardData);
   const [loading, setLoading] = React.useState(false); // Example loading state

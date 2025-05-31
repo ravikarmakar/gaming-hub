@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
 import toast from "react-hot-toast";
 import { useUserStore } from "@/store/useUserStore";
-import { AUTH_CONFIG, ERROR_TOAST_OPTIONS, TOAST_OPTIONS } from "@/config/auth";
+import { AUTH_CONFIG, ERROR_TOAST_OPTIONS, TOAST_OPTIONS } from "@/lib/auth";
 
 export function useSocialAuth() {
   const navigate = useNavigate();

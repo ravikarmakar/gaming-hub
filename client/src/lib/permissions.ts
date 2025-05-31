@@ -1,4 +1,4 @@
-import { ROUTE_PERMISSIONS } from "@/constants/roles";
+import { ROUTE_PERMISSIONS } from "@/lib/roles";
 import { User } from "@/store/useUserStore";
 
 export const hasAnyRole = (
@@ -12,7 +12,7 @@ export const hasAnyRole = (
   return user.role?.some((r) => {
     const matchScope = r.scope === scope;
     const matchRole = allowedRoles.includes(r.role);
-    const matchOrg = orgId ? r.orgId === orgId : true;
+    const matchOrg = orgId ? r.scopeId === orgId : true;
     return matchScope && matchRole && matchOrg;
   });
 };
@@ -29,7 +29,7 @@ export const hasRoutePermission = (
 
   return user.role.some((r) => {
     const isAllowed = allowedRoles.includes(r.role);
-    const isOrgValid = orgId ? r.orgId === orgId : true;
+    const isOrgValid = orgId ? r.scopeId === orgId : true;
     return isAllowed && isOrgValid;
   });
 };
@@ -41,13 +41,29 @@ export const hasOrgRole = (
 ): boolean => {
   if (!user) return false;
 
-  console.log("Checking org roles:", user.role, roles, orgId);
-
   return user.role.some(
     (r) =>
       roles.includes(r.role) &&
       r.scope === "org" &&
-      (orgId ? r.orgId === orgId : true)
+      (orgId ? r.scopeId === orgId : true)
+  );
+};
+
+// working fine
+export const isTeamOwner = (
+  user: User | null,
+  roles: { scope: string; role: string; scopeId?: string }[],
+  teamId?: string
+): boolean => {
+  if (!user || !user.teamId) return false;
+
+  const currentTeamId = teamId ?? user.teamId;
+
+  return roles.some(
+    (r) =>
+      r.scope === "team" &&
+      r.role === "team:owner" &&
+      (!r.scopeId || r.scopeId === currentTeamId)
   );
 };
 

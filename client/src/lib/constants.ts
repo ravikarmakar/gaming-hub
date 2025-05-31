@@ -1,12 +1,3 @@
-// Nav Links
-export const NAV_LINKS = [
-  { name: "Events", href: "/events" },
-  // { name: "Scrims", href: "/scrims" },
-  { name: "Free Tournaments", href: "/free-tournaments" },
-  { name: "Find Teams", href: "/teams" },
-  { name: "Find Players", href: "/players" },
-] as const;
-
 // Tags
 export const tags = [
   "Free Entry",

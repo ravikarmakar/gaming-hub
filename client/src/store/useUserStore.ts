@@ -4,9 +4,9 @@ import "../lib/axiosInterceptor";
 import axios from "axios";
 
 interface Roles {
-  scope: "platform" | "org";
+  scope: "platform" | "org" | "team";
   role: string;
-  orgId: string;
+  scopeId: string;
 }
 
 export interface User {

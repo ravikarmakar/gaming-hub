@@ -1,96 +1,78 @@
-import { axiosInstance } from "@/lib/axios";
-import { User } from "@/types";
 import { create } from "zustand";
+import { axiosInstance } from "@/lib/axios";
+import { AxiosError } from "axios";
+import { User } from "./useUserStore";
 
-interface UserStoreTypes {
-  players: User[];
-  selectedUser: User | null;
+interface PlayerStoreState {
+  players: User[] | null;
   isLoading: boolean;
-  hasMore: boolean;
-  cursor: null | string;
-  searchTerm: string;
   error: string | null;
-  setSearchTerm: (term: string) => void;
-  fetchPlayers: (reset?: boolean) => Promise<void>;
-  getOneUser: (id: string) => Promise<User>;
-  clearSelectedUser: () => void;
-  clearError: () => void;
+  hasMore: boolean;
+  searchByUsername: (
+    username: string,
+    page: number,
+    limit: number
+  ) => Promise<User[] | null>;
 }
 
-const usePlayerStore = create<UserStoreTypes>((set, get) => ({
-  players: [],
-  selectedUser: null,
+const usePlayerStore = create<PlayerStoreState>((set) => ({
+  players: null,
   isLoading: false,
-  hasMore: true,
-  cursor: null,
-  searchTerm: "",
   error: null,
+  hasMore: false,
 
-  setSearchTerm: (term) => {
-    const currentState = get();
-    if (term === currentState.searchTerm) return;
+  searchByUsername: async (
+    username: string,
+    page = 1,
+    limit = 10
+  ): Promise<User[] | null> => {
+    if (!username.trim()) {
+      set({ players: [], hasMore: false, isLoading: false, error: null });
+      return [];
+    }
 
-    set({
-      searchTerm: term,
-      cursor: null,
-      players: [],
-      hasMore: true,
+    set((state) => ({
+      ...state,
+      isLoading: true,
       error: null,
-    });
-    get().fetchPlayers(true);
-  },
-
-  fetchPlayers: async (reset = false) => {
-    const { hasMore, isLoading, cursor, searchTerm, players } = get();
-
-    if (!hasMore || isLoading) return;
-
-    set({ isLoading: true, error: null });
+      players: page === 1 ? [] : state.players,
+    }));
 
     try {
-      const { data } = await axiosInstance.get("/users", {
-        params: {
-          cursor: reset ? null : cursor,
-          limit: 10,
-          search: searchTerm.trim(),
-        },
+      const response = await axiosInstance.get(`/users/search-users`, {
+        params: { username, page, limit },
       });
 
-      const newUsers = data.users.filter(
-        (user: User) => !players.some((p) => p._id === user._id)
-      );
+      const fetchedUsers: User[] = response.data.players;
+      const hasMore: boolean = response.data.hasMore;
 
+      set((state) => ({
+        ...state,
+        players:
+          page === 1
+            ? fetchedUsers
+            : [...(state.players || []), ...fetchedUsers],
+        hasMore,
+        isLoading: false,
+        error: null,
+      }));
+
+      return fetchedUsers;
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        set({
+          error: error.response?.data.message || "Request failed",
+          isLoading: false,
+        });
+        return [];
+      }
       set({
-        players: reset ? data.users : [...players, ...newUsers],
-        cursor: data.nextCursor || null,
-        hasMore: data.hasMore,
+        error: "An unknown error occurred.",
         isLoading: false,
       });
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      set({
-        isLoading: false,
-        error: "Failed to fetch players. Please try again later.",
-        hasMore: false,
-      });
+      return null;
     }
   },
-
-  getOneUser: async (id) => {
-    set({ error: null });
-    try {
-      const res = await axiosInstance.get(`/users/${id}`);
-      set({ selectedUser: res.data });
-      return res.data;
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      set({ error: "Failed to fetch user details." });
-      throw error;
-    }
-  },
-
-  clearSelectedUser: () => set({ selectedUser: null }),
-  clearError: () => set({ error: null }),
 }));
 
 export default usePlayerStore;

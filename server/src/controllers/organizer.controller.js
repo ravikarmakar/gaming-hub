@@ -43,8 +43,9 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
 
   user.role.push({
     scope: Scopes.ORG,
-    orgId: newOrg._id,
     role: Roles.ORG.OWNER,
+    scopeId: newOrg._id,
+    scopeModel: "Organization",
   });
   user.canCreateOrg = false;
   user.orgId = newOrg._id;
@@ -252,7 +253,7 @@ export const updateStaffRole = TryCatchHandler(async (req, res, next) => {
 });
 
 export const removeStaff = TryCatchHandler(async (req, res, next) => {
-  const { userId } = req.body;
+  const userId = req.params.id;
   const orgRole = req.user.role.find((r) => r.scope === "org");
   const orgId = orgRole?.orgId;
 

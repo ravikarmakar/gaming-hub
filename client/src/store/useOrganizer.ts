@@ -31,7 +31,9 @@ export interface OrganizerStateType {
   error: string | null;
   createOrg: (orgData: FormData) => Promise<boolean>;
   getOrgById: (orgId: string) => Promise<Organizer | null>;
-  addStaffs?: (data: { staff: string[] }) => Promise<boolean>;
+  addStaffs: (data: { staff: string[] }) => Promise<boolean>;
+  removeStaff: (id: string) => Promise<boolean>;
+  updateStaffRole: (id: string, role: string) => Promise<boolean>;
   // fetchAllOrganizers: () => Promise<void>;
 }
 
@@ -83,7 +85,50 @@ export const useOrganizerStore = create<OrganizerStateType>((set) => ({
       return false;
     }
   },
+  updateStaffRole: async (id, role) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await axiosInstance.put("/organizers/update-staff-role", {
+        userId: id,
+        newRole: role,
+      });
+      if (res.status === 200 && res.data.success) {
+        set({ isLoading: false });
+        return true;
+      }
+      set({
+        error: res.data.message || "Failed to update role",
+        isLoading: false,
+      });
+      return false;
+    } catch (error) {
+      const errMsg = axios.isAxiosError(error)
+        ? error.response?.data.message || "Error updating role"
+        : "Error updating role";
 
+      set({ error: errMsg, isLoading: false });
+      return false;
+    }
+  },
+  removeStaff: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await axiosInstance.delete(`/organizers/remove-staff/${id}`);
+      if (res.status === 200 && res.data.success) {
+        set({ isLoading: false });
+        return true;
+      } else {
+        set({ isLoading: false });
+        return false;
+      }
+    } catch (error) {
+      const errMsg = axios.isAxiosError(error)
+        ? error.response?.data.message || "Error removeing staff"
+        : "Error removeing staff";
+      set({ error: errMsg, isLoading: false });
+      return false;
+    }
+  },
   // fetchAllOrganizers: () => {
   //   set({ isLoading: true, error: null });
   //   try {

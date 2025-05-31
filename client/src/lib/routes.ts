@@ -2,13 +2,16 @@ export const ROUTES = {
   HOME: "/",
   LOGIN: "/login",
   REGISTER: "/register",
+  FORGOT_PASSWORD: "/forgot-password",
+  DISCORD_CALLBACK: "/auth/discord/callback",
   PROFILE: "/profile",
   ORG_PROFILE: "/org-profile/:id",
   EMAIL_VERIFY: "/verify-account",
   TEAM_PROFILE: "/team-profile",
-  ORGANISER_DASHBOARD: "/organizer",
-  SUPER_ADMIN_DASHBOARD: "/super-admin",
+  ORG_DASHBOARD: "/organizer",
+  SUPER_ADMIN: "/super-admin",
   CREATE_ORG: "/create-org",
+  TEAM_DASHBOARD: "/team/:teamId/dashboard",
 };
 
 // export const ROUTES = {

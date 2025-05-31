@@ -1,14 +1,15 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { ZodError } from "zod";
 import { Building2, Tag, Mail, FileText } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import toast from "react-hot-toast";
+
 import FileUpload from "@/components/ui/FileUpload";
 import Input from "@/components/ui/input";
 import { orgSchema } from "@/schemas/org/createOrg";
-import { ZodError } from "zod";
 import { useUserStore } from "@/store/useUserStore";
-import { Navigate, useNavigate } from "react-router-dom";
 import { useOrganizerStore } from "@/store/useOrganizer";
-import toast from "react-hot-toast";
 
 // Interface for organization data
 interface OrgFormData {

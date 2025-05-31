@@ -1,6 +1,7 @@
 export const SCOPES = {
   PLATFORM: "platform",
   ORG: "org",
+  TEAM: "team",
 };
 
 export const PLATFORM_ROLES = {

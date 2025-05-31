@@ -41,7 +41,7 @@ router.put(
   updateStaffRole
 );
 router.delete(
-  "/remove-staff",
+  "/remove-staff/:id",
   checkAnyRole([Roles.ORG.MANAGER, Roles.ORG.OWNER], Scopes.ORG),
   removeStaff
 );

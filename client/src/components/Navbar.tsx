@@ -15,9 +15,9 @@ import {
   LogOut,
   MessageSquare,
   Crown,
-  HelpCircle,
   Loader2,
   KeyRound,
+  UserCog,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "@/store/useUserStore";
@@ -26,8 +26,8 @@ import {
   ORG_ADMIN_ROLES,
   PLATFORM_SUPER_ADMIN_ROLES,
   SCOPES,
-} from "@/constants/roles";
-import { ROUTES } from "@/constants/routes";
+} from "@/lib/roles";
+import { ROUTES } from "@/lib/routes";
 import { hasAnyRole } from "@/lib/permissions";
 
 const Navbar = () => {
@@ -174,9 +174,9 @@ const Navbar = () => {
 
   const profileOptions = [
     {
-      name: "View Profile",
+      name: "My Profile",
       icon: <User className="w-4 h-4" />,
-      href: "/profile",
+      href: ROUTES.PROFILE,
     },
     ...(user?.orgId
       ? [
@@ -193,6 +193,15 @@ const Navbar = () => {
             name: "Team Profile",
             icon: <Users className="w-4 h-4" />,
             href: ROUTES.TEAM_PROFILE,
+          },
+        ]
+      : []),
+    ...(user?.teamId
+      ? [
+          {
+            name: "Team Dashboard",
+            icon: <UserCog className="w-4 h-4" />,
+            href: `/team/${user?.teamId}/dashboard`,
           },
         ]
       : []),
@@ -215,11 +224,6 @@ const Navbar = () => {
       name: "Settings",
       icon: <Settings className="w-4 h-4" />,
       href: "#settings",
-    },
-    {
-      name: "Support",
-      icon: <HelpCircle className="w-4 h-4" />,
-      href: "#support",
     },
     {
       name: isLoading ? "Logging out..." : "Log Out",
@@ -345,9 +349,9 @@ const Navbar = () => {
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
                   if (isSuperAdmin) {
-                    navigate(ROUTES.SUPER_ADMIN_DASHBOARD);
+                    navigate(ROUTES.SUPER_ADMIN);
                   } else if (hasAnyOrgRole) {
-                    navigate(ROUTES.ORGANISER_DASHBOARD);
+                    navigate(ROUTES.ORG_DASHBOARD);
                   }
                 }}
                 className="flex items-center px-4 py-2 mr-4 font-medium text-gray-200 border rounded-lg border-purple-700/70 bg-gray-900/50 hover:bg-gray-800/50"
@@ -391,9 +395,8 @@ const Navbar = () => {
                       </div>
                       <div className="overflow-y-auto max-h-96">
                         {notifications.map((notification) => (
-                          <motion.a
+                          <motion.div
                             key={notification.id}
-                            href="#"
                             whileHover={{
                               backgroundColor: "rgba(139, 92, 246, 0.1)",
                             }}
@@ -417,15 +420,15 @@ const Navbar = () => {
                                 </p>
                               </div>
                             </div>
-                          </motion.a>
+                          </motion.div>
                         ))}
                       </div>
-                      <a
-                        href="#all-notifications"
-                        className="block p-2 text-sm font-medium text-center text-purple-400 bg-gray-800 hover:text-purple-300 hover:bg-gray-700"
+                      <div
+                        onClick={() => navigate("/notifications")}
+                        className="block p-2 text-sm font-medium text-center text-purple-400 bg-gray-800 cursor-pointer hover:text-purple-300 hover:bg-gray-700"
                       >
                         View All Notifications
-                      </a>
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -478,8 +481,13 @@ const Navbar = () => {
                           <motion.li
                             key={option.name}
                             onClick={() => {
-                              if (option.onClick) option.onClick();
-                              else if (option.href) navigate(option.href);
+                              if (option.onClick) {
+                                option.onClick();
+                                setShowProfile(false);
+                              } else if (option.href) {
+                                navigate(option.href);
+                                setShowProfile(false);
+                              }
                             }}
                             whileHover={{
                               backgroundColor: "rgba(139, 92, 246, 0.1)",

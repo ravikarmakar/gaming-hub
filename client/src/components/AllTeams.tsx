@@ -1,16 +1,9 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useTeamStore } from "@/store/useTeamStore";
+import { Team, useTeamStore } from "@/store/useTeamStore";
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { FaSearch, FaGamepad, FaTrophy, FaUsers } from "react-icons/fa";
-import PageLayout from "@/pages/PageLayout";
-import { Team } from "@/types/team";
-
-interface AllTeamsCardProps {
-  team: Team;
-  index: number;
-}
 
 // Animation variants for staggered animations
 const containerVariants = {
@@ -65,7 +58,7 @@ const TeamCard = ({ team, index }: AllTeamsCardProps) => {
     >
       <Link
         to={`/team-profile/${team._id}`}
-        className="block h-full relative group overflow-hidden"
+        className="relative block h-full overflow-hidden group"
       >
         {/* Card with glassmorphism effect */}
         <div className="relative h-full rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900/90 to-black/95 backdrop-blur-xl border border-gray-800 group-hover:border-[#00ff88]/50 transition-all duration-500 shadow-lg group-hover:shadow-[#00ff88]/20 group-hover:shadow-xl">
@@ -79,18 +72,18 @@ const TeamCard = ({ team, index }: AllTeamsCardProps) => {
             className={`h-1 w-full bg-gradient-to-r ${randomGradient}`}
           ></div>
 
-          <div className="p-6 flex flex-col h-full">
+          <div className="flex flex-col h-full p-6">
             {/* Team logo with glow effect */}
-            <div className="relative mb-4 mx-auto">
+            <div className="relative mx-auto mb-4">
               <div
                 className={`absolute -inset-1 rounded-full blur-md bg-gradient-to-r ${randomGradient} opacity-0 group-hover:opacity-70 transition-opacity duration-500`}
               ></div>
-              <div className="relative flex items-center justify-center w-24 h-24 rounded-full bg-black/50 p-3 border border-gray-700 group-hover:border-white/30 transition-all duration-300">
+              <div className="relative flex items-center justify-center w-24 h-24 p-3 transition-all duration-300 border border-gray-700 rounded-full bg-black/50 group-hover:border-white/30">
                 {team.teamLogo ? (
                   <img
                     src={team.teamLogo}
                     alt={`${team.teamName} logo`}
-                    className="w-full h-full object-contain rounded-full"
+                    className="object-contain w-full h-full rounded-full"
                   />
                 ) : (
                   <FaGamepad className="w-10 h-10 text-[#00ff88]/70" />
@@ -99,7 +92,7 @@ const TeamCard = ({ team, index }: AllTeamsCardProps) => {
             </div>
 
             {/* Team name with animated underline */}
-            <div className="text-center mb-4">
+            <div className="mb-4 text-center">
               <h3 className="text-xl font-bold text-white group-hover:text-[#00ff88] transition-colors duration-300">
                 {team.teamName}
               </h3>
@@ -107,22 +100,22 @@ const TeamCard = ({ team, index }: AllTeamsCardProps) => {
             </div>
 
             {/* Team description */}
-            <p className="text-gray-400 text-sm text-center mb-5 flex-grow line-clamp-3">
+            <p className="flex-grow mb-5 text-sm text-center text-gray-400 line-clamp-3">
               {team.description ||
                 "A competitive gaming team looking for new challenges and victories."}
             </p>
 
             {/* Team stats with icons */}
             <div className="grid grid-cols-2 gap-2 mb-4">
-              <div className="flex items-center justify-center space-x-1 bg-gray-800/50 rounded-lg p-2">
+              <div className="flex items-center justify-center p-2 space-x-1 rounded-lg bg-gray-800/50">
                 <FaUsers className="text-[#00ff88]/70" />
-                <span className="text-gray-300 text-sm">
+                <span className="text-sm text-gray-300">
                   {team.members?.length || 0} Members
                 </span>
               </div>
-              <div className="flex items-center justify-center space-x-1 bg-gray-800/50 rounded-lg p-2">
+              <div className="flex items-center justify-center p-2 space-x-1 rounded-lg bg-gray-800/50">
                 <FaTrophy className="text-amber-400/70" />
-                <span className="text-gray-300 text-sm">
+                <span className="text-sm text-gray-300">
                   {team.playedTournaments?.length || 0} Tournaments
                 </span>
               </div>
@@ -144,14 +137,14 @@ const TeamCard = ({ team, index }: AllTeamsCardProps) => {
 };
 
 const AllTeams = () => {
-  const { fetchTeams, teams, isLoading } = useTeamStore();
+  const { fetchAllTeams, teams, isLoading } = useTeamStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredTeams, setFilteredTeams] = useState<Team[]>([]);
   const searchInputRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchTeams();
+    fetchAllTeams();
   }, []);
 
   useEffect(() => {
@@ -165,105 +158,100 @@ const AllTeams = () => {
   }, [searchQuery, teams]);
 
   return (
-    <PageLayout
-      title="Find Your Dream Team"
-      description="Discover and join the best gaming teams"
-    >
-      <div className="relative min-h-screen px-4 sm:px-6 lg:px-8 overflow-hidden">
-        {/* Content container */}
-        <div className="relative z-10 max-w-7xl mx-auto">
-          {/* Search Section with floating animation */}
+    <div className="relative min-h-screen px-4 overflow-hidden sm:px-6 lg:px-8">
+      {/* Content container */}
+      <div className="relative z-10 mx-auto max-w-7xl">
+        {/* Search Section with floating animation */}
 
-          <div className="relative max-w-2xl mx-auto mt-4">
-            <motion.div className="relative">
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Search for your perfect team..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-6 py-4 bg-gray-900/80 backdrop-blur-xl rounded-2xl text-white border border-gray-800 focus:border-[#00ff88] focus:ring-2 focus:ring-[#00ff88]/30 transition-all placeholder-gray-500 pl-14 shadow-lg"
-              />
-              <FaSearch className="absolute left-5 top-1/2 transform -translate-y-1/2 text-[#00ff88]/60 w-5 h-5" />
+        <div className="relative max-w-2xl mx-auto mt-4">
+          <motion.div className="relative">
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search for your perfect team..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-6 py-4 bg-gray-900/80 backdrop-blur-xl rounded-2xl text-white border border-gray-800 focus:border-[#00ff88] focus:ring-2 focus:ring-[#00ff88]/30 transition-all placeholder-gray-500 pl-14 shadow-lg"
+            />
+            <FaSearch className="absolute left-5 top-1/2 transform -translate-y-1/2 text-[#00ff88]/60 w-5 h-5" />
 
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-5 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-                >
-                  ✕
-                </button>
-              )}
-            </motion.div>
-          </div>
-
-          {/* Loading Animation */}
-          <AnimatePresence>
-            {isLoading && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex flex-col items-center justify-center mb-12"
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute text-gray-500 transition-colors transform -translate-y-1/2 right-5 top-1/2 hover:text-white"
               >
-                <div className="relative w-16 h-16 mb-3">
-                  <div className="absolute inset-0 rounded-full border-t-2 border-[#00ff88] animate-spin"></div>
-                  <div className="absolute inset-2 rounded-full border-r-2 border-purple-500 animate-spin animate-reverse"></div>
-                  <div className="absolute inset-4 rounded-full border-b-2 border-blue-500 animate-spin animate-delay-500"></div>
-                </div>
-                <p className="text-gray-400 animate-pulse">
-                  Loading amazing teams...
-                </p>
-              </motion.div>
+                ✕
+              </button>
             )}
-          </AnimatePresence>
-
-          {/* Teams Grid with staggered animation */}
-          {!isLoading && (
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8 py-12"
-            >
-              {filteredTeams.map((team, index) => (
-                <TeamCard key={team._id} team={team} index={index} />
-              ))}
-            </motion.div>
-          )}
-
-          {/* No teams found state */}
-          {!isLoading && filteredTeams.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-              className="text-center py-16"
-            >
-              <div className="relative w-24 h-24 mx-auto mb-6">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600/30 to-[#00ff88]/30 rounded-full blur-xl"></div>
-                <div className="relative w-full h-full rounded-full bg-gray-900/80 border border-gray-800 flex items-center justify-center">
-                  <FaSearch className="text-3xl text-[#00ff88]/70" />
-                </div>
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-3">
-                No Teams Found
-              </h3>
-              <p className="text-gray-400 mb-6">
-                Try different search terms or create your own team
-              </p>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate("/create-team")}
-                className="px-6 py-3 bg-gradient-to-r from-[#00ff88]/20 to-[#00ff88]/10 hover:from-[#00ff88]/30 hover:to-[#00ff88]/20 border border-[#00ff88]/50 rounded-xl text-[#00ff88] font-medium transition-all duration-300 shadow-lg shadow-[#00ff88]/5"
-              >
-                Create Your Team
-              </motion.button>
-            </motion.div>
-          )}
+          </motion.div>
         </div>
+
+        {/* Loading Animation */}
+        <AnimatePresence>
+          {isLoading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col items-center justify-center mb-12"
+            >
+              <div className="relative w-16 h-16 mb-3">
+                <div className="absolute inset-0 rounded-full border-t-2 border-[#00ff88] animate-spin"></div>
+                <div className="absolute border-r-2 border-purple-500 rounded-full inset-2 animate-spin animate-reverse"></div>
+                <div className="absolute border-b-2 border-blue-500 rounded-full inset-4 animate-spin animate-delay-500"></div>
+              </div>
+              <p className="text-gray-400 animate-pulse">
+                Loading amazing teams...
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Teams Grid with staggered animation */}
+        {!isLoading && (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 gap-6 py-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-8"
+          >
+            {filteredTeams.map((team, index) => (
+              <TeamCard key={team._id} team={team} index={index} />
+            ))}
+          </motion.div>
+        )}
+
+        {/* No teams found state */}
+        {!isLoading && filteredTeams.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="py-16 text-center"
+          >
+            <div className="relative w-24 h-24 mx-auto mb-6">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-600/30 to-[#00ff88]/30 rounded-full blur-xl"></div>
+              <div className="relative flex items-center justify-center w-full h-full border border-gray-800 rounded-full bg-gray-900/80">
+                <FaSearch className="text-3xl text-[#00ff88]/70" />
+              </div>
+            </div>
+            <h3 className="mb-3 text-2xl font-bold text-white">
+              No Teams Found
+            </h3>
+            <p className="mb-6 text-gray-400">
+              Try different search terms or create your own team
+            </p>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate("/create-team")}
+              className="px-6 py-3 bg-gradient-to-r from-[#00ff88]/20 to-[#00ff88]/10 hover:from-[#00ff88]/30 hover:to-[#00ff88]/20 border border-[#00ff88]/50 rounded-xl text-[#00ff88] font-medium transition-all duration-300 shadow-lg shadow-[#00ff88]/5"
+            >
+              Create Your Team
+            </motion.button>
+          </motion.div>
+        )}
       </div>
-    </PageLayout>
+    </div>
   );
 };
 

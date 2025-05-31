@@ -10,9 +10,14 @@ export const Roles = {
     STAFF: "org:staff",
     PLAYER: "org:player",
   },
+  TEAM: {
+    OWNER: "team:owner",
+    PLAYER: "team:player",
+  },
 };
 
 export const Scopes = {
   PLATFORM: "platform",
   ORG: "org",
+  TEAM: "team",
 };

@@ -116,14 +116,14 @@ export default function AdminDashboard() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-medium"
+                className="px-4 py-2 text-sm font-medium bg-gray-800 rounded-lg hover:bg-gray-700"
               >
                 Weekly
               </motion.button>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-4 py-2 bg-purple-700 hover:bg-purple-600 rounded-lg text-sm font-medium"
+                className="px-4 py-2 text-sm font-medium bg-purple-700 rounded-lg hover:bg-purple-600"
               >
                 Generate Report
               </motion.button>
@@ -131,17 +131,17 @@ export default function AdminDashboard() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {statsData.map((stat, index) => (
               <motion.div
                 key={index}
                 variants={itemVariants}
-                className="bg-gray-800 rounded-xl p-6 border border-gray-700"
+                className="p-6 bg-gray-800 border border-gray-700 rounded-xl"
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-gray-400 text-sm">{stat.title}</p>
-                    <h3 className="text-2xl font-bold text-white mt-1">
+                    <p className="text-sm text-gray-400">{stat.title}</p>
+                    <h3 className="mt-1 text-2xl font-bold text-white">
                       {stat.value}
                     </h3>
                     <p
@@ -166,24 +166,24 @@ export default function AdminDashboard() {
           </div>
 
           {/* Charts and Tables Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Activity Chart */}
             <motion.div
               variants={itemVariants}
-              className="bg-gray-800 rounded-xl p-6 lg:col-span-2 border border-gray-700"
+              className="p-6 bg-gray-800 border border-gray-700 rounded-xl lg:col-span-2"
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">
                   User Activity
                 </h3>
-                <div className="flex items-center text-sm space-x-2">
+                <div className="flex items-center space-x-2 text-sm">
                   <span className="inline-block w-3 h-3 bg-purple-500 rounded-full"></span>
                   <span className="text-gray-400">This Month</span>
-                  <span className="inline-block w-3 h-3 bg-gray-500 rounded-full ml-3"></span>
+                  <span className="inline-block w-3 h-3 ml-3 bg-gray-500 rounded-full"></span>
                   <span className="text-gray-400">Last Month</span>
                 </div>
               </div>
-              <div className="h-64 flex items-end justify-between px-2">
+              <div className="flex items-end justify-between h-64 px-2">
                 {[35, 55, 45, 65, 50, 70, 60, 75, 55, 80, 65, 90].map(
                   (height, i) => (
                     <div key={i} className="flex flex-col items-center">
@@ -195,9 +195,9 @@ export default function AdminDashboard() {
                           delay: i * 0.05,
                           ease: "easeOut",
                         }}
-                        className="w-5 bg-purple-600 bg-opacity-80 rounded-t-sm"
+                        className="w-5 bg-purple-600 rounded-t-sm bg-opacity-80"
                       />
-                      <span className="text-xs text-gray-500 mt-1">
+                      <span className="mt-1 text-xs text-gray-500">
                         {i + 1}
                       </span>
                     </div>
@@ -209,7 +209,7 @@ export default function AdminDashboard() {
             {/* Popular Games */}
             <motion.div
               variants={itemVariants}
-              className="bg-gray-800 rounded-xl p-6 border border-gray-700"
+              className="p-6 bg-gray-800 border border-gray-700 rounded-xl"
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">
@@ -222,7 +222,7 @@ export default function AdminDashboard() {
               <div className="space-y-4">
                 {popularGames.map((game) => (
                   <div key={game.id} className="flex items-center">
-                    <div className="w-10 h-10 rounded bg-purple-900 flex items-center justify-center text-purple-300 mr-3">
+                    <div className="flex items-center justify-center w-10 h-10 mr-3 text-purple-300 bg-purple-900 rounded">
                       <Star size={16} />
                     </div>
                     <div className="flex-1">
@@ -235,7 +235,7 @@ export default function AdminDashboard() {
                         </span>
                         <div className="flex items-center ml-3">
                           <Star size={12} className="text-yellow-400" />
-                          <span className="text-xs text-gray-400 ml-1">
+                          <span className="ml-1 text-xs text-gray-400">
                             {game.rating}
                           </span>
                         </div>
@@ -250,7 +250,7 @@ export default function AdminDashboard() {
           {/* Recent Users */}
           <motion.div
             variants={itemVariants}
-            className="bg-gray-800 rounded-xl p-6 border border-gray-700"
+            className="p-6 bg-gray-800 border border-gray-700 rounded-xl"
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-white">Recent Users</h3>
@@ -279,8 +279,8 @@ export default function AdminDashboard() {
                 <tbody>
                   {recentUsers.map((user) => (
                     <tr key={user.id} className="border-b border-gray-700">
-                      <td className="px-6 py-4 flex items-center">
-                        <div className="w-8 h-8 rounded-full bg-purple-700 flex items-center justify-center text-white mr-3">
+                      <td className="flex items-center px-6 py-4">
+                        <div className="flex items-center justify-center w-8 h-8 mr-3 text-white bg-purple-700 rounded-full">
                           {user.name.charAt(0)}
                         </div>
                         <span className="font-medium text-white">
@@ -291,7 +291,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center">
                           <Activity
                             size={14}
-                            className="text-purple-400 mr-2"
+                            className="mr-2 text-purple-400"
                           />
                           <span>Level {user.level}</span>
                         </div>

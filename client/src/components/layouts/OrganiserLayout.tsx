@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { Navigate, Outlet } from "react-router-dom";
 import { useUserStore } from "@/store/useUserStore";
-import { useEffect, useRef, useState } from "react";
 import {
   BarChart,
   BarChart2,
@@ -9,11 +8,10 @@ import {
   Trophy,
   Users,
   Users2,
-  Zap,
+  // Zap,
 } from "lucide-react";
-import { ORG_ADMIN_ROLES, SCOPES } from "@/constants/roles";
+import { ORG_ADMIN_ROLES, SCOPES } from "@/lib/roles";
 import { hasAnyRole } from "@/lib/permissions";
-import { Organizer, useOrganizerStore } from "@/store/useOrganizer";
 import Sidebar from "../super-admin/Sidebar";
 import Topbar from "../super-admin/Topbar";
 
@@ -57,58 +55,16 @@ const sidebarLinks = [
 ];
 
 export default function OrganizerLayout() {
-  const { user, checkingAuth, checkAuth } = useUserStore();
-  const [orgData, setOrgData] = useState<Organizer | null>(null);
-  const { getOrgById } = useOrganizerStore();
-  const hasFetched = useRef(false);
-
-  useEffect(() => {
-    if (!hasFetched.current) {
-      checkAuth();
-      hasFetched.current = true;
-    }
-  }, [checkAuth]);
-
-  useEffect(() => {
-    const fetchOrgData = async () => {
-      if (user?.orgId) {
-        const org = await getOrgById(user.orgId);
-        setOrgData(org);
-      }
-    };
-    fetchOrgData();
-  }, [user, getOrgById]);
-
-  console.log("Org Data:", orgData);
+  const { user } = useUserStore();
 
   const hasPermission = hasAnyRole(user, SCOPES.ORG, ORG_ADMIN_ROLES);
 
-  // Loading screen
-  if (checkingAuth) {
-    return (
-      <div className="flex items-center justify-center w-full h-screen bg-gray-900">
-        <motion.div
-          animate={{
-            scale: [1, 1.2, 1],
-          }}
-          transition={{
-            duration: 1.5,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          className="text-purple-500"
-        >
-          <Zap size={48} />
-        </motion.div>
-      </div>
-    );
-  }
   if (!user || !hasPermission || !user.orgId) {
     return <Navigate to="/" replace />;
   }
 
   return (
-    <div className="flex h-screen text-white bg-gray-950">
+    <div className="flex h-screen text-white bg-gray-900">
       <Sidebar links={sidebarLinks} title="Organizer" />
 
       <div className="flex flex-col flex-1 overflow-hidden">

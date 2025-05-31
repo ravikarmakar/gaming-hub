@@ -1,17 +1,40 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { axiosInstance } from "@/lib/axios";
+import axios from "axios";
 import toast from "react-hot-toast";
-import { Team } from "@/types/team";
 import { create } from "zustand";
 
-interface TeamState {
+interface Members {
+  _id: string;
+  username: string;
+  avatar: string;
+  user: string;
+  roleInTeam: "rusher" | "sniper" | "support" | "igl" | "player";
+}
+
+export interface Team {
+  _id: string;
+  teamName: string;
+  slug: string;
+  captain: string;
+  teamMembers: Members[];
+  description: string;
+  imageUrl: string;
+  bio: string;
+  isVerified: boolean;
+  totalWins: number;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface TeamStateTypes {
   teams: Team[];
   isLoading: boolean;
   error: null | string;
-  seletedTeam: Team | null;
-  createTeam: (teamName: string) => Promise<void>;
-  fetchTeams: () => Promise<void>;
-  fetchOneTeam: (id: string) => Promise<void>;
+  currentTeam: Team | null;
+  createTeam: (teamData: FormData) => Promise<Team | null>;
+  getTeamById: (id: string) => Promise<Team | null>;
+  fetchAllTeams: () => Promise<void>;
 
   // Team Mng
   inviteMember: (playerId: string) => Promise<void>;
@@ -20,67 +43,52 @@ interface TeamState {
   respondToJoinRequest: (action: string) => void;
 }
 
-export const useTeamStore = create<TeamState>((set) => ({
+export const useTeamStore = create<TeamStateTypes>((set) => ({
   teams: [],
   isLoading: false,
   error: null,
-  seletedTeam: null,
-
-  createTeam: async (teamName: string) => {
-    set({ isLoading: true });
-
+  currentTeam: null,
+  createTeam: async (teamData) => {
+    set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.post(
-        "/teams",
-        { teamName },
-        {
-          headers: { "Content-Type": "application/json" },
-          withCredentials: true,
-        }
-      );
-
-      if (response.status === 201) {
-        toast.success("Team created successfully!");
-      }
+      const response = await axiosInstance.post("/teams/create-team", teamData);
+      set({ currentTeam: response.data.team, isLoading: false });
+      return response.data.team;
     } catch (error) {
-      console.log("Error creating team:", error);
-      toast.error("Failed to create team");
-    } finally {
-      set({ isLoading: false });
+      const errMsg = axios.isAxiosError(error)
+        ? error.response?.data.message || "Error creating new team"
+        : "Error creating new team";
+      set({ error: errMsg, isLoading: false });
+      return null;
     }
   },
-
-  fetchTeams: async () => {
-    set({ isLoading: true });
+  getTeamById: async (id) => {
+    set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get("/teams", {
-        withCredentials: true,
-      });
-
-      set({ teams: response.data.teams });
+      const response = await axiosInstance.get(`/teams/details/${id}`);
+      set({ currentTeam: response?.data?.team, isLoading: false });
+      return response.data.team;
     } catch (error) {
-      console.log("Error fetching team:", error);
-    } finally {
-      set({ isLoading: false });
+      const errMsg = axios.isAxiosError(error)
+        ? error.response?.data.message || "Error fetching team details"
+        : "Error fetching team details";
+      set({ error: errMsg, isLoading: false });
+      return null;
     }
   },
-
-  fetchOneTeam: async (id) => {
-    set({ isLoading: true });
-
+  fetchAllTeams: async () => {
+    set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get(`/teams/${id}/profile`, {
-        withCredentials: true,
-      });
-
-      set({ seletedTeam: response.data.team });
+      const response = await axiosInstance.get("/teams");
+      set({ teams: response.data.teams, isLoading: false });
     } catch (error) {
-      console.log("Error to Fetching Single team details", error);
-    } finally {
-      set({ isLoading: false });
+      const errMsg = axios.isAxiosError(error)
+        ? error.response?.data.message || "Error fetching all teams"
+        : "Error fetching all teams";
+      set({ error: errMsg, isLoading: false });
     }
   },
-
+  //
   inviteMember: async (playerId) => {
     try {
       set({ isLoading: true, error: null });
@@ -107,7 +115,6 @@ export const useTeamStore = create<TeamState>((set) => ({
       });
     }
   },
-
   responseToInvite: async (action) => {
     try {
       set({ isLoading: true, error: null });
@@ -133,7 +140,6 @@ export const useTeamStore = create<TeamState>((set) => ({
       set({ isLoading: false });
     }
   },
-
   teamJoinRequest: async (teamId) => {
     set({ isLoading: true, error: null });
 
@@ -161,7 +167,6 @@ export const useTeamStore = create<TeamState>((set) => ({
       set({ isLoading: false });
     }
   },
-
   respondToJoinRequest: async (action) => {
     try {
       set({ isLoading: true, error: null });

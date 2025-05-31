@@ -202,7 +202,7 @@ const OrganizerProfile: React.FC<OrganizerProfileProps> = ({
 
       {/* Profile Header */}
       <div className="relative z-10 max-w-6xl px-4 mx-auto -mt-12 sm:-mt-16">
-        <div className="flex flex-col items-center gap-4 mb-6 text-center md:flex-row md:items-end md:text-left md:gap-6 md:mb-8">
+        <div className="flex flex-col items-center gap-4 mb-6 text-center md:flex-row md:items-start md:text-left md:gap-6 md:mb-8">
           <div className="relative flex-shrink-0">
             <img
               src={organizer.avatar}
@@ -287,7 +287,7 @@ const OrganizerProfile: React.FC<OrganizerProfileProps> = ({
             </div>
           </div>
 
-          <div className="flex flex-col w-full gap-2 mt-4 sm:w-auto sm:flex-row sm:mt-0 md:self-end">
+          <div className="flex flex-col w-full gap-2 mt-4 sm:w-auto sm:flex-row sm:mt-0 md:self-start">
             <button
               onClick={handleFollow}
               className={`w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-3 rounded-xl text-sm sm:text-base font-medium transition-all duration-200 ${
@@ -310,7 +310,7 @@ const OrganizerProfile: React.FC<OrganizerProfileProps> = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="mb-6 border-b border-gray-800 sm:mb-8">
+        <div className="px-2 mb-6 overflow-x-auto border-b border-white/10 sm:mb-8 sm:px-4">
           <Tabs
             tabs={tabItems}
             activeTab={activeTab}

@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import roleSchema from "./role.model.js";
+import { roleSchema } from "./role.model.js";
 
 const userSchema = new mongoose.Schema(
   {

@@ -4,6 +4,7 @@ import User from "../models/user.model.js";
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
 import { findUserById } from "../services/user.service.js";
+import { Roles, Scopes } from "../config/roles.js";
 import {
   checkTeamNameUnique,
   createNewTeam,
@@ -37,7 +38,12 @@ export const createTeam = TryCatchHandler(async (req, res, next) => {
   const newTeam = await createNewTeam(teamData);
 
   user.teamId = newTeam._id;
-
+  user.role.push({
+    scope: Scopes.TEAM,
+    role: Roles.TEAM.OWNER,
+    scopeId: newTeam._id,
+    scopeModel: "Team",
+  });
   await user.save();
 
   res.status(201).json({

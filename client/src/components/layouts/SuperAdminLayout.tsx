@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Navigate, Outlet } from "react-router-dom";
 import Sidebar from "@/components/super-admin/Sidebar";
@@ -15,7 +14,7 @@ import {
   Zap,
 } from "lucide-react";
 import { hasAnyRole } from "@/lib/permissions";
-import { PLATFORM_SUPER_ADMIN_ROLES, SCOPES } from "@/constants/roles";
+import { PLATFORM_SUPER_ADMIN_ROLES, SCOPES } from "@/lib/roles";
 
 const sidebarLinks = [
   {
@@ -63,15 +62,7 @@ const sidebarLinks = [
 ];
 
 export default function SuperAdminLayout() {
-  const { user, checkingAuth, checkAuth } = useUserStore();
-  const hasFetched = useRef(false);
-
-  useEffect(() => {
-    if (!hasFetched.current) {
-      checkAuth();
-      hasFetched.current = true;
-    }
-  }, [checkAuth]);
+  const { user, checkingAuth } = useUserStore();
 
   const hasPermission = hasAnyRole(
     user,

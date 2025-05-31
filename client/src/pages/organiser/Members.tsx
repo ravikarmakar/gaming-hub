@@ -19,11 +19,11 @@ import {
 import { useOrganizerStore, Member as StoreMember } from "@/store/useOrganizer";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import useAuthStore from "@/store/useAuthStore";
 import { useDebounce } from "@/hooks/useDebounce";
 import toast from "react-hot-toast";
 import { hasOrgRole } from "@/lib/permissions";
 import { useUserStore } from "@/store/useUserStore";
+import usePlayerStore from "@/store/usePlayerStore";
 
 type Member = StoreMember & {
   status: "Active" | "Inactive" | "Pending";
@@ -34,8 +34,6 @@ type Member = StoreMember & {
 interface MemberCardProps {
   member: Member;
   onRemove?: (id: string) => void;
-  onEditRole?: (id: string) => void;
-  onProfileView?: (id: string) => void;
   isOwner?: boolean;
   currentUserId: string;
 }
@@ -44,11 +42,37 @@ interface MemberCardProps {
 const MemberCard: React.FC<MemberCardProps> = ({
   member,
   onRemove,
-  onEditRole,
-  onProfileView,
   isOwner,
   currentUserId,
 }) => {
+  const [selectedRole, setSelectedRole] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const onProfileView = (id: string) => {
+    if (id === currentUserId) {
+      navigate("/profile");
+    } else {
+      navigate(`/profile/${id}`);
+    }
+  };
+
+  const { getOrgById, orgData, updateStaffRole, isLoading, error } =
+    useOrganizerStore();
+
+  const handleRoleUpdate = async (id: string, newRole: string) => {
+    console.log("Selected Role:", id, newRole);
+    const success = await updateStaffRole(id, newRole);
+    if (success) {
+      toast.success("Role updated successfully");
+      await getOrgById(orgData?._id ?? "");
+      setIsModalOpen(false);
+      setSelectedRole("");
+    } else {
+      toast.error(error || "Failed to update role");
+    }
+  };
+
   const getStatusClasses = (status: Member["status"]) => {
     switch (status) {
       case "Active":
@@ -133,7 +157,7 @@ const MemberCard: React.FC<MemberCardProps> = ({
 
       <div className="flex justify-center w-full gap-3 mt-5">
         <button
-          onClick={() => onProfileView}
+          onClick={() => onProfileView?.(member._id)}
           className={`flex items-center justify-center flex-1 gap-2 px-3 py-2 text-sm font-medium  ${
             currentUserId === member._id ? "text-yellow-600" : "text-purple-300"
           } transition-colors rounded-lg bg-purple-600/50 hover:bg-purple-900/50`}
@@ -148,7 +172,7 @@ const MemberCard: React.FC<MemberCardProps> = ({
               className="p-2 text-gray-300 transition-colors bg-gray-700 rounded-lg hover:bg-gray-600"
               onClick={(e) => {
                 e.stopPropagation(); // Prevent card click if any
-                onEditRole?.(member._id);
+                setIsModalOpen(!isModalOpen);
               }}
             >
               <Pen size={18} className="hover:text-blue-500" />
@@ -165,6 +189,71 @@ const MemberCard: React.FC<MemberCardProps> = ({
           </div>
         )}
       </div>
+
+      {/* Update Role Modal */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black bg-opacity-60"
+          >
+            <motion.div
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 50, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-md p-6 bg-[#1f1f1f] text-white shadow-lg rounded-xl"
+            >
+              <h2 className="mb-4 text-lg font-semibold">Update Role</h2>
+
+              <label className="block mb-2 text-sm font-medium text-gray-300">
+                Select Role
+              </label>
+              <select
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-600 bg-[#2a2a2a] text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">Select a role</option>
+                <option value="org:manager">Org Manager</option>
+                <option value="org:staff">Org Staff</option>
+              </select>
+
+              <div className="flex justify-end gap-2 mt-6">
+                <button
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setSelectedRole("");
+                  }}
+                  className="px-4 py-2 text-sm text-white bg-gray-700 rounded hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleRoleUpdate?.(member?._id, selectedRole)}
+                  disabled={!selectedRole || isLoading}
+                  className={`px-4 py-2 text-sm rounded text-white flex items-center justify-center gap-2 ${
+                    selectedRole && !isLoading
+                      ? "bg-purple-600 hover:bg-purple-700"
+                      : "bg-gray-500 cursor-not-allowed"
+                  }`}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Role"
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -178,13 +267,18 @@ const Members = () => {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  const navigate = useNavigate();
-
-  const { orgData, addStaffs, isLoading, error, getOrgById } =
+  const { orgData, addStaffs, isLoading, error, getOrgById, removeStaff } =
     useOrganizerStore();
-  const { players, searchByUsername } = useAuthStore();
+  const { players, searchByUsername } = usePlayerStore();
   const { user } = useUserStore();
   const debouncedUserQuery = useDebounce(searchTerm, 500);
+
+  useEffect(() => {
+    // Fetch organization data on mount
+    if (user?.orgId) {
+      getOrgById(user.orgId);
+    }
+  }, []);
 
   useEffect(() => {
     if (orgData?.members) {
@@ -197,7 +291,7 @@ const Members = () => {
   useEffect(() => {
     setPage(1);
     setHasMore(true);
-    useAuthStore.setState({ players: [] });
+    usePlayerStore.setState({ players: [] });
     searchByUsername(debouncedUserQuery, 1, 20);
   }, [debouncedUserQuery]);
 
@@ -213,7 +307,7 @@ const Members = () => {
         const nextPage = page + 1;
         searchByUsername(debouncedUserQuery, nextPage, 20).then((res) => {
           if (res && res.length) {
-            useAuthStore.setState((state) => ({
+            usePlayerStore.setState((state) => ({
               players: [...(state.players ?? []), ...(res ?? [])],
             }));
             setPage(nextPage);
@@ -244,11 +338,15 @@ const Members = () => {
     );
   };
 
+  // handleAddSelectedMembers function
   const handleAddSelectedMembers = async () => {
     const ids = selectedIds.filter((id) => !isAlreadyMember(id));
 
     if (ids.length === 0) {
-      alert("No new members selected to add.");
+      toast("No new members selected to add.", {
+        icon: "ℹ️",
+        style: { background: "#1f2937", color: "#fff" },
+      });
       return;
     }
 
@@ -274,21 +372,22 @@ const Members = () => {
       });
     }
     // Reset modal state
-    useAuthStore.setState({ players: [] });
+    usePlayerStore.setState({ players: [] });
     setPage(1);
     setHasMore(true);
 
     setIsModalOpen(false);
     setSearchTerm("");
-    setSelectedIds(orgData?.members?.map((m) => m._id) || []);
   };
 
-  const removeFromOrg = (id: string) => {
-    console.log(id);
-  };
-
-  const editOrgRole = (id: string) => {
-    console.log(id);
+  const handleStaffRemove = async (id: string) => {
+    const success = await removeStaff(id);
+    if (success) {
+      await getOrgById(orgData?._id ?? "");
+      toast.success("Staff removed successfully");
+    } else {
+      toast.error(error || "Failed to remove staff");
+    }
   };
 
   return (
@@ -317,16 +416,14 @@ const Members = () => {
           {orgData?.members?.map((member) => (
             <MemberCard
               key={member._id}
-              onRemove={removeFromOrg}
-              onEditRole={editOrgRole}
-              onProfileView={() => navigate(`/profile/${member._id}`)}
+              onRemove={handleStaffRemove}
               isOwner={isOwner}
               currentUserId={user?._id ?? ""}
               member={{
                 ...member,
                 status: "Active",
-                joinedDate: "",
-                lastActivity: "",
+                joinedDate: new Date().toISOString(),
+                lastActivity: "Just Now",
               }}
             />
           ))}

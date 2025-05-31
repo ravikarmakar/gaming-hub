@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Trophy,
@@ -9,8 +10,11 @@ import {
   Star,
   Zap,
 } from "lucide-react";
+import CreateTeamModal from "../team/CreateTeamModal";
 
 const Hero = () => {
+  const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false);
+
   return (
     <section className="relative min-h-screen py-20 overflow-hidden bg-gradient-to-br from-gray-900/30 via-purple-900/20 to-gray-900/20">
       {/* Animated Background Grid - Enhanced */}
@@ -69,6 +73,10 @@ const Hero = () => {
 
       {/* Main Content */}
       <div className="container relative z-10 flex flex-col items-center justify-center h-full px-6 mx-auto py-18">
+        <CreateTeamModal
+          isOpen={isCreateTeamOpen}
+          setIsOpen={setIsCreateTeamOpen}
+        />
         {/* Enhanced Live Tournament Badge */}
         <motion.div
           initial={{ y: -50, opacity: 0 }}
@@ -188,11 +196,12 @@ const Hero = () => {
               borderColor: "rgb(168, 85, 247)",
               backgroundColor: "rgba(168, 85, 247, 0.1)",
             }}
+            onClick={() => setIsCreateTeamOpen(true)}
             whileTap={{ scale: 0.95 }}
             className="flex items-center gap-3 px-10 py-5 text-lg font-semibold text-gray-200 transition-all duration-300 border-2 border-gray-600 group bg-gray-800/40 backdrop-blur-sm rounded-2xl hover:text-white"
           >
             <Gamepad className="w-6 h-6 transition-colors group-hover:text-purple-400" />
-            Watch Live Tournaments
+            Create Team
           </motion.button>
         </motion.div>
 

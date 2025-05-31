@@ -12,6 +12,7 @@ import {
   manageMemberRole,
 } from "../controllers/team.controller.js";
 import { isAuthenticated } from "../middleware/auth.middleware.js";
+import { upload } from "../utils/multer.js";
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ router.get("/details/:teamId", fetchTeamDetails);
 
 router.use(isAuthenticated);
 
-router.post("/create-team", createTeam);
+router.post("/create-team", upload.single("image"), createTeam);
 router.put("/update-team", updateTeam);
 router.put("/add-members", addMembers);
 router.delete("/remove-member", removeMember);
