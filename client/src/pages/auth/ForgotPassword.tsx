@@ -11,7 +11,7 @@ import {
   CheckCircle,
   RefreshCw,
 } from "lucide-react";
-import { useUserStore } from "@/store/useUserStore";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
@@ -32,7 +32,7 @@ const ForgotPassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const { resetPassword, sendPassResetOtp, error, isLoading } = useUserStore();
+  const { resetPassword, sendPassResetOtp, error, isLoading } = useAuthStore();
 
   useEffect(() => {}, []);
 

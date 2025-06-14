@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Check, ArrowRight, RefreshCw } from "lucide-react";
-import { useUserStore } from "@/store/useUserStore";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
@@ -13,7 +13,7 @@ const VerifyEmail = () => {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const { isVerifying, verifyEmail, user, sendVerifyOtp, error, checkAuth } =
-    useUserStore();
+    useAuthStore();
 
   // Handle cooldown timer
   useEffect(() => {

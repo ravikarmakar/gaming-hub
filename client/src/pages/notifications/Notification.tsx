@@ -5,7 +5,7 @@ import { useMediaQuery } from "react-responsive";
 import useNotificationStore from "@/store/useNotificationStore";
 import { formatDistanceToNowStrict } from "date-fns";
 import useAuthStore from "@/store/useAuthStore";
-import { useTeamStore } from "@/store/useTeamStore";
+import { useTeamStore } from "@/features/teams/store/useTeamStore";
 import { Trash2 } from "lucide-react";
 
 // Mock data

@@ -5,11 +5,11 @@ import { Building2, Tag, Mail, FileText } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
 
-import FileUpload from "@/components/ui/FileUpload";
 import Input from "@/components/ui/input";
 import { orgSchema } from "@/schemas/org/createOrg";
-import { useUserStore } from "@/store/useUserStore";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useOrganizerStore } from "@/store/useOrganizer";
+import FileUpload from "@/components/FileUplaod";
 
 // Interface for organization data
 interface OrgFormData {
@@ -41,7 +41,7 @@ const CreateOrgForm: React.FC = () => {
 
   const [errors, setErrors] = useState<OrgFormErrors>({});
   const [isSuccess, setIsSuccess] = useState(false);
-  const { user } = useUserStore();
+  const { user } = useAuthStore();
   const { createOrg, isLoading, error } = useOrganizerStore();
 
   const handleInputChange = (
@@ -227,7 +227,11 @@ const CreateOrgForm: React.FC = () => {
               name="image"
               accept="image/*"
               maxSize={5 * 1024 * 1024}
-              error={errors.image}
+              error={
+                Array.isArray(errors.image)
+                  ? errors.image.join(", ")
+                  : errors.image ?? ""
+              }
               onChange={handleFileUpload}
               hint="SVG, PNG, JPG or GIF (max 5MB)"
             />

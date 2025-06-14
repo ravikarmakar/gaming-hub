@@ -1,9 +1,9 @@
 import jwt from "jsonwebtoken";
 import { redis } from "../config/redisClient.js";
 
-export const generateTokens = (userId, role) => {
+export const generateTokens = (userId, roles) => {
   const accessToken = jwt.sign(
-    { userId, role },
+    { userId, roles },
     process.env.ACCESS_TOKEN_SECRET,
     {
       expiresIn: "15m",
@@ -11,7 +11,7 @@ export const generateTokens = (userId, role) => {
   );
 
   const refreshToken = jwt.sign(
-    { userId, role },
+    { userId, roles },
     process.env.REFRESH_TOKEN_SECRET,
     {
       expiresIn: "15d",

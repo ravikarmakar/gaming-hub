@@ -1,10 +1,10 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { useUserStore } from "@/store/useUserStore";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
 const PublicRoute = () => {
-  const { user } = useUserStore();
+  const { user, isLoading } = useAuthStore();
 
-  if (user) {
+  if (user || isLoading) {
     return <Navigate to="/" replace />;
   }
 

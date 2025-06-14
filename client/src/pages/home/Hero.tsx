@@ -10,7 +10,7 @@ import {
   Star,
   Zap,
 } from "lucide-react";
-import CreateTeamModal from "../team/CreateTeamModal";
+import CreateTeamModal from "../../features/teams/ui/components/CreateTeamModal";
 
 const Hero = () => {
   const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false);

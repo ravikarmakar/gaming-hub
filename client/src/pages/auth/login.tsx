@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { SocialLogin } from "./social-login";
-import { useUserStore } from "@/store/useUserStore";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { Input } from "@/components/ui/input";
 import {
   loginSchema,
@@ -23,7 +23,7 @@ const Login: React.FC = () => {
   > | null>(null);
   const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
-  const { isLoading, error, login, googleAuth } = useUserStore();
+  const { isLoading, error, login, googleAuth } = useAuthStore();
 
   // Animation variants
   const containerVariants = {

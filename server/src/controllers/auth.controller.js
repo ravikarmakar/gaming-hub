@@ -29,7 +29,7 @@ export const register = TryCatchHandler(async (req, res, next) => {
 
   const user = await User.create({ username, email, password });
 
-  const { accessToken, refreshToken } = generateTokens(user._id, user.role);
+  const { accessToken, refreshToken } = generateTokens(user._id, user.roles);
 
   // store refresh token in redis
   await storeRefreshToken(user._id, refreshToken);
@@ -77,7 +77,7 @@ export const login = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Invalid credentials", 401));
   }
 
-  const { accessToken, refreshToken } = generateTokens(user._id, user.role);
+  const { accessToken, refreshToken } = generateTokens(user._id, user.roles);
 
   // store only refresh token in redis
   await storeRefreshToken(user._id, refreshToken);
@@ -197,7 +197,7 @@ export const googleLogin = TryCatchHandler(async (req, res, next) => {
     });
   }
 
-  const { accessToken, refreshToken } = generateTokens(user._id, user.role);
+  const { accessToken, refreshToken } = generateTokens(user._id, user.roles);
   await storeRefreshToken(user._id, refreshToken);
   setCookies(res, accessToken, refreshToken);
 
@@ -266,7 +266,7 @@ export const discordLogin = TryCatchHandler(async (req, res, next) => {
     }
 
     // Generate JWT token
-    const { accessToken, refreshToken } = generateTokens(user._id, user.role);
+    const { accessToken, refreshToken } = generateTokens(user._id, user.roles);
     await storeRefreshToken(user._id, refreshToken);
     setCookies(res, accessToken, refreshToken);
 

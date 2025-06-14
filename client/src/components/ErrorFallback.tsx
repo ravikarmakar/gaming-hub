@@ -1,12 +1,16 @@
-import React from 'react';
+import { FallbackProps } from "react-error-boundary";
 
-const ErrorFallback: React.FC = () => {
-    return (
-        <div style={{ padding: '20px', textAlign: 'center' }}>
-            <h1>Something went wrong.</h1>
-            <p>Please try again later.</p>
-        </div>
-    );
-};
-
-export default ErrorFallback;
+export function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
+  return (
+    <div role="alert" className="p-4 text-red-700 bg-red-100 rounded">
+      <p>Something went wrong:</p>
+      <pre className="text-sm">{error.message}</pre>
+      <button
+        onClick={resetErrorBoundary}
+        className="px-4 py-1 mt-2 text-white bg-red-500 rounded"
+      >
+        Try again
+      </button>
+    </div>
+  );
+}

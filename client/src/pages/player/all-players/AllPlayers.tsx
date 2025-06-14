@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Gamepad2, Trophy, Star, Users, Activity } from "lucide-react";
 import { Link } from "react-router-dom";
-import usePlayerStore from "@/store/usePlayerStore";
 import { useDebounce } from "@/hooks/useDebounce";
+import usePlayerStore from "@/features/player/store/usePlayerStore";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -80,7 +80,7 @@ const AllPlayers = () => {
   if (!players)
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-violet-500"></div>
+        <div className="w-32 h-32 border-t-2 border-b-2 rounded-full animate-spin border-violet-500"></div>
       </div>
     );
 
@@ -92,13 +92,13 @@ const AllPlayers = () => {
         transition={{ duration: 0.6 }}
         className="max-w-[90rem] mx-auto"
       >
-        <div className="text-center mb-16 relative">
+        <div className="relative mb-16 text-center">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(124,58,237,0.3),rgba(88,28,135,0)_70%)] blur-3xl" />
 
           <motion.h1
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-3xl md:text-5xl font-bold mb-4 relative"
+            className="relative mb-4 text-3xl font-bold md:text-5xl"
           >
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500">
               You Can Find Best Elite Esports Warriors here
@@ -108,7 +108,7 @@ const AllPlayers = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="text-gray-300 text-md md:text-lg max-w-3xl mx-auto font-light"
+            className="max-w-3xl mx-auto font-light text-gray-300 text-md md:text-lg"
           >
             Discover top players and their achievements in the gaming world
           </motion.p>
@@ -118,7 +118,7 @@ const AllPlayers = () => {
         {error && (
           <div className="max-w-2xl mx-auto mb-8">
             <div
-              className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded relative"
+              className="relative px-4 py-3 text-red-200 border border-red-500 rounded bg-red-900/50"
               role="alert"
             >
               <span className="block sm:inline">{error}</span>
@@ -127,17 +127,17 @@ const AllPlayers = () => {
         )}
 
         {/* Search Input with improved styling */}
-        <div className="max-w-2xl mx-auto mb-8 relative">
+        <div className="relative max-w-2xl mx-auto mb-8">
           <input
             type="text"
             placeholder="Search Players..."
             defaultValue={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all duration-200"
+            className="w-full px-4 py-3 text-white placeholder-gray-400 transition-all duration-200 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
           />
           <div className="absolute inset-y-0 right-0 flex items-center pr-3">
             <svg
-              className="h-5 w-5 text-gray-400"
+              className="w-5 h-5 text-gray-400"
               fill="none"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -154,7 +154,7 @@ const AllPlayers = () => {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8"
+          className="grid grid-cols-1 gap-6 mt-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         >
           {players.map((player) => (
             <Link key={player._id} to={`/profile/${player._id}`}>
@@ -163,29 +163,29 @@ const AllPlayers = () => {
                 whileHover="hover"
                 className="relative group overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a1b23] to-[#13141a] border border-violet-900/20 backdrop-blur-xl"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-violet-600/10 to-fuchsia-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
+                <div className="absolute inset-0 transition-opacity duration-500 opacity-0 bg-gradient-to-br from-violet-600/10 to-fuchsia-600/10 group-hover:opacity-100" />
+                <div className="absolute top-0 left-0 w-full h-1 transition-transform duration-500 transform scale-x-0 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 group-hover:scale-x-100" />
 
-                <div className="p-6 relative z-10">
+                <div className="relative z-10 p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-4">
                       <div className="relative">
-                        <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-violet-500/30">
+                        <div className="w-16 h-16 overflow-hidden rounded-full ring-2 ring-violet-500/30">
                           <img
                             src={player?.avatar}
                             alt={player.name}
-                            className="w-full h-full object-cover"
+                            className="object-cover w-full h-full"
                           />
                         </div>
-                        <div className="absolute -bottom-1 -right-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full p-1">
+                        <div className="absolute p-1 rounded-full -bottom-1 -right-1 bg-gradient-to-r from-violet-500 to-fuchsia-500">
                           <Gamepad2 className="w-4 h-4 text-white" />
                         </div>
                       </div>
                       <div className="text-left">
-                        <h3 className="text-xl font-semibold text-white group-hover:text-violet-400 transition-colors">
+                        <h3 className="text-xl font-semibold text-white transition-colors group-hover:text-violet-400">
                           {player.name}
                         </h3>
-                        <p className="text-gray-400 text-sm">{player?.name}</p>
+                        <p className="text-sm text-gray-400">{player?.name}</p>
                       </div>
                     </div>
                   </div>
@@ -193,7 +193,7 @@ const AllPlayers = () => {
                   <div className="grid grid-cols-2 gap-4 mt-6">
                     <motion.div
                       variants={statsVariants}
-                      className="flex items-center space-x-2 bg-violet-950/30 rounded-lg p-3"
+                      className="flex items-center p-3 space-x-2 rounded-lg bg-violet-950/30"
                     >
                       <Trophy className="w-5 h-5 text-violet-400" />
                       <div>
@@ -205,7 +205,7 @@ const AllPlayers = () => {
                     </motion.div>
                     <motion.div
                       variants={statsVariants}
-                      className="flex items-center space-x-2 bg-fuchsia-950/30 rounded-lg p-3"
+                      className="flex items-center p-3 space-x-2 rounded-lg bg-fuchsia-950/30"
                     >
                       <Star className="w-5 h-5 text-fuchsia-400" />
                       <div>
@@ -248,7 +248,7 @@ const AllPlayers = () => {
             >
               {isLoading ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                  <div className="w-5 h-5 border-t-2 border-b-2 border-white rounded-full animate-spin"></div>
                   <span>Loading...</span>
                 </>
               ) : (

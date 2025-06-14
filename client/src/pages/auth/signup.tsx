@@ -5,7 +5,7 @@ import { FaCheck } from "react-icons/fa";
 import { Mail, Lock, User, AlertCircle, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
-import { useUserStore } from "@/store/useUserStore";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { Input } from "@/components/ui/input";
 import { SocialLogin } from "./social-login";
 import {
@@ -16,7 +16,7 @@ import { useGoogleLogin } from "@react-oauth/google";
 
 const Signup = () => {
   const navigate = useNavigate();
-  const { isLoading, error, register, googleAuth } = useUserStore();
+  const { isLoading, error, register, googleAuth } = useAuthStore();
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [validationErrors, setValidationErrors] = useState<Record<
     string,

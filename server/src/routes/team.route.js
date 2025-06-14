@@ -24,7 +24,7 @@ router.use(isAuthenticated);
 router.post("/create-team", upload.single("image"), createTeam);
 router.put("/update-team", updateTeam);
 router.put("/add-members", addMembers);
-router.delete("/remove-member", removeMember);
+router.put("/remove-member/:id", removeMember);
 router.put("/leave-member", leaveMember);
 router.put("/transfer-owner", transferTeamOwnerShip);
 router.put("/manage-member-role", manageMemberRole);

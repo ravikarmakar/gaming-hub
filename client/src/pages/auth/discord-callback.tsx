@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUserStore } from "@/store/useUserStore";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
 const DiscordCallback = () => {
   const navigate = useNavigate();
-  const { loginWithDiscord, user, isLoading } = useUserStore();
+  const { loginWithDiscord, user, isLoading } = useAuthStore();
 
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get("code");

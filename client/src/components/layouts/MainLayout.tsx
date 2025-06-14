@@ -1,8 +1,8 @@
 import { Outlet, useLocation } from "react-router-dom";
-import Footer from "../Footer";
-import Navbar from "../Navbar";
 import { AnimatePresence, motion } from "framer-motion";
 import { Toaster } from "react-hot-toast";
+import Navbar from "@/components/Navbar";
+import Footer from "../Footer";
 
 const MainLayout = () => {
   const location = useLocation();

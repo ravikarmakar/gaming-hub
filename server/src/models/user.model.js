@@ -49,7 +49,7 @@ const userSchema = new mongoose.Schema(
       enum: ["rusher", "sniper", "support", "igl", "coach", "player"],
       default: "player",
     },
-    role: {
+    roles: {
       type: [roleSchema],
       default: [
         {

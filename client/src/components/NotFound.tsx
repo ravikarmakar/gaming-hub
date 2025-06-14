@@ -1,18 +1,20 @@
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { Button } from "./ui/button";
 
-const NotFound = () => {
+export const NotFound = () => {
+  const navigate = useNavigate();
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center bg-black p-4 sm:p-6 md:p-8">
+    <div className="relative flex items-center justify-center min-h-screen p-4 overflow-hidden bg-[#181825] sm:p-6 md:p-8">
       {/* Animated background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 opacity-80">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#181825]/90 via-[#2d193c]/90 to-[#181825]">
         <motion.div
           className="absolute inset-0"
           animate={{
             background: [
-              "linear-gradient(to right bottom, #0f172a, #3b0764, #18181b)",
-              "linear-gradient(to right bottom, #3b0764, #18181b, #0f172a)",
-              "linear-gradient(to right bottom, #18181b, #0f172a, #3b0764)",
+              "linear-gradient(to right bottom, #181825, #2d193c, #181825)",
+              "linear-gradient(to right bottom, #2d193c, #181825, #181825)",
+              "linear-gradient(to right bottom, #181825, #181825, #2d193c)",
             ],
           }}
           transition={{
@@ -27,7 +29,7 @@ const NotFound = () => {
       {[...Array(6)].map((_, i) => (
         <motion.div
           key={i}
-          className="absolute text-purple-900/20 text-4xl sm:text-5xl md:text-6xl"
+          className="absolute text-4xl text-[#2d193c]/30 sm:text-5xl md:text-6xl"
           initial={{
             x: Math.random() * window.innerWidth,
             y: Math.random() * window.innerHeight,
@@ -48,20 +50,19 @@ const NotFound = () => {
         </motion.div>
       ))}
 
-      <div className="relative z-10 text-center px-4">
+      <div className="relative z-10 px-4 text-center">
         <motion.div
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{
             type: "spring",
             stiffness: 260,
-            damping: 20,
           }}
           className="mb-4 sm:mb-6 md:mb-8"
         >
           <h1
-            className="text-[80px] sm:text-[120px] md:text-[150px] font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-700 via-purple-300 to-purple-700 leading-none
-            drop-shadow-[0_0_15px_rgba(147,51,234,0.5)]"
+            className="text-[80px] sm:text-[120px] md:text-[150px] font-black text-transparent bg-clip-text bg-gradient-to-r from-[#6d28d9] via-[#a78bfa] to-[#6d28d9] leading-none
+            drop-shadow-[0_0_15px_rgba(109,40,217,0.5)]"
           >
             404
           </h1>
@@ -74,43 +75,31 @@ const NotFound = () => {
           className="space-y-4 sm:space-y-6"
         >
           <h2
-            className="text-2xl sm:text-4xl md:text-5xl font-bold text-purple-200 mb-2 sm:mb-4
-            drop-shadow-[0_0_10px_rgba(147,51,234,0.3)]"
+            className="text-2xl sm:text-4xl md:text-5xl font-bold text-[#a78bfa] mb-2 sm:mb-4
+            drop-shadow-[0_0_10px_rgba(109,40,217,0.3)]"
           >
             Game Over! Page Not Found
           </h2>
-          <p className="text-base sm:text-lg md:text-xl text-purple-200/80 mb-4 sm:mb-6 md:mb-8 max-w-lg mx-auto px-4">
+          <p className="max-w-lg px-4 mx-auto mb-4 text-base sm:text-lg md:text-xl text-[#a78bfa]/80 sm:mb-6 md:mb-8">
             Looks like you've ventured into uncharted territory! This level
             doesn't exist in our gaming universe.
           </p>
         </motion.div>
 
-        <motion.div
-          className="relative mt-2"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+        <Button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="mt-4 px-6 sm:px-8 py-2.5 text-base sm:text-lg font-bold leading-none text-[#ede9fe] bg-gradient-to-r from-[#2d193c] via-[#6d28d9] to-[#2d193c] rounded-full transition-all duration-200 hover:shadow-[0_0_30px_rgba(109,40,217,0.5)] border border-[#6d28d9]/30 backdrop-blur-sm"
         >
-          <Link
-            to="/"
-            className="inline-block px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-bold text-purple-100
-              bg-gradient-to-r from-purple-900 via-purple-800 to-purple-900
-              rounded-full transform transition-all duration-200
-              hover:shadow-[0_0_30px_rgba(147,51,234,0.5)]
-              border border-purple-500/20 backdrop-blur-sm"
-          >
-            Return to{" "}
-            <span className="font-bold bg-gradient-to-r from-yellow-400 via-pink-500 to-cyan-500 bg-clip-text text-transparent">
-              GamerX
-            </span>
-          </Link>
-        </motion.div>
+          Back to
+        </Button>
 
         {/* Animated dots */}
         <motion.div className="mt-12 space-x-2">
           {[...Array(3)].map((_, i) => (
             <motion.span
               key={i}
-              className="inline-block w-4 h-4 rounded-full bg-gradient-to-r from-purple-700 to-purple-400"
+              className="inline-block w-4 h-4 rounded-full bg-gradient-to-r from-[#6d28d9] to-[#a78bfa]"
               animate={{
                 y: [0, -15, 0],
                 scale: [1, 1.2, 1],
@@ -127,5 +116,3 @@ const NotFound = () => {
     </div>
   );
 };
-
-export default NotFound;

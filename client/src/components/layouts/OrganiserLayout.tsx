@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Navigate, Outlet } from "react-router-dom";
-import { useUserStore } from "@/store/useUserStore";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import {
   BarChart,
   BarChart2,
@@ -12,8 +12,8 @@ import {
 } from "lucide-react";
 import { ORG_ADMIN_ROLES, SCOPES } from "@/lib/roles";
 import { hasAnyRole } from "@/lib/permissions";
-import Sidebar from "../super-admin/Sidebar";
-import Topbar from "../super-admin/Topbar";
+import Topbar from "@/ui/super-admin/Topbar";
+import Sidebar from "@/ui/super-admin/Sidebar";
 
 const sidebarLinks = [
   {
@@ -55,7 +55,7 @@ const sidebarLinks = [
 ];
 
 export default function OrganizerLayout() {
-  const { user } = useUserStore();
+  const { user } = useAuthStore();
 
   const hasPermission = hasAnyRole(user, SCOPES.ORG, ORG_ADMIN_ROLES);
 

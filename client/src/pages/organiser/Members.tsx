@@ -22,8 +22,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useDebounce } from "@/hooks/useDebounce";
 import toast from "react-hot-toast";
 import { hasOrgRole } from "@/lib/permissions";
-import { useUserStore } from "@/store/useUserStore";
-import usePlayerStore from "@/store/usePlayerStore";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import usePlayerStore from "@/features/player/store/usePlayerStore";
 
 type Member = StoreMember & {
   status: "Active" | "Inactive" | "Pending";
@@ -270,7 +270,7 @@ const Members = () => {
   const { orgData, addStaffs, isLoading, error, getOrgById, removeStaff } =
     useOrganizerStore();
   const { players, searchByUsername } = usePlayerStore();
-  const { user } = useUserStore();
+  const { user } = useAuthStore();
   const debouncedUserQuery = useDebounce(searchTerm, 500);
 
   useEffect(() => {

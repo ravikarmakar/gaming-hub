@@ -1,8 +1,6 @@
 import { motion } from "framer-motion";
 import { Navigate, Outlet } from "react-router-dom";
-import Sidebar from "@/components/super-admin/Sidebar";
-import Topbar from "@/components/super-admin/Topbar";
-import { useUserStore } from "@/store/useUserStore";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import {
   BarChart2,
   Package,
@@ -15,6 +13,8 @@ import {
 } from "lucide-react";
 import { hasAnyRole } from "@/lib/permissions";
 import { PLATFORM_SUPER_ADMIN_ROLES, SCOPES } from "@/lib/roles";
+import Sidebar from "@/ui/super-admin/Sidebar";
+import Topbar from "@/ui/super-admin/Topbar";
 
 const sidebarLinks = [
   {
@@ -62,7 +62,7 @@ const sidebarLinks = [
 ];
 
 export default function SuperAdminLayout() {
-  const { user, checkingAuth } = useUserStore();
+  const { user, checkingAuth } = useAuthStore();
 
   const hasPermission = hasAnyRole(
     user,

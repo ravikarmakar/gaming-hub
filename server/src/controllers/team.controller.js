@@ -12,7 +12,7 @@ import {
 } from "../services/team.service.js";
 
 export const createTeam = TryCatchHandler(async (req, res, next) => {
-  const { teamName } = req.body;
+  const { teamName, bio } = req.body;
   const { userId } = req.user;
   const imageFile = req.file;
 
@@ -32,13 +32,14 @@ export const createTeam = TryCatchHandler(async (req, res, next) => {
     teamName,
     captain: user._id,
     imageUrl,
+    bio,
     teamMembers: [{ user: user._id, roleInTeam: "igl" }],
   };
 
   const newTeam = await createNewTeam(teamData);
 
   user.teamId = newTeam._id;
-  user.role.push({
+  user.roles.push({
     scope: Scopes.TEAM,
     role: Roles.TEAM.OWNER,
     scopeId: newTeam._id,
@@ -329,9 +330,7 @@ export const addMembers = TryCatchHandler(async (req, res, next) => {
   if (issues.unverified.length)
     return next(
       new CustomError(
-        `Users with usernames: ${issues.unverified.join(
-          ", "
-        )} have not verified their email.`,
+        `${issues.unverified.join(", ")} have not verified their email.`,
         400
       )
     );
@@ -358,7 +357,7 @@ export const addMembers = TryCatchHandler(async (req, res, next) => {
 });
 
 export const removeMember = TryCatchHandler(async (req, res, next) => {
-  const { memberId } = req.body;
+  const memberId = req.params.id;
 
   if (!memberId)
     return next(new CustomError("Please provide a member ID to remove.", 400));
@@ -369,15 +368,12 @@ export const removeMember = TryCatchHandler(async (req, res, next) => {
 
   const team = await findTeamById(currentUser.teamId);
 
-  // Only captain can remove members
   if (req.user.userId.toString() !== team.captain.toString())
     return next(new CustomError("Only captain can remove members.", 403));
 
-  // Prevent captain from removing himself
   if (memberId.toString() === team.captain.toString())
     return next(new CustomError("Captain cannot remove themselves.", 400));
 
-  // Check if the member exists in the team
   const memberIndex = team.teamMembers.findIndex(
     (m) => m.user.toString() === memberId.toString()
   );
@@ -385,11 +381,9 @@ export const removeMember = TryCatchHandler(async (req, res, next) => {
   if (memberIndex === -1)
     return next(new CustomError("Member not found in the team.", 404));
 
-  // Remove member from team
   team.teamMembers.splice(memberIndex, 1);
   await team.save();
 
-  // Clear the user's teamId
   await User.findByIdAndUpdate(memberId, { teamId: null });
 
   res.status(200).json({
@@ -432,6 +426,7 @@ export const leaveMember = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "You have successfully left the team.",
+    team,
   });
 });
 
@@ -557,8 +552,10 @@ export const deleteTeam = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Team deleted successfully",
+    team,
   });
 });
 
 // to-do  - whatif memeber left the team ? automatic letf form the evenst register and what?
 // to-do  --> using socket.io emit real time events to users
+// TODO: invalidate the user cache to when someting change in database

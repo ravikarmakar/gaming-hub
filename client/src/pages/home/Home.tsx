@@ -3,8 +3,8 @@ import WhatsNew from "./WhatsNew";
 import FeaturedEvents from "../events/FeaturedEvents";
 import TrendingEvents from "../events/trending/TrendingEvents";
 import { eventData } from "@/lib/constants";
-import EsportsRankings from "@/components/esports-rankings/EsportsRankings";
-import PremiumServices from "@/components/premium/PremiumServices";
+import EsportsRankings from "@/ui/esports-rankings/EsportsRankings";
+import PremiumServices from "@/ui/premium/PremiumServices";
 import Hero from "./Hero";
 
 const Home = () => {

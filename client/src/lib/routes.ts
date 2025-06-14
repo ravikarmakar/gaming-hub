@@ -4,33 +4,77 @@ export const ROUTES = {
   REGISTER: "/register",
   FORGOT_PASSWORD: "/forgot-password",
   DISCORD_CALLBACK: "/auth/discord/callback",
-  PROFILE: "/profile",
-  ORG_PROFILE: "/org-profile/:id",
+  PLAYER_PROFILE: "/player/:id",
+  TEAM_PROFILE: "/team/:id",
+  ORG_PROFILE: "/organizer/:id",
   EMAIL_VERIFY: "/verify-account",
-  TEAM_PROFILE: "/team-profile",
+  TEAM_DASHBOARD: "/dashboard/team",
   ORG_DASHBOARD: "/organizer",
   SUPER_ADMIN: "/super-admin",
   CREATE_ORG: "/create-org",
-  TEAM_DASHBOARD: "/team/:teamId/dashboard",
+  NOTIFICATIONS: "/notifications",
 };
 
 // export const ROUTES = {
-//   PROFILE: "/profile",
-//   USERPROFILE: "/profile/:id",
-//   CREATE_TEAM: "/create-team",
-//   TEAMPROFILE: "/team-profile",
-//   USERTEAMPROFILE: "/team-profile/:id",
-//   EVENTS: "/events", // /events/:type
-//   EVENT: "/events/:id",
-//   FREE_TOURNAMENTS: "/free-tournaments",
-//   BLOG: "/blog",
-//   BLOG_POST: "/blog/:id",
-//   SCRIMSPAGE: "/scrims",
-//   TEAMS: "/teams",
-//   ADMIN: "/admin/dashboard",
-//   MAXADMIN: "/admin/super",
-//   NOTIFICATION: "/notifications",
-//   PLAYER: "/players",
-//   NOTFOUND: "/*",
-//   ORGANIZER_DASHBOARD: "/dashboard/*",
+//   HOME: "/",
+
+//   AUTH: {
+//     LOGIN: "/login",
+//     REGISTER: "/register",
+//     FORGOT_PASSWORD: "/forgot-password",
+//     DISCORD_CALLBACK: "/auth/discord/callback",
+//     VERIFY_EMAIL: "/verify-account",
+//   },
+
+//   DASHBOARD: {
+//     PLAYER: "/dashboard/player",
+//     TEAM: "/dashboard/team",
+//     ORGANIZER: "/organizer",
+//     SUPER_ADMIN: "/super-admin",
+//   },
+
+//   PROFILE: {
+//     PLAYER: "/player/:id",
+//     TEAM: "/team/:id",
+//     ORGANIZER: "/organizer/:id",
+//   },
+
+//   TEAM: {
+//     SETTINGS: "/dashboard/team/settings",
+//     TOURNAMENTS: "/dashboard/team/tournaments",
+//     PLAYERS: "/dashboard/team/players",
+//     PERFORMANCE: "/dashboard/team/performance",
+//   },
+
+//   ORGANIZER: {
+//     CREATE: "/create-org",
+//   },
+
+//   NOTIFICATIONS: "/notifications",
+// };
+
+// lib/routes/index.ts
+// export const ROUTES = {
+//   AUTH: {
+//     LOGIN: "/login",
+//     REGISTER: "/register",
+//     FORGOT_PASSWORD: "/forgot-password",
+//     VERIFY_EMAIL: "/verify-account",
+//     DISCORD_CALLBACK: "/auth/discord/callback",
+//   },
+//   DASHBOARD: {
+//     ORG: "/organizer",
+//     TEAM: "/dashboard/team",
+//     SUPER_ADMIN: "/super-admin",
+//   },
+//   PROFILE: {
+//     PLAYER: "/player/:id",
+//     TEAM: "/team/:id",
+//     ORG: "/organizer/:id",
+//   },
+//   GENERAL: {
+//     HOME: "/",
+//     CREATE_ORG: "/create-org",
+//     NOTIFICATIONS: "/notifications",
+//   },
 // };

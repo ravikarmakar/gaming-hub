@@ -1,5 +1,5 @@
 import { ROUTE_PERMISSIONS } from "@/lib/roles";
-import { User } from "@/store/useUserStore";
+import { User } from "@/features/auth/store/useAuthStore";
 
 export const hasAnyRole = (
   user: User | null,
@@ -9,7 +9,7 @@ export const hasAnyRole = (
 ): boolean => {
   if (!user) return false;
 
-  return user.role?.some((r) => {
+  return user.roles?.some((r) => {
     const matchScope = r.scope === scope;
     const matchRole = allowedRoles.includes(r.role);
     const matchOrg = orgId ? r.scopeId === orgId : true;
@@ -27,7 +27,7 @@ export const hasRoutePermission = (
   const allowedRoles = ROUTE_PERMISSIONS[routePath];
   if (!allowedRoles) return true; // no restriction
 
-  return user.role.some((r) => {
+  return user.roles.some((r) => {
     const isAllowed = allowedRoles.includes(r.role);
     const isOrgValid = orgId ? r.scopeId === orgId : true;
     return isAllowed && isOrgValid;
@@ -41,7 +41,7 @@ export const hasOrgRole = (
 ): boolean => {
   if (!user) return false;
 
-  return user.role.some(
+  return user.roles.some(
     (r) =>
       roles.includes(r.role) &&
       r.scope === "org" &&

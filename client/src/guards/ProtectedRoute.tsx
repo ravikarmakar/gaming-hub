@@ -1,11 +1,13 @@
-import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useUserStore } from "@/store/useUserStore";
 import { useEffect } from "react";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
+
 import LoadingSpinner from "@/components/LoadingSpinner";
 
 const ProtectedRoute = () => {
   const location = useLocation();
-  const { user, checkingAuth, checkAuth } = useUserStore();
+  const { user, checkingAuth, checkAuth, isLoading } = useAuthStore();
 
   useEffect(() => {
     if (!user) checkAuth();
@@ -15,7 +17,7 @@ const ProtectedRoute = () => {
     return <LoadingSpinner />;
   }
 
-  if (!user) {
+  if (!user || checkingAuth || isLoading) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
