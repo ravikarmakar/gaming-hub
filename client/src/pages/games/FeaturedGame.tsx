@@ -110,7 +110,7 @@ const GameStore: React.FC = () => {
           {Array.from({ length: 20 }).map((_, i) => (
             <motion.div
               key={i}
-              className="absolute w-1 h-1 bg-sky-500 rounded-full opacity-30"
+              className="absolute w-1 h-1 rounded-full bg-sky-500 opacity-30"
               animate={{
                 y: ["0vh", "100vh"],
                 x: Math.sin(i) * 20,
@@ -131,10 +131,10 @@ const GameStore: React.FC = () => {
       </div>
 
       {/* Main Container */}
-      <div className="container mx-auto px-6 sm:px-6 relative z-10">
+      <div className="container relative z-10 px-6 mx-auto sm:px-6">
         {/* Headers */}
         <motion.div
-          className="text-center mb-4 lg:mb-16"
+          className="mb-4 text-center lg:mb-16"
           initial={{ y: 60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{
@@ -142,11 +142,11 @@ const GameStore: React.FC = () => {
             ease: [0.6, -0.05, 0.01, 0.99],
           }}
         >
-          <motion.h1 className="text-4xl sm:text-4xl md:text-5xl font-bold mb-2 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-red-500 via-purple-500 to-pink-600">
+          <motion.h1 className="mb-2 text-4xl font-bold tracking-tight text-transparent sm:text-4xl md:text-5xl bg-clip-text bg-gradient-to-r from-red-500 via-purple-500 to-pink-600">
             Favourite Games
           </motion.h1>
           <motion.p
-            className="text-gray-300 max-w-2xl mx-auto text-sm sm:text-base"
+            className="max-w-2xl mx-auto text-sm text-gray-300 sm:text-base"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
@@ -165,7 +165,7 @@ const GameStore: React.FC = () => {
           {/* Featured game section - Only shown on desktop */}
           {!isMobileView && (
             <motion.div
-              className="relative flex-1 justify-center items-center"
+              className="relative items-center justify-center flex-1"
               initial={{ x: -100, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.6 }}

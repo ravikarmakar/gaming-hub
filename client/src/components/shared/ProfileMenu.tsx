@@ -1,4 +1,5 @@
-import { Loader2, LogOut, User, UserCog } from "lucide-react";
+import { useState } from "react";
+import { Loader2, LogOut, PlusCircle, User, UserCog } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -16,13 +17,21 @@ import {
 
 import { ROUTES } from "@/lib/routes";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import CreateTeamModal from "@/features/teams/ui/components/CreateTeamModal";
 
 const ProfileMenu = () => {
   const navigate = useNavigate();
 
   const { user, logout, isLoading } = useAuthStore();
 
-  const profileOptions = [
+  const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false);
+
+  const profileOptions: Array<{
+    name: string;
+    icon: React.ComponentType<{ className?: string }>;
+    href?: string;
+    onClick?: () => void;
+  }> = [
     {
       name: "My Profile",
       icon: User,
@@ -36,7 +45,13 @@ const ProfileMenu = () => {
             href: ROUTES.TEAM_PROFILE.replace(":id", user.teamId),
           },
         ]
-      : []),
+      : [
+          {
+            name: "Create Team",
+            icon: PlusCircle,
+            onClick: () => setIsCreateTeamOpen(true),
+          },
+        ]),
     ...(user?.teamId
       ? [
           {
@@ -50,6 +65,11 @@ const ProfileMenu = () => {
 
   return (
     <>
+      <CreateTeamModal
+        isOpen={isCreateTeamOpen}
+        setIsOpen={setIsCreateTeamOpen}
+      />
+
       {isLoading ? (
         <Skeleton className="w-10 h-10 bg-gray-700 border-2 rounded-full border-purple-500/30" />
       ) : user ? (
@@ -100,9 +120,12 @@ const ProfileMenu = () => {
               {profileOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.name}
-                  onClick={() => navigate(option.href)}
+                  onClick={() => {
+                    if (option.href) navigate(option.href);
+                    else option.onClick?.();
+                  }}
                   className={`flex items-center justify-between text-sm cursor-pointer px-3 py-2
-                          focus:bg-purple-800/20 focus:text-white transition-colors duration-200`}
+            focus:bg-purple-800/20 focus:text-white transition-colors duration-200`}
                 >
                   <div className="flex items-center gap-3">
                     <option.icon className="size-4" />

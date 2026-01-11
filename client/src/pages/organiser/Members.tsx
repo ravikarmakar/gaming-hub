@@ -1,5 +1,8 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   UserPlus,
   Mail,
@@ -16,14 +19,16 @@ import {
   Trash2,
   Pen,
 } from "lucide-react";
-import { useOrganizerStore, Member as StoreMember } from "@/store/useOrganizer";
-import { useNavigate } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
-import { useDebounce } from "@/hooks/useDebounce";
-import toast from "react-hot-toast";
-import { hasOrgRole } from "@/lib/permissions";
+
+import {
+  useOrganizerStore,
+  Member as StoreMember,
+} from "@/features/organizer/store/useOrganizer";
+import { usePlayerStore } from "@/features/player/store/usePlayerStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import usePlayerStore from "@/features/player/store/usePlayerStore";
+
+import { useDebounce } from "@/hooks/useDebounce";
+import { hasOrgRole } from "@/lib/permissions";
 
 type Member = StoreMember & {
   status: "Active" | "Inactive" | "Pending";
@@ -474,8 +479,8 @@ const Members = () => {
                 {players && players.length > 0 ? (
                   <>
                     {players.map((user) => {
-                      const isSelected = selectedIds.includes(user._id);
-                      const alreadyMember = isAlreadyMember(user._id);
+                      const isSelected = selectedIds.includes(user._id ?? "");
+                      const alreadyMember = isAlreadyMember(user._id ?? "");
                       return (
                         <div
                           key={user._id}
@@ -486,7 +491,7 @@ const Members = () => {
                               ? "bg-purple-700 cursor-pointer"
                               : "bg-gray-800 hover:bg-gray-700 cursor-pointer"
                           }`}
-                          onClick={() => toggleSelection(user._id)}
+                          onClick={() => toggleSelection(user._id ?? "")}
                         >
                           <div className="flex items-center gap-3">
                             <img

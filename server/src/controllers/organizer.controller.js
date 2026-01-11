@@ -16,6 +16,8 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
   const cacheKey = `user_profile:${userId}`;
   const { name, email, description, tag } = req.body;
 
+  console.log(req.body);
+
   const imageFile = req.file;
   // uplaod image here
   const imageUrl = "https://new-my-image";
@@ -41,7 +43,7 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
     tag,
   });
 
-  user.role.push({
+  user.roles.push({
     scope: Scopes.ORG,
     role: Roles.ORG.OWNER,
     scopeId: newOrg._id,

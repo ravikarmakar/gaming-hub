@@ -9,7 +9,7 @@ import { errorHandle } from "./middleware/error.middleware.js";
 import connectDB from "./config/db.js";
 
 import authRouter from "./routes/auth.route.js";
-import userRouter from "./routes/user.route.js";
+import userRouter from "./routes/player.route.js";
 import organizerRouter from "./routes/organizer.route.js";
 
 // Team Imports
@@ -42,7 +42,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/organizers", organizerRouter);
 app.use("/api/teams", teamRouter);
-app.use("/api/users", userRouter);
+app.use("/api/players", userRouter);
 
 app.use("/api/notifications", notificationRouter);
 app.use("/api/invitations", invitationRouter);

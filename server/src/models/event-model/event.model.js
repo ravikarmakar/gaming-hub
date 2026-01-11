@@ -25,6 +25,10 @@ const eventSchema = new mongoose.Schema(
       ref: "Organizer",
       required: true,
     },
+    team_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Team",
+    },
   },
   { timestamps: true }
 );

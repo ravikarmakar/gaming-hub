@@ -47,7 +47,7 @@ export const useOrganizerStore = create<OrganizerStateType>((set) => ({
     set({ isLoading: true, error: null });
     try {
       await axiosInstance.post("/organizers/create-org", orgData);
-      set({ isLoading: false });
+      set({ isLoading: false, error: null });
       return true;
     } catch (error) {
       const errMsg = axios.isAxiosError(error)

@@ -80,4 +80,4 @@ router.post(
 
 export default router;
 
-// to-do ---->> update profile, block user, unblock user
+// TODO ---->> update profile, block user, unblock user

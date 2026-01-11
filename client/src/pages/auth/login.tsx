@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Mail, Lock, LoaderCircle, ArrowRight } from "lucide-react";
+import { LoaderCircle, ArrowRight } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,7 +7,7 @@ import { SocialLogin } from "./social-login";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { Input } from "@/components/ui/input";
 import {
-  loginSchema,
+  // loginSchema,
   LoginSchemaType,
 } from "@/schemas/auth-validation/loginSchema";
 import { useGoogleLogin } from "@react-oauth/google";
@@ -17,10 +17,10 @@ const Login: React.FC = () => {
     identifier: "",
     password: "",
   });
-  const [validationErrors, setValidationErrors] = useState<Record<
-    string,
-    string
-  > | null>(null);
+
+  // validationErrors ||is currently not used but kept for future use
+
+  // const [setValidationErrors] = useState<Record<string, string> | null>(null);
   const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
   const { isLoading, error, login, googleAuth } = useAuthStore();
@@ -55,22 +55,22 @@ const Login: React.FC = () => {
     e.preventDefault();
 
     // Zod validation
-    const ValidationResult = loginSchema.safeParse(formData);
+    // const ValidationResult = loginSchema.safeParse(formData);
 
-    if (!ValidationResult.success) {
-      const errors = ValidationResult.error.errors.map((err) => ({
-        field: err.path[0],
-        message: err.message,
-      }));
+    // if (!ValidationResult.success) {
+    //   const errors = ValidationResult.error.errors.map((err) => ({
+    //     field: err.path[0],
+    //     message: err.message,
+    //   }));
 
-      const errorObject = errors.reduce((acc, err) => {
-        acc[err.field] = err.message;
-        return acc;
-      }, {} as Record<string, string>);
-      setValidationErrors(errorObject);
-      return;
-    }
-    setValidationErrors(null);
+    //   const errorObject = errors.reduce((acc, err) => {
+    //     acc[err.field] = err.message;
+    //     return acc;
+    //   }, {} as Record<string, string>);
+    //   setValidationErrors(errorObject);
+    //   return;
+    // }
+    // setValidationErrors(null);
 
     const result = await login(formData.identifier, formData.password);
 
@@ -139,38 +139,46 @@ const Login: React.FC = () => {
         </AnimatePresence>
 
         <motion.div className="space-y-4" variants={itemVariants}>
-          <Input
-            name="identifier"
-            label="Email"
-            type="email"
-            placeholder="Enter your email"
-            icon={<Mail size={18} />}
-            value={formData.identifier}
-            onChange={handleChange}
-            required
-            autoComplete="email"
-            error={
-              validationErrors?.identifier
-                ? [validationErrors?.identifier]
-                : undefined
-            }
-          />
-          <Input
-            name="password"
-            label="Password"
-            type="password"
-            placeholder="Enter your password"
-            icon={<Lock size={18} />}
-            value={formData.password}
-            onChange={handleChange}
-            required
-            autoComplete="current-password"
-            error={
-              validationErrors?.password
-                ? [validationErrors?.password]
-                : undefined
-            }
-          />
+          <div>
+            <label className="block mb-2 text-sm font-medium text-gray-300">
+              Email
+            </label>
+            <Input
+              name="identifier"
+              type="email"
+              placeholder="Enter your email"
+              // icon={<Mail size={18} />}
+              value={formData.identifier}
+              onChange={handleChange}
+              required
+              autoComplete="email"
+              // error={
+              //   validationErrors?.identifier
+              //     ? [validationErrors?.identifier]
+              //     : undefined
+              // }
+            />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium text-gray-300">
+              Password
+            </label>
+            <Input
+              name="password"
+              type="password"
+              placeholder="Enter your password"
+              // icon={<Lock size={18} />}
+              value={formData.password}
+              onChange={handleChange}
+              required
+              autoComplete="current-password"
+              // error={
+              //   validationErrors?.password
+              //     ? [validationErrors?.password]
+              //     : undefined
+              // }
+            />
+          </div>
         </motion.div>
 
         <motion.div

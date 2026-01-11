@@ -31,11 +31,11 @@ const navItems = [
     icon: Gamepad2,
     hasDropdown: true,
     dropdownItems: [
-      { name: "Action", href: "/action" },
-      { name: "Adventure", href: "/adventure" },
-      { name: "RPG", href: "/rgp" },
-      { name: "Strategy", href: "/strategy" },
-      { name: "Sports", href: "/sports" },
+      { name: "Find players", href: "/players" },
+      // { name: "Adventure", href: "/adventure" },
+      // { name: "RPG", href: "/rgp" },
+      // { name: "Strategy", href: "/strategy" },
+      // { name: "Sports", href: "/sports" },
     ],
   },
   {

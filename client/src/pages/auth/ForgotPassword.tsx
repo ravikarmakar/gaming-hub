@@ -119,6 +119,10 @@ const ForgotPassword = () => {
     }
   };
 
+  function onBack() {
+    navigate(-1);
+  }
+
   const handleBack = () => {
     if (isOtpSubmitted) {
       setIsOtpSubmitted(false);
@@ -584,7 +588,3 @@ const ForgotPassword = () => {
 };
 
 export default ForgotPassword;
-
-function onBack() {
-  throw new Error("Function not implemented.");
-}

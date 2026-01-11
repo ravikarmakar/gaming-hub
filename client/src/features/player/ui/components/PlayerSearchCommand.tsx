@@ -14,8 +14,8 @@ import {
 
 import { useDebounce } from "@/hooks/useDebounce";
 
-import usePlayerStore from "../../store/usePlayerStore";
-import { Member } from "@/store/useOrganizer";
+import { usePlayerStore } from "../../store/usePlayerStore";
+import { Member } from "@/features/organizer/store/useOrganizer";
 
 export const PlayerSearchCommand = ({
   open,

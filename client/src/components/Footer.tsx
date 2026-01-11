@@ -62,7 +62,7 @@ const socials = [
 
 const Footer = () => {
   return (
-    <footer className="relative bg-gradient-to-b from-cyan-900/30 via-[#0f141b] to-black">
+    <footer className="relative bg-gradient-to-b from-purple-900/10 via-[#12001d] to-black">
       <div className="container px-4 py-12 mx-auto">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-5">
           {/* Logo & Social Section */}
@@ -73,7 +73,6 @@ const Footer = () => {
               transition={{ duration: 0.5 }}
               className="flex flex-col items-center space-y-6 lg:items-start"
             >
-              {/* <Logo /> */}
               <div className="flex flex-wrap justify-center gap-3 lg:justify-start">
                 {socials.map(({ icon: Icon, label, color }) => (
                   <motion.a
@@ -108,7 +107,7 @@ const Footer = () => {
                   transition={{ duration: 0.5 }}
                 >
                   <div className="flex items-center gap-2 font-bold text-white">
-                    <Icon className="w-5 h-5 text-cyan-400" />
+                    <Icon className="w-5 h-5 text-purple-400" />
                     <h3>{title}</h3>
                   </div>
                   <ul className="space-y-2 text-center sm:text-left">
@@ -120,7 +119,7 @@ const Footer = () => {
                         >
                           <span className="relative">
                             {label}
-                            <span className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-[#5eead4] via-[#8b5cf6] to-[#5eead4] transform scale-x-0 group-hover:scale-x-100 transition-transform" />
+                            <span className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-[#bb5eea] via-[#8b5cf6] to-[#55015d] transform scale-x-0 group-hover:scale-x-100 transition-transform" />
                           </span>
                         </a>
                       </motion.li>

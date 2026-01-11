@@ -9,21 +9,21 @@ import { useAuthStore } from "./features/auth/store/useAuthStore";
 import AuthLayout from "@/components/layouts/auth-layout";
 import MainLayout from "@/components/layouts/MainLayout";
 
-const Home = lazy(() => import("./pages/home/Home"));
+const HomePage = lazy(() => import("@/features/home/ui/pages/HomePage"));
 const Login = lazy(() => import("./pages/auth/login"));
 const SignupPage = lazy(() => import("./pages/auth/signup"));
 const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
 const VerifyEmail = lazy(() => import("./pages/auth/VerifyEmail"));
 const DiscordCallback = lazy(() => import("./pages/auth/discord-callback"));
 
-const CreateOrg = lazy(() => import("./pages/organiser/CreateOrg"));
+const CreateOrg = lazy(() => import("@/features/organizer/ui/pages/CreateOrg"));
 const OrganizerProfile = lazy(
   () => import("./pages/organiser/OrganizerProfile")
 );
 const Dashboard = lazy(() => import("./pages/organiser/Dashboard"));
 const Members = lazy(() => import("./pages/organiser/Members"));
 const OrganizerLayout = lazy(
-  () => import("@/components/layouts/OrganiserLayout")
+  () => import("@/features/organizer/ui/components/OrganiserLayout")
 );
 
 const PlayerIdPage = lazy(
@@ -44,7 +44,8 @@ import LoadingSpinner from "./components/LoadingSpinner";
 import { ErrorFallback } from "./components/ErrorFallback";
 import TeamDashboard from "./features/teams/ui/pages/TeamDashboard";
 import TeamDashboardLayout from "./features/teams/ui/layouts/TeamLayout";
-import TeamMembersPage from "./features/teams/ui/pages/TeamMembersPage";
+import TeamMembersPage from "@/features/teams/ui/pages/TeamMembersPage";
+import AllPlayerPage from "@/features/player/ui/pages/AllPlayerPage";
 
 const App = () => {
   const hasCalled = useRef(false);
@@ -64,7 +65,7 @@ const App = () => {
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             <Route element={<MainLayout />}>
-              <Route index element={<Home />} />
+              <Route index element={<HomePage />} />
 
               <Route element={<ProtectedRoute />}>
                 <Route path={ROUTES.EMAIL_VERIFY} element={<VerifyEmail />} />
@@ -73,6 +74,7 @@ const App = () => {
                   path={ROUTES.ORG_PROFILE}
                   element={<OrganizerProfile />}
                 />
+                <Route path={ROUTES.ALL_PLAYERS} element={<AllPlayerPage />} />
                 <Route
                   path={ROUTES.PLAYER_PROFILE}
                   element={<PlayerIdPage />}
@@ -106,11 +108,11 @@ const App = () => {
               <Route path={ROUTES.ORG_DASHBOARD} element={<OrganizerLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="members" element={<Members />} />
-                <Route path="events" element={<div>Events</div>} />
                 <Route path="tournaments" element={<div>Tournaments</div>} />
+                <Route path="add-tournaments" element={<div>Add events</div>} />
                 <Route path="analytics" element={<div>Analytics</div>} />
                 <Route path="games" element={<div>Games</div>} />
-                <Route path="manage-staff" element={<div>Manage Staff</div>} />
+                <Route path="notifications" element={<div>Notifi</div>} />
               </Route>
 
               <Route path={ROUTES.SUPER_ADMIN} element={<SuperAdminLayout />}>

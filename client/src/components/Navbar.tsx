@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, Gamepad2 } from "lucide-react";
 
@@ -17,19 +17,34 @@ import {
   PLATFORM_SUPER_ADMIN_ROLES,
   SCOPES,
 } from "@/lib/roles";
+import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/routes";
 import { hasAnyRole } from "@/lib/permissions";
-
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import NavItems from "./shared/NavItems";
 import ProfileMenu from "./shared/ProfileMenu";
 import { DashboardButton } from "./shared/DashboardButton";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const { user, isLoading } = useAuthStore();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const offset = window.scrollY;
+      if (offset > 50) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const isSuperAdmin = hasAnyRole(
     user,
@@ -39,7 +54,14 @@ const Navbar = () => {
   const hasAnyOrgRole = hasAnyRole(user, SCOPES.ORG, ORG_ADMIN_ROLES);
 
   return (
-    <nav className="fixed z-50 w-full font-sans transition-all duration-300 ease-in-out border-b shadow-lg bg-gray-900/90 backdrop-blur-md border-purple-900/50 shadow-purple-900/10">
+    <nav
+      className={cn(
+        "fixed z-50 w-full font-sans transition-all duration-300 ease-in-out border-b backdrop-blur-md",
+        scrolled
+          ? "bg-gray-950/90 border-purple-900/50 shadow-lg shadow-purple-900/10"
+          : "bg-transparent border-transparent shadow-none"
+      )}
+    >
       <div className="px-4 mx-auto max-w-8xl sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center flex-shrink-0">
@@ -75,6 +97,7 @@ const Navbar = () => {
               isSuperAdmin={isSuperAdmin}
               hasAnyOrgRole={hasAnyOrgRole}
               isLoading={isLoading}
+              user={user!}
             />
 
             {/* Profile Icon */}
@@ -89,7 +112,7 @@ const Navbar = () => {
                     size="icon"
                     className="p-2 text-gray-300 rounded-md hover:text-white focus-visible:ring-purple-700"
                   >
-                    <Menu className="w-6 h-6" />
+                    <Menu className="w-8 h-8" />
                     <span className="sr-only">Toggle mobile menu</span>
                   </Button>
                 </SheetTrigger>
@@ -106,7 +129,7 @@ const Navbar = () => {
 
                   {/* Mobile Menu Content */}
                   <div className="flex flex-col h-full overflow-y-auto">
-                    {user && (
+                    {user ? (
                       <div className="flex items-center p-3 mb-2 border-b border-gray-800">
                         <Avatar className="w-10 h-10 mr-3 border-2 border-purple-500">
                           <AvatarImage
@@ -124,7 +147,7 @@ const Navbar = () => {
                           <p className="text-xs text-gray-400">{user.email}</p>
                         </div>
                       </div>
-                    )}
+                    ) : null}
 
                     {/* Mobile Navigation Links */}
                     <nav className="flex-1 space-y-1">
@@ -136,10 +159,11 @@ const Navbar = () => {
                       isSuperAdmin={isSuperAdmin}
                       hasAnyOrgRole={hasAnyOrgRole}
                       isLoading={isLoading}
+                      user={user!}
                     />
 
                     {/* Mobile Login Button (if applicable) */}
-                    {(!user || isLoading) && (
+                    {!user || isLoading ? (
                       <Button
                         onClick={() => {
                           navigate(ROUTES.LOGIN);
@@ -149,7 +173,7 @@ const Navbar = () => {
                       >
                         Login
                       </Button>
-                    )}
+                    ) : null}
                   </div>
                 </SheetContent>
               </Sheet>

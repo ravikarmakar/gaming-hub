@@ -1,15 +1,18 @@
 import express from "express";
+
 import {
-  getplayers,
-  getUserProfile,
+  getAllPlayers,
+  getPlayerById,
   searchByUsername,
 } from "../controllers/user.controller.js";
+import { isAuthenticated } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-router.get("/", getplayers);
+router.use(isAuthenticated);
+
+router.get("/", getAllPlayers);
 router.get("/search-users", searchByUsername);
-// router.get("/players", getplayers);
-router.get("/:id", getUserProfile);
+router.get("/:id", getPlayerById);
 
 export default router;

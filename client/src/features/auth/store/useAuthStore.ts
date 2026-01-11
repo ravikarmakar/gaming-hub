@@ -9,6 +9,8 @@ interface Roles {
   scopeId: string;
 }
 
+type EsportsRole = "player" | "sniper" | "support" | "igl" | "coach" | "rusher";
+
 export interface User {
   _id?: string;
   username: string;
@@ -17,6 +19,7 @@ export interface User {
   roles: Roles[];
   orgId: string;
   teamId: string;
+  esportsRole: EsportsRole;
   canCreateOrg: boolean;
   isAccountVerified: boolean;
   verifyOtp: string;

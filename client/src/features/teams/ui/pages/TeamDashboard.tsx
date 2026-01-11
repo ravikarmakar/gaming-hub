@@ -1,5 +1,8 @@
 import { Users, Trophy, Crown, Target } from "lucide-react";
 
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { PlayerHeader } from "@/features/player/ui/components/PlayerHeader";
+
 interface Match {
   id: string;
   opponent: string;
@@ -49,6 +52,8 @@ const memberData = [
 ];
 
 const TeamDashboard = () => {
+  const { user } = useAuthStore();
+
   const recentMatches: Match[] = [
     {
       id: "1",
@@ -111,6 +116,8 @@ const TeamDashboard = () => {
   return (
     <div className="min-h-screen overflow-y-auto text-white bg-gray-900">
       <main className="relative z-10 px-4 py-4 mx-auto md:py-8 max-w-7xl">
+        {user && <PlayerHeader player={user} type="player" />}
+
         <div className="space-y-8">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-4">

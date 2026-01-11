@@ -48,7 +48,7 @@ const Topbar = () => {
           </div>
           {/* Show name on medium and up */}
           <span className="hidden text-sm font-medium text-white md:block">
-            Admin
+            Organizer
           </span>
         </div>
       </div>

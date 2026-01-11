@@ -18,10 +18,10 @@ import { upload } from "../utils/multer.js";
 
 const router = express.Router();
 
+router.use(isAuthenticated);
+
 router.get("/", getOrgDetails);
 router.get("/details/:orgId", getOrgDetails);
-
-router.use(isAuthenticated);
 
 router.post("/create-org", upload.single("image"), createOrg);
 router.put("/update-org", requireRole(Roles.ORG.OWNER, Scopes.ORG), updateOrg); //, upload.single("image")

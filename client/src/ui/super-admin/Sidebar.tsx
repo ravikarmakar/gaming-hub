@@ -162,7 +162,7 @@ const Sidebar: React.FC<SidebarProps> = ({ links, title }) => {
         </div>
 
         {/* Footer */}
-        <div className="pt-4 mt-auto border-t border-gray-800">
+        {/* <div className="pt-4 mt-auto border-t border-gray-800">
           <div className="flex items-center p-4 bg-gray-800 rounded-lg bg-opacity-40">
             <div className="flex items-center justify-center w-8 h-8 mr-3 text-white bg-purple-600 rounded-full">
               <User size={16} />
@@ -178,7 +178,7 @@ const Sidebar: React.FC<SidebarProps> = ({ links, title }) => {
               <LogOut size={18} />
             </button>
           </div>
-        </div>
+        </div> */}
       </div>
     </>
   );

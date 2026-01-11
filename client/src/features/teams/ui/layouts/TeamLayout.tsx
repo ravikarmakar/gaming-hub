@@ -3,9 +3,9 @@ import {
   Users,
   UserPlus,
   Trophy,
-  Settings,
-  BarChart2,
-  Bell,
+  // Settings,
+  // BarChart2,
+  // Bell,
 } from "lucide-react";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -25,26 +25,26 @@ const teamSidebarLinks = [
     icon: UserPlus,
     href: "/dashboard/team/players",
   },
+  // {
+  //   label: "Team Performance",
+  //   icon: BarChart2,
+  //   href: "/dashboard/team/performance",
+  // },
   {
-    label: "Team Performance",
-    icon: BarChart2,
-    href: "/dashboard/team/performance",
-  },
-  {
-    label: "Tournaments",
+    label: "Tournaments Played",
     icon: Trophy,
     href: "/dashboard/team/tournaments",
   },
-  {
-    label: "Team Notifications",
-    icon: Bell,
-    href: "/dashboard/team/notifications",
-  },
-  {
-    label: "Team Settings",
-    icon: Settings,
-    href: "/dashboard/team/settings",
-  },
+  // {
+  //   label: "Team Notifications",
+  //   icon: Bell,
+  //   href: "/dashboard/team/notifications",
+  // },
+  // {
+  //   label: "Team Settings",
+  //   icon: Settings,
+  //   href: "/dashboard/team/settings",
+  // },
 ];
 
 const TeamLayout = () => {

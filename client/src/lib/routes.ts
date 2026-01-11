@@ -6,13 +6,15 @@ export const ROUTES = {
   DISCORD_CALLBACK: "/auth/discord/callback",
   PLAYER_PROFILE: "/player/:id",
   TEAM_PROFILE: "/team/:id",
-  ORG_PROFILE: "/organizer/:id",
   EMAIL_VERIFY: "/verify-account",
   TEAM_DASHBOARD: "/dashboard/team",
-  ORG_DASHBOARD: "/organizer",
-  SUPER_ADMIN: "/super-admin",
+  SUPER_ADMIN: "/super-admin/:id",
   CREATE_ORG: "/create-org",
   NOTIFICATIONS: "/notifications",
+  ALL_PLAYERS: "/players",
+
+  ORG_PROFILE: "/organizer/:id",
+  ORG_DASHBOARD: "/organizer-dashboard/:id",
 };
 
 // export const ROUTES = {

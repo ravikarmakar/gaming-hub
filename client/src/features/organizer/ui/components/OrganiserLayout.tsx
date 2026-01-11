@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useParams } from "react-router-dom";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import {
   BarChart,
@@ -15,47 +15,48 @@ import { hasAnyRole } from "@/lib/permissions";
 import Topbar from "@/ui/super-admin/Topbar";
 import Sidebar from "@/ui/super-admin/Sidebar";
 
-const sidebarLinks = [
-  {
-    id: "dashboard",
-    name: "Dashboard",
-    icon: <BarChart2 size={20} />,
-    href: "/organizer",
-  },
-  {
-    id: "members",
-    name: "Members",
-    icon: <Users size={20} />,
-    href: "/organizer/members",
-  },
-  {
-    id: "events",
-    name: "Events",
-    icon: <Users2 size={20} />,
-    href: "/organizer/events",
-  },
-  {
-    id: "tournaments",
-    name: "Tournaments",
-    icon: <Trophy size={20} />,
-    href: "/organizer/tournaments",
-  },
-  {
-    id: "analytics",
-    name: "Analytics",
-    icon: <BarChart size={20} />,
-    href: "/organizer/analytics",
-  },
-  {
-    id: "notifications",
-    name: "Notifications",
-    icon: <Bell size={20} />,
-    href: "/organizer/games",
-  },
-];
-
 export default function OrganizerLayout() {
   const { user } = useAuthStore();
+  const { id } = useParams();
+
+  const sidebarLinks = [
+    {
+      id: "dashboard",
+      name: "Dashboard",
+      icon: <BarChart2 size={20} />,
+      href: `/organizer-dashboard/${id}`,
+    },
+    {
+      id: "members",
+      name: "Members",
+      icon: <Users size={20} />,
+      href: `/organizer-dashboard/${id}/members`,
+    },
+    {
+      id: "events",
+      name: "Events",
+      icon: <Users2 size={20} />,
+      href: `/organizer-dashboard/${id}/tournaments`,
+    },
+    {
+      id: "add-tournaments",
+      name: "Add-Tournaments",
+      icon: <Trophy size={20} />,
+      href: `/organizer-dashboard/${id}/add-tournaments`,
+    },
+    {
+      id: "analytics",
+      name: "Analytics",
+      icon: <BarChart size={20} />,
+      href: `/organizer-dashboard/${id}/analytics`,
+    },
+    {
+      id: "notifications",
+      name: "Notifications",
+      icon: <Bell size={20} />,
+      href: `/organizer-dashboard/${id}/notifications`,
+    },
+  ];
 
   const hasPermission = hasAnyRole(user, SCOPES.ORG, ORG_ADMIN_ROLES);
 

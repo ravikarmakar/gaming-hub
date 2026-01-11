@@ -1,19 +1,29 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { Award, BarChart3, User, Settings } from "lucide-react";
 
 import { TabContent, Tabs } from "@/components/Tab";
 
 import { PlayerHeader } from "../components/PlayerHeader";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { usePlayerStore } from "../../store/usePlayerStore";
 import { PlayerOverview } from "../components/PlayerOverview";
 import { PlayerAchievements } from "../components/PlayerAchievements";
 import { PlayerStats } from "../components/PlayerStats";
 import { PlayerEquipment } from "../components/PlayerEquipment";
+import { Button } from "@/components/ui/button";
 
 const PlayerIdPage = () => {
+  const { id } = useParams();
+
   const [activeTab, setActiveTab] = useState<string>("overview");
 
-  const { user } = useAuthStore();
+  console.log("Player ID:", id);
+
+  const { fetchPlayerById, selectedPlayer } = usePlayerStore();
+
+  useEffect(() => {
+    if (id) fetchPlayerById(id);
+  }, [id, fetchPlayerById]);
 
   const tabItems = [
     {
@@ -58,7 +68,9 @@ const PlayerIdPage = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-blue-900/30 to-purple-900/30" />
       </div>
 
-      {user && <PlayerHeader player={user} type="player" />}
+      {selectedPlayer && <PlayerHeader player={selectedPlayer} type="player" />}
+
+      <Button>Create Team</Button>
 
       <div className="px-4 mx-auto mb-8 overflow-x-auto max-w-7xl sm:px-6 lg:px-8">
         <Tabs

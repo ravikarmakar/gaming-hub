@@ -1,15 +1,16 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { Navigate, useNavigate } from "react-router-dom";
 import { ZodError } from "zod";
-import { Building2, Tag, Mail, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import toast from "react-hot-toast";
 
-import Input from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
 import { orgSchema } from "@/schemas/org/createOrg";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { useOrganizerStore } from "@/store/useOrganizer";
 import FileUpload from "@/components/FileUplaod";
+
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useOrganizerStore } from "@/features/organizer/store/useOrganizer";
 
 // Interface for organization data
 interface OrgFormData {
@@ -158,15 +159,20 @@ const CreateOrgForm: React.FC = () => {
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.1 }}
+              className="space-y-1.5"
             >
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-gray-200"
+              >
+                Organization Name
+              </label>
               <Input
+                id="name"
                 name="name"
-                label="Organization Name"
                 value={formData.name}
                 onChange={handleInputChange}
-                icon={<Building2 size={18} />}
                 placeholder="Acme Corporation"
-                error={errors.name}
                 required
               />
             </motion.div>
@@ -176,16 +182,22 @@ const CreateOrgForm: React.FC = () => {
               initial={{ x: 20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
+              className="space-y-1.5"
             >
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-gray-200"
+              >
+                Organization Tag
+              </label>
+
               <Input
                 name="tag"
-                label="Organization Tag"
                 value={formData.tag}
                 onChange={handleInputChange}
-                icon={<Tag size={18} />}
                 placeholder="ACM"
-                hint="2-5 uppercase letters"
-                error={errors.tag}
+                // hint="2-5 uppercase letters"
+                // error={errors.tag}
                 required
                 maxLength={5}
                 autoCapitalize="characters"
@@ -202,16 +214,24 @@ const CreateOrgForm: React.FC = () => {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3 }}
+            className="space-y-1.5"
           >
+            <label
+              htmlFor="name"
+              className="block text-sm font-medium text-gray-200"
+            >
+              Organization Contact Email
+            </label>
+
             <Input
               name="email"
-              label="Contact Email"
+              // label="Contact Email"
               type="email"
               value={formData.email}
               onChange={handleInputChange}
-              icon={<Mail size={18} />}
+              // icon={<Mail size={18} />}
               placeholder="contact@organization.com"
-              error={errors.email}
+              // error={errors.email}
               required
             />
           </motion.div>

@@ -1,8 +1,9 @@
+import { places } from "googleapis/build/src/apis/places/index.js";
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import User from "../models/user.model.js";
 import { CustomError } from "../utils/CustomError.js";
 
-export const getUserProfile = async (req, res) => {
+export const getPlayerById = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -16,35 +17,22 @@ export const getUserProfile = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json(user);
+    res.status(200).json({ player: user });
   } catch (error) {
     console.error(`Error in getUserProfile : ${error.message}`);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-export const getplayers = async (req, res) => {
+export const getAllPlayers = async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 10;
-    const cursor = req.query.cursor || null;
-    const search = req.query.search || "";
+    const users = await User.find({
+      _id: { $ne: req.user.userId },
+    });
 
-    let query = {};
-    if (cursor) {
-      query._id = { $gt: cursor };
-    }
-    if (search) {
-      query.name = { $regex: search, $options: "i" };
-    }
-
-    const users = await User.find(query).limit(limit).sort({ _id: 1 });
-
-    const nextCursor =
-      users.length === limit ? users[users.length - 1]._id : null;
-
-    const hasMore = users.length === limit;
-
-    res.json({ users, nextCursor, hasMore });
+    res.status(200).json({
+      players: users,
+    });
   } catch (error) {
     res.status(500).json({ message: "Server Error" });
   }

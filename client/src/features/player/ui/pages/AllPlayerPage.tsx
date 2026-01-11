@@ -1,9 +1,8 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { Gamepad2, Trophy, Star, Users, Activity } from "lucide-react";
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { useDebounce } from "@/hooks/useDebounce";
+import { motion } from "framer-motion";
+import { Gamepad2, Trophy, Star, Activity } from "lucide-react";
+
 import { usePlayerStore } from "@/features/player/store/usePlayerStore";
 
 const containerVariants = {
@@ -49,35 +48,16 @@ const statsVariants = {
   },
 };
 
-const AllPlayers = () => {
-  const {
-    fetchPlayers,
-    hasMore,
-    players,
-    searchTerm,
-    setSearchTerm,
-    error,
-    isLoading,
-  } = usePlayerStore();
-
-  const [query, setQuery] = useState(searchTerm);
-  const debouncedSearchTerm = useDebounce(query, 500);
+const AllPlayerPage = () => {
+  const { isLoading, fetchAllPlayers, players, error } = usePlayerStore();
 
   useEffect(() => {
-    setSearchTerm(debouncedSearchTerm);
-  }, [debouncedSearchTerm]);
+    fetchAllPlayers();
+  }, [fetchAllPlayers]);
 
-  useEffect(() => {
-    if (players.length === 0) {
-      fetchPlayers(true);
-    }
-  }, [players.length]);
+  console.log("Players:", players);
 
-  useEffect(() => {
-    fetchPlayers(true);
-  }, [searchTerm]);
-
-  if (!players)
+  if (!players || isLoading)
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="w-32 h-32 border-t-2 border-b-2 rounded-full animate-spin border-violet-500"></div>
@@ -127,7 +107,7 @@ const AllPlayers = () => {
         )}
 
         {/* Search Input with improved styling */}
-        <div className="relative max-w-2xl mx-auto mb-8">
+        {/* <div className="relative max-w-2xl mx-auto mb-8">
           <input
             type="text"
             placeholder="Search Players..."
@@ -148,7 +128,7 @@ const AllPlayers = () => {
               <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
             </svg>
           </div>
-        </div>
+        </div> */}
 
         <motion.div
           variants={containerVariants}
@@ -157,7 +137,7 @@ const AllPlayers = () => {
           className="grid grid-cols-1 gap-6 mt-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         >
           {players.map((player) => (
-            <Link key={player._id} to={`/profile/${player._id}`}>
+            <Link key={player._id} to={`/player/${player._id}`}>
               <motion.div
                 variants={cardVariants}
                 whileHover="hover"
@@ -173,7 +153,7 @@ const AllPlayers = () => {
                         <div className="w-16 h-16 overflow-hidden rounded-full ring-2 ring-violet-500/30">
                           <img
                             src={player?.avatar}
-                            alt={player.name}
+                            alt={player.username}
                             className="object-cover w-full h-full"
                           />
                         </div>
@@ -183,9 +163,11 @@ const AllPlayers = () => {
                       </div>
                       <div className="text-left">
                         <h3 className="text-xl font-semibold text-white transition-colors group-hover:text-violet-400">
-                          {player.name}
+                          {player.username}
                         </h3>
-                        <p className="text-sm text-gray-400">{player?.name}</p>
+                        <p className="text-sm text-gray-400">
+                          {player?.esportsRole}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -199,7 +181,8 @@ const AllPlayers = () => {
                       <div>
                         <p className="text-sm text-gray-400">Tournaments</p>
                         <p className="text-lg font-semibold text-violet-400">
-                          {player.globalRank}
+                          {/* {player.email} */}
+                          10
                         </p>
                       </div>
                     </motion.div>
@@ -211,7 +194,8 @@ const AllPlayers = () => {
                       <div>
                         <p className="text-sm text-gray-400">Rating</p>
                         <p className="text-lg font-semibold text-fuchsia-400">
-                          {player.globalRank}
+                          {/* {player.username} */}
+                          4.5
                         </p>
                       </div>
                     </motion.div>
@@ -219,15 +203,9 @@ const AllPlayers = () => {
 
                   <div className="mt-6 space-y-2">
                     <div className="flex items-center space-x-2 text-gray-400">
-                      <Users className="w-4 h-4" />
-                      <span className="text-sm">
-                        Team: {player.team || "Solo Player"}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2 text-gray-400">
                       <Activity className="w-4 h-4" />
                       <span className="text-sm">
-                        Experience: {player.playstyle} years
+                        Experience: {player.esportsRole} years
                       </span>
                     </div>
                   </div>
@@ -237,7 +215,7 @@ const AllPlayers = () => {
           ))}
         </motion.div>
 
-        <div className="flex items-center justify-center mt-8 mb-12">
+        {/* <div className="flex items-center justify-center mt-8 mb-12">
           {hasMore && (
             <button
               onClick={() => fetchPlayers()}
@@ -263,10 +241,10 @@ const AllPlayers = () => {
               )}
             </button>
           )}
-        </div>
+        </div> */}
       </motion.div>
     </div>
   );
 };
 
-export default AllPlayers;
+export default AllPlayerPage;

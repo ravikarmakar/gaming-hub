@@ -342,7 +342,17 @@ export const addMembers = TryCatchHandler(async (req, res, next) => {
         !team.teamMembers.some((m) => m.user.toString() === memberId.toString())
       ) {
         team.teamMembers.push({ user: memberId, roleInTeam: "player" });
-        await User.findByIdAndUpdate(memberId, { teamId: team._id });
+        await User.findByIdAndUpdate(memberId, {
+          teamId: team._id,
+          $push: {
+            roles: {
+              scope: "team",
+              role: Roles.TEAM.PLAYER,
+              scopeId: team._id,
+              scopeModel: Scopes.TEAM,
+            },
+          },
+        });
       }
     })
   );
