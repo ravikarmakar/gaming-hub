@@ -43,11 +43,11 @@ app.use("/api/auth", authRouter);
 app.use("/api/organizers", organizerRouter);
 app.use("/api/teams", teamRouter);
 app.use("/api/players", userRouter);
+app.use("/api/events", eventRouter);
 
 app.use("/api/notifications", notificationRouter);
 app.use("/api/invitations", invitationRouter);
 app.use("/api/join-requests", joinRequestRouter);
-app.use("/api/events", eventRouter);
 app.use("/api/prize", prizeRouter);
 app.use("/api/rounds", roundsRouter);
 app.use("/api/groups", groupsRouter);

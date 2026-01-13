@@ -1,8 +1,9 @@
 import jwt from "jsonwebtoken";
 import axios from "axios";
 import qs from "qs";
-import User from "../models/user.model.js";
 import { redis } from "../config/redisClient.js";
+
+import User from "../models/user.model.js";
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
 import {

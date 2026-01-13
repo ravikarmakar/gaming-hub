@@ -1,5 +1,5 @@
 import Prize from "../../models/event-model/prize.model.js";
-import Event from "../../models/event-model/event.model.js";
+import Event from "../../models/event.model.js";
 
 export const createPrizeForEvent = async (req, res) => {
   const { eventId } = req.params;

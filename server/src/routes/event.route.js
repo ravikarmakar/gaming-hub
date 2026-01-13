@@ -1,6 +1,9 @@
 import express from "express";
+
 import {
   createEvent,
+  fetchEventByOrg,
+  fetchEventDetailsById,
   getAllEvents,
   getEventDetails,
   updateEvent,
@@ -10,12 +13,20 @@ import {
   closeRegistration,
 } from "../controllers/event.controller.js";
 import { authorizeRoles, protectRoute } from "../middleware/authMiddleware.js";
+import { isAuthenticated } from "../middleware/auth.middleware.js";
+import { upload } from "../utils/multer.js";
 
 const router = express.Router();
 
 router.get("/", getAllEvents);
+
+router.use(isAuthenticated);
+
+router.post("/create-event", upload.single("image"), createEvent);
+router.get("/org-events/:orgId", fetchEventByOrg);
+router.get("/event-details/:eventId", fetchEventDetailsById);
+
 router.get("/:eventId", getEventDetails);
-router.post("/", protectRoute, authorizeRoles("organizer"), createEvent);
 router.put("/:eventId", authorizeRoles("organizer"), updateEvent);
 router.delete("/:eventId", authorizeRoles("organizer"), deleteEvent);
 router.post("/register/:eventId", protectRoute, registerEvent);

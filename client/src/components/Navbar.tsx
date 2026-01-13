@@ -97,7 +97,7 @@ const Navbar = () => {
               isSuperAdmin={isSuperAdmin}
               hasAnyOrgRole={hasAnyOrgRole}
               isLoading={isLoading}
-              user={user!}
+              user={user}
             />
 
             {/* Profile Icon */}
@@ -159,7 +159,8 @@ const Navbar = () => {
                       isSuperAdmin={isSuperAdmin}
                       hasAnyOrgRole={hasAnyOrgRole}
                       isLoading={isLoading}
-                      user={user!}
+                      // user={user!}
+                      user={user}
                     />
 
                     {/* Mobile Login Button (if applicable) */}

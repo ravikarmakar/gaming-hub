@@ -47,6 +47,10 @@ import TeamDashboardLayout from "./features/teams/ui/layouts/TeamLayout";
 import TeamMembersPage from "@/features/teams/ui/pages/TeamMembersPage";
 import AllPlayerPage from "@/features/player/ui/pages/AllPlayerPage";
 
+import CreateTournament from "@/features/events/ui/pages/CreateTournament";
+import ViewEventOrg from "@/features/organizer/ui/pages/ViewEventOrg";
+import ViewEventById from "./features/events/ui/pages/ViewEventById";
+
 const App = () => {
   const hasCalled = useRef(false);
   const { checkAuth } = useAuthStore();
@@ -84,6 +88,10 @@ const App = () => {
                   element={<div>Notifi</div>}
                 />
                 <Route path={ROUTES.TEAM_PROFILE} element={<TeamIdPage />} />
+                <Route
+                  path={ROUTES.EVENT_DETAILS}
+                  element={<ViewEventById />}
+                />
               </Route>
             </Route>
 
@@ -108,8 +116,8 @@ const App = () => {
               <Route path={ROUTES.ORG_DASHBOARD} element={<OrganizerLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="members" element={<Members />} />
-                <Route path="tournaments" element={<div>Tournaments</div>} />
-                <Route path="add-tournaments" element={<div>Add events</div>} />
+                <Route path="tournaments" element={<ViewEventOrg />} />
+                <Route path="add-tournaments" element={<CreateTournament />} />
                 <Route path="analytics" element={<div>Analytics</div>} />
                 <Route path="games" element={<div>Games</div>} />
                 <Route path="notifications" element={<div>Notifi</div>} />

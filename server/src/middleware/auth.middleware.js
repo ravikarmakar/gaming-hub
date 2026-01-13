@@ -25,7 +25,7 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
 
     req.user = {
       userId: decoded.userId,
-      role: decoded.role,
+      roles: decoded.roles,
     };
 
     next();
@@ -42,7 +42,7 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
 
 export const requireRole = (requiredRole, requiredScope = "platform") => {
   return (req, res, next) => {
-    const userRoles = req.user?.role || [];
+    const userRoles = req.user?.roles || [];
 
     const hasRole = userRoles.some(
       (r) => r.scope === requiredScope && r.role === requiredRole

@@ -34,13 +34,13 @@ export default function OrganizerLayout() {
     },
     {
       id: "events",
-      name: "Events",
+      name: "Tournaments",
       icon: <Users2 size={20} />,
       href: `/organizer-dashboard/${id}/tournaments`,
     },
     {
       id: "add-tournaments",
-      name: "Add-Tournaments",
+      name: "Add Tournaments",
       icon: <Trophy size={20} />,
       href: `/organizer-dashboard/${id}/add-tournaments`,
     },

@@ -1,115 +1,121 @@
 import mongoose from "mongoose";
-import Event from "../models/event-model/event.model.js";
+
 import Organizer from "../models/organizer.model.js";
 import Team from "../models/team.model.js";
 import User from "../models/user.model.js";
+import Event from "../models/event.model.js";
+
 import TeamNotification from "../models/notification-model/team.notification.model.js";
 
-export const getAllEvents = async (req, res) => {
-  try {
-    let { cursor, limit = 10, search } = req.query;
+import { TryCatchHandler } from "../middleware/error.middleware.js";
+import { CustomError } from "../utils/CustomError.js";
 
-    limit = parseInt(limit);
+import { findUserById } from "../services/user.service.js";
 
-    let query = {};
+const requiredFields = [
+  "title",
+  "game",
+  "startDate",
+  "registrationEndsAt",
+  "slots",
+  "category",
+];
 
-    if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
-      ];
-    }
+export const createEvent = TryCatchHandler(async (req, res, next) => {
+  const { userId, roles } = req.user;
 
-    if (cursor) {
-      query._id = { $lt: cursor };
-    }
+  console.log(roles);
 
-    const events = await Event.find(query)
-      .sort({ _id: -1 })
-      .limit(limit + 1);
+  const user = await findUserById(userId);
 
-    let nextCursor = null;
-    if (events.length > limit) {
-      const lastEvent = events.pop();
-      nextCursor = lastEvent._id;
-    }
-    const hasMore = nextCursor !== null;
-
-    // 🔹 Response
-    res.status(200).json({ success: true, events, nextCursor, hasMore });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  const org = await Organizer.findById(user.orgId);
+  if (!org || org.isDeleted) {
+    return next(new CustomError("Organization not found or inactive", 404));
   }
-};
 
-export const createEvent = async (req, res) => {
-  try {
-    const loggedInUser = req.user;
+  const isOrgOwner = roles.some(
+    (r) =>
+      r.scope === "org" &&
+      r.scopeModel === "Organization" &&
+      r.role === "org:owner" &&
+      r.scopeId.toString() === user.orgId.toString()
+  );
+  if (!isOrgOwner)
+    return next(new CustomError("Not authorized for this organization", 403));
 
-    if (!loggedInUser || !loggedInUser.activeOrganizer) {
-      return res
-        .status(403)
-        .json({ message: "You are not an active organizer!" });
+  for (const field of requiredFields) {
+    if (!req.body[field]) {
+      return next(new CustomError(`${field} is required`, 400));
     }
+  }
 
-    const organization = await Organizer.findById(loggedInUser.activeOrganizer);
-    if (!organization) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Organization Not found" });
-    }
+  const startDate = new Date(req.body.startDate);
+  const registrationEnds = new Date(req.body.registrationEnds);
 
-    const {
-      title,
-      game,
-      startDate,
-      registrationEnds,
-      mode,
-      slots,
-      category,
-      prizePool,
-      image,
-      description,
-    } = req.body;
+  if (registrationEnds >= startDate) {
+    return next(
+      new CustomError("Registration must end before event start", 400)
+    );
+  }
 
-    // Validation for missing fields
-    if (
-      !title ||
-      !game ||
-      !startDate ||
-      !registrationEnds ||
-      !mode ||
-      !slots ||
-      !category ||
-      !prizePool ||
-      !image ||
-      !description
-    ) {
-      return res.status(400).json({ message: "All fields are required!" });
-    }
+  if (Number(req.body.slots) <= 0) {
+    return next(new CustomError("Slots must be greater than 0", 400));
+  }
 
-    const newEvent = new Event({
-      title,
-      game,
-      startDate,
-      registrationEnds,
-      mode,
-      slots,
-      category,
-      prizePool,
-      image,
-      description,
-      organizerId: organization._id, // Ensure req.user._id exists
+  if (Number(req.body.prizePool) < 0) {
+    return next(new CustomError("Prize pool cannot be negative", 400));
+  }
+
+  const exists = await Event.findOne({
+    title: req.body.title,
+    orgId: user.orgId,
+  });
+
+  if (exists) {
+    return next(new CustomError("Event already exists", 409));
+  }
+
+  // handle image uplaoding logic here
+  const imageUrl = "https://cloudinary/dummy-image-url";
+
+  const event = await Event.create({
+    ...req.body,
+    orgId: user.orgId,
+    createdBy: user._id,
+    image: imageUrl,
+    trending: false,
+    eventEndsAt: req.body.registrationEndsAt,
+  });
+
+  res.status(201).json(event);
+});
+
+export const fetchEventByOrg = TryCatchHandler(async (req, res, next) => {
+  const { orgId } = req.params;
+
+  const events = await Event.find({ orgId })
+    .sort({ createdAt: -1 })
+    .select("-__v")
+    .lean();
+
+  if (!events.length) {
+    return res.status(200).json({
+      success: true,
+      message: "No events found for this organization",
+      data: [],
     });
-
-    await newEvent.save();
-
-    res.status(201).json(newEvent);
-  } catch (error) {
-    console.log("Error in createTournament controller :", error);
-    res.status(500).json({ message: error.message });
   }
-};
+
+  return res.status(200).json({
+    success: true,
+    count: events.length,
+    data: events,
+  });
+});
+
+export const fetchEventDetailsById = TryCatchHandler(
+  async (req, res, next) => {}
+);
 
 export const getEventDetails = async (req, res) => {
   const { eventId } = req.params;
@@ -413,5 +419,42 @@ export const deleteEvent = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const getAllEvents = TryCatchHandler(async (req, res, next) => {
+  try {
+    let { cursor, limit = 10, search } = req.query;
+
+    limit = parseInt(limit);
+
+    let query = {};
+
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (cursor) {
+      query._id = { $lt: cursor };
+    }
+
+    const events = await Event.find(query)
+      .sort({ _id: -1 })
+      .limit(limit + 1);
+
+    let nextCursor = null;
+    if (events.length > limit) {
+      const lastEvent = events.pop();
+      nextCursor = lastEvent._id;
+    }
+    const hasMore = nextCursor !== null;
+
+    // 🔹 Response
+    res.status(200).json({ success: true, events, nextCursor, hasMore });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 // to-do -  Event host can remove any team from the event

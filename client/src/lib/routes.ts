@@ -15,6 +15,7 @@ export const ROUTES = {
 
   ORG_PROFILE: "/organizer/:id",
   ORG_DASHBOARD: "/organizer-dashboard/:id",
+  EVENT_DETAILS: "/organizer/event/:eventId",
 };
 
 // export const ROUTES = {

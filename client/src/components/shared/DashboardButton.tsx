@@ -10,7 +10,7 @@ type DashboardButtonProps = {
   isSuperAdmin: boolean;
   hasAnyOrgRole: boolean;
   isLoading?: boolean;
-  user: User;
+  user: User | null;
 };
 
 export const DashboardButton = ({
@@ -21,8 +21,7 @@ export const DashboardButton = ({
 }: DashboardButtonProps) => {
   const navigate = useNavigate();
 
-  console.log({ isSuperAdmin, hasAnyOrgRole });
-  console.log("User OrgId", user.orgId);
+  if (!user) return null;
 
   if (!isSuperAdmin && !hasAnyOrgRole) return null;
 
@@ -32,7 +31,7 @@ export const DashboardButton = ({
       size="sm"
       onClick={() => {
         if (isSuperAdmin) navigate(ROUTES.SUPER_ADMIN);
-        else navigate(ROUTES.ORG_DASHBOARD.replace(":id", user.orgId!));
+        else navigate(`/organizer-dashboard/${user.orgId}`);
       }}
       className="items-center hidden px-4 py-2 mr-4 font-medium text-white transition-all duration-200 ease-in-out border border-purple-600 md:inline-flex bg-gray-900/60 hover:bg-gradient-to-r hover:from-purple-700 hover:to-indigo-800 hover:text-white hover:shadow-lg hover:shadow-purple-800/40"
       disabled={isLoading}

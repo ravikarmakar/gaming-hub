@@ -5,14 +5,14 @@ const eventSchema = new mongoose.Schema(
     title: { type: String, required: true },
     game: { type: String, required: true },
     startDate: { type: Date, required: true },
-    registrationEnds: { type: Date, required: true },
-    mode: { type: String, required: true }, // Online / Offline
+    eventEndsAt: { type: Date },
+    registrationEndsAt: { type: Date, required: true },
     slots: { type: Number, required: true }, // Total slots available
-    location: { type: String },
     category: { type: String, required: true }, // Solo, Duo, Squad
     prizePool: { type: Number, default: 0 },
     image: { type: String, required: true },
     description: { type: String, required: true },
+    trending: { type: Boolean },
     status: {
       type: String,
       enum: ["registration-open", "registration-closed", "live", "completed"],
@@ -20,12 +20,12 @@ const eventSchema = new mongoose.Schema(
     },
     likes: { type: Number, default: 0 },
     views: { type: Number, default: 0 },
-    organizerId: {
+    orgId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organizer",
       required: true,
     },
-    team_id: {
+    teamId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Team",
     },
@@ -43,16 +43,3 @@ eventSchema.pre("save", function (next) {
 
 const Event = mongoose.model("Event", eventSchema);
 export default Event;
-
-// TO-DO
-
-//   {
-//     attendees: {
-//       type: Number,
-//       default: 0,
-//     },
-//     venue: {
-//       type: String,
-//       required: true,
-//     },
-//   },

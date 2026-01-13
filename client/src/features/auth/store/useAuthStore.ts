@@ -1,7 +1,8 @@
-import { axiosInstance } from "@/lib/axios";
 import { create } from "zustand";
-import "../../../lib/axiosInterceptor";
 import axios from "axios";
+
+import { axiosInstance } from "@/lib/axios";
+import "../../../lib/axiosInterceptor";
 
 interface Roles {
   scope: "platform" | "org" | "team";

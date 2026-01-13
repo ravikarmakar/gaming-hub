@@ -1,6 +1,6 @@
 import Group from "../../models/event-model/group.model.js";
 import Round from "../../models/event-model/round.model.js";
-import Event from "../../models/event-model/event.model.js";
+import Event from "../../models/event.model.js";
 
 export const getGroups = async (req, res) => {
   try {

@@ -1,42 +1,32 @@
-import { places } from "googleapis/build/src/apis/places/index.js";
-import { TryCatchHandler } from "../middleware/error.middleware.js";
 import User from "../models/user.model.js";
+import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
 
-export const getPlayerById = async (req, res) => {
-  try {
-    const { id } = req.params;
+export const getPlayerById = TryCatchHandler(async (req, res, next) => {
+  const { id } = req.params;
 
-    if (!id) {
-      return res.status(400).json({ error: "User ID is required" });
-    }
-
-    const user = await User.findById(id).select("-password");
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.status(200).json({ player: user });
-  } catch (error) {
-    console.error(`Error in getUserProfile : ${error.message}`);
-    res.status(500).json({ message: "Internal Server Error" });
+  if (!id) {
+    return next(new CustomError("User ID is required", 400));
   }
-};
 
-export const getAllPlayers = async (req, res) => {
-  try {
-    const users = await User.find({
-      _id: { $ne: req.user.userId },
-    });
+  const user = await User.findById(id).select("-password");
 
-    res.status(200).json({
-      players: users,
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Server Error" });
+  if (!user) {
+    return next(new CustomError("User not found", 404));
   }
-};
+
+  res.status(200).json({ player: user });
+});
+
+export const getAllPlayers = TryCatchHandler(async (req, res, next) => {
+  const users = await User.find({
+    _id: { $ne: req.user.userId },
+  });
+
+  res.status(200).json({
+    players: users,
+  });
+});
 
 export const searchByUsername = TryCatchHandler(async (req, res, next) => {
   const { username, page = 1, limit = 10 } = req.query;

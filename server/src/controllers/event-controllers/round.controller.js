@@ -1,6 +1,5 @@
 import Round from "../../models/event-model/round.model.js";
-import Event from "../../models/event-model/event.model.js";
-
+import Event from "../../models/event.model.js";
 export const getRounds = async (req, res) => {
   try {
     const rounds = await Round.find({});
