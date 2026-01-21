@@ -4,6 +4,7 @@ import { StarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { Separator } from "@/components/ui/separator";
+import { ROUTES } from "@/lib/routes";
 import {
   Sidebar,
   SidebarHeader,
@@ -25,13 +26,8 @@ const sectionTwo = [
   {
     label: "Upgrade",
     icon: StarIcon,
-    href: "/upgrade",
+    href: ROUTES.UPGRADE,
   },
-  // {
-  //   icon: Settings,
-  //   label: "Settings",
-  //   href: "/dashboard/settings",
-  // },
 ];
 
 interface SidebarItem {
@@ -54,7 +50,7 @@ export const DashboardSidebar = ({ sidebarItems }: Props) => {
       className="group-data-[side=left]:border-r-0"
     >
       <SidebarHeader className="text-white">
-        <Link to="/" className="flex items-center gap-2 px-2 pt-2">
+        <Link to={ROUTES.HOME} className="flex items-center gap-2 px-2 pt-2">
           <img src="/logo.svg" height={36} width={36} alt="Gaminghub" />
           <p className="text-2xl font-semibold">Gaming Hub</p>
         </Link>

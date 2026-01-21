@@ -14,6 +14,7 @@ import {
 import { oauth2Client } from "../config/google.config.js";
 import { discordOAuthConfig } from "../config/discord.config.js";
 import { transporter } from "../config/nodemailer.config.js";
+import { generateOTP, sendVerificationEmail } from "../utils/otp.js";
 
 export const register = TryCatchHandler(async (req, res, next) => {
   const { username, email, password } = req.body;
@@ -21,7 +22,7 @@ export const register = TryCatchHandler(async (req, res, next) => {
   const isExistingUsername = await User.findOne({ username });
   if (isExistingUsername)
     return next(
-      new CustomError("Username already exists. Please choose another.", 409)
+      new CustomError("Username already exists. Please choose another.", 409),
     );
 
   const isExistingEmail = await User.findOne({ email });
@@ -36,25 +37,22 @@ export const register = TryCatchHandler(async (req, res, next) => {
   await storeRefreshToken(user._id, refreshToken);
   setCookies(res, accessToken, refreshToken);
 
-  // remove password before sending user in response
-  const userObj = user.toObject();
-  delete userObj.password;
+  // Generate and save verification OTP
+  const otp = generateOTP();
+  user.verifyOtp = otp;
+  user.verifyOtpExpireAt = Date.now() + 10 * 60 * 1000; // 10 mins
+  await user.save();
 
-  // Send Welcome Email
-  const mailOptions = {
-    from: process.env.SENDER_EMAIL,
-    to: email,
-    subject: "Welcome to Gaming-hub",
-    text: `Welcome to gaming-hub website, Your account has been created with email id: ${email}`,
-  };
-
-  await transporter.sendMail(mailOptions);
+  // Send Verification Email (non-blocking for faster response)
+  sendVerificationEmail(email, otp).catch((err) =>
+    console.error("Failed to send verification email:", err)
+  );
 
   res.status(201).json({
     success: true,
-    message: "User Register successfully",
+    message: "User registered successfully",
     accessToken,
-    user: userObj,
+    user: user.toObject(),
   });
 });
 
@@ -67,7 +65,7 @@ export const login = TryCatchHandler(async (req, res, next) => {
 
   const user = await User.findOne({
     $or: [{ email: identifier.toLowerCase() }, { username: identifier }],
-  }).select("+password");
+  }).select("+password +verifyOtpExpireAt");
 
   if (!user) {
     return next(new CustomError("Invalid credentials", 401));
@@ -100,24 +98,27 @@ export const logout = TryCatchHandler(async (req, res, next) => {
   const refreshToken = req.cookies.refreshToken;
   const accessToken = req.cookies.accessToken;
 
-  if (refreshToken) {
+  // Batch Redis operations for better performance
+  if (refreshToken || accessToken) {
     try {
-      const decoded = jwt.verify(
-        refreshToken,
-        process.env.REFRESH_TOKEN_SECRET
-      );
-      await redis.del(`refresh_token:${decoded.userId}`);
+      const p = redis.pipeline();
+
+      if (refreshToken) {
+        const decoded = jwt.verify(
+          refreshToken,
+          process.env.REFRESH_TOKEN_SECRET,
+        );
+        p.del(`refresh_token:${decoded.userId}`);
+      }
+
+      if (accessToken) {
+        p.setex(`blacklist_token:${accessToken}`, 15 * 60, "true");
+      }
+
+      await p.exec();
     } catch (error) {
       // Don't throw error here, just proceed to clear cookies
-      console.warn("Refresh token invalid or expired during logout.");
-    }
-  }
-
-  if (accessToken) {
-    try {
-      await redis.setex(`blacklist_token:${accessToken}`, 15 * 60, "true");
-    } catch (err) {
-      console.error("Failed to blacklist access token", err);
+      console.warn("Redis cleanup failed during logout:", error.message);
     }
   }
 
@@ -146,33 +147,33 @@ export const refreshToken = TryCatchHandler(async (req, res, next) => {
   if (!refreshTokenCookie)
     return next(new CustomError("No refresh token provided", 401));
 
-  try {
-    const decoded = jwt.verify(
-      refreshTokenCookie,
-      process.env.REFRESH_TOKEN_SECRET
-    );
-    const storedToken = await redis.get(`refresh_token:${decoded.userId}`);
+  const decoded = jwt.verify(
+    refreshTokenCookie,
+    process.env.REFRESH_TOKEN_SECRET,
+  );
+  const storedToken = await redis.get(`refresh_token:${decoded.userId}`);
 
-    if (storedToken !== refreshTokenCookie)
-      return next(new CustomError("Invalid refresh token", 401));
+  if (storedToken !== refreshTokenCookie)
+    return next(new CustomError("Invalid refresh token", 401));
 
-    if (decoded) {
-      await redis.del(`refresh_token:${decoded.userId}`);
-    }
-
-    const user = await User.findById(decoded.userId);
-    if (!user) return next(new CustomError("User not found", 404));
-
-    const { accessToken, refreshToken } = generateTokens(user._id, user.role);
-
-    // store refreshToken token in redis
-    await storeRefreshToken(user._id, refreshToken);
-    setCookies(res, accessToken, refreshToken);
-
-    res.json({ message: "Token refreshed successfully", accessToken });
-  } catch (error) {
-    next(error);
+  if (decoded) {
+    await redis.del(`refresh_token:${decoded.userId}`);
   }
+
+  const user = await User.findById(decoded.userId);
+  if (!user) return next(new CustomError("User not found", 404));
+
+  const { accessToken, refreshToken } = generateTokens(user._id, user.roles);
+
+  // store refreshToken token in redis
+  await storeRefreshToken(user._id, refreshToken);
+  setCookies(res, accessToken, refreshToken);
+
+  // remove password before sending user in response
+  const userObj = user.toObject();
+  delete userObj.password;
+
+  res.json({ success: true, message: "Token refreshed successfully", accessToken, user: userObj });
 });
 
 export const googleLogin = TryCatchHandler(async (req, res, next) => {
@@ -182,7 +183,7 @@ export const googleLogin = TryCatchHandler(async (req, res, next) => {
   oauth2Client.setCredentials(tokens);
 
   const { data } = await axios.get(
-    `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${tokens.access_token}`
+    `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${tokens.access_token}`,
   );
 
   const { email, name, picture } = data;
@@ -228,7 +229,7 @@ export const discordLogin = TryCatchHandler(async (req, res, next) => {
     const tokenRes = await axios.post(
       discordOAuthConfig.token_url,
       qs.stringify(data),
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
     );
 
     const access_token = tokenRes.data.access_token;
@@ -292,47 +293,44 @@ export const sendVerifyOtp = TryCatchHandler(async (req, res, next) => {
   const user = await User.findById(req.user.userId);
   if (!user) return next(new CustomError("User not found", 404));
   if (user.isAccountVerified) {
-    res
+    return res
       .status(200)
-      .json({ success: false, message: "Account Alraedy verified" });
-    return;
+      .json({ success: false, message: "Account already verified" });
   }
-  // Generate otp
-  const otp = String(Math.floor(100000 + Math.random() * 900000));
+  // Generate and save verification OTP
+  const otp = generateOTP();
 
   user.verifyOtp = otp;
   user.verifyOtpExpireAt = Date.now() + 10 * 60 * 1000; // 10 mins = 600000 ms
 
   await user.save();
+  await redis.del(`user_profile:${req.user.userId}`);
 
-  // Send Verification Email
-  const mailOptions = {
-    from: process.env.SENDER_EMAIL,
-    to: user.email,
-    subject: "Account verification OTP - Gaming-Hub",
-    text: `Welcome to Gaming-hub!\n\nYour One-Time Password (OTP) is: ${otp}\n\nPlease verify your account using this OTP. Note: This OTP is valid for only 10 minutes.`,
-  };
+  // Send Verification Email (non-blocking for faster response)
+  sendVerificationEmail(user.email, otp).catch((err) =>
+    console.error("Failed to send verification email:", err)
+  );
 
-  await transporter.sendMail(mailOptions);
-
-  res
-    .status(200)
-    .json({ success: true, message: "Verification OTP sent on Email" });
+  res.status(200).json({
+    success: true,
+    message: "Verification OTP sent on Email",
+    user: user.toObject(),
+  });
 });
 
 export const verifyEmail = TryCatchHandler(async (req, res, next) => {
   const userId = req.user.userId;
-  const cacheKey = `user_profile:${userId}`;
   const { otp } = req.body;
+
+  const cacheKey = `user_profile:${userId}`;
   if (!otp)
     return next(
-      new CustomError("Please provide the OTP sent to your email.", 400)
+      new CustomError("Please provide the OTP sent to your email.", 400),
     );
 
-  const user = await User.findById(userId);
+  const user = await User.findById(userId).select("+verifyOtp +verifyOtpExpireAt");
   if (!user) return next(new CustomError("User not found", 404));
 
-  // Invalidate cache
   await redis.del(cacheKey);
 
   if (user.verifyOtp !== otp)
@@ -350,29 +348,53 @@ export const verifyEmail = TryCatchHandler(async (req, res, next) => {
   // Update cache for 1 minute (adjust time as needed)
   await redis.setex(cacheKey, 60, JSON.stringify(user));
 
-  res
-    .status(200)
-    .json({ success: true, message: "Your account verified successfully" });
+  res.status(200).json({
+    success: true,
+    message: "Your account was verified successfully",
+    user: user.toObject(),
+  });
 });
 
 export const getProfile = TryCatchHandler(async (req, res, next) => {
   const userId = req.user.userId;
-  const cacheKey = `user_profile:${userId}`;
-
-  const cachedData = await redis.get(cacheKey);
-
-  if (cachedData) {
+  if (req.user.cachedProfile) {
     return res.status(200).json({
       success: true,
-      user: cachedData,
+      user: req.user.cachedProfile,
       cached: true,
     });
   }
 
-  const user = await User.findById(userId);
+  const cacheKey = `user_profile:${userId}`;
+  let cachedData = null;
+
+  try {
+    cachedData = await redis.get(cacheKey);
+  } catch (err) {
+    console.error("Redis getProfile error:", err);
+  }
+
+  if (cachedData) {
+    try {
+      const user = typeof cachedData === "string" ? JSON.parse(cachedData) : cachedData;
+      return res.status(200).json({
+        success: true,
+        user,
+        cached: true,
+      });
+    } catch (parseError) {
+      console.error("Redis parse error in getProfile:", parseError);
+    }
+  }
+
+  const user = await User.findById(userId).select("+verifyOtpExpireAt");
   if (!user) return next(new CustomError("User not found", 404));
 
-  await redis.setex(cacheKey, 60, JSON.stringify(user));
+  try {
+    await redis.setex(cacheKey, 60, JSON.stringify(user));
+  } catch (setCacheError) {
+    console.error("Redis setex error in getProfile:", setCacheError);
+  }
 
   return res.status(200).json({ success: true, user });
 });
@@ -403,9 +425,8 @@ export const sendResetPasswordOtp = TryCatchHandler(async (req, res, next) => {
     from: process.env.SENDER_EMAIL,
     to: email,
     subject: "Password Reset OTP - Gaming Hub",
-    text: `Hello ${
-      user.username || "User"
-    },\n\nWe received a request to reset the password for your Gaming Hub account.\n\nYour One-Time Password (OTP) is: ${otp}\n\nPlease use this OTP to reset your password. This OTP is valid for only 10 minutes.\n\nIf you did not request a password reset, you can safely ignore this email.\n\nRegards,\nGaming Hub Team`,
+    text: `Hello ${user.username || "User"
+      },\n\nWe received a request to reset the password for your Gaming Hub account.\n\nYour One-Time Password (OTP) is: ${otp}\n\nPlease use this OTP to reset your password. This OTP is valid for only 10 minutes.\n\nIf you did not request a password reset, you can safely ignore this email.\n\nRegards,\nGaming Hub Team`,
   };
 
   await transporter.sendMail(mailOptions);
@@ -423,10 +444,10 @@ export const resetPassword = TryCatchHandler(async (req, res, next) => {
   // Input validations
   if (!email || !otp || !newPassword)
     return next(
-      new CustomError("Email, OTP, and new password are required", 400)
+      new CustomError("Email, OTP, and new password are required", 400),
     );
 
-  const user = await User.findOne({ email }).select("+password");
+  const user = await User.findOne({ email }).select("+password +resetOtp +resetOtpExpireAt");
 
   if (!user) return next(new CustomError("User not found", 404));
 
@@ -450,5 +471,3 @@ export const resetPassword = TryCatchHandler(async (req, res, next) => {
     message: "Password has been reset successfully. You can now log in.",
   });
 });
-
-// to-do --> user block, user unblock from platform

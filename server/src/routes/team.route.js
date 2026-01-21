@@ -11,7 +11,7 @@ import {
   removeMember,
   manageMemberRole,
 } from "../controllers/team.controller.js";
-import { isAuthenticated } from "../middleware/auth.middleware.js";
+import { isAuthenticated, isVerified } from "../middleware/auth.middleware.js";
 import { upload } from "../utils/multer.js";
 
 const router = express.Router();
@@ -19,7 +19,7 @@ const router = express.Router();
 router.get("/", fetchAllTeams);
 router.get("/details/:teamId", fetchTeamDetails);
 
-router.use(isAuthenticated);
+router.use(isAuthenticated, isVerified);
 
 router.post("/create-team", upload.single("image"), createTeam);
 router.put("/update-team", updateTeam);

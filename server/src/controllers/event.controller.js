@@ -1,16 +1,15 @@
 import mongoose from "mongoose";
 
 import Organizer from "../models/organizer.model.js";
-import Team from "../models/team.model.js";
 import User from "../models/user.model.js";
 import Event from "../models/event.model.js";
-
-import TeamNotification from "../models/notification-model/team.notification.model.js";
 
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
 
 import { findUserById } from "../services/user.service.js";
+import { findTeamById } from "../services/team.service.js";
+import { findEventById } from "../services/event.service.js";
 
 const requiredFields = [
   "title",
@@ -23,8 +22,6 @@ const requiredFields = [
 
 export const createEvent = TryCatchHandler(async (req, res, next) => {
   const { userId, roles } = req.user;
-
-  console.log(roles);
 
   const user = await findUserById(userId);
 
@@ -113,243 +110,143 @@ export const fetchEventByOrg = TryCatchHandler(async (req, res, next) => {
   });
 });
 
-export const fetchEventDetailsById = TryCatchHandler(
-  async (req, res, next) => {}
-);
+export const fetchEventDetailsById = TryCatchHandler(async (req, res, next) => {
+  const { eventId } = req.params;
 
-export const getEventDetails = async (req, res) => {
+  if (!eventId || !mongoose.Types.ObjectId.isValid(eventId)) {
+    return next(new AppError("Invalid event id", 400));
+  }
+
+  const event = await Event.findById(eventId);
+
+  if (!event) {
+    return next(new CustomError("Event not found", 404));
+  }
+
+  // Optional: increase views count
+  // event.views += 1;
+  // await event.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Event details fetched successfully",
+    data: event,
+  });
+});
+
+export const fetchAllEvents = TryCatchHandler(async (req, res, next) => {
+  const events = await Event.find().sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    data: events,
+  });
+});
+
+export const registerEvent = TryCatchHandler(async (req, res, next) => {
+  const { userId } = req.user;
   const { eventId } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(eventId)) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Invalid event ID" });
+    return next(new CustomError("Invalid Event ID", 400));
   }
 
-  try {
-    const eventDetails = await Event.findById(eventId).populate(
-      "organizerId",
-      "name"
+  const user = await findUserById(userId);
+
+  if (!user.teamId)
+    return next(new CustomError("You are not part of any team", 400));
+
+  const team = await findTeamById(user.teamId);
+
+  if (team.teamMembers.length < 4) {
+    return next(
+      new CustomError("Your team must have at least 4 players to register", 400)
     );
-    // .populate("prize")
-    // .populate("rounds");
-
-    if (!eventDetails) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Event not found" });
-    }
-
-    res.status(200).json({ success: true, events: eventDetails });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
   }
-};
 
-export const registerEvent = async (req, res) => {
-  try {
-    const loggedInUser = req.user;
+  const event = await findEventById(eventId);
+
+  // Registration deadline check
+  if (new Date() > new Date(event.registrationEndsAt)) {
+    return next(new CustomError("Registration for this event has ended", 400));
+  }
+
+  // Status check
+  if (event.status !== "registration-open") {
+    return next(new CustomError("Event registration is not open", 400));
+  }
+
+  // Slot check
+  if (event.teamId.length >= event.slots) {
+    return next(new CustomError("Event registration is full", 400));
+  }
+
+  // Duplicate check
+  const isAlreadyRegistered = event.teamId.some(
+    (id) => id.toString() === team._id.toString()
+  );
+  if (isAlreadyRegistered) {
+    return next(
+      new CustomError("Your team is already registered for this event", 400)
+    );
+  }
+
+  // Register team
+  event.teamId.push(team._id);
+  await event.save();
+
+  // Update team history
+  if (!team.playedTournaments.includes(eventId)) {
+    team.playedTournaments.push(eventId);
+    await team.save();
+  }
+
+  // Update users history
+  await User.updateMany(
+    {
+      _id: { $in: team.teamMembers.map((m) => m.user) },
+      eventHistory: { $ne: eventId },
+    },
+    { $push: { eventHistory: eventId } }
+  );
+
+  return res.status(200).json({
+    success: true,
+    message: "Yor Team successfully registered for the tournament",
+  });
+});
+
+export const isTeamRegistered = TryCatchHandler(async (req, res, next) => {
+  const { eventId, teamId } = req.params;
+
+  const event = await Event.findOne({
+    _id: eventId,
+    teamId: teamId,
+  });
+
+  res.json({
+    registered: !!event,
+  });
+});
+
+export const fetchAllRegisteredTeams = TryCatchHandler(
+  async (req, res, next) => {
     const { eventId } = req.params;
 
-    // Validate Event ID
-    if (!mongoose.Types.ObjectId.isValid(eventId)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid Event ID" });
-    }
+    const event = await Event.findById(eventId)
+      .populate("teamId", "teamName imageUrl")
+      .select("teamsId");
 
-    // Check if user has an active team
-    if (!loggedInUser.activeTeam) {
-      return res.status(400).json({
-        success: false,
-        message: "You don't have a team to register for events",
-      });
-    }
-
-    // Fetch the team
-    const team = await Team.findById(loggedInUser.activeTeam);
-    if (!team) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Team not found" });
-    }
-
-    // Check if team has at least 4 players
-    // if (team.members.length < 4) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: "Your team must have at least 4 players to register",
-    //   });
-    // }
-
-    // Fetch the event
-    const event = await Event.findById(eventId);
     if (!event) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Event not found" });
+      return next(new CustomError("Event not found", 404));
     }
-
-    // Check if the event is full
-    if (event.teams.length >= event.slots) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Event registration is full" });
-    }
-
-    // Check if team is already registered
-    const isAlreadyRegistered = event.teams.some(
-      (t) => t?.teamId?.toString() === team._id.toString()
-    );
-    if (isAlreadyRegistered) {
-      return res.status(400).json({
-        success: false,
-        message: "Your team is already registered for this event",
-      });
-    }
-
-    // Check if event registration has ended
-    if (new Date() > new Date(event.registrationEnds)) {
-      return res.status(400).json({
-        success: false,
-        message: "Registration for this event has ended",
-      });
-    }
-
-    // Check if event is active for registration
-    if (event.status !== "registration-open") {
-      return res
-        .status(400)
-        .json({ success: false, message: "Event registration is not open" });
-    }
-
-    // Register the team
-    event.teams.push({ teamId: team._id, registeredAt: new Date() });
-    await event.save();
-
-    // Ensure event is not duplicated in playedTournaments
-    if (!team.playedTournaments.includes(eventId)) {
-      team.playedTournaments.push(eventId);
-      await team.save();
-    }
-
-    // Update eventHistory for each member only if eventId is not already present
-    await User.updateMany(
-      {
-        _id: { $in: team.members.map((m) => m.userId) },
-        eventHistory: { $ne: eventId },
-      },
-      { $push: { eventHistory: eventId } }
-    );
-
-    // Generate notifications for all team members
-    const notifications = team.members.map((member) => ({
-      user: member.userId,
-      type: "announcement",
-      message: `Your team has successfully registered for the event: ${event.title}`,
-      relatedId: event._id,
-    }));
-
-    await TeamNotification.insertMany(notifications);
 
     return res.status(200).json({
-      success: true,
-      message: "Team successfully registered for the event",
-      notifications,
-    });
-  } catch (error) {
-    console.error("Error in registerEvent controller:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
+      totalTeams: event.teamId.length,
+      teams: event.teamId,
     });
   }
-};
-
-export const leaveEvent = async (req, res) => {
-  try {
-    const loggedInUser = req.user;
-    const { eventId } = req.params;
-
-    // Check if eventId is valid
-    if (!mongoose.Types.ObjectId.isValid(eventId)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid Event ID" });
-    }
-
-    // Find the event
-    const event = await Event.findById(eventId);
-    if (!event) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Event not found" });
-    }
-
-    // Check if user has a team
-    if (!loggedInUser.activeTeam) {
-      return res.status(400).json({
-        success: false,
-        message: "You don't have a team",
-      });
-    }
-
-    // Find the team
-    const team = await Team.findById(loggedInUser.activeTeam);
-    if (!team) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Team not found" });
-    }
-
-    // Check if user is the team owner
-    if (team.owner.toString() !== loggedInUser._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: "Only the team owner can leave the event",
-      });
-    }
-
-    // Check if team is registered in the event
-    if (!event.teams.some((t) => t.teamId.toString() === team._id.toString())) {
-      return res.status(400).json({
-        success: false,
-        message: "Team is not registered in this event",
-      });
-    }
-
-    // Remove team from event
-    await Event.findByIdAndUpdate(
-      eventId,
-      { $pull: { teams: { teamId: team._id } } },
-      { new: true }
-    );
-
-    // Notify all team members
-    const notifications = team.members.map((member) => ({
-      user: member.userId,
-      type: "announcement",
-      message: `Your team '${team.teamName}' has left the event '${event.title}'.`,
-      relatedId: event._id,
-    }));
-
-    await TeamNotification.insertMany(notifications);
-
-    res.status(200).json({
-      success: true,
-      message: "Team successfully left the event",
-      notifications,
-    });
-  } catch (error) {
-    console.log("Error in leaveEvent controller:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
+);
 
 export const closeRegistration = async (req, res) => {
   try {
@@ -457,4 +354,5 @@ export const getAllEvents = TryCatchHandler(async (req, res, next) => {
   }
 });
 
-// to-do -  Event host can remove any team from the event
+// TO-DO -> Event owner can remove any team from the event
+// TO-DO -> notification feature using socket.io

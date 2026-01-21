@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { CustomError } from "../utils/CustomError.js";
 import { TryCatchHandler } from "./error.middleware.js";
 import { redis } from "../config/redisClient.js";
+import User from "../models/user.model.js";
 
 export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
   if (req.method === "OPTIONS") {
@@ -15,17 +16,32 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
   if (!accessToken)
     return next(new CustomError("Unauthorized: No token provided", 401));
 
-  const isBlacklisted = await redis.get(`blacklist_token:${accessToken}`);
-  if (isBlacklisted)
-    return next(new CustomError("Token blacklisted! Please login again", 401));
-
   try {
     const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
-    console.log(decoded);
+
+    // PIPELINE: Fetch blacklist AND profile in one roundtrip
+    const p = redis.pipeline();
+    p.get(`blacklist_token:${accessToken}`);
+    p.get(`user_profile:${decoded.userId}`);
+
+    let isBlacklisted = null;
+    let cachedProfile = null;
+
+    try {
+      const results = await p.exec();
+      isBlacklisted = results[0];
+      cachedProfile = results[1];
+    } catch (redisError) {
+      console.error("Redis auth pipeline error:", redisError);
+    }
+
+    if (isBlacklisted)
+      return next(new CustomError("Token blacklisted! Please login again", 401));
 
     req.user = {
       userId: decoded.userId,
       roles: decoded.roles,
+      cachedProfile: cachedProfile ? (typeof cachedProfile === "string" ? JSON.parse(cachedProfile) : cachedProfile) : null,
     };
 
     next();
@@ -38,6 +54,45 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
       return next(new CustomError("Unauthorized access", 401));
     }
   }
+});
+
+export const isVerified = TryCatchHandler(async (req, res, next) => {
+  const userId = req.user.userId;
+  const cacheKey = `user_profile:${userId}`;
+
+  let user = null;
+  try {
+    user = await redis.get(cacheKey);
+    if (user) {
+      user = typeof user === "string" ? JSON.parse(user) : user;
+    }
+  } catch (redisError) {
+    console.error("Redis isVerified error:", redisError);
+  }
+
+  if (!user) {
+    user = await User.findById(userId);
+    if (user) {
+      try {
+        await redis.setex(cacheKey, 60, JSON.stringify(user));
+      } catch (saveCacheError) {
+        console.error("Redis setex error in isVerified:", saveCacheError);
+      }
+    }
+  }
+
+  if (!user) return next(new CustomError("User not found", 404));
+
+  if (!user.isAccountVerified) {
+    return next(
+      new CustomError(
+        "Forbidden: Your account is not verified. Please verify your email.",
+        403
+      )
+    );
+  }
+
+  next();
 });
 
 export const requireRole = (requiredRole, requiredScope = "platform") => {
@@ -58,10 +113,9 @@ export const requireRole = (requiredRole, requiredScope = "platform") => {
   };
 };
 
-// This is for any role checking
 export const checkAnyRole = (rolesArray, scope = "platform") => {
   return (req, res, next) => {
-    const userRoles = req.user?.role || [];
+    const userRoles = req.user?.roles || [];
 
     const authorized = rolesArray.some((role) =>
       userRoles.some((r) => r.scope === scope && r.role === role)

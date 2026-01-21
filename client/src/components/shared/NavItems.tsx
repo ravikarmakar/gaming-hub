@@ -10,6 +10,8 @@ import {
   Users,
 } from "lucide-react";
 
+import { ROUTES } from "@/lib/routes";
+
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -25,33 +27,29 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const navItems = [
-  { name: "Home", icon: Home, href: "/" },
+  { name: "Home", icon: Home, href: ROUTES.HOME },
   {
     name: "Esports",
     icon: Gamepad2,
     hasDropdown: true,
     dropdownItems: [
-      { name: "Find players", href: "/players" },
-      // { name: "Adventure", href: "/adventure" },
-      // { name: "RPG", href: "/rgp" },
-      // { name: "Strategy", href: "/strategy" },
-      // { name: "Sports", href: "/sports" },
+      { name: "Find players", href: ROUTES.ALL_PLAYERS },
     ],
   },
   {
     name: "Tournaments",
     icon: Trophy,
-    href: "/tournaments",
+    href: ROUTES.ALL_EVENTS,
   },
   {
     name: "Trending",
     icon: Flame,
-    href: "/trending",
+    href: ROUTES.TRENDING,
   },
   {
     name: "Community",
     icon: Users,
-    href: "/community",
+    href: ROUTES.COMMUNITY,
   },
 ];
 
@@ -88,9 +86,8 @@ const NavItems = () => {
                 >
                   <CollapsibleTrigger asChild>
                     <span
-                      className={`flex items-center justify-between px-3 py-2 text-sm font-medium transition-colors rounded-md cursor-pointer ${
-                        isActive ? "text-purple-300" : "text-gray-300"
-                      } hover:text-purple-300`}
+                      className={`flex items-center justify-between px-3 py-2 text-sm font-medium transition-colors rounded-md cursor-pointer ${isActive ? "text-purple-300" : "text-gray-300"
+                        } hover:text-purple-300`}
                     >
                       <div className="flex items-center">
                         <span className="mr-1">
@@ -117,11 +114,10 @@ const NavItems = () => {
                             onClick={() => {
                               setOpenCollapsible(null);
                             }}
-                            className={`flex items-center py-2 text-sm font-medium transition-colors rounded-md ${
-                              isDropdownItemActive
+                            className={`flex items-center py-2 text-sm font-medium transition-colors rounded-md ${isDropdownItemActive
                                 ? "text-purple-300"
                                 : "text-gray-400"
-                            } hover:text-purple-300`}
+                              } hover:text-purple-300`}
                           >
                             {drop.name}
                           </Link>
@@ -134,9 +130,8 @@ const NavItems = () => {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <span
-                      className={`flex items-center px-3 py-2 text-sm font-medium transition-colors rounded-md cursor-pointer ${
-                        isActive ? "text-purple-300" : "text-gray-300"
-                      } hover:text-purple-300`}
+                      className={`flex items-center px-3 py-2 text-sm font-medium transition-colors rounded-md cursor-pointer ${isActive ? "text-purple-300" : "text-gray-300"
+                        } hover:text-purple-300`}
                     >
                       <span className="mr-1">
                         <Icon className="w-4 h-4" />
@@ -153,11 +148,10 @@ const NavItems = () => {
                         <DropdownMenuItem
                           key={drop.name}
                           onClick={() => navigate(drop.href)}
-                          className={`cursor-pointer ${
-                            isDropdownItemActive
+                          className={`cursor-pointer ${isDropdownItemActive
                               ? "bg-purple-700/20 text-white"
                               : "hover:bg-gray-700"
-                          }`}
+                            }`}
                         >
                           {drop.name}
                         </DropdownMenuItem>
@@ -172,9 +166,8 @@ const NavItems = () => {
                 onClick={() => {
                   setOpenCollapsible(null);
                 }}
-                className={`flex items-center px-3 py-2 text-sm font-medium transition-colors rounded-md ${
-                  isActive ? "text-purple-300" : "text-gray-300"
-                } hover:text-purple-300`}
+                className={`flex items-center px-3 py-2 text-sm font-medium transition-colors rounded-md ${isActive ? "text-purple-300" : "text-gray-300"
+                  } hover:text-purple-300`}
               >
                 <span className="mr-1">
                   <Icon className="w-4 h-4" />

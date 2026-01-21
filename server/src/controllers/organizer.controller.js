@@ -55,7 +55,7 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
   await user.save();
 
   // this will update the accessToken and refresh token jwt payloads
-  const { accessToken, refreshToken } = generateTokens(user._id, user.role);
+  const { accessToken, refreshToken } = generateTokens(user._id, user.roles);
 
   // store refresh token in redis
   await storeRefreshToken(user._id, refreshToken);
@@ -66,7 +66,7 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
 
   res
     .status(201)
-    .json({ success: true, messgae: "Org created successfully", org: newOrg });
+    .json({ success: true, message: "Org created successfully", org: newOrg });
 });
 
 export const getOrgDetails = TryCatchHandler(async (req, res, next) => {
@@ -96,7 +96,7 @@ export const getOrgDetails = TryCatchHandler(async (req, res, next) => {
         orgRole: {
           $first: {
             $filter: {
-              input: "$role",
+              input: "$roles",
               as: "r",
               cond: { $eq: ["$$r.scope", "org"] },
             },
@@ -126,7 +126,7 @@ export const getOrgDetails = TryCatchHandler(async (req, res, next) => {
 });
 
 export const updateOrg = TryCatchHandler(async (req, res, next) => {
-  const orgRole = req.user.role.find((r) => r.scope === "org");
+  const orgRole = req.user.roles.find((r) => r.scope === "org");
   const orgId = orgRole?.orgId;
   console.log(orgId);
   const { name, email, description, tag } = req.body;
@@ -176,7 +176,7 @@ export const addStaff = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Staff array is required", 400));
   }
 
-  const orgRole = req.user.role.find((r) => r.scope === "org");
+  const orgRole = req.user.roles.find((r) => r.scope === "org");
   const orgId = orgRole?.orgId;
 
   if (!orgId) {
@@ -197,7 +197,7 @@ export const addStaff = TryCatchHandler(async (req, res, next) => {
           message: "User not verified or already in an organization",
         };
       }
-      const alreadyInOrg = targetUser.role.some(
+      const alreadyInOrg = targetUser.roles.some(
         (r) => r.scope === "org" && r.orgId?.toString() === orgId.toString()
       );
       if (alreadyInOrg) {
@@ -208,13 +208,14 @@ export const addStaff = TryCatchHandler(async (req, res, next) => {
         };
       }
 
-      targetUser.role.push({
+      targetUser.roles.push({
         scope: Scopes.ORG,
         role: Roles.ORG.STAFF,
         orgId,
       });
       targetUser.orgId = orgId;
       await targetUser.save();
+      await redis.del(`user_profile:${userId}`);
 
       return { userId, success: true };
     })
@@ -222,12 +223,12 @@ export const addStaff = TryCatchHandler(async (req, res, next) => {
 
   res
     .status(200)
-    .json({ success: true, messgae: "Members added successfully", results });
+    .json({ success: true, message: "Members added successfully", results });
 });
 
 export const updateStaffRole = TryCatchHandler(async (req, res, next) => {
   const { userId, newRole } = req.body;
-  const orgRole = req.user.role.find((r) => r.scope === "org");
+  const orgRole = req.user.roles.find((r) => r.scope === "org");
   const orgId = orgRole?.orgId;
 
   if (!userId || !newRole)
@@ -236,7 +237,7 @@ export const updateStaffRole = TryCatchHandler(async (req, res, next) => {
   const user = await User.findById(userId);
   if (!user) return next(new CustomError("User not found", 404));
 
-  const orgRoleIndex = user.role.findIndex(
+  const orgRoleIndex = user.roles.findIndex(
     (r) => r.scope === "org" && r.orgId?.toString() === orgId.toString()
   );
 
@@ -245,8 +246,9 @@ export const updateStaffRole = TryCatchHandler(async (req, res, next) => {
       new CustomError("User does not belong to your organization", 403)
     );
 
-  user.role[orgRoleIndex].role = newRole;
+  user.roles[orgRoleIndex].role = newRole;
   await user.save();
+  await redis.del(`user_profile:${userId}`);
 
   res.status(200).json({
     success: true,
@@ -256,7 +258,7 @@ export const updateStaffRole = TryCatchHandler(async (req, res, next) => {
 
 export const removeStaff = TryCatchHandler(async (req, res, next) => {
   const userId = req.params.id;
-  const orgRole = req.user.role.find((r) => r.scope === "org");
+  const orgRole = req.user.roles.find((r) => r.scope === "org");
   const orgId = orgRole?.orgId;
 
   if (!userId)
@@ -265,7 +267,7 @@ export const removeStaff = TryCatchHandler(async (req, res, next) => {
   const user = await User.findById(userId);
   if (!user) return next(new CustomError("User not found", 404));
 
-  const hasOrgRole = user.role.some(
+  const hasOrgRole = user.roles.some(
     (r) => r.scope === "org" && r.orgId?.toString() === orgId.toString()
   );
 
@@ -273,7 +275,7 @@ export const removeStaff = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("User is not part of your organization", 403));
 
   // Remove the org role
-  user.role = user.role.filter(
+  user.roles = user.roles.filter(
     (r) => !(r.scope === "org" && r.orgId?.toString() === orgId.toString())
   );
 
@@ -283,6 +285,7 @@ export const removeStaff = TryCatchHandler(async (req, res, next) => {
   }
 
   await user.save();
+  await redis.del(`user_profile:${userId}`);
 
   res.status(200).json({
     success: true,
@@ -291,7 +294,7 @@ export const removeStaff = TryCatchHandler(async (req, res, next) => {
 });
 
 export const deleteOrg = TryCatchHandler(async (req, res, next) => {
-  const orgRole = req.user.role.find((r) => r.scope === "org");
+  const orgRole = req.user.roles.find((r) => r.scope === "org");
   const orgId = orgRole?.orgId;
   const { userId } = req.user;
 
@@ -312,7 +315,7 @@ export const deleteOrg = TryCatchHandler(async (req, res, next) => {
   }
 
   // Delete the org
-  org.isDeketed = true;
+  org.isDeleted = true;
   await org.save();
 
   // Optional: Remove org-related roles from all users

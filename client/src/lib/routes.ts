@@ -6,7 +6,7 @@ export const ROUTES = {
   DISCORD_CALLBACK: "/auth/discord/callback",
   PLAYER_PROFILE: "/player/:id",
   TEAM_PROFILE: "/team/:id",
-  EMAIL_VERIFY: "/verify-account",
+  EMAIL_VERIFY: "/verify-email",
   TEAM_DASHBOARD: "/dashboard/team",
   SUPER_ADMIN: "/super-admin/:id",
   CREATE_ORG: "/create-org",
@@ -15,19 +15,18 @@ export const ROUTES = {
 
   ORG_PROFILE: "/organizer/:id",
   ORG_DASHBOARD: "/organizer-dashboard/:id",
+
+  ALL_EVENTS: "/tournaments",
   EVENT_DETAILS: "/organizer/event/:eventId",
+  TERMS: "/terms",
+  PRIVACY: "/privacy",
+  TRENDING: "/trending",
+  COMMUNITY: "/community",
+  UPGRADE: "/upgrade",
 };
 
 // export const ROUTES = {
 //   HOME: "/",
-
-//   AUTH: {
-//     LOGIN: "/login",
-//     REGISTER: "/register",
-//     FORGOT_PASSWORD: "/forgot-password",
-//     DISCORD_CALLBACK: "/auth/discord/callback",
-//     VERIFY_EMAIL: "/verify-account",
-//   },
 
 //   DASHBOARD: {
 //     PLAYER: "/dashboard/player",

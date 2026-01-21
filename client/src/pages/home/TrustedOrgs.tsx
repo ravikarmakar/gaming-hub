@@ -62,9 +62,8 @@ const TrustedOrgs = () => {
         </h5>
 
         <motion.div
-          className={`flex ${
-            isMobile ? "justify-start" : "justify-center flex-wrap gap-8"
-          } items-center`}
+          className={`flex ${isMobile ? "justify-start" : "justify-center flex-wrap gap-8"
+            } items-center`}
           animate={controls}
           style={{
             width: isMobile ? "calc(200% + 2rem)" : "100%",
@@ -73,9 +72,8 @@ const TrustedOrgs = () => {
           {clonedOrgs.map((org, index) => (
             <motion.div
               key={`${org.name}-${index}`}
-              className={`flex flex-col items-center ${
-                isMobile ? "mx-8" : "mx-4"
-              }`}
+              className={`flex flex-col items-center ${isMobile ? "mx-8" : "mx-4"
+                }`}
               whileHover={{ scale: 1.05 }}
               transition={{ duration: 0.2 }}
             >

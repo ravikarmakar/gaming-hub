@@ -1,55 +1,57 @@
 import { useEffect, useRef, lazy, Suspense } from "react";
 import { Toaster } from "react-hot-toast";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, Navigate } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
 
+// Stores & Constants
 import { ROUTES } from "./lib/routes";
 import { useAuthStore } from "./features/auth/store/useAuthStore";
 
-import AuthLayout from "@/components/layouts/auth-layout";
+// Layouts & Guards
+import AuthLayout from "@/features/auth/ui/components/auth-layout";
 import MainLayout from "@/components/layouts/MainLayout";
-
-const HomePage = lazy(() => import("@/features/home/ui/pages/HomePage"));
-const Login = lazy(() => import("./pages/auth/login"));
-const SignupPage = lazy(() => import("./pages/auth/signup"));
-const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
-const VerifyEmail = lazy(() => import("./pages/auth/VerifyEmail"));
-const DiscordCallback = lazy(() => import("./pages/auth/discord-callback"));
-
-const CreateOrg = lazy(() => import("@/features/organizer/ui/pages/CreateOrg"));
-const OrganizerProfile = lazy(
-  () => import("./pages/organiser/OrganizerProfile")
-);
-const Dashboard = lazy(() => import("./pages/organiser/Dashboard"));
-const Members = lazy(() => import("./pages/organiser/Members"));
-const OrganizerLayout = lazy(
-  () => import("@/features/organizer/ui/components/OrganiserLayout")
-);
-
-const PlayerIdPage = lazy(
-  () => import("@/features/player/ui/pages/PlayerIdPage")
-);
-const TeamIdPage = lazy(() => import("@/features/teams/ui/pages/TeamIdPage"));
-
-const SuperAdminLayout = lazy(
-  () => import("@/components/layouts/SuperAdminLayout")
-);
-const DashboardPage = lazy(() => import("./pages/super-admin/DashboardPage"));
-
-// Route Guards
 import ProtectedRoute from "./guards/ProtectedRoute";
 import PublicRoute from "./guards/PublicRoute";
+
+// Shared Components
 import { NotFound } from "./components/NotFound";
 import LoadingSpinner from "./components/LoadingSpinner";
 import { ErrorFallback } from "./components/ErrorFallback";
-import TeamDashboard from "./features/teams/ui/pages/TeamDashboard";
-import TeamDashboardLayout from "./features/teams/ui/layouts/TeamLayout";
-import TeamMembersPage from "@/features/teams/ui/pages/TeamMembersPage";
-import AllPlayerPage from "@/features/player/ui/pages/AllPlayerPage";
 
-import CreateTournament from "@/features/events/ui/pages/CreateTournament";
-import ViewEventOrg from "@/features/organizer/ui/pages/ViewEventOrg";
-import ViewEventById from "./features/events/ui/pages/ViewEventById";
+// Lazy Loaded Pages
+const HomePage = lazy(() => import("@/features/home/ui/pages/HomePage"));
+const LoginPage = lazy(() => import("@/features/auth/ui/LoginPage"));
+const SignupPage = lazy(() => import("@/features/auth/ui/SignupPage"));
+const ForgotPassword = lazy(() => import("@/features/auth/ui/components/forgot-password"));
+const VerifyEmail = lazy(() => import("@/features/auth/ui/components/verify-email"));
+const DiscordCallback = lazy(() => import("@/features/auth/ui/components/discord-callback"));
+
+// Organizer Features
+const CreateOrg = lazy(() => import("@/features/organizer/ui/pages/CreateOrg"));
+const OrganizerProfile = lazy(() => import("./pages/organiser/OrganizerProfile"));
+const Dashboard = lazy(() => import("./pages/organiser/Dashboard"));
+const Members = lazy(() => import("./pages/organiser/Members"));
+const OrganizerLayout = lazy(() => import("@/features/organizer/ui/components/OrganiserLayout"));
+const ViewEventOrg = lazy(() => import("@/features/organizer/ui/pages/ViewEventOrg"));
+
+// Player Features
+const PlayerIdPage = lazy(() => import("@/features/player/ui/pages/PlayerIdPage"));
+const AllPlayerPage = lazy(() => import("@/features/player/ui/pages/AllPlayerPage"));
+
+// Team Features
+const TeamIdPage = lazy(() => import("@/features/teams/ui/pages/TeamIdPage"));
+const TeamDashboard = lazy(() => import("./features/teams/ui/pages/TeamDashboard"));
+const TeamDashboardLayout = lazy(() => import("./features/teams/ui/layouts/TeamLayout"));
+const TeamMembersPage = lazy(() => import("@/features/teams/ui/pages/TeamMembersPage"));
+
+// Event/Tournament Features
+const CreateTournament = lazy(() => import("@/features/events/ui/pages/CreateTournament"));
+const ViewEventById = lazy(() => import("@/features/events/ui/pages/ViewEventById"));
+const ViewAllEvents = lazy(() => import("@/features/events/ui/pages/ViewAllEvents"));
+
+// Super Admin
+const SuperAdminLayout = lazy(() => import("@/components/layouts/SuperAdminLayout"));
+const DashboardPage = lazy(() => import("./pages/super-admin/DashboardPage"));
 
 const App = () => {
   const hasCalled = useRef(false);
@@ -70,6 +72,7 @@ const App = () => {
           <Routes>
             <Route element={<MainLayout />}>
               <Route index element={<HomePage />} />
+              <Route path={ROUTES.ALL_EVENTS} element={<ViewAllEvents />} />
 
               <Route element={<ProtectedRoute />}>
                 <Route path={ROUTES.EMAIL_VERIFY} element={<VerifyEmail />} />
@@ -79,19 +82,10 @@ const App = () => {
                   element={<OrganizerProfile />}
                 />
                 <Route path={ROUTES.ALL_PLAYERS} element={<AllPlayerPage />} />
-                <Route
-                  path={ROUTES.PLAYER_PROFILE}
-                  element={<PlayerIdPage />}
-                />
-                <Route
-                  path={ROUTES.NOTIFICATIONS}
-                  element={<div>Notifi</div>}
-                />
+                <Route path={ROUTES.PLAYER_PROFILE} element={<PlayerIdPage />} />
+                <Route path={ROUTES.NOTIFICATIONS} element={<div>Notifi</div>} />
                 <Route path={ROUTES.TEAM_PROFILE} element={<TeamIdPage />} />
-                <Route
-                  path={ROUTES.EVENT_DETAILS}
-                  element={<ViewEventById />}
-                />
+                <Route path={ROUTES.EVENT_DETAILS} element={<ViewEventById />} />
               </Route>
             </Route>
 
@@ -133,15 +127,18 @@ const App = () => {
                 path={ROUTES.DISCORD_CALLBACK}
                 element={<DiscordCallback />}
               />
-              <Route
-                path={ROUTES.FORGOT_PASSWORD}
-                element={<ForgotPassword />}
-              />
               <Route element={<AuthLayout />}>
-                <Route path={ROUTES.LOGIN} element={<Login />} />
+                <Route path={ROUTES.LOGIN} element={<LoginPage />} />
                 <Route path={ROUTES.REGISTER} element={<SignupPage />} />
+                <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
               </Route>
             </Route>
+
+            {/* Safety Redirects for common manual URL entry errors */}
+            <Route path="/verify-otp" element={<Navigate to={ROUTES.EMAIL_VERIFY} replace />} />
+            <Route path="/player/verify-otp" element={<Navigate to={ROUTES.EMAIL_VERIFY} replace />} />
+            <Route path="/players/verify-otp" element={<Navigate to={ROUTES.EMAIL_VERIFY} replace />} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

@@ -1,4 +1,4 @@
-import exporess from "express";
+import express from "express";
 import {
   register,
   login,
@@ -15,7 +15,7 @@ import {
 import { isAuthenticated } from "../middleware/auth.middleware.js";
 import { rateLimiter } from "../middleware/rateLimiter.middleware.js";
 
-const router = exporess.Router();
+const router = express.Router();
 
 router.post(
   "/register",
@@ -57,14 +57,17 @@ router.post(
   discordLogin
 );
 
-router.use(isAuthenticated);
-
-router.post("/logout", logout);
 router.get(
   "/get-profile",
-  rateLimiter({ limit: 10, timer: 60, key: "profile" }),
+  rateLimiter({ limit: 30, timer: 60, key: "profile" }),
+  isAuthenticated,
   getProfile
 );
+
+// Logout doesn't need auth middleware - just clear tokens and cookies
+router.post("/logout", logout);
+
+router.use(isAuthenticated);
 
 // Verify account
 router.post(
@@ -72,6 +75,7 @@ router.post(
   rateLimiter({ limit: 5, timer: 60, key: "verifyOtp" }),
   sendVerifyOtp
 );
+
 router.post(
   "/verify-account",
   rateLimiter({ limit: 5, timer: 60, key: "verifyAccount" }),
@@ -80,4 +84,4 @@ router.post(
 
 export default router;
 
-// TODO ---->> update profile, block user, unblock user
+// TODO: update profile, block user, unblock user

@@ -9,6 +9,11 @@ export const getPlayerById = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("User ID is required", 400));
   }
 
+  // Basic validation for MongoDB ObjectId format
+  if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+    return next(new CustomError("Invalid Player ID format", 400));
+  }
+
   const user = await User.findById(id).select("-password");
 
   if (!user) {

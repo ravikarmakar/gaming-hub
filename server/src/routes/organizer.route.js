@@ -12,13 +12,14 @@ import {
   checkAnyRole,
   isAuthenticated,
   requireRole,
+  isVerified,
 } from "../middleware/auth.middleware.js";
 import { Roles, Scopes } from "../config/roles.js";
 import { upload } from "../utils/multer.js";
 
 const router = express.Router();
 
-router.use(isAuthenticated);
+router.use(isAuthenticated, isVerified);
 
 router.get("/", getOrgDetails);
 router.get("/details/:orgId", getOrgDetails);

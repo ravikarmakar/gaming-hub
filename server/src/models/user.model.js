@@ -44,6 +44,13 @@ const userSchema = new mongoose.Schema(
     orgId: { type: mongoose.Types.ObjectId, ref: "Organizer", default: null },
     teamId: { type: mongoose.Types.ObjectId, ref: "Team", default: null },
     canCreateOrg: { type: Boolean, default: false },
+    eventHistory: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Event",
+      },
+    ],
+
     esportsRole: {
       type: String,
       enum: ["rusher", "sniper", "support", "igl", "coach", "player"],
@@ -66,6 +73,7 @@ const userSchema = new mongoose.Schema(
 // Indexes for performance on queries
 userSchema.index({ orgId: 1 });
 userSchema.index({ teamId: 1 });
+userSchema.index({ eventHistory: 1 });
 userSchema.index({ isDeleted: 1 });
 
 userSchema.pre("save", async function (next) {

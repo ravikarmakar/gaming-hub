@@ -3,6 +3,7 @@ import axios from "axios";
 
 import { axiosInstance } from "@/lib/axios";
 import "../../../lib/axiosInterceptor";
+import { AUTH_ENDPOINTS } from "../api/endpoints";
 
 interface Roles {
   scope: "platform" | "org" | "team";
@@ -60,131 +61,141 @@ interface AuthStateTypes {
   ) => Promise<{ success: boolean; message: string }>;
 }
 
-export const useAuthStore = create<AuthStateTypes>((set) => ({
+const getErrorMessage = (error: unknown, defaultMsg: string): string => {
+  return axios.isAxiosError(error)
+    ? error.response?.data?.message || defaultMsg
+    : "Network error. Please check your connection.";
+};
+
+export const useAuthStore = create<AuthStateTypes>((set, get) => ({
   user: null,
   error: null,
   isLoading: false,
   isVerifying: false,
-  checkingAuth: true,
+  checkingAuth: false,
+
   register: async (username, email, password) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.post("/auth/register", {
+      const response = await axiosInstance.post(AUTH_ENDPOINTS.REGISTER, {
         username,
         email,
         password,
       });
-      set({ user: response.data.user, isLoading: false });
+      set({ user: response.data.user });
       return response.data.user;
-    } catch {
-      set({ error: "Error while register", isLoading: false });
+    } catch (error) {
+      const errMsg = getErrorMessage(error, "Registration failed. Please try again.");
+      set({ error: errMsg });
       return null;
+    } finally {
+      set({ isLoading: false, checkingAuth: false });
     }
   },
+
   login: async (identifier, password) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.post("/auth/login", {
+      const response = await axiosInstance.post(AUTH_ENDPOINTS.LOGIN, {
         identifier,
         password,
       });
-      set({ user: response.data.user, isLoading: false });
+      set({ user: response.data.user });
       return true;
     } catch (error) {
-      const errMsg = axios.isAxiosError(error)
-        ? error.response?.data?.message || "Failed to login! Tray again!"
-        : "Something went wrong";
-      set({ error: errMsg, isLoading: false });
+      const errMsg = getErrorMessage(error, "Failed to login! Please try again.");
+      set({ error: errMsg });
       return false;
+    } finally {
+      set({ isLoading: false, checkingAuth: false });
     }
   },
+
   logout: async () => {
     set({ isLoading: true, error: null });
     try {
-      await axiosInstance.post("/auth/logout");
+      await axiosInstance.post(AUTH_ENDPOINTS.LOGOUT);
       set({
         user: null,
-        isLoading: false,
-        checkingAuth: false,
         isVerifying: false,
       });
-    } catch {
+    } catch (error) {
+      const errMsg = getErrorMessage(error, "Error during logout. Please try again.");
+      set({ error: errMsg, user: null });
+    } finally {
       set({
-        user: null,
-        error: "Error while logot",
         isLoading: false,
         checkingAuth: false,
-        isVerifying: false,
       });
     }
   },
+
   checkAuth: async () => {
+    if (get().checkingAuth) return;
     set({ checkingAuth: true, error: null, isLoading: true });
     try {
-      const response = await axiosInstance.get("/auth/get-profile");
+      const response = await axiosInstance.get(AUTH_ENDPOINTS.GET_PROFILE);
       set({ user: response.data.user });
     } catch (error) {
-      const errMsg = axios.isAxiosError(error)
-        ? error.response?.data?.message ||
-          "Something went wrong during authentication"
-        : "Unexpected error occurred";
-
+      const errMsg = getErrorMessage(error, "Something went wrong during authentication");
       set({ error: errMsg, user: null });
     } finally {
-      console.log("SET FALSE form chekcing auth");
       set({ checkingAuth: false, isLoading: false });
     }
   },
+
   refreshToken: async () => {
     set({ checkingAuth: true, isLoading: true, error: null });
     try {
-      const response = await axiosInstance.post("/auth/refresh-token");
+      const response = await axiosInstance.post(AUTH_ENDPOINTS.REFRESH_TOKEN);
       const { user } = response.data;
       if (user) set({ user });
       return response.data;
     } catch (error) {
-      const errMsg = axios.isAxiosError(error)
-        ? error.response?.data?.message || "Failed to refresh session"
-        : "Unexpected error occurred during token refresh";
-
+      const errMsg = getErrorMessage(error, "Failed to refresh session");
       set({ user: null, error: errMsg });
     } finally {
-      console.log("SET FALSE");
       set({ checkingAuth: false, isLoading: false });
     }
   },
+
   googleAuth: async (code) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get(`/auth/google?code=${code}`);
-      set({ user: response.data.user, isLoading: false });
+      const response = await axiosInstance.get(`${AUTH_ENDPOINTS.GOOGLE}?code=${code}`);
+      set({ user: response.data.user });
       return response.data.user;
-    } catch {
-      set({ error: "Error while Google Register!", isLoading: false });
+    } catch (error) {
+      const errMsg = getErrorMessage(error, "Error while Google Register!");
+      set({ error: errMsg });
       return null;
+    } finally {
+      set({ isLoading: false, checkingAuth: false });
     }
   },
+
   loginWithDiscord: async (code) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.post(`/auth/discord?code=${code}`);
-      set({ user: response.data.user, isLoading: false });
+      const response = await axiosInstance.post(`${AUTH_ENDPOINTS.DISCORD}?code=${code}`);
+      set({ user: response.data.user });
       return response.data.user;
-    } catch {
-      set({ isLoading: false, error: "Error while Discord Register & login!" });
+    } catch (error) {
+      const errMsg = getErrorMessage(error, "Error while Discord Register & login!");
+      set({ error: errMsg });
       return null;
+    } finally {
+      set({ isLoading: false, checkingAuth: false });
     }
   },
+
   sendVerifyOtp: async () => {
     set({ isVerifying: true, error: null });
     try {
-      const response = await axiosInstance.post("/auth/send-verify-otp");
-      set({ isVerifying: false });
+      const response = await axiosInstance.post(AUTH_ENDPOINTS.SEND_VERIFY_OTP);
 
-      if (!response.data.success) {
-        const errorMsg = response.data.message || "Something went wrong";
-        set({ error: errorMsg });
-        return { success: false, message: errorMsg };
+      if (response.data.user) {
+        set({ user: response.data.user });
       }
 
       return {
@@ -192,26 +203,23 @@ export const useAuthStore = create<AuthStateTypes>((set) => ({
         message: response.data.message,
       };
     } catch (error) {
-      const errMsg = axios.isAxiosError(error)
-        ? error.response?.data?.message || "Failed to send OTP"
-        : "Something went wrong";
-
-      set({ error: errMsg, isVerifying: false });
+      const errMsg = getErrorMessage(error, "Failed to send OTP");
+      set({ error: errMsg });
       return { success: false, message: errMsg };
+    } finally {
+      set({ isVerifying: false });
     }
   },
+
   verifyEmail: async (otp) => {
     set({ isVerifying: true, error: null });
     try {
-      const response = await axiosInstance.post("/auth/verify-account", {
+      const response = await axiosInstance.post(AUTH_ENDPOINTS.VERIFY_ACCOUNT, {
         otp,
       });
-      set({ isVerifying: false });
 
-      if (!response.data.success) {
-        const errorMsg = response.data.message || "Something went wrong";
-        set({ error: errorMsg });
-        return { success: false, message: errorMsg };
+      if (response.data.user) {
+        set({ user: response.data.user });
       }
 
       return {
@@ -219,21 +227,20 @@ export const useAuthStore = create<AuthStateTypes>((set) => ({
         message: response.data.message,
       };
     } catch (error) {
-      const errMsg = axios.isAxiosError(error)
-        ? error.response?.data?.message || "Failed to send OTP"
-        : "Something went wrong";
-
-      set({ error: errMsg, isVerifying: false });
+      const errMsg = getErrorMessage(error, "Failed to verify account");
+      set({ error: errMsg });
       return { success: false, message: errMsg };
+    } finally {
+      set({ isVerifying: false });
     }
   },
+
   sendPassResetOtp: async (email) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.post("/auth/send-reset-otp", {
+      const response = await axiosInstance.post(AUTH_ENDPOINTS.SEND_RESET_OTP, {
         email,
       });
-      set({ isLoading: false });
 
       if (!response.data.success) {
         const errorMsg = response.data.message || "Something went wrong";
@@ -246,23 +253,22 @@ export const useAuthStore = create<AuthStateTypes>((set) => ({
         message: response.data.message,
       };
     } catch (error) {
-      const errMsg = axios.isAxiosError(error)
-        ? error.response?.data?.message || "Failed to send passward reset OTP"
-        : "Something went wrong";
-
-      set({ error: errMsg, isLoading: false });
+      const errMsg = getErrorMessage(error, "Failed to send password reset OTP");
+      set({ error: errMsg });
       return { success: false, message: errMsg };
+    } finally {
+      set({ isLoading: false, checkingAuth: false });
     }
   },
+
   resetPassword: async (email, otp, newPassword) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.post("/auth/reset-password", {
+      const response = await axiosInstance.post(AUTH_ENDPOINTS.RESET_PASSWORD, {
         email,
         otp,
         newPassword,
       });
-      set({ isLoading: false });
 
       if (!response.data.success) {
         const errorMsg = response.data.message || "Something went wrong";
@@ -275,14 +281,11 @@ export const useAuthStore = create<AuthStateTypes>((set) => ({
         message: response.data.message,
       };
     } catch (error) {
-      const errMsg = axios.isAxiosError(error)
-        ? error.response?.data?.message || "Failed to reset passward! Try again"
-        : "Something went wrong";
-
-      set({ error: errMsg, isLoading: false });
+      const errMsg = getErrorMessage(error, "Failed to reset password! Try again");
+      set({ error: errMsg });
       return { success: false, message: errMsg };
+    } finally {
+      set({ isLoading: false, checkingAuth: false });
     }
   },
-  resetLoadingStates: () =>
-    set({ isLoading: false, checkingAuth: false, isVerifying: false }),
 }));
