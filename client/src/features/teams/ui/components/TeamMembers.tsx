@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 
-import { TeamMembersTypes } from "@/features/teams/store/useTeamStore";
+import { TeamMembersTypes, useTeamStore } from "@/features/teams/store/useTeamStore";
 import { MemberCard } from "./MemberCard";
 
 interface TeamMembersProps {
@@ -14,6 +14,7 @@ interface TeamMembersProps {
   currentUserId: string;
   onRemove: (id: string) => void;
   onEditRole: (role: string, id: string) => void;
+  onTransferOwnership: (id: string) => void;
   isLoading?: boolean;
 }
 
@@ -23,14 +24,26 @@ export const TeamMembers = ({
   currentUserId,
   onRemove,
   onEditRole,
+  onTransferOwnership,
   isLoading,
 }: TeamMembersProps) => {
-  // Memoize filtered member lists for performance
+  const { currentTeam } = useTeamStore();
+
+  // Memoize filtered and sorted member lists for performance
   const { activeMembers, inactiveMembers } = useMemo(() => {
-    const active = members.filter((m) => m.isActive);
-    const inactive = members.filter((m) => !m.isActive);
+    const captainId = currentTeam?.captain?.toString();
+
+    // Sort function: captain first
+    const sortedMembers = [...members].sort((a, b) => {
+      if (a.user.toString() === captainId) return -1;
+      if (b.user.toString() === captainId) return 1;
+      return 0;
+    });
+
+    const active = sortedMembers.filter((m) => m.isActive);
+    const inactive = sortedMembers.filter((m) => !m.isActive);
     return { activeMembers: active, inactiveMembers: inactive };
-  }, [members]);
+  }, [members, currentTeam?.captain]);
 
   if (isLoading && members.length === 0) {
     return (
@@ -67,6 +80,7 @@ export const TeamMembers = ({
             currentUserId={currentUserId}
             onRemove={onRemove}
             onEditRole={onEditRole}
+            onTransferOwnership={onTransferOwnership}
             isLoading={isLoading || false}
           />
         ))}

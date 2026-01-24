@@ -6,12 +6,13 @@ const teamSchema = new mongoose.Schema(
     teamName: {
       type: String,
       required: true,
-      unique: true,
+      required: true,
+      // unique: true, // Handled by partial index below
       trim: true,
       minlength: 3,
       maxlength: 50,
     },
-    slug: { type: String, lowercase: true, trim: true, unique: true },
+    slug: { type: String, lowercase: true, trim: true }, // Index handled below
     tag: { type: String, maxlength: 5, uppercase: true, trim: true }, // e.g., "SOUL", "TSM"
 
     // Ownership & Members
@@ -84,6 +85,7 @@ const teamSchema = new mongoose.Schema(
     },
     game: { type: mongoose.Schema.Types.ObjectId, ref: "Game", default: null },
     isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date, default: null },
   },
   {
     timestamps: true,
@@ -99,6 +101,9 @@ teamSchema.index({ "teamMembers.user": 1 });
 teamSchema.index({ "playedTournaments.event": 1 });
 teamSchema.index({ "stats.winRate": -1 }); // For leaderboards
 teamSchema.index({ isRecruiting: 1, region: 1 }); // For team discovery
+// Partial Indexes for uniqueness ensuring name reuse after soft delete
+teamSchema.index({ teamName: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });
+teamSchema.index({ slug: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });
 
 // Auto-generate slug from teamName before saving
 teamSchema.pre("save", function (next) {

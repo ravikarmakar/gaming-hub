@@ -12,7 +12,6 @@ import {
   deleteEvent,
   closeRegistration,
 } from "../controllers/event.controller.js";
-import { authorizeRoles, protectRoute } from "../middleware/authMiddleware.js";
 import { isAuthenticated, isVerified } from "../middleware/auth.middleware.js";
 import { upload } from "../utils/multer.js";
 
@@ -30,10 +29,10 @@ router.post("/register-event/:eventId", registerEvent);
 router.get("/is-registered/:eventId/teams/:teamId", isTeamRegistered);
 router.get("/registered-teams/:eventId", fetchAllRegisteredTeams);
 
-router.put("/:eventId", authorizeRoles("organizer"), updateEvent);
-router.delete("/:eventId", authorizeRoles("organizer"), deleteEvent);
-// router.put("/remove-team/:eventId/:teamId", protectRoute, removeTeam); // to-do
-router.patch("/close-registration/:eventId", protectRoute, closeRegistration);
+router.put("/:eventId", updateEvent);
+router.delete("/:eventId", deleteEvent);
+// router.put("/remove-team/:eventId/:teamId", removeTeam); // to-do
+router.patch("/close-registration/:eventId", closeRegistration);
 
 // router.get("/featured", featuredEvents);
 // router.get("/trending", TrendingEvents);

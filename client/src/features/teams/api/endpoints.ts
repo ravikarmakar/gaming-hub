@@ -1,33 +1,35 @@
-// Base path for all team endpoints
-const TEAMS_BASE = '/teams';
+const TEAMS_BASE = "/teams";
+const INVITATIONS_BASE = "/invitations";
 
-export const teamEndpoints = {
-    // Public endpoints - no authentication required
-    getAll: () => `${TEAMS_BASE}`,
-    getById: (teamId: string) => `${TEAMS_BASE}/details/${teamId}`,
+export const TEAM_ENDPOINTS = {
+    // Public
+    GET_ALL: `${TEAMS_BASE}`,
 
-    // Authenticated endpoints - require user authentication
-    create: () => `${TEAMS_BASE}/create-team`,
-    update: () => `${TEAMS_BASE}/update-team`,
-    delete: () => `${TEAMS_BASE}/delete-team`,
+    // Team CRUD
+    GET_BY_ID: (teamId: string) => `${TEAMS_BASE}/details/${teamId}`,
+    CREATE: `${TEAMS_BASE}/create-team`,
+    UPDATE: `${TEAMS_BASE}/update-team`,
+    DELETE: `${TEAMS_BASE}/delete-team`,
 
-    // Member management - nested resource pattern
-    members: {
-        add: () => `${TEAMS_BASE}/add-members`,
-        remove: (memberId: string) => `${TEAMS_BASE}/remove-member/${memberId}`,
-        leave: () => `${TEAMS_BASE}/leave-member`,
-        updateRole: () => `${TEAMS_BASE}/manage-member-role`,
-    },
+    // Members
+    ADD_MEMBER: `${TEAMS_BASE}/add-members`,
+    REMOVE_MEMBER: (memberId: string) =>
+        `${TEAMS_BASE}/remove-member/${memberId}`,
+    LEAVE_TEAM: `${TEAMS_BASE}/leave-member`,
+    UPDATE_MEMBER_ROLE: `${TEAMS_BASE}/manage-member-role`,
 
-    // Ownership management
-    ownership: {
-        transfer: () => `${TEAMS_BASE}/transfer-owner`,
-    },
+    // Ownership
+    TRANSFER_OWNERSHIP: `${TEAMS_BASE}/transfer-owner`,
 
     // Invitations
-    invitations: {
-        base: () => '/invitations',
-        invite: () => '/invitations/invite-member',
-        respond: () => '/invitations/response-invite',
-    }
+    INVITE_MEMBER: `${INVITATIONS_BASE}/invite-member`,
+    RESPOND_INVITE: `${INVITATIONS_BASE}/response-invite`,
+
+    // Join Requests
+    SEND_JOIN_REQUEST: (teamId: string) =>
+        `${TEAMS_BASE}/${teamId}/join-request`,
+    FETCH_JOIN_REQUESTS: `${TEAMS_BASE}/join-requests/all`,
+    HANDLE_JOIN_REQUEST: (requestId: string) =>
+        `${TEAMS_BASE}/join-requests/${requestId}/handle`,
 } as const;
+

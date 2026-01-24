@@ -1,7 +1,9 @@
-import { axiosInstance } from "@/lib/axios";
 import axios from "axios";
 import { create } from "zustand";
-import { teamEndpoints } from "../api/endpoints";
+
+import { axiosInstance } from "@/lib/axios";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { TEAM_ENDPOINTS } from "../api/endpoints";
 
 export interface TeamMembersTypes {
   _id: string;
@@ -50,6 +52,7 @@ export interface Team {
   region: "NA" | "EU" | "ASIA" | "SEA" | "SA" | "OCE" | "MENA" | "INDIA" | null;
   game?: string;
   isDeleted: boolean;
+  hasPendingRequest?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -64,16 +67,17 @@ interface TeamStateTypes {
     hasMore: boolean;
   };
   isLoading: boolean;
+  isRequestingJoin: boolean;
   error: null | string;
   currentTeam: Team | null;
+  joinRequests: any[];
   createTeam: (teamData: FormData) => Promise<Team | null>;
-  addMembers: (members: string[]) => Promise<Team | null>;
   getTeamById: (id: string, forceRefresh?: boolean) => Promise<Team | null>;
   updateMemberRole: (role: string, memberId: string) => Promise<Team | null>;
-  removeMember: (id: string) => Promise<Team | null>;
-  leaveMember: () => Promise<Team | null>;
-  transferTeamOwnerShip?: () => void;
-  deleteTeam?: () => void;
+  removeMember: (id: string) => Promise<{ success: boolean; message: string } | null>;
+  leaveMember: () => Promise<{ success: boolean; message: string } | null>;
+  transferTeamOwnerShip: (memberId: string) => Promise<{ success: boolean; message: string }>;
+  deleteTeam: () => Promise<{ success: boolean; message: string }>;
   fetchAllTeams: () => Promise<void>;
   fetchTeamsPaginated: (params: {
     page?: number;
@@ -86,6 +90,9 @@ interface TeamStateTypes {
   }) => Promise<void>;
   updateTeam: (teamData: FormData) => Promise<Team | null>;
   inviteMember: (playerId: string) => Promise<{ success: boolean; message: string }>;
+  sendJoinRequest: (teamId: string, message?: string) => Promise<{ success: boolean; message: string }>;
+  fetchJoinRequests: () => Promise<void>;
+  handleJoinRequest: (requestId: string, action: 'accepted' | 'rejected') => Promise<{ success: boolean; message: string }>;
   clearError: () => void;
 }
 
@@ -106,15 +113,17 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
     hasMore: false,
   },
   isLoading: false,
+  isRequestingJoin: false,
   error: null,
   currentTeam: null,
+  joinRequests: [],
 
   clearError: () => set({ error: null }),
 
   createTeam: async (teamData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.post(teamEndpoints.create(), teamData);
+      const response = await axiosInstance.post(TEAM_ENDPOINTS.CREATE, teamData);
       set({ currentTeam: response.data.team, isLoading: false });
       return response.data.team;
     } catch (error) {
@@ -133,7 +142,7 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
 
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get(teamEndpoints.getById(id));
+      const response = await axiosInstance.get(TEAM_ENDPOINTS.GET_BY_ID(id));
       set({ currentTeam: response?.data?.team, isLoading: false });
       return response.data.team;
     } catch (error) {
@@ -143,50 +152,28 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
     }
   },
 
-  addMembers: async (members) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await axiosInstance.put(teamEndpoints.members.add(), {
-        members,
-      });
-      const updatedTeam = response.data.team;
-
-      set(() => ({
-        currentTeam: updatedTeam,
-        isLoading: false,
-      }));
-
-      return updatedTeam;
-    } catch (error) {
-      const errMsg = getErrorMessage(error, "Error adding team members");
-      set({ error: errMsg, isLoading: false });
-      return null;
-    }
-  },
-
   removeMember: async (id) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
-      const response = await axiosInstance.put(teamEndpoints.members.remove(id));
-      const updatedTeam = response.data.team;
-
-      set({
-        currentTeam: updatedTeam,
-        isLoading: false,
-      });
-
-      return updatedTeam;
+      const response = await axiosInstance.put(TEAM_ENDPOINTS.REMOVE_MEMBER(id));
+      if (response.data.success) {
+        set({ currentTeam: response.data.team, isLoading: false });
+      } else {
+        set({ isLoading: false });
+      }
+      return response.data;
     } catch (error) {
       const errMsg = getErrorMessage(error, "Error removing team member");
-      set({ error: errMsg, isLoading: false });
-      return null;
+      console.error("Failed to remove member:", errMsg);
+      set({ isLoading: false });
+      return { success: false, message: errMsg };
     }
   },
 
   updateMemberRole: async (role, memberId) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.put(teamEndpoints.members.updateRole(), {
+      const response = await axiosInstance.put(TEAM_ENDPOINTS.UPDATE_MEMBER_ROLE, {
         role,
         memberId,
       });
@@ -206,31 +193,111 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
   },
 
   leaveMember: async () => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
-      const response = await axiosInstance.put(teamEndpoints.members.leave());
-      const updatedTeam = response.data.team;
+      const response = await axiosInstance.put(TEAM_ENDPOINTS.LEAVE_TEAM);
+
+      // Update Auth Store to reflect that user no longer has a team
+      const authUser = useAuthStore.getState().user;
+      if (authUser) {
+        useAuthStore.setState({
+          user: {
+            ...authUser,
+            teamId: "",
+            roles: authUser.roles.filter(r => r.scope !== 'team')
+          }
+        });
+      }
 
       set({
-        currentTeam: updatedTeam,
+        currentTeam: null,
         isLoading: false,
       });
 
-      return updatedTeam;
+      return response.data;
     } catch (error) {
       const errMsg = getErrorMessage(error, "Error while leaving team");
-      set({ error: errMsg, isLoading: false });
-      return null;
+      console.error("Failed to leave team:", errMsg);
+      set({ isLoading: false });
+      return { success: false, message: errMsg };
     }
   },
 
-  transferTeamOwnerShip: () => { },
-  deleteTeam: () => { },
+  transferTeamOwnerShip: async (memberId: string) => {
+    set({ isLoading: true });
+    try {
+      const response = await axiosInstance.put(TEAM_ENDPOINTS.TRANSFER_OWNERSHIP, {
+        memberId,
+      });
+
+      if (response.data.success) {
+        // Update local auth user state for immediate response
+        const authUser = useAuthStore.getState().user;
+        if (authUser) {
+          useAuthStore.setState({
+            user: {
+              ...authUser,
+              roles: authUser.roles.map((r) =>
+                r.scope === "team" ? { ...r, role: "team:player" } : r
+              ),
+            },
+          });
+        }
+
+        // Update current team with fresh data from response
+        if (response.data.team) {
+          set({ currentTeam: response.data.team });
+        } else {
+          // Fallback refresh
+          const state = get();
+          if (state.currentTeam?._id) {
+            await state.getTeamById(state.currentTeam._id, true);
+          }
+        }
+      }
+
+      set({ isLoading: false });
+      return response.data;
+    } catch (error) {
+      const errMsg = getErrorMessage(error, "Error transferring team ownership");
+      set({ isLoading: false });
+      return { success: false, message: errMsg };
+    }
+  },
+
+  deleteTeam: async () => {
+    set({ isLoading: true });
+    try {
+      const response = await axiosInstance.delete(TEAM_ENDPOINTS.DELETE);
+
+      if (response.data.success) {
+        // Clear team from auth store for all members (but locally for this user)
+        const authUser = useAuthStore.getState().user;
+        if (authUser) {
+          useAuthStore.setState({
+            user: {
+              ...authUser,
+              teamId: "",
+              roles: authUser.roles.filter(r => r.scope !== 'team')
+            }
+          });
+        }
+        set({ currentTeam: null });
+      }
+
+      set({ isLoading: false });
+      return response.data;
+    } catch (error) {
+      const errMsg = getErrorMessage(error, "Error deleting team");
+      set({ isLoading: false });
+      return { success: false, message: errMsg };
+    }
+  },
 
   fetchAllTeams: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get(teamEndpoints.getAll());
+      const response = await axiosInstance.get(TEAM_ENDPOINTS.GET_ALL);
       set({ teams: response.data.teams, isLoading: false });
     } catch (error) {
       const errMsg = getErrorMessage(error, "Error fetching all teams");
@@ -250,7 +317,7 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
       if (isRecruiting !== undefined) params.append("isRecruiting", isRecruiting.toString());
       if (isVerified !== undefined) params.append("isVerified", isVerified.toString());
 
-      const response = await axiosInstance.get(`${teamEndpoints.getAll()}?${params.toString()}`);
+      const response = await axiosInstance.get(`${TEAM_ENDPOINTS.GET_ALL}?${params.toString()}`);
 
       const newTeams = response.data.teams;
       const pagination = response.data.pagination;
@@ -269,7 +336,7 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
   updateTeam: async (teamData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.put(teamEndpoints.update(), teamData);
+      const response = await axiosInstance.put(TEAM_ENDPOINTS.UPDATE, teamData);
       set({ currentTeam: response.data.team, isLoading: false });
       return response.data.team;
     } catch (error) {
@@ -283,13 +350,63 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await axiosInstance.post(
-        teamEndpoints.invitations.invite(),
+        TEAM_ENDPOINTS.INVITE_MEMBER,
         { playerId }
       );
       set({ isLoading: false });
       return { success: true, message: response.data.message };
     } catch (error) {
       const errMsg = getErrorMessage(error, "Failed to invite player");
+      set({ error: errMsg, isLoading: false });
+      return { success: false, message: errMsg };
+    }
+  },
+
+  sendJoinRequest: async (teamId, message) => {
+    set({ isRequestingJoin: true, error: null });
+    try {
+      const response = await axiosInstance.post(TEAM_ENDPOINTS.SEND_JOIN_REQUEST(teamId), { message });
+      set({ isRequestingJoin: false });
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      const errMsg = getErrorMessage(error, "Failed to send join request");
+      set({ isRequestingJoin: false, error: errMsg });
+      return { success: false, message: errMsg };
+    }
+  },
+
+  fetchJoinRequests: async () => {
+    set({ isLoading: true });
+    try {
+      const response = await axiosInstance.get(TEAM_ENDPOINTS.FETCH_JOIN_REQUESTS);
+      set({ joinRequests: response.data.requests, isLoading: false });
+    } catch (error) {
+      console.error("Failed to fetch join requests:", error);
+      set({ isLoading: false });
+    }
+  },
+
+  handleJoinRequest: async (requestId, action) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosInstance.put(TEAM_ENDPOINTS.HANDLE_JOIN_REQUEST(requestId), { action });
+
+      // Update local state
+      set((state) => {
+        const nextState: any = {
+          joinRequests: state.joinRequests.filter((req) => req._id !== requestId),
+          isLoading: false
+        };
+
+        if (action === 'accepted' && response.data.team) {
+          nextState.currentTeam = response.data.team;
+        }
+
+        return nextState;
+      });
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      const errMsg = getErrorMessage(error, "Failed to handle join request");
       set({ error: errMsg, isLoading: false });
       return { success: false, message: errMsg };
     }

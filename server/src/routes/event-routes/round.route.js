@@ -5,19 +5,19 @@ import {
   getRoundDetails,
 } from "../../controllers/event-controllers/round.controller.js";
 import {
-  protectRoute,
-  authorizeRoles,
-} from "../../middleware/authMiddleware.js";
+  isAuthenticated,
+  isVerified,
+} from "../../middleware/auth.middleware.js";
 
 const router = express.Router();
 
+router.use(isAuthenticated, isVerified);
+
 router.post(
   "/create",
-  protectRoute,
-  authorizeRoles("organizer", "moderator", "staff"),
   createRound
 );
-router.get("/:roundId", protectRoute, getRoundDetails);
+router.get("/:roundId", getRoundDetails);
 router.get("/", getRounds);
 
 export default router;

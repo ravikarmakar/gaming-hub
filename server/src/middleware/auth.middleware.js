@@ -56,6 +56,34 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
   }
 });
 
+// Optional authentication middleware that identifies the user if a token is present
+// but does not throw an error if it's missing or invalid.
+export const optionalAuthenticate = TryCatchHandler(async (req, res, next) => {
+  const accessToken =
+    req.cookies.accessToken ||
+    (req.headers.authorization && req.headers.authorization.split(" ")[1]);
+
+  if (!accessToken) return next();
+
+  try {
+    const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
+
+    // Check if blacklisted
+    const isBlacklisted = await redis.get(`blacklist_token:${accessToken}`);
+    if (isBlacklisted) return next();
+
+    req.user = {
+      _id: decoded.userId,
+      userId: decoded.userId,
+      roles: decoded.roles,
+    };
+    next();
+  } catch (error) {
+    // Silently continue for optional auth
+    next();
+  }
+});
+
 export const isVerified = TryCatchHandler(async (req, res, next) => {
   const userId = req.user.userId;
   const cacheKey = `user_profile:${userId}`;

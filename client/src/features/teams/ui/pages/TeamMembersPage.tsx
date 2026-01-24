@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Info } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,6 +9,8 @@ import { TeamMembers } from "../components/TeamMembers";
 import { MemberHeader } from "../components/MemberHeader";
 import { useTeamStore } from "@/features/teams/store/useTeamStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { JoinRequestsList } from "../components/JoinRequestsList";
+import { Users } from "lucide-react";
 
 const TeamMembersPage = () => {
   const {
@@ -18,6 +20,7 @@ const TeamMembersPage = () => {
     error,
     removeMember,
     updateMemberRole,
+    transferTeamOwnerShip,
   } = useTeamStore();
   const { user } = useAuthStore();
 
@@ -30,13 +33,13 @@ const TeamMembersPage = () => {
   const handleRemove = useCallback(
     async (memberId: string) => {
       const result = await removeMember(memberId);
-      if (result) {
+      if (result && result.success) {
         if (user?.teamId) {
           await getTeamById(user.teamId);
         }
-        toast.success("Member removed successfully");
+        toast.success(result.message || "Member removed successfully");
       } else {
-        toast.error("Failed to remove member");
+        toast.error(result?.message || "Failed to remove member");
       }
     },
     [removeMember, user?.teamId, getTeamById]
@@ -55,6 +58,21 @@ const TeamMembersPage = () => {
       }
     },
     [updateMemberRole, user?.teamId, getTeamById]
+  );
+
+  const handleTransferOwnership = useCallback(
+    async (memberId: string) => {
+      const result = await transferTeamOwnerShip(memberId);
+      if (result && result.success) {
+        toast.success(result.message || "Ownership transferred successfully");
+        if (user?.teamId) {
+          await getTeamById(user.teamId, true);
+        }
+      } else {
+        toast.error(result?.message || "Failed to transfer ownership");
+      }
+    },
+    [transferTeamOwnerShip, user?.teamId, getTeamById]
   );
 
   const isOwner = currentTeam?.captain?.toString() === user?._id?.toString();
@@ -102,15 +120,41 @@ const TeamMembersPage = () => {
       />
 
       <ScrollArea className="h-[calc(100vh-140px)]">
-        <main className="px-4 md:px-8 py-8 mx-auto max-w-7xl">
-          <TeamMembers
-            members={currentTeam.teamMembers ?? []}
-            owner={isOwner}
-            currentUserId={user?._id ?? ""}
-            onRemove={handleRemove}
-            onEditRole={handleEditRole}
-            isLoading={isLoading}
-          />
+        <main className="px-4 md:px-8 py-8 mx-auto max-w-7xl space-y-12">
+
+
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-400 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-blue-300">Tournament Registration Note</h4>
+              <p className="text-sm text-blue-200/80 leading-relaxed">
+                Only members with <span className="text-blue-100 font-medium">IGL, Rusher, Sniper, and Support</span> roles will be automatically registered for tournaments.
+                Any other roles will be listed as substitutes.
+              </p>
+            </div>
+          </div>
+
+          <section className="space-y-6">
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-400" />
+              <h2 className="text-xl font-bold text-white uppercase tracking-tight">Active Roster</h2>
+            </div>
+            <TeamMembers
+              members={currentTeam.teamMembers ?? []}
+              owner={isOwner}
+              currentUserId={user?._id ?? ""}
+              onRemove={handleRemove}
+              onEditRole={handleEditRole}
+              onTransferOwnership={handleTransferOwnership}
+              isLoading={isLoading}
+            />
+          </section>
+
+          {isOwner && (
+            <section className="animate-in fade-in slide-in-from-top-4 duration-500">
+              <JoinRequestsList />
+            </section>
+          )}
         </main>
       </ScrollArea>
     </div>

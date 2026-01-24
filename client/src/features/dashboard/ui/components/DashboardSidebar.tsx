@@ -14,6 +14,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
   SidebarMenuButton,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 const sectionTwo = [
@@ -36,12 +37,17 @@ interface Props {
 
 export const DashboardSidebar = ({ sidebarItems }: Props) => {
   const { pathname } = useLocation();
+  const { setOpenMobile } = useSidebar();
+
+  const handleLinkClick = () => {
+    setOpenMobile(false);
+  };
 
   return (
     <Sidebar
       style={{ borderRight: "none" }}
       side="left"
-      className="group-data-[side=left]:border-r-0 bg-[#0B0C1A] border-r border-white/5"
+      className="group-data-[side=left]:border-r-0 bg-[#0F0720] border-r border-purple-500/10"
     >
       {/* Header with Logo */}
       <SidebarHeader className="text-white bg-transparent py-5 px-4">
@@ -63,7 +69,7 @@ export const DashboardSidebar = ({ sidebarItems }: Props) => {
 
       {/* Separator */}
       <div className="px-4 pb-3">
-        <Separator className="bg-white/5" />
+        <Separator className="bg-purple-500/10" />
       </div>
 
       {/* Main Navigation */}
@@ -80,12 +86,16 @@ export const DashboardSidebar = ({ sidebarItems }: Props) => {
                     className={cn(
                       "h-10 px-3 flex items-center gap-3 rounded-md transition-all duration-200",
                       isActive
-                        ? "bg-purple-500/10 text-white"
+                        ? "bg-purple-500/20 text-purple-300"
                         : "text-gray-400 hover:text-white hover:bg-white/5"
                     )}
                     isActive={isActive}
                   >
-                    <Link to={item.href} className="flex items-center gap-3 w-full">
+                    <Link
+                      to={item.href}
+                      onClick={handleLinkClick}
+                      className="flex items-center gap-3 w-full"
+                    >
                       <item.icon
                         className={cn(
                           "size-[18px]",
@@ -106,7 +116,7 @@ export const DashboardSidebar = ({ sidebarItems }: Props) => {
 
       {/* Separator */}
       <div className="px-4 py-3">
-        <Separator className="bg-white/5" />
+        <Separator className="bg-purple-500/10" />
       </div>
 
       {/* Upgrade Section */}
@@ -123,12 +133,16 @@ export const DashboardSidebar = ({ sidebarItems }: Props) => {
                     className={cn(
                       "h-10 px-3 flex items-center gap-3 rounded-md transition-all duration-200",
                       isActive
-                        ? "bg-purple-500/10 text-white"
+                        ? "bg-purple-500/20 text-purple-300"
                         : "text-gray-400 hover:text-white hover:bg-white/5"
                     )}
                     isActive={isActive}
                   >
-                    <Link to={item.href} className="flex items-center gap-3 w-full">
+                    <Link
+                      to={item.href}
+                      onClick={handleLinkClick}
+                      className="flex items-center gap-3 w-full"
+                    >
                       <item.icon
                         className={cn(
                           "size-[18px]",

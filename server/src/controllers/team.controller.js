@@ -1,32 +1,21 @@
 import fs from "fs";
 import mongoose from "mongoose";
+
 import Team from "../models/team.model.js";
 import User from "../models/user.model.js";
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
 import { findUserById } from "../services/user.service.js";
 import { Roles, Scopes } from "../config/roles.js";
-import {
-  checkTeamNameUnique,
-  createNewTeam,
-  findTeamById,
-} from "../services/team.service.js";
+import { checkTeamNameUnique } from "../services/team.service.js";
 import { uploadOnImageKit } from "../utils/imagekit.js";
 import { createNotification } from "./notification.controller.js";
+import JoinRequest from "../models/join-request.model.js";
+import { redis } from "../config/redisClient.js";
 
 export const createTeam = TryCatchHandler(async (req, res, next) => {
   const { teamName, bio, tag, region } = req.body;
   const { userId } = req.user;
-
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  const handleError = (message, status) => {
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-    return next(new CustomError(message, status));
-  };
 
   try {
     await checkTeamNameUnique(teamName);
@@ -35,13 +24,15 @@ export const createTeam = TryCatchHandler(async (req, res, next) => {
     if (user.teamId) throw new CustomError("You are already in a team", 400);
     if (!user.isAccountVerified) throw new CustomError("Account is not verified yet", 401);
 
-    // image handling logic here
-    let imageUrl = "https://cloudinary/dummy-image-url";
+    // 1. Image handling with ImageKit
+    let imageUrl = "https://placehold.co/400x400/0f0720/white?text=Team";
     if (req.file) {
-      // Cleanup local file immediately since we are skipping upload for now
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
+      const uploadRes = await uploadOnImageKit(
+        req.file.path,
+        `team-logo-${Date.now()}`,
+        "/teams/logos"
+      );
+      if (uploadRes) imageUrl = uploadRes.url;
     }
 
     const teamData = {
@@ -54,19 +45,22 @@ export const createTeam = TryCatchHandler(async (req, res, next) => {
       teamMembers: [{ user: user._id, roleInTeam: "igl" }],
     };
 
+    // 2. Create Team (Atomic)
     const newTeam = new Team(teamData);
-    await newTeam.save({ session });
+    await newTeam.save();
 
-    user.teamId = newTeam._id;
-    user.roles.push({
-      scope: Scopes.TEAM,
-      role: Roles.TEAM.OWNER,
-      scopeId: newTeam._id,
-      scopeModel: "Team",
+    // 3. Update User (Atomic)
+    await User.findByIdAndUpdate(userId, {
+      $set: { teamId: newTeam._id },
+      $push: {
+        roles: {
+          scope: Scopes.TEAM,
+          role: Roles.TEAM.OWNER,
+          scopeId: newTeam._id,
+          scopeModel: "Team",
+        },
+      },
     });
-
-    await user.save({ session });
-    await session.commitTransaction();
 
     res.status(201).json({
       success: true,
@@ -74,13 +68,10 @@ export const createTeam = TryCatchHandler(async (req, res, next) => {
       team: newTeam,
     });
   } catch (error) {
-    await session.abortTransaction();
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
     next(error);
-  } finally {
-    session.endSession();
   }
 });
 
@@ -107,20 +98,22 @@ export const updateTeam = TryCatchHandler(async (req, res, next) => {
 
   // Handle branding assets update (logo and banner)
   if (req.files) {
-    const cleanup = (filePath) => {
-      if (filePath && fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    };
-
     if (req.files.image && req.files.image[0]) {
-      cleanup(req.files.image[0].path);
-      team.imageUrl = "https://cloudinary/dummy-image-url/updated-logo"; // Placeholder
+      const uploadRes = await uploadOnImageKit(
+        req.files.image[0].path,
+        `team-logo-${team._id}-${Date.now()}`,
+        "/teams/logos"
+      );
+      if (uploadRes) team.imageUrl = uploadRes.url;
     }
 
     if (req.files.banner && req.files.banner[0]) {
-      cleanup(req.files.banner[0].path);
-      team.bannerUrl = "https://cloudinary/dummy-image-url/updated-banner"; // Placeholder
+      const uploadRes = await uploadOnImageKit(
+        req.files.banner[0].path,
+        `team-banner-${team._id}-${Date.now()}`,
+        "/teams/banners"
+      );
+      if (uploadRes) team.bannerUrl = uploadRes.url;
     }
   }
 
@@ -174,6 +167,17 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Team not found", 404));
   }
 
+  // Check if the current user (if logged in) has a pending join request
+  let hasPendingRequest = false;
+  if (req.user) {
+    const existingRequest = await JoinRequest.findOne({
+      requester: req.user._id,
+      team: teamId,
+      status: "pending"
+    });
+    hasPendingRequest = !!existingRequest;
+  }
+
   // Transform populated data to match expected client format
   const transformedTeam = {
     ...team,
@@ -185,6 +189,7 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
       joinedAt: member.joinedAt,
       isActive: member.isActive,
     })),
+    hasPendingRequest
   };
 
   res.status(200).json({
@@ -357,131 +362,174 @@ export const addMembers = TryCatchHandler(async (req, res, next) => {
       400
     );
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
+    const updatedMembers = [...team.teamMembers];
+
     await Promise.all(
       members.map(async (memberId) => {
-        if (
-          !team.teamMembers.some((m) => m.user.toString() === memberId.toString())
-        ) {
-          team.teamMembers.push({ user: memberId, roleInTeam: "player" });
+        const isAlreadyMember = team.teamMembers.some((m) => m.user.toString() === memberId.toString());
+
+        if (!isAlreadyMember) {
+          // 1. Update User (Atomic)
           await User.findByIdAndUpdate(memberId, {
-            teamId: team._id,
+            $set: { teamId: team._id },
             $push: {
               roles: {
-                scope: "team",
+                scope: Scopes.TEAM,
                 role: Roles.TEAM.PLAYER,
                 scopeId: team._id,
-                scopeModel: Scopes.TEAM,
+                scopeModel: "Team",
               },
             },
-          }, { session });
+          });
+
+          // 2. Prepare Roster update
+          updatedMembers.push({ user: memberId, roleInTeam: "player" });
         }
       })
     );
 
-    await team.save({ session });
-    await session.commitTransaction();
+    // 3. Update Team Roster (Atomic)
+    await Team.findByIdAndUpdate(team._id, { $set: { teamMembers: updatedMembers } });
 
     res.status(200).json({
       success: true,
       message: "Members added successfully to the team.",
-      team,
     });
   } catch (error) {
-    await session.abortTransaction();
     next(error);
-  } finally {
-    session.endSession();
   }
 });
 
 export const removeMember = TryCatchHandler(async (req, res, next) => {
   const memberId = req.params.id;
+  const { userId } = req.user;
   const team = req.teamDoc;
 
-  if (memberId.toString() === team.captain.toString())
+  if (memberId.toString() === team.captain.toString()) {
     throw new CustomError("Captain cannot remove themselves.", 400);
+  }
 
-  const memberIndex = team.teamMembers.findIndex(
-    (m) => m.user.toString() === memberId.toString()
+  // Explicit membership check
+  const isMember = team.teamMembers.some((m) => m.user.toString() === memberId.toString());
+  if (!isMember) {
+    throw new CustomError("User is not a member of this team.", 404);
+  }
+
+  // 1. Remove user from team roster
+  await Team.findByIdAndUpdate(
+    team._id,
+    { $pull: { teamMembers: { user: memberId } } }
   );
 
-  if (memberIndex === -1)
-    throw new CustomError("Member not found in the team.", 404);
-
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    team.teamMembers.splice(memberIndex, 1);
-    await team.save({ session });
-
-    await User.findByIdAndUpdate(memberId, { teamId: null }, { session });
-
-    // Generate notification for the kicked member
-    await createNotification({
-      recipient: memberId,
-      sender: req.user.userId,
-      type: "TEAM_KICK",
-      content: {
-        title: "Kicked from Team",
-        message: `You have been removed from the team ${team.teamName} by the captain.`,
+  // 2. Clear user team data and roles
+  await User.findByIdAndUpdate(
+    memberId,
+    {
+      $set: { teamId: null },
+      $pull: {
+        roles: {
+          scope: "team",
+          scopeId: team._id,
+        },
       },
-      relatedData: {
-        teamId: team._id,
-      },
-    });
+    }
+  );
 
-    await session.commitTransaction();
+  // 3. Invalidate Redis cache for both users
+  const pipeline = redis.pipeline();
+  pipeline.del(`user_profile:${userId}`);     // Captain (updated team view)
+  pipeline.del(`user_profile:${memberId}`);   // Removed Member (no team view)
+  await pipeline.exec();
 
-    res.status(200).json({
-      success: true,
-      message: "Member removed successfully.",
-      team,
-    });
-  } catch (error) {
-    await session.abortTransaction();
-    next(error);
-  } finally {
-    session.endSession();
-  }
+  // 4. Notify the removed member
+  await createNotification({
+    recipient: memberId,
+    sender: userId,
+    type: "TEAM_KICK",
+    content: {
+      title: "Kicked from Team",
+      message: `You have been removed from the team ${team.teamName} by the captain.`,
+    },
+    relatedData: {
+      teamId: team._id,
+    },
+  });
+
+  // Fetch updated team roster
+  const updatedTeam = await Team.findById(team._id).populate({
+    path: "teamMembers.user",
+    select: "username avatar _id",
+  }).lean();
+
+  const transformedTeam = {
+    ...updatedTeam,
+    teamMembers: updatedTeam.teamMembers.map((m) => ({
+      user: m.user._id,
+      roleInTeam: m.roleInTeam,
+      username: m.user.username,
+      avatar: m.user.avatar,
+      joinedAt: m.joinedAt,
+      isActive: m.isActive,
+    })),
+  };
+
+  res.status(200).json({
+    success: true,
+    message: "Member removed successfully.",
+    team: transformedTeam
+  });
 });
 
 export const leaveMember = TryCatchHandler(async (req, res, next) => {
-  const user = req.userDoc;
-  const team = req.teamDoc;
+  const { userId } = req.user;
 
-  if (team.captain.toString() === user._id.toString()) {
+  // Fresh load
+  const user = await User.findById(userId);
+  if (!user || !user.teamId) {
+    throw new CustomError("You are not part of any team.", 400);
+  }
+
+  const team = await Team.findById(user.teamId);
+  if (!team) {
+    // Stale state cleanup
+    await User.findByIdAndUpdate(userId, { $set: { teamId: null } });
+    return res.status(200).json({ success: true, message: "Team association cleared." });
+  }
+
+  // Prevention of captain abandonment
+  if (team.captain.toString() === userId.toString()) {
     throw new CustomError(
       "You are the captain. Transfer captaincy or disband the team before leaving.",
       403
     );
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  // 1. Atomic removal from team roster
+  await Team.findByIdAndUpdate(
+    team._id,
+    { $pull: { teamMembers: { user: userId } } }
+  );
 
+  // 2. Atomic removal of team info from user
+  await User.findByIdAndUpdate(
+    userId,
+    {
+      $set: { teamId: null },
+      $pull: {
+        roles: {
+          scope: "team",
+          scopeId: team._id,
+        },
+      },
+    }
+  );
+
+  // 3. Notify the captain
   try {
-    // Remove user from teamMembers
-    team.teamMembers = team.teamMembers.filter(
-      (member) => member.user.toString() !== user._id.toString()
-    );
-    await team.save({ session });
-
-    // Remove teamId from user and clear team-related roles
-    user.teamId = null;
-    user.roles = user.roles.filter(
-      (r) => r.scope !== "team" || r.scopeId?.toString() !== team._id.toString()
-    );
-    await user.save({ session });
-
-    // Generate notification for the team captain
     await createNotification({
       recipient: team.captain,
-      sender: req.user.userId,
+      sender: userId,
       type: "TEAM_LEAVE",
       content: {
         title: "Member Left Team",
@@ -491,85 +539,139 @@ export const leaveMember = TryCatchHandler(async (req, res, next) => {
         teamId: team._id,
       },
     });
-
-    await session.commitTransaction();
-
-    res.status(200).json({
-      success: true,
-      message: "You have successfully left the team.",
-      team,
-    });
-  } catch (error) {
-    await session.abortTransaction();
-    next(error);
-  } finally {
-    session.endSession();
+  } catch (notifErr) {
+    console.error("Notification failed:", notifErr);
+    // Continue anyway
   }
+
+  res.status(200).json({
+    success: true,
+    message: "You have successfully left the team.",
+  });
 });
 
 export const transferTeamOwnerShip = TryCatchHandler(async (req, res, next) => {
   const { memberId } = req.body;
-  if (!memberId)
-    throw new CustomError("Please provide a member ID to assign as captain.", 400);
 
-  const team = req.teamDoc;
-  const user = req.userDoc;
+  if (!memberId) {
+    throw new CustomError(
+      "Please provide a member ID to assign as captain.",
+      400
+    );
+  }
 
-  // Check if the new member is part of the team
+  const team = req.teamDoc;   // current team
+  const user = req.userDoc;   // old owner (request sender)
+
+  // 1 Check: member team ka hissa hai ya nahi
   const isMember = team.teamMembers.some(
     (m) => m.user.toString() === memberId.toString()
   );
 
-  if (!isMember)
-    throw new CustomError("The selected member is not part of your team.", 400);
-
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  if (!isMember) {
+    throw new CustomError(
+      "The selected member is not part of your team.",
+      400
+    );
+  }
 
   try {
-    // Update roles in teamMembers array
-    team.teamMembers = team.teamMembers.map((member) => {
-      if (member.user.toString() === memberId.toString()) {
-        return { ...member, roleInTeam: "igl" };
-      } else if (member.user.toString() === user._id.toString()) {
-        return { ...member, roleInTeam: "player" };
+    // 2 Update Team document (captain + teamMembers)
+    const updatedMembers = team.teamMembers.map((member) => {
+      const uid = member.user.toString();
+
+      if (uid === memberId.toString()) {
+        return { ...member.toObject(), roleInTeam: "igl" };
       }
-      return member;
+
+      if (uid === user._id.toString()) {
+        return { ...member.toObject(), roleInTeam: "player" };
+      }
+
+      return member.toObject();
     });
 
-    // Transfer igl
-    team.captain = memberId;
-    await team.save({ session });
+    await Team.findByIdAndUpdate(team._id, {
+      $set: {
+        captain: memberId,
+        teamMembers: updatedMembers,
+      },
+    });
 
-    // Update old captain's roles
-    user.roles = user.roles.map((r) =>
-      r.scope === "team" && r.scopeId?.toString() === team._id.toString()
-        ? { ...r, role: Roles.TEAM.PLAYER }
-        : r
-    );
-    await user.save({ session });
+    // 3 Update User document (roles)
+    await User.findByIdAndUpdate(user._id, {
+      $set: {
+        roles: [
+          // keep platform role safe
+          ...user.roles.filter((r) => r.scope === "platform"),
 
-    // Update new captain's roles
-    const newCaptain = await findUserById(memberId);
-    newCaptain.roles = newCaptain.roles.map((r) =>
-      r.scope === "team" && r.scopeId?.toString() === team._id.toString()
-        ? { ...r, role: Roles.TEAM.OWNER }
-        : r
-    );
-    await newCaptain.save({ session });
+          // ONLY current team as PLAYER
+          {
+            scope: "team",
+            role: Roles.TEAM.PLAYER, // "team:player"
+            scopeId: team._id,
+            scopeModel: "Team",
+          },
+        ],
+      },
+    });
 
-    await session.commitTransaction();
+    // 4 Update New Captain document (roles)  
+    const newCaptainUser = await findUserById(memberId);
 
+    await User.findByIdAndUpdate(memberId, {
+      $set: {
+        roles: [
+          ...newCaptainUser.roles.filter((r) => r.scope === "platform"),
+
+          {
+            scope: "team",
+            role: Roles.TEAM.OWNER, // "team:owner"
+            scopeId: team._id,
+            scopeModel: "Team",
+          },
+        ],
+      },
+    });
+
+    // 5 Clear Redis cache
+    const pipeline = redis.pipeline();
+    pipeline.del(`user_profile:${user._id}`);
+    pipeline.del(`user_profile:${memberId}`);
+    await pipeline.exec();
+
+    // 6 Fetch updated team
+    const updatedTeam = await Team.findOne({
+      _id: team._id,
+      isDeleted: false,
+    })
+      .select("-__v")
+      .populate({
+        path: "teamMembers.user",
+        select: "username avatar _id",
+      })
+      .lean();
+
+    const transformedTeam = {
+      ...updatedTeam,
+      teamMembers: updatedTeam.teamMembers.map((m) => ({
+        user: m.user._id,
+        roleInTeam: m.roleInTeam,
+        username: m.user.username,
+        avatar: m.user.avatar,
+        joinedAt: m.joinedAt,
+        isActive: m.isActive,
+      })),
+    };
+
+    // 7 Response
     res.status(200).json({
       success: true,
       message: "Team ownership transferred successfully.",
-      team,
+      team: transformedTeam,
     });
   } catch (error) {
-    await session.abortTransaction();
     next(error);
-  } finally {
-    session.endSession();
   }
 });
 
@@ -599,6 +701,9 @@ export const manageMemberRole = TryCatchHandler(async (req, res, next) => {
   member.roleInTeam = role;
   await team.save();
 
+  // Invalidate Redis cache for the member (Stale roles/profile)
+  await redis.del(`user_profile:${memberId}`);
+
   res.status(200).json({
     success: true,
     message: `The member's role has been updated to '${role}'.`,
@@ -609,11 +714,8 @@ export const manageMemberRole = TryCatchHandler(async (req, res, next) => {
 export const deleteTeam = TryCatchHandler(async (req, res, next) => {
   const team = req.teamDoc;
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
-    // Set teamId = null and remove team roles for all team members
+    // 1. Set teamId = null and remove team roles for all team members (Atomic)
     const memberIds = team.teamMembers.map((member) => member.user);
     await User.updateMany(
       { _id: { $in: memberIds } },
@@ -625,29 +727,39 @@ export const deleteTeam = TryCatchHandler(async (req, res, next) => {
             scopeId: team._id,
           },
         },
-      },
-      { session }
+      }
     );
 
-    // Soft delete the team by setting isDeleted to true
-    team.isDeleted = true;
-    await team.save({ session });
+    // 2. Soft delete the team (Atomic)
+    await Team.findByIdAndUpdate(team._id, {
+      $set: {
+        isDeleted: true,
+        deletedAt: new Date()
+      }
+    });
 
-    await session.commitTransaction();
+    // 3. Invalidate Redis cache for all members (Pipeline for efficiency)
+    const pipeline = redis.pipeline();
+    memberIds.forEach((userId) => {
+      pipeline.del(`user_profile:${userId}`);
+    });
+    await pipeline.exec();
+
+    // 4. Async cleanup of related data
+    JoinRequest.deleteMany({ team: team._id }).catch(err =>
+      console.error(`Failed to cleanup join requests for team ${team._id}:`, err)
+    );
 
     res.status(200).json({
       success: true,
       message: "Team deleted successfully",
-      team,
     });
   } catch (error) {
-    await session.abortTransaction();
     next(error);
-  } finally {
-    session.endSession();
   }
 });
 
-// to-do  - whatif memeber left the team ? automatic letf form the evenst register and what?
-// to-do  --> using socket.io emit real time events to users
-// TODO: invalidate the user cache to when someting change in database
+// TODO: using socket.io emit real time events to users
+// TODO: invalidate the user cache in redis when someting change in database
+// TODO: ImageKit is not working; handle the team creation error later.
+
