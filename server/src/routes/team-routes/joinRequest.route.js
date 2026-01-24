@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { protectRoute } from "../../middleware/authMiddleware.js";
+import { isAuthenticated } from "../../middleware/auth.middleware.js";
 import {
   getAllJoinRequest,
   respondToJoinRequest,
@@ -8,8 +8,8 @@ import {
 
 const router = Router();
 
-router.get("/", protectRoute, getAllJoinRequest);
-router.put("/respond", protectRoute, respondToJoinRequest);
-router.post("/", protectRoute, requestToJoinTeam);
+router.get("/", isAuthenticated, getAllJoinRequest);
+router.put("/respond", isAuthenticated, respondToJoinRequest);
+router.post("/", isAuthenticated, requestToJoinTeam);
 
 export default router;

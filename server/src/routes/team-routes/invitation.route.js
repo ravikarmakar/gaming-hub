@@ -1,15 +1,13 @@
 import { Router } from "express";
-import { protectRoute } from "../../middleware/authMiddleware.js";
+import { isAuthenticated } from "../../middleware/auth.middleware.js";
 import {
   getAllInvitations,
-  responseToInvite,
   inviteMemberInTeam,
-} from "../../controllers/team-controller/invitation.controller.js";
+} from "../../controllers/invitation.controller.js";
 
 const router = Router();
 
-router.get("/", protectRoute, getAllInvitations);
-router.post("/invite-member", protectRoute, inviteMemberInTeam);
-router.put("/response-invite", protectRoute, responseToInvite);
+router.get("/", isAuthenticated, getAllInvitations);
+router.post("/invite-member", isAuthenticated, inviteMemberInTeam);
 
 export default router;

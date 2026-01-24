@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import TeamNotification from "../../models/notification-model/team.notification.model.js";
+import { Notification } from "../../models/notification.model.js";
 import JoinRequest from "../../models/team-model/joinRequest.model.js";
 import Team from "../../models/team.model.js";
 import User from "../../models/user.model.js";
@@ -30,7 +30,13 @@ export const getAllJoinRequest = async (req, res) => {
 export const requestToJoinTeam = async (req, res) => {
   try {
     const { teamId } = req.body;
-    const loggedInUser = req.user;
+    const userId = req.user._id;
+
+    // Fetch full user for status check
+    const loggedInUser = await User.findById(userId);
+    if (!loggedInUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
 
     if (!mongoose.Types.ObjectId.isValid(teamId)) {
       return res
@@ -56,7 +62,7 @@ export const requestToJoinTeam = async (req, res) => {
     }
 
     // Check if player is already in another team
-    if (loggedInUser.activeTeam) {
+    if (loggedInUser.teamId) {
       return res
         .status(400)
         .json({ success: false, message: "You are already in another team." });
@@ -97,16 +103,25 @@ export const requestToJoinTeam = async (req, res) => {
 
     await newJoinRequest.save();
 
-    // Notify the team owner
-    const notification = new TeamNotification({
-      user: team.owner,
-      type: "join_request",
+    // Notify the team owner using the new system
+    await Notification.create({
+      recipient: team.owner,
+      sender: loggedInUser._id,
+      type: "TEAM_JOIN_REQUEST",
+      content: {
+        title: "New Join Request",
+        message: `${loggedInUser.username} requested to join your team: ${team.teamName}.`,
+      },
       status: "unread",
-      message: `${loggedInUser.name} requested to join your team: ${team.teamName}.`,
-      relatedId: newJoinRequest._id,
+      relatedData: {
+        teamId: team._id,
+        inviteId: newJoinRequest._id,
+      },
+      actions: [
+        { label: "Accept", actionType: "ACCEPT", payload: { teamId: team._id, requestId: newJoinRequest._id, userId: loggedInUser._id } },
+        { label: "Reject", actionType: "REJECT", payload: { requestId: newJoinRequest._id } },
+      ]
     });
-
-    await notification.save();
 
     // Increment owner's notification count
     await User.findByIdAndUpdate(team.owner, {
@@ -131,7 +146,13 @@ export const requestToJoinTeam = async (req, res) => {
 export const respondToJoinRequest = async (req, res) => {
   try {
     const { action } = req.body;
-    const loggedInUser = req.user;
+    const userId = req.user._id;
+
+    // Fetch full user (Owner)
+    const loggedInUser = await User.findById(userId);
+    if (!loggedInUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
 
     if (!action) {
       return res
@@ -181,7 +202,7 @@ export const respondToJoinRequest = async (req, res) => {
     }
 
     // Check if user is already in a team
-    if (userToJoin.activeTeam) {
+    if (userToJoin.teamId) {
       return res
         .status(400)
         .json({ success: false, message: "User is already in a team." });
@@ -193,8 +214,8 @@ export const respondToJoinRequest = async (req, res) => {
     let joinRequestType = action === "accept" ? "accept" : "reject";
 
     if (action === "accept") {
-      // Update user's active team
-      userToJoin.activeTeam = team._id;
+      // Update user's teamId
+      userToJoin.teamId = team._id;
       await userToJoin.save();
 
       // Add user to team members
@@ -210,16 +231,23 @@ export const respondToJoinRequest = async (req, res) => {
     joinRequest.status = action === "accept" ? "accepted" : "rejected";
     await joinRequest.save();
 
-    // Create a notification
-    const notification = new TeamNotification({
-      user: userToJoin._id,
-      type: joinRequestType,
+    // Create a notification using the new system
+    await Notification.create({
+      recipient: userToJoin._id,
+      sender: loggedInUser._id,
+      type: "SYSTEM",
+      content: {
+        title: "Join Request Update",
+        message,
+      },
       status: "unread",
-      message,
-      relatedId: team._id,
+      relatedData: {
+        teamId: team._id,
+      },
+      actions: [
+        { label: "View Team", actionType: "VIEW", payload: { teamId: team._id } }
+      ]
     });
-
-    await notification.save();
 
     // Increment sender's notification count
     await User.findByIdAndUpdate(joinRequest.senderId, {

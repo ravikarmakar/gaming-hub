@@ -16,12 +16,6 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 
-// const sectionOne = [
-//   { label: "Profile", icon: User, href: "/dashboard/player" },
-//   { label: "Team", icon: Users, href: "/dashboard/team" },
-//   { label: "Notifications", icon: Bell, href: "/dashboard/notifications" },
-// ];
-
 const sectionTwo = [
   {
     label: "Upgrade",
@@ -41,81 +35,125 @@ interface Props {
 }
 
 export const DashboardSidebar = ({ sidebarItems }: Props) => {
-  const pathname = useLocation();
+  const { pathname } = useLocation();
 
   return (
     <Sidebar
       style={{ borderRight: "none" }}
       side="left"
-      className="group-data-[side=left]:border-r-0"
+      className="group-data-[side=left]:border-r-0 bg-[#0B0C1A] border-r border-white/5"
     >
-      <SidebarHeader className="text-white">
-        <Link to={ROUTES.HOME} className="flex items-center gap-2 px-2 pt-2">
-          <img src="/logo.svg" height={36} width={36} alt="Gaminghub" />
-          <p className="text-2xl font-semibold">Gaming Hub</p>
+      {/* Header with Logo */}
+      <SidebarHeader className="text-white bg-transparent py-5 px-4">
+        <Link
+          to={ROUTES.HOME}
+          className="flex items-center gap-2.5"
+        >
+          <img
+            src="/logo.svg"
+            height={32}
+            width={32}
+            alt="Gaming Hub"
+          />
+          <p className="text-xl font-bold text-white tracking-tight">
+            Gaming Hub
+          </p>
         </Link>
       </SidebarHeader>
-      <div className="px-4 py-2">
-        <Separator className="opacity-10 text-[#5D6B68]" />
+
+      {/* Separator */}
+      <div className="px-4 pb-3">
+        <Separator className="bg-white/5" />
       </div>
+
+      {/* Main Navigation */}
       <SidebarGroup>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {sidebarItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  className={cn(
-                    "h-10 px-4 flex items-center gap-3 rounded-md transition-colors duration-200",
-                    pathname.pathname === item.href
-                      ? "bg-purple-900/40 text-white border border-purple-700/20"
-                      : "hover:bg-purple-800/30 hover:text-white text-gray-300"
-                  )}
-                  isActive={pathname.pathname === item.href}
-                >
-                  <Link to={item.href}>
-                    <item.icon className="text-purple-400 size-5" />
-                    <span className="text-sm font-medium tracking-tight">
-                      {item.label}
-                    </span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
-      <div className="px-4 py-2">
-        <Separator className="opacity-10 text-[#5D6B68]" />
-      </div>
-      <SidebarGroup>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {sectionTwo.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  className={cn(
-                    "h-10 px-4 flex items-center gap-3 rounded-md transition-colors duration-200",
-                    pathname.pathname === item.href
-                      ? "bg-purple-900/50 text-white border border-purple-700"
-                      : "hover:bg-purple-800/30 hover:text-white text-gray-300"
-                  )}
-                  isActive={pathname.pathname === item.href}
-                >
-                  <Link to={item.href}>
-                    <item.icon className="w-5 h-5 text-purple-400" />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+        <SidebarGroupContent className="px-3">
+          <SidebarMenu className="space-y-0.5">
+            {sidebarItems.map((item) => {
+              const isActive = pathname === item.href;
+
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    className={cn(
+                      "h-10 px-3 flex items-center gap-3 rounded-md transition-all duration-200",
+                      isActive
+                        ? "bg-purple-500/10 text-white"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                    )}
+                    isActive={isActive}
+                  >
+                    <Link to={item.href} className="flex items-center gap-3 w-full">
+                      <item.icon
+                        className={cn(
+                          "size-[18px]",
+                          isActive ? "text-purple-400" : "text-gray-400"
+                        )}
+                      />
+                      <span className="text-sm font-medium">
+                        {item.label}
+                      </span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
 
-      <SidebarFooter className="text-white">
-        {/* <DashboardUserButton /> */}
+      {/* Separator */}
+      <div className="px-4 py-3">
+        <Separator className="bg-white/5" />
+      </div>
+
+      {/* Upgrade Section */}
+      <SidebarGroup>
+        <SidebarGroupContent className="px-3">
+          <SidebarMenu>
+            {sectionTwo.map((item) => {
+              const isActive = pathname === item.href;
+
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    className={cn(
+                      "h-10 px-3 flex items-center gap-3 rounded-md transition-all duration-200",
+                      isActive
+                        ? "bg-purple-500/10 text-white"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                    )}
+                    isActive={isActive}
+                  >
+                    <Link to={item.href} className="flex items-center gap-3 w-full">
+                      <item.icon
+                        className={cn(
+                          "size-[18px]",
+                          isActive ? "text-purple-400" : "text-gray-400"
+                        )}
+                      />
+                      <span className="text-sm font-medium">
+                        {item.label}
+                      </span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      {/* Footer */}
+      <SidebarFooter className="text-white bg-transparent pb-4">
+        <div className="px-4 text-center">
+          <p className="text-xs text-gray-500">
+            © 2024 Gaming Hub
+          </p>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

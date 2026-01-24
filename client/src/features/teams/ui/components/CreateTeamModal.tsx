@@ -1,8 +1,10 @@
 import { z } from "zod";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { motion, AnimatePresence } from "framer-motion";
+import { Shield, Info } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +13,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -23,37 +24,19 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-import FileUpload from "@/components/FileUplaod";
-
+import FileUpload from "@/components/FileUpload";
 import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { MAX_FILE_SIZE, teamSchema } from "@/schemas/team-validation/teamSchema";
 
-// Zod schema remains the same
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ACCEPTED_IMAGE_TYPES = [
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-];
-
-const teamSchema = z.object({
-  teamName: z
-    .string()
-    .min(2, { message: "Team name is required" })
-    .max(30, { message: "Team name must not exceed 50 characters." }),
-  bio: z
-    .string()
-    .max(500, { message: "Bio must not exceed 500 characters." })
-    .optional(),
-  image: z
-    .instanceof(File)
-    .refine((file) => file.size <= MAX_FILE_SIZE, `Max image size is 5MB.`)
-    .refine(
-      (file) => ACCEPTED_IMAGE_TYPES.includes(file.type),
-      "Only .jpg, .jpeg, .png and .webp formats are supported."
-    ),
-});
 
 type TeamForm = z.infer<typeof teamSchema>;
 
@@ -62,19 +45,16 @@ interface CreateTeamModalProps {
   setIsOpen: (open: boolean) => void;
 }
 
-const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
-  isOpen,
-  setIsOpen,
-}) => {
-  const { createTeam, isLoading, error } = useTeamStore();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const CreateTeamModal: React.FC<CreateTeamModalProps> = ({ isOpen, setIsOpen }) => {
+  const { createTeam, isLoading, error, clearError } = useTeamStore();
 
   const form = useForm<TeamForm>({
     resolver: zodResolver(teamSchema),
     defaultValues: {
       teamName: "",
+      tag: "",
+      region: "INDIA",
       bio: "",
-      image: undefined,
     },
   });
 
@@ -82,121 +62,190 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
 
   const onSubmit = async (data: TeamForm) => {
     const formData = new FormData();
-    formData.append("teamName", data.teamName);
-    if (data.bio) {
-      formData.append("bio", data.bio);
-    }
-    formData.append("image", data.image);
+
+    Object.entries(data).forEach(([key, value]) => {
+      if (value) formData.append(key, value);
+    });
+
+    console.log("Team data", formData)
 
     const result = await createTeam(formData);
     if (result) {
+      // Refresh the user profile to update teamId and roles in the auth store
+      await useAuthStore.getState().checkAuth();
       toast.success("Team created successfully!");
-      resetFormAndCloseModal();
+      setIsOpen(false);
+      reset();
     }
-  };
-
-  const resetFormAndCloseModal = () => {
-    reset();
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-    setIsOpen(false);
   };
 
   useEffect(() => {
     if (!isOpen) {
-      resetFormAndCloseModal();
+      clearError();
     }
-  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, clearError]);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[425px] bg-gray-900 border border-gray-800 rounded-xl text-white">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">
-            Create Your Team
-          </DialogTitle>
-          <DialogDescription className="text-gray-400">
-            Enter the details for your new team.
-          </DialogDescription>
+      <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden bg-[#0a0514] border-purple-500/20 shadow-[0_0_50px_rgba(139,92,246,0.15)] rounded-2xl">
+        <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,0.05),transparent_40%)] pointer-events-none" />
+
+        <DialogHeader className="p-6 pb-2">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
+              <Shield className="w-5 h-5 text-purple-400" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-bold text-white tracking-tight">Create Team</DialogTitle>
+              <DialogDescription className="text-purple-300/60 text-xs mt-0.5">Define your team identity and start competing.</DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
+
         <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
-            <FormField
-              control={control}
-              name="teamName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-white">Team Name</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Example Esports"
-                      {...field}
-                      className="text-white bg-gray-800 border-gray-500 focus:border-gray-400"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={control}
-              name="bio"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-white">Team Bio</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Tell us a little about your team..."
-                      {...field}
-                      className="resize-y min-h-[80px] border-gray-500 focus:border-gray-400 bg-gray-800 text-white"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={control}
-              name="image"
-              render={({
-                field: { onChange, value, ...fieldProps },
-                fieldState,
-              }) => (
-                <FormItem>
-                  <FileUpload
-                    label="Team Logo"
-                    name={fieldProps.name}
-                    id={fieldProps.name}
-                    accept="image/*"
-                    maxSize={MAX_FILE_SIZE}
-                    onChange={onChange}
-                    value={value}
-                    error={fieldState.error?.message}
-                    hint="Max 5MB, JPG, PNG, WebP"
-                    required
-                    disabled={isLoading}
+          <form onSubmit={handleSubmit(onSubmit)} className="px-6 pb-6 pt-2">
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <FormField
+                    control={control}
+                    name="teamName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-purple-100/80 text-xs">Team Name</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Nexus Gaming"
+                            {...field}
+                            className="bg-white/5 border-purple-500/10 focus:border-purple-500/50 text-white rounded-xl h-9 text-xs transition-all"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-red-400 text-[10px]" />
+                      </FormItem>
+                    )}
                   />
-                  {fieldState.error && <FormMessage />}
-                </FormItem>
-              )}
-            />
+                </div>
+                <div className="col-span-1">
+                  <FormField
+                    control={control}
+                    name="tag"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-purple-100/80 text-xs">Tag</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="NXG"
+                            {...field}
+                            className="bg-white/5 border-purple-500/10 focus:border-purple-500/50 text-white rounded-xl h-9 text-xs uppercase font-mono transition-all"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-red-400 text-[10px]" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
 
-            {error && (
-              <p className="p-2 text-sm text-center text-red-400 rounded-md bg-red-500/10">
-                {error}
-              </p>
-            )}
+              <div className="grid grid-cols-2 gap-3 items-end">
+                <FormField
+                  control={control}
+                  name="region"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-purple-100/80 text-xs">Region</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-white/5 border-purple-500/10 focus:border-purple-500/50 text-white rounded-xl h-9 text-xs transition-all">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-[#0a0514] border-purple-500/20 text-purple-100">
+                          {["INDIA", "NA", "EU", "ASIA", "SEA", "SA", "OCE", "MENA"].map((reg) => (
+                            <SelectItem key={reg} value={reg} className="focus:bg-purple-500/10 cursor-pointer text-xs">
+                              {reg}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-red-400 text-[10px]" />
+                    </FormItem>
+                  )}
+                />
 
-            <DialogFooter>
-              <Button
-                type="submit"
-                className="w-full py-2 font-bold text-white bg-purple-800 rounded-md hover:bg-purple-750"
-                disabled={isLoading}
-              >
-                {isLoading ? "Creating..." : "Create Team"}
-              </Button>
-            </DialogFooter>
+                <FormField
+                  control={control}
+                  name="image"
+                  render={({ field: { onChange, value } }) => (
+                    <FormItem className="space-y-1">
+                      <FormControl>
+                        <FileUpload
+                          onChange={onChange}
+                          value={value}
+                          maxSize={MAX_FILE_SIZE}
+                          compact={true}
+                          className="border-purple-500/10 hover:border-purple-500/30 transition-all rounded-xl"
+                        />
+                      </FormControl>
+                      <FormMessage className="text-red-400 text-[10px]" />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={control}
+                name="bio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-purple-100/80 text-xs">Bio</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="What inspires your team?"
+                        {...field}
+                        className="bg-white/5 border-purple-500/10 focus:border-purple-500/50 text-white rounded-xl min-h-[60px] max-h-[100px] text-xs resize-none transition-all"
+                      />
+                    </FormControl>
+                    <FormMessage className="text-red-400 text-[10px]" />
+                  </FormItem>
+                )}
+              />
+
+              <div className="space-y-3 pt-2">
+                <AnimatePresence>
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="flex items-start gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20"
+                    >
+                      <Info className="w-3 h-3 text-red-400 mt-0.5" />
+                      <p className="text-[10px] text-red-400 leading-tight font-medium">{error}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 text-purple-300 hover:text-white hover:bg-purple-500/10 rounded-xl text-xs h-9"
+                  >
+                    Discard
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    size="sm"
+                    className="flex-[2] bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold h-9 rounded-xl shadow-[0_4px_15px_rgba(147,51,234,0.3)] transition-all active:scale-[0.98] text-xs"
+                  >
+                    {isLoading ? "creating..." : "Create Team"}
+                  </Button>
+                </div>
+              </div>
+            </div>
           </form>
         </Form>
       </DialogContent>

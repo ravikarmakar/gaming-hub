@@ -3,8 +3,8 @@ import { Upload, X, Check, AlertTriangle, FileIcon } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 interface FileUploadProps {
-  label: string;
-  name: string;
+  label?: string;
+  name?: string;
   id?: string;
   accept?: string;
   maxSize?: number;
@@ -14,6 +14,8 @@ interface FileUploadProps {
   hint?: string;
   required?: boolean;
   disabled?: boolean;
+  className?: string;
+  compact?: boolean;
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({
@@ -28,6 +30,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
   hint,
   required = false,
   disabled = false,
+  className,
+  compact = false,
 }) => {
   const [internalFile, setInternalFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -67,8 +71,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         ) {
           // More robust check for specific types if not image/*
           newErrors.push(
-            `File type '${
-              file.type
+            `File type '${file.type
             }' not supported. Accepted: ${acceptedTypesArray.join(", ")}`
           );
         }
@@ -146,21 +149,23 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const showFileIcon = !isImage || !preview; // Show generic file icon if not image or no preview
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <label
-          htmlFor={id || name}
-          className="block text-sm font-medium text-gray-200"
-        >
-          {label} {required && <span className="text-purple-400">*</span>}
-        </label>
+    <div className={`space-y-1.5 ${className || ""}`}>
+      {label && (
+        <div className="flex items-center justify-between">
+          <label
+            htmlFor={id || name}
+            className="block text-sm font-medium text-gray-200"
+          >
+            {label} {required && <span className="text-purple-400">*</span>}
+          </label>
 
-        {hint && (
-          <span className="text-xs text-gray-400 transition-colors duration-200 group-hover:text-gray-300">
-            {hint}
-          </span>
-        )}
-      </div>
+          {hint && (
+            <span className="text-xs text-gray-400 transition-colors duration-200 group-hover:text-gray-300">
+              {hint}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="relative group">
         {/* Gradient border effect (visual flair) */}
@@ -177,15 +182,13 @@ const FileUpload: React.FC<FileUploadProps> = ({
         <div
           className={`
             relative bg-gray-900/80 rounded-lg overflow-hidden
-            ${
-              displayedErrors.length > 0
-                ? "border border-red-500/50"
-                : "border border-gray-700 group-hover:border-gray-600"
+            ${displayedErrors.length > 0
+              ? "border border-red-500/50"
+              : "border border-gray-700 group-hover:border-gray-600"
             }
-            ${
-              isDragging
-                ? "border-purple-500/70 shadow-[0_0_10px_rgba(168,85,247,0.15)]"
-                : ""
+            ${isDragging
+              ? "border-purple-500/70 shadow-[0_0_10px_rgba(168,85,247,0.15)]"
+              : ""
             }
             transition-all duration-300
             ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}
@@ -214,35 +217,37 @@ const FileUpload: React.FC<FileUploadProps> = ({
           {!internalFile ? (
             <motion.div
               whileHover={disabled ? {} : { scale: 1.01 }}
-              className="flex flex-col items-center justify-center p-6"
+              className={`flex flex-col items-center justify-center ${compact ? "p-3" : "p-6"}`}
             >
-              <div className="p-3 mb-4 rounded-full bg-purple-500/10">
-                <Upload size={24} className="text-purple-400" />
+              <div className={`rounded-full bg-purple-500/10 ${compact ? "p-2 mb-2" : "p-3 mb-4"}`}>
+                <Upload size={compact ? 18 : 24} className="text-purple-400" />
               </div>
-              <p className="mb-1 text-sm text-gray-300">
+              <p className={`mb-1 text-gray-300 ${compact ? "text-xs" : "text-sm"}`}>
                 <span className="font-medium text-purple-400">
-                  Click to upload
+                  {compact ? "Upload Logo" : "Click to upload"}
                 </span>{" "}
-                or drag and drop
+                {!compact && "or drag and drop"}
               </p>
-              <p className="text-xs text-gray-500">
-                {accept.includes("image")
-                  ? "SVG, PNG, JPG or GIF"
-                  : "Supported files"}
-                {maxSize
-                  ? ` (max. ${Math.round(maxSize / (1024 * 1024))}MB)`
-                  : ""}
-              </p>
+              {!compact && (
+                <p className="text-xs text-gray-500">
+                  {accept.includes("image")
+                    ? "SVG, PNG, JPG or GIF"
+                    : "Supported files"}
+                  {maxSize
+                    ? ` (max. ${Math.round(maxSize / (1024 * 1024))}MB)`
+                    : ""}
+                </p>
+              )}
             </motion.div>
           ) : (
-            <div className="p-4">
+            <div className={compact ? "p-2" : "p-4"}>
               <div className="flex items-center gap-4">
                 {showFileIcon ? (
-                  <div className="flex items-center justify-center flex-shrink-0 w-16 h-16 bg-gray-800 rounded-lg">
-                    <FileIcon size={24} className="text-gray-400" />
+                  <div className={`flex items-center justify-center flex-shrink-0 bg-gray-800 rounded-lg ${compact ? "w-10 h-10" : "w-16 h-16"}`}>
+                    <FileIcon size={compact ? 16 : 24} className="text-gray-400" />
                   </div>
                 ) : (
-                  <div className="flex-shrink-0 w-16 h-16 overflow-hidden bg-gray-800 rounded-lg">
+                  <div className={`flex-shrink-0 overflow-hidden bg-gray-800 rounded-lg ${compact ? "w-10 h-10" : "w-16 h-16"}`}>
                     <motion.img
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}

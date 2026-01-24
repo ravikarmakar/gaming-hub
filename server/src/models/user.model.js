@@ -75,6 +75,8 @@ userSchema.index({ orgId: 1 });
 userSchema.index({ teamId: 1 });
 userSchema.index({ eventHistory: 1 });
 userSchema.index({ isDeleted: 1 });
+// Text index for optimized username search (case-insensitive)
+userSchema.index({ username: "text" });
 
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {

@@ -1,10 +1,12 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
+import { Loader2, AlertCircle } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { TeamMembers } from "../components/TeamMembers";
 import { MemberHeader } from "../components/MemberHeader";
-
 import { useTeamStore } from "@/features/teams/store/useTeamStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
@@ -13,60 +15,105 @@ const TeamMembersPage = () => {
     currentTeam,
     getTeamById,
     isLoading,
+    error,
     removeMember,
     updateMemberRole,
   } = useTeamStore();
   const { user } = useAuthStore();
 
   useEffect(() => {
-    if ((!currentTeam || user) && user) {
+    if (user?.teamId) {
       getTeamById(user.teamId);
     }
-  }, []);
+  }, [user?.teamId, getTeamById]);
 
-  const onRemove = async (memberId: string) => {
-    const result = await removeMember(memberId);
-    if (result) {
-      if (user?.teamId) {
-        await getTeamById(user.teamId);
+  const handleRemove = useCallback(
+    async (memberId: string) => {
+      const result = await removeMember(memberId);
+      if (result) {
+        if (user?.teamId) {
+          await getTeamById(user.teamId);
+        }
+        toast.success("Member removed successfully");
+      } else {
+        toast.error("Failed to remove member");
       }
-      toast.success("Member removed successfully");
-    }
-  };
+    },
+    [removeMember, user?.teamId, getTeamById]
+  );
 
-  const onEditRole = async (role: string, id: string) => {
-    const result = await updateMemberRole(role, id);
-    if (result) {
-      if (user?.teamId) {
-        await getTeamById(user.teamId);
+  const handleEditRole = useCallback(
+    async (role: string, memberId: string) => {
+      const result = await updateMemberRole(role, memberId);
+      if (result) {
+        if (user?.teamId) {
+          await getTeamById(user.teamId);
+        }
+        toast.success("Member role updated successfully");
+      } else {
+        toast.error("Failed to update member role");
       }
-      toast.success("Member role updated");
-    }
-  };
+    },
+    [updateMemberRole, user?.teamId, getTeamById]
+  );
 
   const isOwner = currentTeam?.captain?.toString() === user?._id?.toString();
 
-  if (isLoading) {
-    return <div>Loading...</div>;
+  if (isLoading && !currentTeam) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#0B0C1A]">
+        <div className="text-center space-y-3">
+          <Loader2 className="w-10 h-10 mx-auto text-purple-400 animate-spin" />
+          <p className="text-sm text-gray-400">Loading team members...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0B0C1A] text-center p-6">
+        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+        <h2 className="text-xl font-bold text-white mb-2">
+          Failed to Load Members
+        </h2>
+        <p className="text-gray-400 max-w-md mb-6">{error}</p>
+        <Button
+          variant="outline"
+          onClick={() => user?.teamId && getTeamById(user.teamId)}
+          className="border-white/10 hover:bg-white/5 text-white"
+        >
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  if (!currentTeam) {
+    return null;
   }
 
   return (
-    <>
+    <div className="min-h-screen bg-[#0B0C1A]">
       <MemberHeader
         currentUserId={user?._id ?? ""}
-        teamId={currentTeam?._id ?? ""}
-        members={currentTeam?.teamMembers ?? []}
+        teamId={currentTeam._id}
+        members={currentTeam.teamMembers ?? []}
       />
-      <main className="z-10 w-full h-screen px-4 py-4 mx-auto bg-gray-900 md:px-8">
-        <TeamMembers
-          members={currentTeam?.teamMembers ?? []}
-          owner={isOwner}
-          onRemove={onRemove}
-          onEditRole={onEditRole}
-          isLoading={isLoading}
-        />
-      </main>
-    </>
+
+      <ScrollArea className="h-[calc(100vh-140px)]">
+        <main className="px-4 md:px-8 py-8 mx-auto max-w-7xl">
+          <TeamMembers
+            members={currentTeam.teamMembers ?? []}
+            owner={isOwner}
+            currentUserId={user?._id ?? ""}
+            onRemove={handleRemove}
+            onEditRole={handleEditRole}
+            isLoading={isLoading}
+          />
+        </main>
+      </ScrollArea>
+    </div>
   );
 };
 

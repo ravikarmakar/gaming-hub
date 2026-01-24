@@ -14,7 +14,7 @@ import organizerRouter from "./routes/organizer.route.js";
 
 // Team Imports
 import teamRouter from "./routes/team.route.js";
-import notificationRouter from "./routes/notifications-route/team.notification.route.js";
+import notificationRouter from "./routes/notification.route.js";
 import invitationRouter from "./routes/team-routes/invitation.route.js";
 import joinRequestRouter from "./routes/team-routes/joinRequest.route.js";
 
@@ -40,12 +40,13 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authRouter);
-app.use("/api/organizers", organizerRouter);
 app.use("/api/teams", teamRouter);
+app.use("/api/notifications", notificationRouter);
+
+app.use("/api/organizers", organizerRouter);
 app.use("/api/players", userRouter);
 app.use("/api/events", eventRouter);
 
-app.use("/api/notifications", notificationRouter);
 app.use("/api/invitations", invitationRouter);
 app.use("/api/join-requests", joinRequestRouter);
 app.use("/api/prize", prizeRouter);

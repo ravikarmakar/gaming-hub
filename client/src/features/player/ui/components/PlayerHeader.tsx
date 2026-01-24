@@ -19,12 +19,12 @@ interface Props {
 }
 
 export const PlayerHeader = ({ player }: Props) => {
-  const handleFollow = () => {};
+  const handleFollow = () => { };
   const isFollowing = true;
   const followerCount = 4000;
 
   return (
-    <div className="relative z-10 px-4 mx-auto -mt-20 max-w-7xl sm:px-6 lg:px-8">
+    <div className="relative z-0 px-4 mx-auto mt-8 max-w-7xl sm:px-6 lg:px-8">
       <div className="flex flex-col items-center gap-8 mb-12 lg:flex-row lg:items-start lg:gap-12">
         {/* Profile Image & Status */}
         <div className="relative group">

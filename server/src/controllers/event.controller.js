@@ -1,3 +1,4 @@
+import fs from "fs";
 import mongoose from "mongoose";
 
 import Organizer from "../models/organizer.model.js";
@@ -10,6 +11,7 @@ import { CustomError } from "../utils/CustomError.js";
 import { findUserById } from "../services/user.service.js";
 import { findTeamById } from "../services/team.service.js";
 import { findEventById } from "../services/event.service.js";
+import { uploadOnImageKit } from "../utils/imagekit.js";
 
 const requiredFields = [
   "title",
@@ -23,11 +25,18 @@ const requiredFields = [
 export const createEvent = TryCatchHandler(async (req, res, next) => {
   const { userId, roles } = req.user;
 
+  const handleError = (message, status) => {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    return next(new CustomError(message, status));
+  };
+
   const user = await findUserById(userId);
 
   const org = await Organizer.findById(user.orgId);
   if (!org || org.isDeleted) {
-    return next(new CustomError("Organization not found or inactive", 404));
+    return handleError("Organization not found or inactive", 404);
   }
 
   const isOrgOwner = roles.some(
@@ -38,11 +47,11 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
       r.scopeId.toString() === user.orgId.toString()
   );
   if (!isOrgOwner)
-    return next(new CustomError("Not authorized for this organization", 403));
+    return handleError("Not authorized for this organization", 403);
 
   for (const field of requiredFields) {
     if (!req.body[field]) {
-      return next(new CustomError(`${field} is required`, 400));
+      return handleError(`${field} is required`, 400);
     }
   }
 
@@ -56,7 +65,7 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
   }
 
   if (Number(req.body.slots) <= 0) {
-    return next(new CustomError("Slots must be greater than 0", 400));
+    return handleError("Slots must be greater than 0", 400);
   }
 
   if (Number(req.body.prizePool) < 0) {
@@ -69,11 +78,24 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
   });
 
   if (exists) {
-    return next(new CustomError("Event already exists", 409));
+    return handleError("Event already exists", 409);
   }
 
-  // handle image uplaoding logic here
-  const imageUrl = "https://cloudinary/dummy-image-url";
+  // handle image uploading logic here
+  let imageUrl = "https://cloudinary/dummy-image-url";
+  if (req.file) {
+    /*
+    const imageKitResponse = await uploadOnImageKit(req.file.path, req.file.filename, "events");
+    if (!imageKitResponse) {
+      return handleError("Failed to upload event image", 500);
+    }
+    imageUrl = imageKitResponse.url;
+    */
+    // Cleanup local file immediately since we are skipping upload
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+  }
 
   const event = await Event.create({
     ...req.body,

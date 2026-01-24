@@ -45,7 +45,7 @@ export const register = TryCatchHandler(async (req, res, next) => {
 
   // Send Verification Email (non-blocking for faster response)
   sendVerificationEmail(email, otp).catch((err) =>
-    console.error("Failed to send verification email:", err)
+    console.error("Failed to send verification email:", err),
   );
 
   res.status(201).json({
@@ -173,7 +173,12 @@ export const refreshToken = TryCatchHandler(async (req, res, next) => {
   const userObj = user.toObject();
   delete userObj.password;
 
-  res.json({ success: true, message: "Token refreshed successfully", accessToken, user: userObj });
+  res.json({
+    success: true,
+    message: "Token refreshed successfully",
+    accessToken,
+    user: userObj,
+  });
 });
 
 export const googleLogin = TryCatchHandler(async (req, res, next) => {
@@ -308,7 +313,7 @@ export const sendVerifyOtp = TryCatchHandler(async (req, res, next) => {
 
   // Send Verification Email (non-blocking for faster response)
   sendVerificationEmail(user.email, otp).catch((err) =>
-    console.error("Failed to send verification email:", err)
+    console.error("Failed to send verification email:", err),
   );
 
   res.status(200).json({
@@ -328,7 +333,9 @@ export const verifyEmail = TryCatchHandler(async (req, res, next) => {
       new CustomError("Please provide the OTP sent to your email.", 400),
     );
 
-  const user = await User.findById(userId).select("+verifyOtp +verifyOtpExpireAt");
+  const user = await User.findById(userId).select(
+    "+verifyOtp +verifyOtpExpireAt",
+  );
   if (!user) return next(new CustomError("User not found", 404));
 
   await redis.del(cacheKey);
@@ -376,7 +383,8 @@ export const getProfile = TryCatchHandler(async (req, res, next) => {
 
   if (cachedData) {
     try {
-      const user = typeof cachedData === "string" ? JSON.parse(cachedData) : cachedData;
+      const user =
+        typeof cachedData === "string" ? JSON.parse(cachedData) : cachedData;
       return res.status(200).json({
         success: true,
         user,
@@ -425,8 +433,9 @@ export const sendResetPasswordOtp = TryCatchHandler(async (req, res, next) => {
     from: process.env.SENDER_EMAIL,
     to: email,
     subject: "Password Reset OTP - Gaming Hub",
-    text: `Hello ${user.username || "User"
-      },\n\nWe received a request to reset the password for your Gaming Hub account.\n\nYour One-Time Password (OTP) is: ${otp}\n\nPlease use this OTP to reset your password. This OTP is valid for only 10 minutes.\n\nIf you did not request a password reset, you can safely ignore this email.\n\nRegards,\nGaming Hub Team`,
+    text: `Hello ${
+      user.username || "User"
+    },\n\nWe received a request to reset the password for your Gaming Hub account.\n\nYour One-Time Password (OTP) is: ${otp}\n\nPlease use this OTP to reset your password. This OTP is valid for only 10 minutes.\n\nIf you did not request a password reset, you can safely ignore this email.\n\nRegards,\nGaming Hub Team`,
   };
 
   await transporter.sendMail(mailOptions);
@@ -447,7 +456,9 @@ export const resetPassword = TryCatchHandler(async (req, res, next) => {
       new CustomError("Email, OTP, and new password are required", 400),
     );
 
-  const user = await User.findOne({ email }).select("+password +resetOtp +resetOtpExpireAt");
+  const user = await User.findOne({ email }).select(
+    "+password +resetOtp +resetOtpExpireAt",
+  );
 
   if (!user) return next(new CustomError("User not found", 404));
 

@@ -8,7 +8,6 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);
   }
-
   const accessToken =
     req.cookies.accessToken ||
     (req.headers.authorization && req.headers.authorization.split(" ")[1]);
@@ -39,6 +38,7 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
       return next(new CustomError("Token blacklisted! Please login again", 401));
 
     req.user = {
+      _id: decoded.userId,
       userId: decoded.userId,
       roles: decoded.roles,
       cachedProfile: cachedProfile ? (typeof cachedProfile === "string" ? JSON.parse(cachedProfile) : cachedProfile) : null,
@@ -92,6 +92,7 @@ export const isVerified = TryCatchHandler(async (req, res, next) => {
     );
   }
 
+  console.log(">>> [isVerified] Account is verified. Next.");
   next();
 });
 

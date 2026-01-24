@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 import { Input } from "@/components/ui/input";
 import { orgSchema } from "@/schemas/org/createOrg";
-import FileUpload from "@/components/FileUplaod";
+import FileUpload from "@/components/FileUpload";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useOrganizerStore } from "@/features/organizer/store/useOrganizer";

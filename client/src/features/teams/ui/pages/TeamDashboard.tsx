@@ -1,240 +1,214 @@
-import { Users, Trophy, Crown, Target } from "lucide-react";
+import { useEffect } from "react";
+import { Users, Trophy, Crown, Target, Loader2, AlertCircle, UserPlus, Settings, BarChart2 } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { PlayerHeader } from "@/features/player/ui/components/PlayerHeader";
-
-interface Match {
-  id: string;
-  opponent: string;
-  result: "win" | "loss" | "draw";
-  score: string;
-  date: string;
-  map: string;
-}
-
-interface Tournament {
-  id: string;
-  name: string;
-  date: string;
-  prize: string;
-  status: "upcoming" | "live" | "completed";
-}
-
-const memberData = [
-  {
-    title: "Team Rank",
-    value: "#12",
-    change: "+3",
-    icon: Crown,
-    color: "from-yellow-500 to-orange-500",
-  },
-  {
-    title: "Win Rate",
-    value: "74%",
-    change: "+2%",
-    icon: Trophy,
-    color: "from-green-500 to-emerald-500",
-  },
-  {
-    title: "Avg K/D",
-    value: "2.16",
-    change: "+0.1",
-    icon: Target,
-    color: "from-blue-500 to-cyan-500",
-  },
-  {
-    title: "Active Players",
-    value: "5",
-    change: "Online",
-    icon: Users,
-    color: "from-purple-500 to-pink-500",
-  },
-];
+import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { TeamHeader } from "../components/TeamHeader";
+import { TeamStatCard } from "../components/TeamStatCard";
+import { TeamRecentMatch } from "../components/TeamRecentMatch";
+import { TournamentItem } from "../components/TournamentItem";
 
 const TeamDashboard = () => {
   const { user } = useAuthStore();
+  const { currentTeam, getTeamById, isLoading, error, clearError } = useTeamStore();
 
-  const recentMatches: Match[] = [
-    {
-      id: "1",
-      opponent: "Team Nexus",
-      result: "win",
-      score: "16-12",
-      date: "2 hours ago",
-      map: "Dust2",
-    },
-    {
-      id: "2",
-      opponent: "Cyber Wolves",
-      result: "win",
-      score: "16-8",
-      date: "1 day ago",
-      map: "Mirage",
-    },
-    {
-      id: "3",
-      opponent: "Dark Phoenix",
-      result: "loss",
-      score: "14-16",
-      date: "2 days ago",
-      map: "Inferno",
-    },
-    {
-      id: "4",
-      opponent: "Lightning Bolts",
-      result: "win",
-      score: "16-10",
-      date: "3 days ago",
-      map: "Cache",
-    },
-  ];
+  useEffect(() => {
+    // Clear any previous errors (e.g., from failed member adding) when visiting dashboard
+    clearError();
 
-  const tournaments: Tournament[] = [
+    if (user?.teamId) {
+      getTeamById(user.teamId);
+    }
+  }, [user?.teamId, getTeamById, clearError]);
+
+  if (isLoading && !currentTeam) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-3">
+          <Loader2 className="w-10 h-10 mx-auto text-purple-400 animate-spin" />
+          <p className="text-sm text-gray-400">Loading your team dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Only show full error screen if we don't have currentTeam data
+  if (error && !currentTeam) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+        <h2 className="text-xl font-bold text-white mb-2">Failed to Load Dashboard</h2>
+        <p className="text-gray-400 max-w-md mb-6">{error}</p>
+        <Button
+          variant="outline"
+          onClick={() => user?.teamId && getTeamById(user.teamId)}
+          className="border-white/10 hover:bg-white/5"
+        >
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  if (!currentTeam) return null;
+
+  const statsData = [
     {
-      id: "1",
-      name: "ESL Pro League",
-      date: "Jun 15, 2025",
-      prize: "$50,000",
-      status: "upcoming",
+      title: "Win Rate",
+      value: `${currentTeam.stats?.winRate || 0}%`,
+      icon: Trophy,
+      color: "emerald",
     },
     {
-      id: "2",
-      name: "DreamHack Masters",
-      date: "Live Now",
-      prize: "$100,000",
-      status: "live",
+      title: "Total Matches",
+      value: currentTeam.stats?.totalMatches || 0,
+      icon: Target,
+      color: "blue",
     },
     {
-      id: "3",
-      name: "BLAST Premier",
-      date: "May 20, 2025",
-      prize: "$25,000",
-      status: "completed",
+      title: "Tournament Wins",
+      value: currentTeam.stats?.tournamentWins || 0,
+      icon: Crown,
+      color: "amber",
+    },
+    {
+      title: "Total Prize Won",
+      value: `$${(currentTeam.stats?.totalPrizeWon || 0).toLocaleString()}`,
+      icon: Users,
+      color: "purple",
     },
   ];
 
   return (
-    <div className="min-h-screen overflow-y-auto text-white bg-gray-900">
-      <main className="relative z-10 px-4 py-4 mx-auto md:py-8 max-w-7xl">
-        {user && <PlayerHeader player={user} type="player" />}
+    <div className="min-h-screen bg-[#0B0C1A] pb-12">
+      <main className="relative z-10 px-4 py-6 mx-auto max-w-7xl">
+        {/* Team Header */}
+        <div className="mb-10">
+          {currentTeam && <TeamHeader team={currentTeam} isDashboard={true} />}
+        </div>
 
-        <div className="space-y-8">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-            {memberData.map((stat, index) => {
-              const Icon = stat.icon;
-              return (
-                <div
-                  key={index}
-                  className="p-6 transition-all duration-300 transform border cursor-pointer bg-gray-800/40 backdrop-blur-sm rounded-xl border-gray-700/50 hover:border-purple-500/50 hover:-translate-y-1 hover:shadow-2xl group"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-400">
-                        {stat.title}
-                      </p>
-                      <p className="mt-1 text-2xl font-bold">{stat.value}</p>
-                      <p className="mt-1 text-sm text-green-400">
-                        {stat.change}
-                      </p>
-                    </div>
-                    <div
-                      className={`w-12 h-12 rounded-lg bg-gradient-to-r ${stat.color} flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300`}
-                    >
-                      <Icon className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+        {/* Quick Actions */}
+        <div className="mb-10">
+          <h2 className="text-lg font-bold text-white mb-4">
+            Quick Actions
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Button
+              variant="outline"
+              className="h-auto py-3 flex-col gap-2 border-white/10 hover:bg-white/5 bg-white/5"
+            >
+              <UserPlus className="w-5 h-5 text-gray-400" />
+              <span className="text-xs font-medium text-gray-300">Invite Players</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto py-3 flex-col gap-2 border-white/10 hover:bg-white/5 bg-white/5"
+            >
+              <Trophy className="w-5 h-5 text-gray-400" />
+              <span className="text-xs font-medium text-gray-300">Find Tournaments</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto py-3 flex-col gap-2 border-white/10 hover:bg-white/5 bg-white/5"
+            >
+              <BarChart2 className="w-5 h-5 text-gray-400" />
+              <span className="text-xs font-medium text-gray-300">View Stats</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto py-3 flex-col gap-2 border-white/10 hover:bg-white/5 bg-white/5"
+            >
+              <Settings className="w-5 h-5 text-gray-400" />
+              <span className="text-xs font-medium text-gray-300">Settings</span>
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-10">
+          {/* Stats Section */}
+          <div>
+            <h2 className="text-lg font-bold text-white mb-4">
+              Team Performance
+            </h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {statsData.map((stat, index) => (
+                <TeamStatCard key={index} {...stat} />
+              ))}
+            </div>
           </div>
 
-          {/* Recent Matches & Tournaments */}
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
             {/* Recent Matches */}
-            <div className="overflow-hidden border bg-gray-800/40 backdrop-blur-sm rounded-xl border-gray-700/50">
-              <div className="p-6 border-b border-gray-700/50">
-                <h2 className="text-xl font-bold">Recent Matches</h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-white">
+                  Recent Matches
+                </h2>
+                <Button variant="link" className="text-gray-400 text-xs hover:text-white p-0">
+                  View All →
+                </Button>
               </div>
-              <div className="p-6 space-y-4">
-                {recentMatches.map((match) => (
-                  <div
-                    key={match.id}
-                    className="flex items-center justify-between p-4 transition-all duration-300 rounded-lg bg-gray-900/50 hover:bg-gray-900/70"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div
-                        className={`w-3 h-3 rounded-full ${
-                          match.result === "win"
-                            ? "bg-green-500"
-                            : match.result === "loss"
-                            ? "bg-red-500"
-                            : "bg-yellow-500"
-                        }`}
-                      ></div>
-                      <div>
-                        <p className="font-medium">{match.opponent}</p>
-                        <p className="text-sm text-gray-400">
-                          {match.map} • {match.date}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold">{match.score}</p>
-                      <p
-                        className={`text-sm capitalize ${
-                          match.result === "win"
-                            ? "text-green-400"
-                            : match.result === "loss"
-                            ? "text-red-400"
-                            : "text-yellow-400"
-                        }`}
-                      >
-                        {match.result}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <div className="space-y-3">
+                <TeamRecentMatch
+                  opponent="Nexus Gaming"
+                  result="win"
+                  score="16 - 12"
+                  date="2 hours ago"
+                  map="Dust II"
+                />
+                <TeamRecentMatch
+                  opponent="Cyber Wolves"
+                  result="win"
+                  score="16 - 8"
+                  date="1 day ago"
+                  map="Mirage"
+                />
+                <TeamRecentMatch
+                  opponent="Dark Phoenix"
+                  result="loss"
+                  score="14 - 16"
+                  date="2 days ago"
+                  map="Inferno"
+                />
               </div>
             </div>
 
             {/* Tournaments */}
-            <div className="overflow-hidden border bg-gray-800/40 backdrop-blur-sm rounded-xl border-gray-700/50">
-              <div className="p-6 border-b border-gray-700/50">
-                <h2 className="text-xl font-bold">Tournaments</h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-white">
+                  Tournaments
+                </h2>
+                <Button variant="link" className="text-gray-400 text-xs hover:text-white p-0">
+                  Manage →
+                </Button>
               </div>
-              <div className="p-6 space-y-4">
-                {tournaments.map((tournament) => (
-                  <div
-                    key={tournament.id}
-                    className="p-4 transition-all duration-300 rounded-lg bg-gray-900/50 hover:bg-gray-900/70"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium">{tournament.name}</h3>
-                        <p className="text-sm text-gray-400">
-                          {tournament.date}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-green-400">
-                          {tournament.prize}
-                        </p>
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full ${
-                            tournament.status === "live"
-                              ? "bg-red-500/20 text-red-400"
-                              : tournament.status === "upcoming"
-                              ? "bg-blue-500/20 text-blue-400"
-                              : "bg-gray-500/20 text-gray-400"
-                          }`}
-                        >
-                          {tournament.status}
-                        </span>
-                      </div>
-                    </div>
+              <div className="space-y-3">
+                {currentTeam.playedTournaments?.length > 0 ? (
+                  currentTeam.playedTournaments.slice(0, 3).map((t, idx) => (
+                    <TournamentItem
+                      key={idx}
+                      name={`Tournament ${idx + 1}`}
+                      date={new Date(t.playedAt).toLocaleDateString()}
+                      prize={t.prizeWon}
+                      status={t.status}
+                      placement={t.placement}
+                    />
+                  ))
+                ) : (
+                  <div className="p-8 text-center border border-white/10 rounded-lg bg-white/5">
+                    <Trophy className="w-10 h-10 mx-auto mb-3 text-gray-600" />
+                    <p className="text-gray-400 text-sm mb-4">No tournament history found</p>
+                    <Button
+                      variant="outline"
+                      className="border-white/10 hover:bg-white/5 text-sm"
+                    >
+                      Find Tournaments
+                    </Button>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>

@@ -25,3 +25,20 @@ export const findTeamById = async (id) => {
   }
   return team;
 };
+
+export const findTeamByIdLean = async (id, selectFields = null) => {
+  let query = Team.findOne({ _id: id, isDeleted: false }).lean();
+  if (selectFields) {
+    query = query.select(selectFields);
+  }
+  const team = await query;
+  if (!team) {
+    throw new CustomError("Team not found", 404);
+  }
+  return team;
+};
+
+export const teamExists = async (id) => {
+  const exists = await Team.exists({ _id: id, isDeleted: false });
+  return Boolean(exists);
+};

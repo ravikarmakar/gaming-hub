@@ -1,9 +1,20 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { LogOut, PlusIcon } from "lucide-react";
+import { LogOut, UserPlus, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { PlayerSearchCommand } from "@/features/player/ui/components/PlayerSearchCommand";
 import {
@@ -18,75 +29,106 @@ interface MemberHeaderProps {
 }
 
 export const MemberHeader = ({
-  teamId,
   members,
   currentUserId,
-}: MemberHeaderProps) => {
+}: Omit<MemberHeaderProps, "teamId">) => {
   const navigate = useNavigate();
   const [isMemberDialogOpen, setIsMemberDialogOpen] = useState(false);
-  const { isLoading, addMembers, error, getTeamById, leaveMember } =
-    useTeamStore();
+  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
+  const { isLoading, leaveMember, clearError } = useTeamStore();
 
-  const handleAddMembers = async (ids: string[]) => {
-    const result = await addMembers(ids);
-    if (result) {
-      await getTeamById(teamId);
-      toast.success("Members added successfully");
+  const handleSingleInvite = async (id: string) => {
+    const { success, message } = await useTeamStore.getState().inviteMember(id);
+    if (success) {
+      toast.success("Invite sent successfully");
+      return true;
     } else {
-      toast.error(error);
+      toast.error(message || "Failed to send invite");
+      return false;
     }
+  };
+
+  const closeSearchDialog = () => {
     setIsMemberDialogOpen(false);
+    clearError();
   };
 
   const handleLeave = async () => {
-    if (!window.confirm("Are you sure you want to leave the team?")) {
-      return;
-    }
-
     const result = await leaveMember();
     if (result) {
       toast.success("Team left successfully");
       navigate("/");
-
-      // TODO: invalidate the backend cache
     }
+    setIsLeaveDialogOpen(false);
   };
 
   const isOwner = members.find(
-    (members) => members.user === currentUserId && members.roleInTeam === "igl"
+    (member) => member.user === currentUserId && member.roleInTeam === "igl"
   );
 
   return (
     <>
       <PlayerSearchCommand
         open={isMemberDialogOpen}
-        onOpenChange={setIsMemberDialogOpen}
-        onSubmit={(ids) => handleAddMembers(ids)}
+        onOpenChange={(val) => !val && closeSearchDialog()}
+        onInvite={handleSingleInvite}
         isLoading={isLoading}
+        existingMemberIds={members.map((m) => m.user)}
       />
-      <div className="flex flex-col px-4 py-4 bg-gray-900 md:px-8 gap-y-4">
-        <div className="flex items-center justify-between">
-          <h5 className="text-xl font-medium">Team Members</h5>
-          {isOwner ? (
-            <Button
-              type="button"
-              className="flex items-center gap-2 px-4 py-2 text-white transition-all duration-300 ease-in-out border shadow-sm rounded-xl bg-gradient-to-r from-purple-500/30 to-pink-500/30 hover:from-purple-500/50 hover:to-pink-500/50 backdrop-blur-md border-white/10"
-              onClick={() => setIsMemberDialogOpen(true)}
-            >
-              <PlusIcon />
-              New Members
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              className="flex items-center gap-2 px-4 py-2 text-white transition-all duration-300 ease-in-out border shadow-sm rounded-xl bg-gradient-to-r from-purple-500/30 to-pink-500/30 hover:from-purple-500/50 hover:to-pink-500/50 backdrop-blur-md border-white/10"
+
+      <AlertDialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen}>
+        <AlertDialogContent className="bg-[#1A1B2E] border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Leave Team?</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              Are you sure you want to leave this team? This action cannot be undone.
+              You'll need to be invited again to rejoin.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
               onClick={handleLeave}
+              className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/20"
             >
-              <LogOut />
               Leave Team
-            </Button>
-          )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 py-6 bg-[#0B0C1A] border-b border-white/10">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-white">Team Members</h1>
+          <Badge
+            variant="outline"
+            className="bg-white/5 border-white/10 text-gray-400"
+          >
+            <Users className="w-3 h-3 mr-1" />
+            {members.length}
+          </Badge>
         </div>
+
+        {isOwner ? (
+          <Button
+            onClick={() => setIsMemberDialogOpen(true)}
+            className="bg-white/5 border border-white/10 hover:bg-white/[0.07] text-white"
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            Invite Members
+          </Button>
+        ) : (
+          <Button
+            onClick={() => setIsLeaveDialogOpen(true)}
+            variant="outline"
+            className="border-white/10 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 text-gray-300"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Leave Team
+          </Button>
+        )}
       </div>
     </>
   );

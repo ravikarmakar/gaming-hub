@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 
 import { ROUTES } from "@/lib/routes";
 import { User } from "@/features/auth/store/useAuthStore";
+import { cn } from "@/lib/utils";
 
 type DashboardButtonProps = {
   isSuperAdmin: boolean;
   hasAnyOrgRole: boolean;
   isLoading?: boolean;
   user: User | null;
+  className?: string;
 };
 
 export const DashboardButton = ({
@@ -18,26 +20,33 @@ export const DashboardButton = ({
   hasAnyOrgRole,
   isLoading,
   user,
+  className,
 }: DashboardButtonProps) => {
   const navigate = useNavigate();
 
   if (!user) return null;
-
   if (!isSuperAdmin && !hasAnyOrgRole) return null;
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => {
-        if (isSuperAdmin) navigate(ROUTES.SUPER_ADMIN);
-        else navigate(`/organizer-dashboard/${user.orgId}`);
-      }}
-      className="items-center hidden px-4 py-2 mr-4 font-medium text-white transition-all duration-200 ease-in-out border border-purple-600 md:inline-flex bg-gray-900/60 hover:bg-gradient-to-r hover:from-purple-700 hover:to-indigo-800 hover:text-white hover:shadow-lg hover:shadow-purple-800/40"
-      disabled={isLoading}
-    >
-      <ShieldCheck className="w-4 h-4" />
-      <span>{isSuperAdmin ? "Super Admin" : "Organizer"}</span>
-    </Button>
+    <div className={cn("relative group", className)}>
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg blur opacity-20 group-hover:opacity-100 transition duration-500" />
+      <Button
+        variant="outline"
+        onClick={() => {
+          if (isSuperAdmin) navigate(ROUTES.SUPER_ADMIN);
+          else navigate(`/organizer-dashboard/${user.orgId}`);
+        }}
+        className={cn(
+          "relative w-full h-10 px-4 flex items-center gap-2 font-bold text-white transition-all bg-[#0a0514] border-purple-500/20 hover:border-purple-500/50 hover:bg-purple-500/5 group-active:scale-95",
+          "sm:w-auto sm:px-5 rounded-lg"
+        )}
+        disabled={isLoading}
+      >
+        <ShieldCheck className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+        <span className="text-sm tracking-wide">
+          {isSuperAdmin ? "Super Admin" : "Dashboard"}
+        </span>
+      </Button>
+    </div>
   );
 };

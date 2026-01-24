@@ -8,7 +8,7 @@ import ProfileMenu from "@/components/shared/ProfileMenu";
 export const DashboardNavbar = () => {
   const { isMobile, state, toggleSidebar } = useSidebar();
   return (
-    <nav className="z-20 flex items-center justify-between px-4 py-3 bg-gray-900 border-b border-gray-700 gap-x-2">
+    <nav className="z-50 flex items-center justify-between px-4 py-3 bg-[#0a0514] border-b border-purple-500/10 gap-x-2">
       <Button
         className="bg-gray-900 size-9 hover:bg-gray-800"
         onClick={toggleSidebar}
