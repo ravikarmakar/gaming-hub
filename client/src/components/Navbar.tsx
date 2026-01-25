@@ -17,10 +17,10 @@ import {
   ORG_ADMIN_ROLES,
   PLATFORM_SUPER_ADMIN_ROLES,
   SCOPES,
-} from "@/lib/roles";
+} from "@/features/auth/lib/roles";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/routes";
-import { hasAnyRole } from "@/lib/permissions";
+import { hasAnyRole } from "@/features/auth/lib/permissions";
 import NavItems from "./shared/NavItems";
 import ProfileMenu from "./shared/ProfileMenu";
 import { DashboardButton } from "./shared/DashboardButton";

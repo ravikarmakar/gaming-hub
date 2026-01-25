@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { Users, Trophy, Crown, Target, Loader2, AlertCircle, UserPlus, Settings, BarChart2 } from "lucide-react";
+import { Users, Trophy, Crown, Target, Loader2, AlertCircle, UserPlus, Settings } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 
@@ -9,10 +10,18 @@ import { TeamHeader } from "../components/TeamHeader";
 import { TeamStatCard } from "../components/TeamStatCard";
 import { TeamRecentMatch } from "../components/TeamRecentMatch";
 import { TournamentItem } from "../components/TournamentItem";
+import { useAccess } from "@/features/auth/hooks/useAccess";
+import { TEAM_ACCESS, TEAM_ACTIONS, TEAM_ACTIONS_ACCESS } from "../../lib/access";
+import { TEAM_ROUTES } from "../../lib/routes";
 
 const TeamDashboard = () => {
+  const navigate = useNavigate();
+  const { can } = useAccess();
   const { user } = useAuthStore();
   const { currentTeam, getTeamById, isLoading, error, clearError } = useTeamStore();
+
+  const canManageSettings = can(TEAM_ACCESS.settings);
+  const canManageRoster = can(TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.manageRoster]);
 
   useEffect(() => {
     // Clear any previous errors (e.g., from failed member adding) when visiting dashboard
@@ -97,32 +106,43 @@ const TeamDashboard = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Button
               variant="outline"
+              onClick={() => navigate(TEAM_ROUTES.MEMBERS)}
               className="h-auto py-3 flex-col gap-2 border-white/10 hover:bg-white/5 bg-white/5"
             >
-              <UserPlus className="w-5 h-5 text-gray-400" />
-              <span className="text-xs font-medium text-gray-300">Invite Players</span>
+              <Users className="w-5 h-5 text-gray-400" />
+              <span className="text-xs font-medium text-gray-300">View Roster</span>
             </Button>
+
+            {canManageRoster && (
+              <Button
+                variant="outline"
+                onClick={() => navigate(TEAM_ROUTES.MEMBERS)} // Roster management is on members page
+                className="h-auto py-3 flex-col gap-2 border-white/10 hover:bg-white/5 bg-white/5"
+              >
+                <UserPlus className="w-5 h-5 text-purple-400" />
+                <span className="text-xs font-medium text-gray-300">Invite Players</span>
+              </Button>
+            )}
+
             <Button
               variant="outline"
+              onClick={() => navigate(TEAM_ROUTES.TOURNAMENTS)}
               className="h-auto py-3 flex-col gap-2 border-white/10 hover:bg-white/5 bg-white/5"
             >
               <Trophy className="w-5 h-5 text-gray-400" />
               <span className="text-xs font-medium text-gray-300">Find Tournaments</span>
             </Button>
-            <Button
-              variant="outline"
-              className="h-auto py-3 flex-col gap-2 border-white/10 hover:bg-white/5 bg-white/5"
-            >
-              <BarChart2 className="w-5 h-5 text-gray-400" />
-              <span className="text-xs font-medium text-gray-300">View Stats</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-auto py-3 flex-col gap-2 border-white/10 hover:bg-white/5 bg-white/5"
-            >
-              <Settings className="w-5 h-5 text-gray-400" />
-              <span className="text-xs font-medium text-gray-300">Settings</span>
-            </Button>
+
+            {canManageSettings && (
+              <Button
+                variant="outline"
+                onClick={() => navigate(TEAM_ROUTES.SETTINGS)}
+                className="h-auto py-3 flex-col gap-2 border-white/10 hover:bg-white/5 bg-white/5"
+              >
+                <Settings className="w-5 h-5 text-gray-400" />
+                <span className="text-xs font-medium text-gray-300">Settings</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -146,7 +166,11 @@ const TeamDashboard = () => {
                 <h2 className="text-lg font-bold text-white">
                   Recent Matches
                 </h2>
-                <Button variant="link" className="text-gray-400 text-xs hover:text-white p-0">
+                <Button
+                  variant="link"
+                  onClick={() => navigate(TEAM_ROUTES.PERFORMANCE)}
+                  className="text-gray-400 text-xs hover:text-white p-0"
+                >
                   View All →
                 </Button>
               </div>
@@ -181,7 +205,11 @@ const TeamDashboard = () => {
                 <h2 className="text-lg font-bold text-white">
                   Tournaments
                 </h2>
-                <Button variant="link" className="text-gray-400 text-xs hover:text-white p-0">
+                <Button
+                  variant="link"
+                  onClick={() => navigate(TEAM_ROUTES.TOURNAMENTS)}
+                  className="text-gray-400 text-xs hover:text-white p-0"
+                >
                   Manage →
                 </Button>
               </div>
@@ -203,6 +231,7 @@ const TeamDashboard = () => {
                     <p className="text-gray-400 text-sm mb-4">No tournament history found</p>
                     <Button
                       variant="outline"
+                      onClick={() => navigate(TEAM_ROUTES.TOURNAMENTS)}
                       className="border-white/10 hover:bg-white/5 text-sm"
                     >
                       Find Tournaments

@@ -1,32 +1,36 @@
-import { Crown, Zap, Flame } from "lucide-react";
-import { useHover } from "../../hook/useHover";
-import { ProgressBar } from "./PlayerOverview";
+import React from "react";
+import { Award, Zap, Flame, Crown, CheckCircle2, Lock } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { motion } from "framer-motion";
 
-export const PlayerAchievements = () => {
-  const achievements: {
-    id: string;
-    title: string;
-    description: string;
-    icon: React.ReactNode;
-    rarity: "common" | "rare" | "epic" | "legendary";
-    unlockedAt: string;
-    progress?: number;
-    maxProgress?: number;
-  }[] = [
+interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  rarity: "common" | "rare" | "epic" | "legendary";
+  unlockedAt?: string;
+  progress?: number;
+  maxProgress?: number;
+}
+
+export const PlayerAchievements: React.FC = () => {
+  const achievements: Achievement[] = [
     {
       id: "ach1",
-      title: "First Blood",
-      description: "Achieve the first kill in a match.",
+      title: "Tactical Executioner",
+      description: "Achieve the first kill in 50 matches.",
       icon: <Zap className="w-5 h-5" />,
       rarity: "common",
       unlockedAt: "2023-01-10T12:00:00.000Z",
-      progress: 1,
-      maxProgress: 1,
+      progress: 50,
+      maxProgress: 50,
     },
     {
       id: "ach2",
-      title: "Unstoppable",
-      description: "Win 10 matches in a row.",
+      title: "Indomitable Force",
+      description: "Win 10 professional level matches in a row.",
       icon: <Flame className="w-5 h-5" />,
       rarity: "rare",
       unlockedAt: "2023-02-15T12:00:00.000Z",
@@ -35,114 +39,96 @@ export const PlayerAchievements = () => {
     },
     {
       id: "ach3",
-      title: "Legend",
-      description: "Reach the highest rank in any game.",
+      title: "Absolute Zenith",
+      description: "Reach the grandmaster rank in three different seasonal cycles.",
       icon: <Crown className="w-5 h-5" />,
       rarity: "legendary",
       unlockedAt: "2024-01-01T12:00:00.000Z",
     },
+    {
+      id: "ach4",
+      title: "Squad Carrier",
+      description: "Average over 1.5 KDA in 100 competitive matches.",
+      icon: <Award className="w-5 h-5" />,
+      rarity: "epic",
+      progress: 65,
+      maxProgress: 100,
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-      {achievements.map((ach) => (
-        <AchievementCard key={ach.id} achievement={ach} />
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {achievements.map((ach, index) => (
+        <AchievementCard key={ach.id} achievement={ach} index={index} />
       ))}
     </div>
   );
 };
 
-type Rarity = "common" | "rare" | "epic" | "legendary";
-
-interface AchievementCardProps {
-  achievement: {
-    id: string;
-    title: string;
-    description: string;
-    icon: React.ReactNode;
-    rarity: "common" | "rare" | "epic" | "legendary";
-    unlockedAt: string;
-    progress?: number;
-    maxProgress?: number;
-  };
-}
-
-const AchievementCard: React.FC<AchievementCardProps> = ({ achievement }) => {
-  const hoverProps = useHover();
-
-  const getRarityConfig = (rarity: Rarity) => {
-    const configs = {
-      common: {
-        color: "from-gray-500 to-gray-600",
-        borderColor: "border-gray-500/30",
-        textColor: "text-gray-400",
-      },
-      rare: {
-        color: "from-blue-500 to-blue-600",
-        borderColor: "border-blue-500/30",
-        textColor: "text-blue-400",
-      },
-      epic: {
-        color: "from-purple-500 to-purple-600",
-        borderColor: "border-purple-500/30",
-        textColor: "text-purple-400",
-      },
-      legendary: {
-        color: "from-yellow-500 to-yellow-600",
-        borderColor: "border-yellow-500/30",
-        textColor: "text-yellow-400",
-      },
-    };
-    return configs[rarity];
+const AchievementCard: React.FC<{ achievement: Achievement, index: number }> = ({ achievement, index }) => {
+  const rarityConfig = {
+    common: { bg: "from-slate-500/10 to-transparent", text: "text-slate-400", border: "border-slate-500/20", glow: "shadow-slate-500/5" },
+    rare: { bg: "from-blue-500/10 to-transparent", text: "text-blue-400", border: "border-blue-500/20", glow: "shadow-blue-500/5" },
+    epic: { bg: "from-violet-500/10 to-transparent", text: "text-violet-400", border: "border-violet-500/20", glow: "shadow-violet-500/5" },
+    legendary: { bg: "from-amber-500/10 to-transparent", text: "text-amber-400", border: "border-amber-500/20", glow: "shadow-amber-500/5" },
   };
 
-  const rarityConfig = getRarityConfig(achievement.rarity);
+  const config = rarityConfig[achievement.rarity];
+  const isUnlocked = !!achievement.unlockedAt;
 
   return (
-    <div
-      className={`group relative bg-gradient-to-br from-gray-900/80 to-gray-800/80 backdrop-blur-xl border ${
-        rarityConfig.borderColor
-      } rounded-2xl p-4 transition-all duration-300 ${
-        hoverProps.isHovered ? "scale-105 shadow-lg" : ""
-      }`}
-      {...hoverProps}
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.05 }}
     >
-      <div className="flex items-center gap-3 mb-3">
-        <div
-          className={`w-10 h-10 rounded-xl bg-gradient-to-r ${rarityConfig.color} flex items-center justify-center text-white`}
-        >
-          {achievement.icon}
+      <Card className={`relative overflow-hidden bg-white/[0.02] backdrop-blur-3xl border ${config.border} rounded-3xl p-6 transition-all duration-500 group hover:bg-white/[0.04] shadow-2xl`}>
+        {/* Rarity Background Gradient */}
+        <div className={`absolute inset-0 bg-gradient-to-br ${config.bg} opacity-20`} />
+
+        <div className="relative z-10 flex gap-6">
+          {/* Icon Container */}
+          <div className={`shrink-0 w-16 h-16 rounded-2xl flex items-center justify-center bg-[#050505] border border-white/5 shadow-inner transition-transform group-hover:scale-110 duration-500 ${config.text}`}>
+            {isUnlocked ? achievement.icon : <Lock className="w-6 h-6 opacity-20" />}
+          </div>
+
+          <div className="flex-1 space-y-3">
+            <div className="flex items-start justify-between">
+              <div>
+                <h4 className={`text-lg font-black italic uppercase tracking-tighter ${isUnlocked ? 'text-white' : 'text-white/30'}`}>
+                  {achievement.title}
+                </h4>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[9px] font-black uppercase tracking-[0.3em] ${config.text}`}>{achievement.rarity} Commendation</span>
+                  {isUnlocked && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
+                </div>
+              </div>
+              {isUnlocked && (
+                <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">
+                  {new Date(achievement.unlockedAt!).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                </span>
+              )}
+            </div>
+
+            <p className="text-xs text-white/40 font-medium leading-relaxed">
+              {achievement.description}
+            </p>
+
+            {achievement.maxProgress && (
+              <div className="pt-2 space-y-2">
+                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-white/20">
+                  <span>Progression</span>
+                  <span className={isUnlocked ? 'text-emerald-400' : ''}>{achievement.progress} / {achievement.maxProgress}</span>
+                </div>
+                <Progress
+                  value={(achievement.progress || 0) / achievement.maxProgress * 100}
+                  className={`h-1.5 bg-white/5 ${isUnlocked ? '[&>div]:bg-emerald-500' : ''}`}
+                />
+              </div>
+            )}
+          </div>
         </div>
-        <div className="flex-1">
-          <h4 className="text-sm font-bold text-white">{achievement.title}</h4>
-          <p className={`text-xs ${rarityConfig.textColor} font-medium`}>
-            {achievement.rarity.charAt(0).toUpperCase() +
-              achievement.rarity.slice(1)}
-          </p>
-        </div>
-      </div>
-
-      <p className="mb-2 text-xs text-gray-400">{achievement.description}</p>
-
-      {achievement.progress !== undefined && achievement.maxProgress && (
-        <ProgressBar
-          current={achievement.progress}
-          max={achievement.maxProgress}
-          showLabel={false}
-          color={
-            achievement.rarity === "legendary"
-              ? "yellow"
-              : achievement.rarity === "epic"
-              ? "purple"
-              : "blue"
-          }
-          className="mb-2"
-        />
-      )}
-
-      <div className="text-xs text-gray-500">
-        Unlocked {new Date(achievement.unlockedAt).toLocaleDateString()}
-      </div>
-    </div>
+      </Card>
+    </motion.div>
   );
 };

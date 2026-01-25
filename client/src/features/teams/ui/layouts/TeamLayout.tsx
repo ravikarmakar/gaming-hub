@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import {
   Users,
@@ -12,59 +13,80 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 
 import { DashboardNavbar } from "@/features/dashboard/ui/components/DashboardNavbar";
 import { DashboardSidebar } from "@/features/dashboard/ui/components/DashboardSidebar";
+import { TEAM_ROUTES } from "@/features/teams/lib/routes";
+import { TEAM_ACCESS } from "@/features/teams/lib/access";
+import { useAccess } from "@/features/auth/hooks/useAccess";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
 const teamSidebarLinks = [
   {
     label: "Team Overview",
     icon: Users,
-    href: "/dashboard/team",
+    href: TEAM_ROUTES.DASHBOARD,
+    access: TEAM_ACCESS.dashboard,
   },
   {
-    label: "Manage Players",
+    label: "Team Members",
     icon: UserPlus,
-    href: "/dashboard/team/players",
+    href: TEAM_ROUTES.MEMBERS,
+    access: TEAM_ACCESS.members,
   },
   {
     label: "Team Performance",
     icon: BarChart2,
-    href: "/dashboard/team/performance",
+    href: TEAM_ROUTES.PERFORMANCE,
   },
   {
     label: "Tournaments Played",
     icon: Trophy,
-    href: "/dashboard/team/tournaments",
+    href: TEAM_ROUTES.TOURNAMENTS,
   },
   {
     label: "Team Notifications",
     icon: Bell,
-    href: "/dashboard/team/notifications",
+    href: TEAM_ROUTES.NOTIFICATIONS,
+  },
+  {
+    label: "Staff Management",
+    icon: Settings,
+    href: TEAM_ROUTES.STAFF,
+    access: TEAM_ACCESS.staff,
   },
   {
     label: "Team Settings",
     icon: Settings,
-    href: "/dashboard/team/settings",
+    href: TEAM_ROUTES.SETTINGS,
+    access: TEAM_ACCESS.settings,
   },
+
 ];
 
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
-
 const TeamLayout = () => {
-  const { user } = useAuthStore();
-  const { currentTeam } = useTeamStore();
+  const { can } = useAccess();
+  const { user, checkingAuth } = useAuthStore();
 
-  if (!user?.teamId) {
-    return <Navigate to="/" />;
+  const filteredLinks = useMemo(() => {
+    return teamSidebarLinks.filter((link) => {
+      if (!link.access) return true;
+      return can(link.access);
+    });
+  }, [can]);
+
+  if (checkingAuth) {
+    return (
+      <div className="w-screen h-screen bg-[#0a0514] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+      </div>
+    );
   }
 
-  const isCaptain = currentTeam?.captain === user?._id;
-
-  const filteredLinks = teamSidebarLinks.filter(link => {
-    if (link.label === "Team Settings") {
-      return isCaptain;
-    }
-    return true;
-  });
+  if (!user?.teamId) {
+    return <Navigate to="/" replace />;
+  }
+  // Note: can() automatically resolves scopeId for SCOPES.TEAM from user.teamId
+  if (!can(TEAM_ACCESS.dashboard)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <SidebarProvider>

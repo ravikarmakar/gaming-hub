@@ -18,6 +18,9 @@ export const TEAM_ENDPOINTS = {
     LEAVE_TEAM: `${TEAMS_BASE}/leave-member`,
     UPDATE_MEMBER_ROLE: `${TEAMS_BASE}/manage-member-role`,
 
+    // Staff Management
+    MANAGE_STAFF: `${TEAMS_BASE}/manage-staff-role`,
+
     // Ownership
     TRANSFER_OWNERSHIP: `${TEAMS_BASE}/transfer-owner`,
 
@@ -32,4 +35,3 @@ export const TEAM_ENDPOINTS = {
     HANDLE_JOIN_REQUEST: (requestId: string) =>
         `${TEAMS_BASE}/join-requests/${requestId}/handle`,
 } as const;
-

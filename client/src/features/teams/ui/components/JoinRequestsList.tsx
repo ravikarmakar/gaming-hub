@@ -1,16 +1,22 @@
-import React, { useEffect } from 'react';
-import { useTeamStore } from '../../store/useTeamStore';
+import { useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { User, Check, X, MessageSquare, Clock, Loader2 } from 'lucide-react';
+
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { User, Check, X, MessageSquare, Clock, Loader2 } from 'lucide-react';
-import toast from 'react-hot-toast';
+
+import { useTeamStore } from '../../store/useTeamStore';
 
 export const JoinRequestsList: React.FC = () => {
-    const { joinRequests, fetchJoinRequests, handleJoinRequest, isLoading } = useTeamStore();
+    const { joinRequests, fetchJoinRequests, handleJoinRequest, isLoading, currentTeam } = useTeamStore();
 
     useEffect(() => {
-        fetchJoinRequests();
-    }, [fetchJoinRequests]);
+        // Only fetch if there are pending requests indicated by the team details
+        // optimized to prevent unnecessary backend calls
+        if (currentTeam?.pendingRequestsCount && currentTeam.pendingRequestsCount > 0) {
+            fetchJoinRequests();
+        }
+    }, [fetchJoinRequests, currentTeam?.pendingRequestsCount]);
 
     const onHandle = async (requestId: string, action: 'accepted' | 'rejected') => {
         const res = await handleJoinRequest(requestId, action);

@@ -70,13 +70,9 @@ export const sendJoinRequest = TryCatchHandler(async (req, res, next) => {
 // @desc    Get all join requests for a team (Captain only)
 // @route   GET /api/v1/teams/join-requests
 export const getTeamJoinRequests = TryCatchHandler(async (req, res, next) => {
-    const { teamId } = req.userDoc; // From ensurePartOfTeam middleware
+    const teamId = req.teamDoc._id; // From ensurePartOfTeam middleware
 
-    // Double check if user is captain
-    const team = await Team.findById(teamId);
-    if (team.captain.toString() !== req.user.userId.toString()) {
-        throw new CustomError("Only the team captain can view join requests", 403);
-    }
+    // Access controlled by verifyTeamPermission(TEAM_ACTIONS.manageRoster) middleware
 
     const requests = await JoinRequest.find({
         team: teamId,
@@ -111,10 +107,7 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
         throw new CustomError(`Request has already been ${joinRequest.status}`, 400);
     }
 
-    // Ensure only captain can handle
-    if (joinRequest.team.captain.toString() !== userId.toString()) {
-        throw new CustomError("Only the team captain can handle join requests", 403);
-    }
+    // Access controlled by verifyTeamPermission(TEAM_ACTIONS.manageRoster) middleware
 
     try {
         if (action === "accepted") {
@@ -131,6 +124,12 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
 
             // 2. Add to team (Atomic)
             const team = joinRequest.team;
+
+            // Check limit
+            if (team.teamMembers.length >= 10) {
+                throw new CustomError("Team is full (max 10 members). Cannot accept new members.", 400);
+            }
+
             await Team.findByIdAndUpdate(team._id, {
                 $push: { teamMembers: { user: requester._id, roleInTeam: "player" } }
             });

@@ -5,10 +5,11 @@ import { axiosInstance } from "@/lib/axios";
 import "../../../lib/axiosInterceptor";
 import { AUTH_ENDPOINTS } from "../api/endpoints";
 
-interface Roles {
+export interface Roles {
   scope: "platform" | "org" | "team";
   role: string;
   scopeId: string;
+  scopeModel: string;
 }
 
 type EsportsRole = "player" | "sniper" | "support" | "igl" | "coach" | "rusher";
@@ -30,6 +31,7 @@ export interface User {
   resetOtpExpireAt: number;
   createdAt: string;
   updatedAt: string;
+  bio?: string;
 }
 
 interface AuthStateTypes {

@@ -1,10 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { StarIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils";
-
 import { Separator } from "@/components/ui/separator";
-import { ROUTES } from "@/lib/routes";
 import {
   Sidebar,
   SidebarHeader,
@@ -16,6 +13,9 @@ import {
   SidebarMenuButton,
   useSidebar,
 } from "@/components/ui/sidebar";
+
+import { cn } from "@/lib/utils";
+import { ROUTES } from "@/lib/routes";
 
 const sectionTwo = [
   {
@@ -77,7 +77,15 @@ export const DashboardSidebar = ({ sidebarItems }: Props) => {
         <SidebarGroupContent className="px-3">
           <SidebarMenu className="space-y-0.5">
             {sidebarItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive =
+                pathname === item.href ||
+                (item.href !== '/' &&
+                  pathname.startsWith(item.href) &&
+                  !sidebarItems.some(other =>
+                    other.href !== item.href &&
+                    other.href.length > item.href.length &&
+                    pathname.startsWith(other.href)
+                  ));
 
               return (
                 <SidebarMenuItem key={item.href}>

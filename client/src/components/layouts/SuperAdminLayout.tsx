@@ -11,8 +11,8 @@ import {
   Users2,
   Zap,
 } from "lucide-react";
-import { hasAnyRole } from "@/lib/permissions";
-import { PLATFORM_SUPER_ADMIN_ROLES, SCOPES } from "@/lib/roles";
+import { hasAnyRole } from "@/features/auth/lib/permissions";
+import { PLATFORM_SUPER_ADMIN_ROLES, SCOPES } from "@/features/auth/lib/roles";
 import Sidebar from "@/ui/super-admin/Sidebar";
 import Topbar from "@/ui/super-admin/Topbar";
 

@@ -66,6 +66,11 @@ const userSchema = new mongoose.Schema(
       ],
     },
     isDeleted: { type: Boolean, default: false },
+    bio: {
+      type: String,
+      default: "",
+      maxlength: [500, "Bio must be less than 500 characters"],
+    },
   },
   { timestamps: true }
 );

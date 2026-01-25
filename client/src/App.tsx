@@ -5,7 +5,7 @@ import { ErrorBoundary } from "react-error-boundary";
 
 // Stores & Constants
 import { ROUTES } from "./lib/routes";
-import { TEAM_ROUTES } from "./features/teams/routes";
+import { TEAM_ROUTES } from "./features/teams/lib/routes";
 import { useAuthStore } from "./features/auth/store/useAuthStore";
 
 // Layouts & Guards
@@ -37,13 +37,14 @@ const ViewEventOrg = lazy(() => import("@/features/organizer/ui/pages/ViewEventO
 
 // Player Features
 const PlayerIdPage = lazy(() => import("@/features/player/ui/pages/PlayerIdPage"));
-const AllPlayerPage = lazy(() => import("@/features/player/ui/pages/AllPlayerPage"));
+const FindPlayers = lazy(() => import("@/features/player/ui/pages/FindPlayers"));
 
 // Team Features
 const TeamIdPage = lazy(() => import("@/features/teams/ui/pages/TeamIdPage"));
 const TeamDashboard = lazy(() => import("./features/teams/ui/pages/TeamDashboard"));
 const TeamDashboardLayout = lazy(() => import("./features/teams/ui/layouts/TeamLayout"));
 const TeamMembersPage = lazy(() => import("@/features/teams/ui/pages/TeamMembersPage"));
+const TeamStaffPage = lazy(() => import("@/features/teams/ui/pages/TeamStaffPage"));
 const TeamNotificationsPage = lazy(() => import("@/features/teams/ui/pages/TeamNotificationsPage"));
 const TeamSettings = lazy(() => import("@/features/teams/ui/pages/TeamSettings"));
 const AllTeams = lazy(() => import("@/features/teams/ui/pages/FindTeams"));
@@ -61,8 +62,8 @@ const DashboardPage = lazy(() => import("./pages/super-admin/DashboardPage"));
 const NotificationsPage = lazy(() => import("@/features/notifications/ui/pages/NotificationsPage"));
 
 const App = () => {
+  const { checkAuth, checkingAuth } = useAuthStore();
   const hasCalled = useRef(false);
-  const { checkAuth } = useAuthStore();
 
   useEffect(() => {
     if (!hasCalled.current) {
@@ -70,6 +71,10 @@ const App = () => {
       hasCalled.current = true;
     }
   }, [checkAuth]);
+
+  if (checkingAuth) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <>
@@ -85,29 +90,25 @@ const App = () => {
               <Route element={<ProtectedRoute />}>
                 <Route path={ROUTES.EMAIL_VERIFY} element={<VerifyEmail />} />
                 <Route path={ROUTES.CREATE_ORG} element={<CreateOrg />} />
-                <Route
-                  path={ROUTES.ORG_PROFILE}
-                  element={<OrganizerProfile />}
-                />
-                <Route path={ROUTES.ALL_PLAYERS} element={<AllPlayerPage />} />
+                <Route path={ROUTES.ORG_PROFILE} element={<OrganizerProfile />} />
+                <Route path={ROUTES.ALL_PLAYERS} element={<FindPlayers />} />
                 <Route path={ROUTES.PLAYER_PROFILE} element={<PlayerIdPage />} />
+                <Route path={TEAM_ROUTES.PROFILE} element={<TeamIdPage />} />
                 <Route path={ROUTES.NOTIFICATIONS} element={<NotificationsPage />} />
-                <Route path={ROUTES.TEAM_PROFILE} element={<TeamIdPage />} />
                 <Route path={ROUTES.EVENT_DETAILS} element={<ViewEventById />} />
               </Route>
             </Route>
 
+            {/* Team Routes */}
             <Route element={<ProtectedRoute />}>
-              <Route
-                path={ROUTES.TEAM_DASHBOARD}
-                element={<TeamDashboardLayout />}
-              >
+              <Route path={TEAM_ROUTES.DASHBOARD} element={<TeamDashboardLayout />}>
                 <Route index element={<TeamDashboard />} />
-                <Route path={TEAM_ROUTES.PLAYERS.split('/').pop()} element={<TeamMembersPage />} />
-                <Route path={TEAM_ROUTES.PERFORMANCE.split('/').pop()} element={<div>performance</div>} />
-                <Route path={TEAM_ROUTES.TOURNAMENTS.split('/').pop()} element={<div>tournaments</div>} />
-                <Route path={TEAM_ROUTES.NOTIFICATIONS.split('/').pop()} element={<TeamNotificationsPage />} />
-                <Route path={TEAM_ROUTES.SETTINGS.split('/').pop()} element={<TeamSettings />} />
+                <Route path={TEAM_ROUTES.MEMBERS} element={<TeamMembersPage />} />
+                <Route path={TEAM_ROUTES.PERFORMANCE} element={<div>performance</div>} />
+                <Route path={TEAM_ROUTES.TOURNAMENTS} element={<div>tournaments</div>} />
+                <Route path={TEAM_ROUTES.NOTIFICATIONS} element={<TeamNotificationsPage />} />
+                <Route path={TEAM_ROUTES.STAFF} element={<TeamStaffPage />} />
+                <Route path={TEAM_ROUTES.SETTINGS} element={<TeamSettings />} />
               </Route>
             </Route>
 
@@ -128,10 +129,7 @@ const App = () => {
             </Route>
 
             <Route element={<PublicRoute />}>
-              <Route
-                path={ROUTES.DISCORD_CALLBACK}
-                element={<DiscordCallback />}
-              />
+              <Route path={ROUTES.DISCORD_CALLBACK} element={<DiscordCallback />} />
               <Route element={<AuthLayout />}>
                 <Route path={ROUTES.LOGIN} element={<LoginPage />} />
                 <Route path={ROUTES.REGISTER} element={<SignupPage />} />

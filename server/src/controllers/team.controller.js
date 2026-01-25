@@ -159,7 +159,7 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
     .select('-__v') // Exclude version key
     .populate({
       path: 'teamMembers.user',
-      select: 'username avatar _id', // Only select required fields for performance
+      select: 'username avatar roles _id esportsRole', // Include roles to display system team roles
     })
     .lean(); // Return plain JS object for better performance
 
@@ -169,6 +169,8 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
 
   // Check if the current user (if logged in) has a pending join request
   let hasPendingRequest = false;
+  let pendingRequestsCount = 0;
+
   if (req.user) {
     const existingRequest = await JoinRequest.findOne({
       requester: req.user._id,
@@ -176,6 +178,15 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
       status: "pending"
     });
     hasPendingRequest = !!existingRequest;
+
+    // If user is a member, fetch the count of ALL pending requests for the team
+    const isMember = team.teamMembers.some(m => m.user._id.toString() === req.user._id.toString());
+    if (isMember) {
+      pendingRequestsCount = await JoinRequest.countDocuments({
+        team: teamId,
+        status: "pending"
+      });
+    }
   }
 
   // Transform populated data to match expected client format
@@ -186,10 +197,12 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
       roleInTeam: member.roleInTeam,
       username: member.user.username,
       avatar: member.user.avatar,
+      systemRole: member.user.roles.find(role => role.scope === Scopes.TEAM).role,
       joinedAt: member.joinedAt,
       isActive: member.isActive,
     })),
-    hasPendingRequest
+    hasPendingRequest,
+    pendingRequestsCount
   };
 
   res.status(200).json({
@@ -361,6 +374,17 @@ export const addMembers = TryCatchHandler(async (req, res, next) => {
       `Users have not verified their email: ${issues.unverified.join(", ")}`,
       400
     );
+
+  // Check Team Limit
+  const currentMembersCount = team.teamMembers.length;
+  // Filter out members who are already in the team to get true addition count
+  const newMembersCount = members.filter(mid =>
+    !team.teamMembers.some(m => m.user.toString() === mid.toString())
+  ).length;
+
+  if (currentMembersCount + newMembersCount > 10) {
+    throw new CustomError(`Cannot add more members. Team limit is 10. You have ${currentMembersCount} members.`, 400);
+  }
 
   try {
     const updatedMembers = [...team.teamMembers];
@@ -679,8 +703,8 @@ export const manageMemberRole = TryCatchHandler(async (req, res, next) => {
   const { memberId, role } = req.body;
   if (!memberId) throw new CustomError("Member ID is required.", 400);
   if (!role) throw new CustomError("Role is required.", 400);
-  if (role === "igl")
-    throw new CustomError("You cannot assign the 'igl' role manually.", 400);
+  // if (role === "igl")
+  //   throw new CustomError("You cannot assign the 'igl' role manually.", 400);
 
   const team = req.teamDoc;
 
@@ -690,12 +714,6 @@ export const manageMemberRole = TryCatchHandler(async (req, res, next) => {
 
   if (!member) {
     throw new CustomError("The specified user is not a member of the team.", 404);
-  }
-  if (
-    member.roleInTeam === "igl" &&
-    member.user.toString() === req.user.userId.toString()
-  ) {
-    throw new CustomError("IGL cannot change their own role.", 403);
   }
 
   member.roleInTeam = role;
@@ -759,7 +777,101 @@ export const deleteTeam = TryCatchHandler(async (req, res, next) => {
   }
 });
 
+export const manageStaffRole = TryCatchHandler(async (req, res, next) => {
+  const { memberId, action } = req.body; // action: "promote" | "demote"
+
+  if (!memberId) throw new CustomError("Member ID is required.", 400);
+  if (!["promote", "demote"].includes(action)) {
+    throw new CustomError("Invalid action. Use 'promote' or 'demote'.", 400);
+  }
+
+  const team = req.teamDoc;
+
+  // Verify member exists in team
+  const isMember = team.teamMembers.some(
+    (m) => m.user.toString() === memberId.toString()
+  );
+
+  if (!isMember) {
+    throw new CustomError("The specified user is not a member of the team.", 404);
+  }
+
+  // Prevent modifying the Owner (Captain)
+  if (team.captain.toString() === memberId.toString()) {
+    throw new CustomError("Cannot separate system role for the Team Owner.", 403);
+  }
+
+  const user = await findUserById(memberId);
+
+  if (action === "promote") {
+    // Check if already manager
+    const alreadyManager = user.roles.some(
+      r => r.scope === Scopes.TEAM &&
+        r.scopeId.toString() === team._id.toString() &&
+        r.role === Roles.TEAM.MANAGER
+    );
+
+    if (alreadyManager) {
+      return res.status(200).json({ success: true, message: "Member is already a Manager." });
+    }
+
+    // Add Manager Role
+    await User.updateOne(
+      { _id: memberId, "roles.scopeId": team._id },
+      { $set: { "roles.$.role": Roles.TEAM.MANAGER } }
+    );
+
+
+  } else if (action === "demote") {
+    // Remove Manager Role
+    await User.updateOne(
+      { _id: memberId, "roles.scopeId": team._id },
+      { $set: { "roles.$.role": Roles.TEAM.PLAYER } }
+    );
+
+    // Remove Manager Role
+    await User.updateOne(
+      { _id: memberId, "roles.scopeId": team._id },
+      { $set: { "roles.$.role": Roles.TEAM.PLAYER } }
+    );
+
+  }
+
+  // Invalidate Redis cache
+  await redis.del(`user_profile:${memberId}`);
+
+  // Fetch updated team to return to client
+  const updatedTeam = await Team.findOne({
+    _id: team._id,
+    isDeleted: false
+  })
+    .select('-__v')
+    .populate({
+      path: 'teamMembers.user',
+      select: 'username avatar roles _id esportsRole',
+    })
+    .lean();
+
+  const transformedTeam = {
+    ...updatedTeam,
+    teamMembers: updatedTeam.teamMembers.map(member => ({
+      user: member.user._id,
+      roleInTeam: member.roleInTeam,
+      username: member.user.username,
+      avatar: member.user.avatar,
+      systemRole: member.user.roles.find(role => role.scope === Scopes.TEAM && role.scopeId.toString() === team._id.toString())?.role,
+      joinedAt: member.joinedAt,
+      isActive: member.isActive,
+    })),
+  };
+
+  res.status(200).json({
+    success: true,
+    message: `Member successfully ${action === "promote" ? "promoted to Manager" : "demoted to Player"}.`,
+    team: transformedTeam
+  });
+});
+
 // TODO: using socket.io emit real time events to users
 // TODO: invalidate the user cache in redis when someting change in database
 // TODO: ImageKit is not working; handle the team creation error later.
-

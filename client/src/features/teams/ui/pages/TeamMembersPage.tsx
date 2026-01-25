@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
-import { Loader2, AlertCircle, Info } from "lucide-react";
+import { Loader2, AlertCircle, Info, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,7 +10,8 @@ import { MemberHeader } from "../components/MemberHeader";
 import { useTeamStore } from "@/features/teams/store/useTeamStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { JoinRequestsList } from "../components/JoinRequestsList";
-import { Users } from "lucide-react";
+import { useAccess } from "@/features/auth/hooks/useAccess";
+import { TEAM_ACTIONS, TEAM_ACTIONS_ACCESS } from "../../lib/access";
 
 const TeamMembersPage = () => {
   const {
@@ -20,9 +21,17 @@ const TeamMembersPage = () => {
     error,
     removeMember,
     updateMemberRole,
-    transferTeamOwnerShip,
   } = useTeamStore();
   const { user } = useAuthStore();
+  const { can } = useAccess()
+
+  // RBAC
+  const accessJoinRequestList = can(
+    TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.accessJoinRequestList]
+  );
+  const canManageRoster = can(
+    TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.manageRoster]
+  );
 
   useEffect(() => {
     if (user?.teamId) {
@@ -59,23 +68,6 @@ const TeamMembersPage = () => {
     },
     [updateMemberRole, user?.teamId, getTeamById]
   );
-
-  const handleTransferOwnership = useCallback(
-    async (memberId: string) => {
-      const result = await transferTeamOwnerShip(memberId);
-      if (result && result.success) {
-        toast.success(result.message || "Ownership transferred successfully");
-        if (user?.teamId) {
-          await getTeamById(user.teamId, true);
-        }
-      } else {
-        toast.error(result?.message || "Failed to transfer ownership");
-      }
-    },
-    [transferTeamOwnerShip, user?.teamId, getTeamById]
-  );
-
-  const isOwner = currentTeam?.captain?.toString() === user?._id?.toString();
 
   if (isLoading && !currentTeam) {
     return (
@@ -141,16 +133,15 @@ const TeamMembersPage = () => {
             </div>
             <TeamMembers
               members={currentTeam.teamMembers ?? []}
-              owner={isOwner}
+              owner={canManageRoster}
               currentUserId={user?._id ?? ""}
               onRemove={handleRemove}
               onEditRole={handleEditRole}
-              onTransferOwnership={handleTransferOwnership}
               isLoading={isLoading}
             />
           </section>
 
-          {isOwner && (
+          {accessJoinRequestList && (
             <section className="animate-in fade-in slide-in-from-top-4 duration-500">
               <JoinRequestsList />
             </section>

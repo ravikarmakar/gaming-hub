@@ -10,10 +10,9 @@ import {
   Users2,
   // Zap,
 } from "lucide-react";
-import { ORG_ADMIN_ROLES, SCOPES } from "@/lib/roles";
-import { hasAnyRole } from "@/lib/permissions";
 import Topbar from "@/ui/super-admin/Topbar";
 import Sidebar from "@/ui/super-admin/Sidebar";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 
 export default function OrganizerLayout() {
   const { user } = useAuthStore();
@@ -58,7 +57,9 @@ export default function OrganizerLayout() {
     },
   ];
 
-  const hasPermission = hasAnyRole(user, SCOPES.ORG, ORG_ADMIN_ROLES);
+  /* New: Simplified hook usage */
+  const { hasOrgAccess } = usePermissions();
+  const hasPermission = hasOrgAccess(user?.orgId);
 
   if (!user || !hasPermission || !user.orgId) {
     return <Navigate to="/" replace />;

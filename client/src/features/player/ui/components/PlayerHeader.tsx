@@ -1,131 +1,135 @@
+import React from "react";
 import {
   CheckCircle,
-  Crown,
-  Gift,
-  Heart,
   MapPin,
   MessageCircle,
   Share2,
   Sword,
   Users,
+  Heart,
+  Gamepad2,
+  ShieldCheck,
+  Calendar
 } from "lucide-react";
 
 import { User } from "@/features/auth/store/useAuthStore";
-import { GlowButton } from "@/ui/element/Button";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { motion } from "framer-motion";
 
 interface Props {
   player: User;
   type?: "team" | "player" | "organizer";
 }
 
-export const PlayerHeader = ({ player }: Props) => {
-  const handleFollow = () => { };
-  const isFollowing = true;
-  const followerCount = 4000;
+export const PlayerHeader: React.FC<Props> = ({ player }) => {
+  const followerCount = "4.2K";
 
   return (
-    <div className="relative z-0 px-4 mx-auto mt-8 max-w-7xl sm:px-6 lg:px-8">
-      <div className="flex flex-col items-center gap-8 mb-12 lg:flex-row lg:items-start lg:gap-12">
-        {/* Profile Image & Status */}
-        <div className="relative group">
-          <div className="relative">
-            <img
-              src={player.avatar}
-              alt={player.username}
-              className="w-32 h-32 transition-all duration-500 bg-gray-900 border-4 border-gray-800 rounded-full shadow-2xl sm:w-36 sm:h-36 md:w-40 md:h-40 group-hover:shadow-blue-500/20"
-            />
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative flex flex-col items-center lg:flex-row lg:items-end gap-8 p-8 md:p-12 rounded-[2.5rem] bg-[#0d091a]/40 backdrop-blur-3xl border border-white/5 shadow-2xl overflow-hidden"
+    >
+      {/* Decorative inner glow */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-violet-600/10 blur-[80px] -mr-32 -mt-32 rounded-full" />
 
-            {/* Status Indicator */}
-            <div className="absolute flex items-center gap-2 -bottom-2 -right-2">
-              <div className="w-5 h-5 bg-green-500 border-4 border-gray-800 rounded-full sm:w-6 sm:h-6 animate-pulse" />
-              <div className="p-2 rounded-full shadow-lg bg-gradient-to-r from-blue-500 to-purple-500">
-                <CheckCircle className="w-4 h-4 text-white" />
-              </div>
+      {/* Avatar Section */}
+      <div className="relative group shrink-0">
+        <div className="absolute -inset-1 bg-gradient-to-tr from-violet-600 to-fuchsia-600 rounded-full blur opacity-20 group-hover:opacity-40 transition duration-500" />
+        <Avatar className="w-40 h-40 md:w-48 md:h-48 border-4 border-[#050505] shadow-2xl ring-2 ring-white/5 transition-transform duration-500 group-hover:scale-[1.02]">
+          <AvatarImage src={player.avatar} className="object-cover" />
+          <AvatarFallback className="bg-[#1a1528] text-violet-400">
+            <Users className="w-16 h-16 opacity-20" />
+          </AvatarFallback>
+        </Avatar>
+
+        {/* Verification & Status */}
+        {player.isAccountVerified && (
+          <div className="absolute -bottom-2 -right-2 p-1.5 rounded-full bg-blue-500 border-4 border-[#050505] shadow-xl">
+            <ShieldCheck className="w-6 h-6 text-white" />
+          </div>
+        )}
+      </div>
+
+      {/* Info Section */}
+      <div className="flex-1 flex flex-col items-center lg:items-start space-y-6 text-center lg:text-left z-10 w-full">
+        <div className="space-y-4 w-full">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter italic">
+              {player.username}
+            </h1>
+            <Badge variant="outline" className="self-center lg:self-center bg-emerald-500/10 text-emerald-400 border-emerald-500/20 px-3 py-1 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-black tracking-widest uppercase">Combat Ready</span>
+            </Badge>
+          </div>
+
+          <div className="flex flex-wrap justify-center lg:justify-start gap-3">
+            <Badge className="bg-white/5 hover:bg-white/10 text-white/60 border-white/5 px-3 py-1.5 rounded-xl transition-colors">
+              <Gamepad2 className="w-3.5 h-3.5 mr-2 text-violet-400" />
+              <span className="text-[10px] font-black uppercase tracking-widest">{player.esportsRole || "Tactician"}</span>
+            </Badge>
+            <Badge className="bg-white/5 hover:bg-white/10 text-white/60 border-white/5 px-3 py-1.5 rounded-xl transition-colors">
+              <Users className="w-3.5 h-3.5 mr-2 text-blue-400" />
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                {(player as any).teamId ? (player as any).teamId.teamName : "LEGION OF ONE"}
+              </span>
+            </Badge>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 text-[10px] font-black uppercase tracking-[0.2em] text-white/30">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-3.5 h-3.5 text-violet-500/50" />
+              <span>Global Sector 01</span>
             </div>
-
-            {/* Tier Badge */}
-            <div className="absolute p-2 border-2 border-gray-800 rounded-full shadow-lg -top-2 -left-2 bg-gradient-to-r from-yellow-400 to-pink-500 sm:p-3">
-              <Crown className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-2">
+              <Calendar className="w-3.5 h-3.5 text-violet-500/50" />
+              <span>Member since 2024</span>
             </div>
           </div>
 
-          {/* Glow effect */}
-          <div className="absolute inset-0 transition-opacity duration-500 opacity-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur-xl group-hover:opacity-100 -z-10" />
+          <p className="text-sm text-white/50 max-w-xl line-clamp-2 italic font-medium leading-relaxed">
+            {player.bio || "No tactical briefing available for this operative."}
+          </p>
         </div>
 
-        {/* Profile Info */}
-        <div className="w-full space-y-6 text-center lg:text-left lg:flex-1">
-          <div className="space-y-3">
-            <div className="flex flex-col items-center gap-2 lg:flex-row lg:items-center lg:gap-4">
-              <h1 className="text-3xl font-bold text-transparent sm:text-4xl md:text-5xl bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text">
-                {player.username}
-              </h1>
-              <div
-                className={`px-3 py-1 rounded-full text-sm font-medium border bg-green-500"`}
-              >
-                Online
-              </div>
-            </div>
+        {/* Action Controls */}
+        <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-4 w-full">
+          <Button
+            className="h-12 px-8 rounded-2xl bg-violet-600 hover:bg-violet-700 text-white shadow-xl shadow-violet-600/20 transition-all active:scale-95 group"
+          >
+            <Heart className="w-4 h-4 mr-2 group-hover:fill-current transition-all" />
+            <span className="text-[10px] font-black uppercase tracking-widest italic">Recruit</span>
+            <span className="ml-3 pl-3 border-l border-white/20 opacity-60">{followerCount}</span>
+          </Button>
 
-            <div className="flex flex-wrap justify-center gap-2 lg:justify-start">
-              <div className="flex items-center gap-2 px-3 py-1 text-xs font-semibold text-blue-300 border rounded-full bg-gradient-to-r from-blue-500/20 to-purple-500/20 border-blue-500/30">
-                <Users className="w-4 h-4" />
-                {player.teamId}
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1 text-xs font-semibold text-yellow-300 border rounded-full bg-gradient-to-r from-yellow-500/20 to-pink-500/20 border-yellow-500/30">
-                <Gift className="w-4 h-4" />
-                Sponsored
-              </div>
-            </div>
+          <Button
+            variant="outline"
+            className="h-12 px-8 rounded-2xl bg-white/5 border-white/10 hover:bg-white/10 hover:border-violet-500/30 text-white transition-all active:scale-95"
+          >
+            <MessageCircle className="w-4 h-4 mr-2 text-violet-400" />
+            <span className="text-[10px] font-black uppercase tracking-widest italic">Comms</span>
+          </Button>
 
-            <div className="flex flex-col items-center gap-1 text-sm text-gray-400 sm:flex-row sm:gap-4 sm:justify-center lg:justify-start">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                <span>Bengaluru, KA</span>
-              </div>
-            </div>
-
-            <div className="text-sm text-gray-300 sm:text-base">Bio</div>
-          </div>
-
-          {/* Buttons */}
-          <div className="flex flex-wrap justify-center gap-3 lg:justify-start">
-            <GlowButton
-              variant={isFollowing ? "secondary" : "primary"}
-              onClick={handleFollow}
-              size="md"
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="w-12 h-12 rounded-2xl bg-white/5 border-white/10 hover:bg-white/10 hover:border-violet-500/30 text-white"
             >
-              <Heart className="w-5 h-5" />
-              {isFollowing ? "Following" : "Follow"}
-              <span className="ml-2">{followerCount}</span>
-            </GlowButton>
-            <GlowButton
-              variant="secondary"
-              onClick={() => console.log("Message clicked")}
-              size="md"
+              <Share2 className="w-4 h-4" />
+            </Button>
+            <Button
+              className="h-12 px-8 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white shadow-xl shadow-rose-600/20 transition-all active:scale-95 group"
             >
-              <MessageCircle className="w-5 h-5" />
-              Message
-            </GlowButton>
-            <GlowButton
-              variant="ghost"
-              onClick={() => console.log("Settings clicked")}
-              size="md"
-            >
-              <Share2 className="w-5 h-5" />
-              Share
-            </GlowButton>
-            <GlowButton
-              variant="danger"
-              onClick={() => console.log("Challenge clicked")}
-              size="md"
-            >
-              <Sword className="w-5 h-5" />
-              Challenge
-            </GlowButton>
+              <Sword className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />
+              <span className="text-[10px] font-black uppercase tracking-widest italic">Challenge</span>
+            </Button>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };

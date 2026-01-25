@@ -3,7 +3,7 @@ import { Team } from "../../store/useTeamStore";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Users, Trophy, ShieldCheck, Gamepad2, Globe } from "lucide-react";
-import { ROUTES } from "@/lib/routes";
+import { TEAM_ROUTES } from "../../lib/routes";
 
 interface TeamCardProps {
     team: Team;
@@ -20,7 +20,7 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, index }) => {
             className="group"
         >
             <Link
-                to={ROUTES.TEAM_PROFILE.replace(":id", team._id)}
+                to={TEAM_ROUTES.PROFILE.replace(":id", team._id)}
                 className="block relative h-full bg-white/[0.03] backdrop-blur-md border border-white/10 rounded-3xl p-6 hover:bg-white/[0.05] hover:border-purple-500/40 transition-all duration-500 overflow-hidden"
             >
                 {/* Glow Effect */}

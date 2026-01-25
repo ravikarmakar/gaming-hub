@@ -5,12 +5,26 @@ import { axiosInstance } from "@/lib/axios";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { TEAM_ENDPOINTS } from "../api/endpoints";
 
+export const roleInTeam = [
+  "igl",
+  "rusher",
+  "sniper",
+  "support",
+  "player",
+  "coach",
+  "analyst",
+  "substitute",
+];
+
+export const systemRole = ["player", "owner", "manager"];
+
 export interface TeamMembersTypes {
   _id: string;
   username: string;
   avatar: string;
   user: string;
-  roleInTeam: "igl" | "rusher" | "sniper" | "support" | "player" | "coach" | "analyst" | "substitute";
+  roleInTeam: typeof roleInTeam[number];
+  systemRole: typeof systemRole[number];
   joinedAt: string;
   isActive: boolean;
 }
@@ -53,6 +67,7 @@ export interface Team {
   game?: string;
   isDeleted: boolean;
   hasPendingRequest?: boolean;
+  pendingRequestsCount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -74,6 +89,11 @@ interface TeamStateTypes {
   createTeam: (teamData: FormData) => Promise<Team | null>;
   getTeamById: (id: string, forceRefresh?: boolean) => Promise<Team | null>;
   updateMemberRole: (role: string, memberId: string) => Promise<Team | null>;
+
+  // Staff Management
+  promoteMember: (memberId: string) => Promise<{ success: boolean; message: string }>;
+  demoteMember: (memberId: string) => Promise<{ success: boolean; message: string }>;
+
   removeMember: (id: string) => Promise<{ success: boolean; message: string } | null>;
   leaveMember: () => Promise<{ success: boolean; message: string } | null>;
   transferTeamOwnerShip: (memberId: string) => Promise<{ success: boolean; message: string }>;
@@ -192,6 +212,52 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
     }
   },
 
+  promoteMember: async (memberId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosInstance.put(TEAM_ENDPOINTS.MANAGE_STAFF, {
+        memberId,
+        action: "promote"
+      });
+
+      if (response.data.success) {
+        set((state) => ({
+          currentTeam: response.data.team || state.currentTeam,
+          isLoading: false
+        }));
+      }
+
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      const errMsg = getErrorMessage(error, "Error promoting member");
+      set({ error: errMsg, isLoading: false });
+      return { success: false, message: errMsg };
+    }
+  },
+
+  demoteMember: async (memberId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosInstance.put(TEAM_ENDPOINTS.MANAGE_STAFF, {
+        memberId,
+        action: "demote"
+      });
+
+      if (response.data.success) {
+        set((state) => ({
+          currentTeam: response.data.team || state.currentTeam,
+          isLoading: false
+        }));
+      }
+
+      return { success: true, message: response.data.message };
+    } catch (error) {
+      const errMsg = getErrorMessage(error, "Error demoting member");
+      set({ error: errMsg, isLoading: false });
+      return { success: false, message: errMsg };
+    }
+  },
+
   leaveMember: async () => {
     set({ isLoading: true });
     try {
@@ -231,36 +297,31 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
       });
 
       if (response.data.success) {
-        // Update local auth user state for immediate response
-        const authUser = useAuthStore.getState().user;
-        if (authUser) {
+        // Consolidate updates to skip redundant re-renders
+        const authStore = useAuthStore.getState();
+        if (authStore.user) {
           useAuthStore.setState({
             user: {
-              ...authUser,
-              roles: authUser.roles.map((r) =>
+              ...authStore.user,
+              roles: authStore.user.roles.map((r) =>
                 r.scope === "team" ? { ...r, role: "team:player" } : r
               ),
             },
           });
         }
 
-        // Update current team with fresh data from response
-        if (response.data.team) {
-          set({ currentTeam: response.data.team });
-        } else {
-          // Fallback refresh
-          const state = get();
-          if (state.currentTeam?._id) {
-            await state.getTeamById(state.currentTeam._id, true);
-          }
-        }
+        set({
+          currentTeam: response.data.team || get().currentTeam,
+          isLoading: false
+        });
+      } else {
+        set({ isLoading: false });
       }
 
-      set({ isLoading: false });
       return response.data;
     } catch (error) {
       const errMsg = getErrorMessage(error, "Error transferring team ownership");
-      set({ isLoading: false });
+      set({ isLoading: false, error: errMsg });
       return { success: false, message: errMsg };
     }
   },

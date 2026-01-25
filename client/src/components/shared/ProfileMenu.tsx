@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, LogOut, PlusCircle, User, UserCog, Settings, Bell } from "lucide-react";
+import { Loader2, LogOut, PlusCircle, User, Settings, Bell, UserCog } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/routes";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import CreateTeamModal from "@/features/teams/ui/components/CreateTeamModal";
+import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 
 const ProfileMenu = () => {
   const navigate = useNavigate();
@@ -37,13 +38,13 @@ const ProfileMenu = () => {
         {
           name: "Team Profile",
           icon: UserCog,
-          href: ROUTES.TEAM_PROFILE.replace(":id", user.teamId),
+          href: TEAM_ROUTES.PROFILE.replace(":id", user.teamId),
           color: "text-purple-400",
         },
         {
           name: "Team Dashboard",
           icon: Settings,
-          href: ROUTES.TEAM_DASHBOARD,
+          href: TEAM_ROUTES.DASHBOARD,
           color: "text-indigo-400",
         },
       ]

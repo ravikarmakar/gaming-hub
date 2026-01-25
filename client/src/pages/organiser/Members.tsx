@@ -28,7 +28,7 @@ import { usePlayerStore } from "@/features/player/store/usePlayerStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
 import { useDebounce } from "@/hooks/useDebounce";
-import { hasOrgRole } from "@/lib/permissions";
+import { hasOrgRole } from "@/features/auth/lib/permissions";
 
 type Member = StoreMember & {
   status: "Active" | "Inactive" | "Pending";
@@ -132,8 +132,8 @@ const MemberCard: React.FC<MemberCardProps> = ({
         alt={member.username}
         className="object-cover w-24 h-24 mb-4 transition-colors duration-200 border-4 border-gray-700 rounded-full group-hover:border-purple-500/60"
         onError={(e) =>
-          (e.currentTarget.src =
-            "https://placehold.co/100x100/374151/9CA3AF?text=User")
+        (e.currentTarget.src =
+          "https://placehold.co/100x100/374151/9CA3AF?text=User")
         }
       />
       <h3 className="mb-1 text-xl font-bold text-white">{member.username}</h3>
@@ -163,9 +163,8 @@ const MemberCard: React.FC<MemberCardProps> = ({
       <div className="flex justify-center w-full gap-3 mt-5">
         <button
           onClick={() => onProfileView?.(member._id)}
-          className={`flex items-center justify-center flex-1 gap-2 px-3 py-2 text-sm font-medium  ${
-            currentUserId === member._id ? "text-yellow-600" : "text-purple-300"
-          } transition-colors rounded-lg bg-purple-600/50 hover:bg-purple-900/50`}
+          className={`flex items-center justify-center flex-1 gap-2 px-3 py-2 text-sm font-medium  ${currentUserId === member._id ? "text-yellow-600" : "text-purple-300"
+            } transition-colors rounded-lg bg-purple-600/50 hover:bg-purple-900/50`}
         >
           <User2 size={16} />
           {currentUserId === member._id ? "My Profile" : "View Profile"}
@@ -239,11 +238,10 @@ const MemberCard: React.FC<MemberCardProps> = ({
                 <button
                   onClick={() => handleRoleUpdate?.(member?._id, selectedRole)}
                   disabled={!selectedRole || isLoading}
-                  className={`px-4 py-2 text-sm rounded text-white flex items-center justify-center gap-2 ${
-                    selectedRole && !isLoading
-                      ? "bg-purple-600 hover:bg-purple-700"
-                      : "bg-gray-500 cursor-not-allowed"
-                  }`}
+                  className={`px-4 py-2 text-sm rounded text-white flex items-center justify-center gap-2 ${selectedRole && !isLoading
+                    ? "bg-purple-600 hover:bg-purple-700"
+                    : "bg-gray-500 cursor-not-allowed"
+                    }`}
                 >
                   {isLoading ? (
                     <>
@@ -484,13 +482,12 @@ const Members = () => {
                       return (
                         <div
                           key={user._id}
-                          className={`flex items-center justify-between p-3 rounded-lg transition-all ${
-                            alreadyMember
-                              ? "bg-gray-700 cursor-not-allowed"
-                              : isSelected
+                          className={`flex items-center justify-between p-3 rounded-lg transition-all ${alreadyMember
+                            ? "bg-gray-700 cursor-not-allowed"
+                            : isSelected
                               ? "bg-purple-700 cursor-pointer"
                               : "bg-gray-800 hover:bg-gray-700 cursor-pointer"
-                          }`}
+                            }`}
                           onClick={() => toggleSelection(user._id ?? "")}
                         >
                           <div className="flex items-center gap-3">
@@ -507,11 +504,10 @@ const Members = () => {
                             </span>
                           ) : (
                             <div
-                              className={`w-7 h-7 flex items-center justify-center rounded-full border-2 transition-all ${
-                                isSelected
-                                  ? "bg-purple-600 border-purple-500"
-                                  : "border-blue-500"
-                              }`}
+                              className={`w-7 h-7 flex items-center justify-center rounded-full border-2 transition-all ${isSelected
+                                ? "bg-purple-600 border-purple-500"
+                                : "border-blue-500"
+                                }`}
                             >
                               {isSelected ? (
                                 <Check size={16} className="text-white" />
@@ -535,11 +531,10 @@ const Members = () => {
               <button
                 onClick={handleAddSelectedMembers}
                 disabled={selectedIds.length === 0 || isLoading}
-                className={`w-full mt-4 py-2 rounded-lg text-white font-semibold flex items-center justify-center gap-2 ${
-                  selectedIds.length
-                    ? "bg-purple-600 hover:bg-purple-700"
-                    : "bg-gray-600 cursor-not-allowed"
-                }`}
+                className={`w-full mt-4 py-2 rounded-lg text-white font-semibold flex items-center justify-center gap-2 ${selectedIds.length
+                  ? "bg-purple-600 hover:bg-purple-700"
+                  : "bg-gray-600 cursor-not-allowed"
+                  }`}
               >
                 {isLoading ? (
                   <>

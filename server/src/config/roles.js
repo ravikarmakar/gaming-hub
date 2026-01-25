@@ -12,6 +12,7 @@ export const Roles = {
   },
   TEAM: {
     OWNER: "team:owner",
+    MANAGER: "team:manager",
     PLAYER: "team:player",
   },
 };

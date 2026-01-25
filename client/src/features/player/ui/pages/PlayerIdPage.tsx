@@ -1,88 +1,160 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Award, BarChart3, User, Settings } from "lucide-react";
+import { Award, BarChart3, User, Settings, Info } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
-import { TabContent, Tabs } from "@/components/Tab";
-
-import { PlayerHeader } from "../components/PlayerHeader";
 import { usePlayerStore } from "../../store/usePlayerStore";
+import { PlayerHeader } from "../components/PlayerHeader";
 import { PlayerOverview } from "../components/PlayerOverview";
 import { PlayerAchievements } from "../components/PlayerAchievements";
 import { PlayerStats } from "../components/PlayerStats";
 import { PlayerEquipment } from "../components/PlayerEquipment";
-import { Button } from "@/components/ui/button";
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 const PlayerIdPage = () => {
   const { id } = useParams();
-
-  const [activeTab, setActiveTab] = useState<string>("overview");
-
-  console.log("Player ID:", id);
-
-  const { fetchPlayerById, selectedPlayer } = usePlayerStore();
+  const { fetchPlayerById, selectedPlayer, isLoading } = usePlayerStore();
 
   useEffect(() => {
-    if (id) fetchPlayerById(id);
+    if (id) fetchPlayerById(id, true);
   }, [id, fetchPlayerById]);
 
-  const tabItems = [
-    {
-      id: "overview",
-      label: "Overview",
-      icon: <User className="w-4 h-4" />,
-      content: <PlayerOverview />,
-    },
-    {
-      id: "stats",
-      label: "Game Stats",
-      icon: <BarChart3 className="w-4 h-4" />,
-      content: <PlayerStats />,
-    },
-    {
-      id: "achievements",
-      label: "Achievements",
-      icon: <Award className="w-4 h-4" />,
-      content: <PlayerAchievements />,
-    },
-    {
-      id: "equipment",
-      label: "Setup",
-      icon: <Settings className="w-4 h-4" />,
-      content: <PlayerEquipment />,
-    },
-  ];
+  if (isLoading && !selectedPlayer) {
+    return <LoadingSpinner />;
+  }
 
-  const playerCoverImg =
-    "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80";
+  if (!selectedPlayer) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white/40 italic">
+        PLAYER DOSSIER NOT FOUND...
+      </div>
+    );
+  }
+
+  const playerCoverImg = "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop";
 
   return (
-    <div className="min-h-screen text-white bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
-      {/* Enhanced Banner Section */}
-      <div className="relative h-64 overflow-hidden md:h-80 rounded-xl">
-        <img
+    <div className="min-h-screen bg-[#050505] text-white">
+      {/* Background Decorative Orbs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-violet-800/20 blur-[120px] rounded-full animate-pulse duration-[15000ms]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-fuchsia-800/20 blur-[120px] rounded-full animate-pulse duration-[18000ms]" />
+        <div className="absolute top-[20%] right-[5%] w-[30%] h-[30%] bg-blue-800/10 blur-[100px] rounded-full animate-pulse duration-[25000ms]" />
+      </div>
+
+      {/* Banner Section */}
+      <div className="relative h-64 md:h-80 lg:h-96 w-full overflow-hidden">
+        <motion.img
+          initial={{ scale: 1.1 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 10, repeat: Infinity, repeatType: "reverse" }}
           src={playerCoverImg}
-          alt="Banner"
-          className="object-cover w-full h-full"
+          alt="Campaign Background"
+          className="object-cover w-full h-full opacity-40 grayscale-[0.5]"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/30 to-purple-900/30" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/60 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#050505] to-transparent" />
       </div>
 
-      {selectedPlayer && <PlayerHeader player={selectedPlayer} type="player" />}
+      {/* Profile Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 md:-mt-32 relative z-10 space-y-12">
+        {/* Header Component */}
+        <PlayerHeader player={selectedPlayer} type="player" />
 
-      <Button>Create Team</Button>
+        {/* Tactical Interface (Tabs) */}
+        <div className="pb-24">
+          <Tabs defaultValue="overview" className="w-full">
+            <div className="flex justify-center mb-10 overflow-x-auto pb-2 scrollbar-none">
+              <TabsList className="bg-white/[0.03] border border-white/10 p-1.5 rounded-2xl h-auto flex-nowrap shrink-0">
+                <TabsTrigger
+                  value="overview"
+                  className="px-6 py-2.5 rounded-xl data-[state=active]:bg-violet-600 data-[state=active]:text-white transition-all duration-300"
+                >
+                  <div className="flex items-center gap-2">
+                    <Info className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Tactical Overview</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">Overview</span>
+                  </div>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="stats"
+                  className="px-6 py-2.5 rounded-xl data-[state=active]:bg-violet-600 data-[state=active]:text-white transition-all duration-300"
+                >
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Battle Stats</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">Stats</span>
+                  </div>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="achievements"
+                  className="px-6 py-2.5 rounded-xl data-[state=active]:bg-violet-600 data-[state=active]:text-white transition-all duration-300"
+                >
+                  <div className="flex items-center gap-2">
+                    <Award className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Commendations</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">Honors</span>
+                  </div>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="equipment"
+                  className="px-6 py-2.5 rounded-xl data-[state=active]:bg-violet-600 data-[state=active]:text-white transition-all duration-300"
+                >
+                  <div className="flex items-center gap-2">
+                    <Settings className="w-4 h-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Gear Setup</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">Setup</span>
+                  </div>
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-      <div className="px-4 mx-auto mb-8 overflow-x-auto max-w-7xl sm:px-6 lg:px-8">
-        <Tabs
-          tabs={tabItems}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-        />
-      </div>
-      <div className="px-4 pb-16 mx-auto max-w-7xl sm:px-6 lg:px-8">
-        <TabContent motionKey={activeTab}>
-          {tabItems.find((tab) => tab.id === activeTab)?.content}
-        </TabContent>
+            <AnimatePresence mode="wait">
+              <TabsContent value="overview">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <PlayerOverview />
+                </motion.div>
+              </TabsContent>
+              <TabsContent value="stats">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <PlayerStats />
+                </motion.div>
+              </TabsContent>
+              <TabsContent value="achievements">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <PlayerAchievements />
+                </motion.div>
+              </TabsContent>
+              <TabsContent value="equipment">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <PlayerEquipment />
+                </motion.div>
+              </TabsContent>
+            </AnimatePresence>
+          </Tabs>
+        </div>
       </div>
     </div>
   );

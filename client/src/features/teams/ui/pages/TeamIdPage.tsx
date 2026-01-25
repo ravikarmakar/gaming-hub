@@ -10,6 +10,8 @@ import { TeamStatsGrid } from "../components/TeamStatsGrid";
 import { TeamMembersList } from "../components/TeamMembersList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
+import { AccessControl } from "@/features/auth/ui/components/AccessControl";
+import { TEAM_ACCESS as ACCESS } from "@/features/teams/lib/access";
 
 export default function TeamIdPage() {
   const { id } = useParams<{ id: string }>();
@@ -140,15 +142,17 @@ export default function TeamIdPage() {
                         {currentTeam.isRecruiting ? 'YES' : 'NO'}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between py-2">
-                      <div className="flex items-center gap-2 text-gray-400 text-sm">
-                        <Trophy className="w-4 h-4" />
-                        <span>Status</span>
+                    <AccessControl check={ACCESS.MANAGE}>
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-2 text-gray-400 text-sm">
+                          <Trophy className="w-4 h-4" />
+                          <span>Status</span>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${currentTeam.isVerified ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-gray-500/20 text-gray-400'}`}>
+                          {currentTeam.isVerified ? 'VERIFIED' : 'CITIZEN'}
+                        </span>
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${currentTeam.isVerified ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-gray-500/20 text-gray-400'}`}>
-                        {currentTeam.isVerified ? 'VERIFIED' : 'CITIZEN'}
-                      </span>
-                    </div>
+                    </AccessControl>
                   </div>
                 </Card>
               </div>
