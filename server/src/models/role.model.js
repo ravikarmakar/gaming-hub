@@ -15,10 +15,12 @@ export const roleSchema = new mongoose.Schema(
         Roles.PLATFORM.STAFF,
         Roles.PLATFORM.USER,
         Roles.ORG.OWNER,
+        Roles.ORG.CO_OWNER,
         Roles.ORG.MANAGER,
         Roles.ORG.STAFF,
         Roles.ORG.PLAYER,
         Roles.TEAM.OWNER,
+        Roles.TEAM.MANAGER,
         Roles.TEAM.PLAYER,
       ],
       required: true,
@@ -32,7 +34,7 @@ export const roleSchema = new mongoose.Schema(
     },
     scopeModel: {
       type: String,
-      enum: ["Organization", "Team"],
+      enum: ["Organization", "Team", "Organizer"],
       required: function () {
         return this.scope !== "platform";
       },

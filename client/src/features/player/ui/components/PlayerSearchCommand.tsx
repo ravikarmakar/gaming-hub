@@ -143,7 +143,7 @@ export const PlayerSearchCommand = ({
           <CommandList className="max-h-[40vh] sm:max-h-[350px] overflow-y-auto scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent">
             {/* ... children ... */}
             <CommandEmpty className="py-8 text-center">
-              <div className="flex flex-coln items-center gap-2">
+              <div className="flex flex-col items-center gap-2">
                 <Search className="w-8 h-8 text-gray-600" />
                 <p className="text-sm text-gray-400">
                   {searchTerm.trim().length === 0

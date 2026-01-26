@@ -14,6 +14,7 @@ interface TeamMembersProps {
   currentUserId: string;
   onRemove: (id: string) => void;
   onEditRole: (role: string, id: string) => void;
+  onViewProfile: (id: string) => void;
   isLoading?: boolean;
 }
 
@@ -23,6 +24,7 @@ export const TeamMembers = ({
   currentUserId,
   onRemove,
   onEditRole,
+  onViewProfile,
   isLoading,
 }: TeamMembersProps) => {
   const { currentTeam } = useTeamStore();
@@ -78,6 +80,7 @@ export const TeamMembers = ({
             currentUserId={currentUserId}
             onRemove={onRemove}
             onEditRole={onEditRole}
+            onViewProfile={onViewProfile}
             isLoading={isLoading || false}
           />
         ))}

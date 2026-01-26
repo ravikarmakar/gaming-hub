@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  CheckCircle,
   MapPin,
   MessageCircle,
   Share2,
@@ -17,6 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import { useAccess } from "@/features/auth/hooks/useAccess";
+import { TEAM_ACTIONS_ACCESS, TEAM_ACTIONS } from "@/features/teams/lib/access";
+import { TeamInviteDialog } from "./TeamInviteDialog";
+import { useState } from "react";
 
 interface Props {
   player: User;
@@ -25,6 +28,10 @@ interface Props {
 
 export const PlayerHeader: React.FC<Props> = ({ player }) => {
   const followerCount = "4.2K";
+  const { can } = useAccess();
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+
+  const canInvite = can(TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.inviteMember]);
 
   return (
     <motion.div
@@ -97,13 +104,16 @@ export const PlayerHeader: React.FC<Props> = ({ player }) => {
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-4 w-full">
-          <Button
-            className="h-12 px-8 rounded-2xl bg-violet-600 hover:bg-violet-700 text-white shadow-xl shadow-violet-600/20 transition-all active:scale-95 group"
-          >
-            <Heart className="w-4 h-4 mr-2 group-hover:fill-current transition-all" />
-            <span className="text-[10px] font-black uppercase tracking-widest italic">Recruit</span>
-            <span className="ml-3 pl-3 border-l border-white/20 opacity-60">{followerCount}</span>
-          </Button>
+          {canInvite && (
+            <Button
+              onClick={() => setIsInviteOpen(true)}
+              className="h-12 px-8 rounded-2xl bg-violet-600 hover:bg-violet-700 text-white shadow-xl shadow-violet-600/20 transition-all active:scale-95 group"
+            >
+              <Heart className="w-4 h-4 mr-2 group-hover:fill-current transition-all" />
+              <span className="text-[10px] font-black uppercase tracking-widest italic">Recruit</span>
+              <span className="ml-3 pl-3 border-l border-white/20 opacity-60 font-black">{followerCount}</span>
+            </Button>
+          )}
 
           <Button
             variant="outline"
@@ -130,6 +140,13 @@ export const PlayerHeader: React.FC<Props> = ({ player }) => {
           </div>
         </div>
       </div>
+
+      <TeamInviteDialog
+        open={isInviteOpen}
+        onOpenChange={setIsInviteOpen}
+        playerId={player._id!}
+        playerName={player.username}
+      />
     </motion.div>
   );
 };

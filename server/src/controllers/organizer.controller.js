@@ -1,5 +1,6 @@
 import Organizer from "../models/organizer.model.js";
 import User from "../models/user.model.js";
+import Event from "../models/event.model.js";
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
 import { Roles, Scopes } from "../config/roles.js";
@@ -10,13 +11,13 @@ import {
   storeRefreshToken,
 } from "../utils/generateTokens.js";
 import { findUserById } from "../services/user.service.js";
+import JoinRequest from "../models/join-request.model.js";
+import { createNotification } from "./notification.controller.js";
 
 export const createOrg = TryCatchHandler(async (req, res, next) => {
   const { userId } = req.user;
   const cacheKey = `user_profile:${userId}`;
   const { name, email, description, tag } = req.body;
-
-  console.log(req.body);
 
   const imageFile = req.file;
   // uplaod image here
@@ -30,9 +31,29 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
       new CustomError("You are not allowed to create an organization", 403)
     );
 
-  const org = await Organizer.findOne({ name });
-  if (org)
-    return next(new CustomError("Organization name must be unique", 400));
+  // Check for duplicate name, email, or tag pre-emptively
+  // Only check against ACTIVE organizations (not deleted ones)
+  const existingOrg = await Organizer.findOne({
+    $and: [
+      { isDeleted: false },
+      {
+        $or: [
+          { name: name },
+          { email: email },
+          { tag: tag?.toUpperCase() }
+        ]
+      }
+    ]
+  });
+
+  if (existingOrg) {
+    if (existingOrg.name.toLowerCase() === name.toLowerCase())
+      return next(new CustomError("Organization name is already in use", 400));
+    if (existingOrg.email.toLowerCase() === email.toLowerCase())
+      return next(new CustomError("Organization email is already in use", 400));
+    if (existingOrg.tag === tag?.toUpperCase())
+      return next(new CustomError("Organization tag is already in use", 400));
+  }
 
   const newOrg = await Organizer.create({
     ownerId: user._id,
@@ -40,14 +61,14 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
     name,
     email,
     description,
-    tag,
+    tag: tag?.toUpperCase(),
   });
 
   user.roles.push({
     scope: Scopes.ORG,
     role: Roles.ORG.OWNER,
     scopeId: newOrg._id,
-    scopeModel: "Organization",
+    scopeModel: "Organizer",
   });
   user.canCreateOrg = false;
   user.orgId = newOrg._id;
@@ -76,7 +97,7 @@ export const getOrgDetails = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Organization ID is required", 400));
   }
 
-  const organization = await Organizer.findById(orgId).populate(
+  const organization = await Organizer.findOne({ _id: orgId, isDeleted: false }).populate(
     "ownerId",
     "username email"
   );
@@ -126,39 +147,55 @@ export const getOrgDetails = TryCatchHandler(async (req, res, next) => {
 });
 
 export const updateOrg = TryCatchHandler(async (req, res, next) => {
-  const orgRole = req.user.roles.find((r) => r.scope === "org");
-  const orgId = orgRole?.orgId;
-  console.log(orgId);
-  const { name, email, description, tag } = req.body;
-  const imageFile = req.file;
+  // Use orgId from context (via middleware) or params
+  const orgId = req.params.orgId || req.orgContext?.orgId;
 
-  // Optional: Check if user is authorized (e.g., org owner or manager)
-  // You can include auth logic here if needed
-
-  // Validate orgId
   if (!orgId) {
     return next(new CustomError("Organization ID is required", 400));
   }
 
-  // Find existing organization
-  const org = await Organizer.findById(orgId);
+  const { name, email, description, tag, isHiring, socialLinks } = req.body;
+  const files = req.files;
+
+  // Find existing organization (ensure it's not deleted)
+  const org = await Organizer.findOne({ _id: orgId, isDeleted: false });
   if (!org) {
     return next(new CustomError("Organization not found", 404));
   }
 
-  // Optional: Image upload logic
-  let imageUrl = org.imageUrl;
-  if (imageFile) {
-    // Upload to cloud service (e.g., Cloudinary) — stubbed here
-    imageUrl = "https://new-updated-image-url.com";
+  // Handle Profile Image Upload
+  if (files?.image?.[0]) {
+    // Stubbed: in a real app, upload files.image[0] to Cloudinary/S3
+    org.imageUrl = "https://new-profile-image.com";
+  }
+
+  // Handle Banner Image Upload
+  if (files?.banner?.[0]) {
+    // Stubbed: in a real app, upload files.banner[0] to Cloudinary/S3
+    org.bannerUrl = "https://new-banner-image.com";
   }
 
   // Update fields if provided
-  if (name) org.name = name;
-  if (email) org.email = email;
-  if (description) org.description = description;
-  if (tag) org.tag = tag;
-  org.imageUrl = imageUrl;
+  if (typeof name !== 'undefined') org.name = name;
+  if (typeof email !== 'undefined') org.email = email;
+  if (typeof description !== 'undefined') org.description = description;
+  if (typeof tag !== 'undefined') org.tag = tag;
+
+  if (typeof isHiring !== 'undefined') {
+    org.isHiring = isHiring === 'true' || isHiring === true;
+  }
+
+  if (socialLinks) {
+    try {
+      const parsedSocial = typeof socialLinks === 'string' ? JSON.parse(socialLinks) : socialLinks;
+      org.socialLinks = {
+        ...org.socialLinks,
+        ...parsedSocial
+      };
+    } catch (e) {
+      console.error("Error parsing socialLinks:", e);
+    }
+  }
 
   await org.save();
 
@@ -171,16 +208,21 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
 
 export const addStaff = TryCatchHandler(async (req, res, next) => {
   const { staff } = req.body;
+  // Use orgId from context or params. Middleware `guardOrgAccess` should have validated membership.
+  const orgId = req.params.orgId || req.orgContext?.orgId || req.body.orgId;
+
+  if (!orgId) {
+    return next(new CustomError("Organization ID is required", 400));
+  }
 
   if (!Array.isArray(staff) || staff.length === 0) {
     return next(new CustomError("Staff array is required", 400));
   }
 
-  const orgRole = req.user.roles.find((r) => r.scope === "org");
-  const orgId = orgRole?.orgId;
-
-  if (!orgId) {
-    return next(new CustomError("Organization ID not found in user role", 400));
+  // Basic validation that the org exists
+  const org = await Organizer.findOne({ _id: orgId, isDeleted: false });
+  if (!org) {
+    return next(new CustomError("Organization not found", 404));
   }
 
   let results = await Promise.all(
@@ -198,7 +240,7 @@ export const addStaff = TryCatchHandler(async (req, res, next) => {
         };
       }
       const alreadyInOrg = targetUser.roles.some(
-        (r) => r.scope === "org" && r.orgId?.toString() === orgId.toString()
+        (r) => r.scope === "org" && r.scopeId?.toString() === orgId.toString()
       );
       if (alreadyInOrg) {
         return {
@@ -211,7 +253,8 @@ export const addStaff = TryCatchHandler(async (req, res, next) => {
       targetUser.roles.push({
         scope: Scopes.ORG,
         role: Roles.ORG.STAFF,
-        orgId,
+        scopeId: orgId,
+        scopeModel: "Organizer",
       });
       targetUser.orgId = orgId;
       await targetUser.save();
@@ -228,55 +271,71 @@ export const addStaff = TryCatchHandler(async (req, res, next) => {
 
 export const updateStaffRole = TryCatchHandler(async (req, res, next) => {
   const { userId, newRole } = req.body;
-  const orgRole = req.user.roles.find((r) => r.scope === "org");
-  const orgId = orgRole?.orgId;
+  const orgId = req.params.orgId || req.orgContext?.orgId || req.body.orgId;
 
-  if (!userId || !newRole)
-    return next(new CustomError("userId and newRole are required", 400));
+  if (!orgId) return next(new CustomError("Organization ID is required", 400));
+  if (!userId || !newRole) return next(new CustomError("userId and newRole are required", 400));
+
+  const validRoles = Object.values(Roles.ORG);
+  if (!validRoles.includes(newRole)) {
+    return next(new CustomError("Invalid role specified", 400));
+  }
 
   const user = await User.findById(userId);
   if (!user) return next(new CustomError("User not found", 404));
 
   const orgRoleIndex = user.roles.findIndex(
-    (r) => r.scope === "org" && r.orgId?.toString() === orgId.toString()
+    (r) => r.scope === "org" && r.scopeId?.toString() === orgId.toString()
   );
 
   if (orgRoleIndex === -1)
     return next(
-      new CustomError("User does not belong to your organization", 403)
+      new CustomError("User does not belong to this organization", 403)
     );
 
   user.roles[orgRoleIndex].role = newRole;
   await user.save();
   await redis.del(`user_profile:${userId}`);
 
+  // Fetch updated organization with members for the response
+  const updatedOrg = await Organizer.findById(orgId);
+  const members = await User.find({
+    "roles.scopeId": orgId
+  }).select("username email roles avatar joinedDate");
+
+  const formattedMembers = members.map(m => {
+    const mObj = m.toObject();
+    const roleRecord = m.roles.find(r => r.scopeId?.toString() === orgId.toString());
+    return { ...mObj, role: roleRecord ? roleRecord.role : "org:player" };
+  });
+
   res.status(200).json({
     success: true,
     message: "Staff role updated successfully",
+    org: { ...updatedOrg.toObject(), members: formattedMembers }
   });
 });
 
 export const removeStaff = TryCatchHandler(async (req, res, next) => {
-  const userId = req.params.id;
-  const orgRole = req.user.roles.find((r) => r.scope === "org");
-  const orgId = orgRole?.orgId;
+  const userId = req.params.id; // Staff ID to remove
+  const orgId = req.params.orgId || req.orgContext?.orgId || req.body.orgId;
 
-  if (!userId)
-    return next(new CustomError("userId is required to remove staff", 400));
+  if (!orgId) return next(new CustomError("Organization ID is required", 400));
+  if (!userId) return next(new CustomError("userId is required to remove staff", 400));
 
   const user = await User.findById(userId);
   if (!user) return next(new CustomError("User not found", 404));
 
   const hasOrgRole = user.roles.some(
-    (r) => r.scope === "org" && r.orgId?.toString() === orgId.toString()
+    (r) => r.scope === "org" && r.scopeId?.toString() === orgId.toString()
   );
 
   if (!hasOrgRole)
-    return next(new CustomError("User is not part of your organization", 403));
+    return next(new CustomError("User is not part of this organization", 403));
 
   // Remove the org role
   user.roles = user.roles.filter(
-    (r) => !(r.scope === "org" && r.orgId?.toString() === orgId.toString())
+    (r) => !(r.scope === "org" && r.scopeId?.toString() === orgId.toString())
   );
 
   // Clear the user's orgId if it matches
@@ -287,49 +346,90 @@ export const removeStaff = TryCatchHandler(async (req, res, next) => {
   await user.save();
   await redis.del(`user_profile:${userId}`);
 
+  // Fetch updated organization with members for the response
+  const updatedOrg = await Organizer.findById(orgId);
+  const members = await User.find({
+    "roles.scopeId": orgId
+  }).select("username email roles avatar joinedDate");
+
+  const formattedMembers = members.map(m => {
+    const mObj = m.toObject();
+    const roleRecord = m.roles.find(r => r.scopeId?.toString() === orgId.toString());
+    return { ...mObj, role: roleRecord ? roleRecord.role : "org:player" };
+  });
+
   res.status(200).json({
     success: true,
     message: "Staff removed from organization successfully",
+    org: { ...updatedOrg.toObject(), members: formattedMembers }
   });
 });
 
 export const deleteOrg = TryCatchHandler(async (req, res, next) => {
-  const orgRole = req.user.roles.find((r) => r.scope === "org");
-  const orgId = orgRole?.orgId;
+  const orgId = req.params.orgId || req.orgContext?.orgId;
   const { userId } = req.user;
 
   if (!orgId) {
     return next(new CustomError("Organization ID is required", 400));
   }
 
-  const org = await Organizer.findById(orgId);
+  const org = await Organizer.findOne({ _id: orgId, isDeleted: false });
   if (!org) {
     return next(new CustomError("Organization not found", 404));
   }
 
-  // Check if the requester is the owner
-  if (org.ownerId.toString() !== userId) {
+  // Double check owner (middleware should have covered this, but redundancy is safe)
+  const isAuthorized =
+    req.orgContext?.isSuperAdmin ||
+    req.orgContext?.role === Roles.ORG.OWNER ||
+    req.orgContext?.role === Roles.ORG.CO_OWNER ||
+    org.ownerId.toString() === userId.toString();
+
+  if (!isAuthorized) {
     return next(
-      new CustomError("Only the organization owner can delete it", 403)
+      new CustomError("Only the organization owner or co-owner can delete it", 403)
     );
   }
 
-  // Delete the org
+  // Soft Delete
   org.isDeleted = true;
+  org.deletedAt = new Date();
+
+  // NOTE: We do NOT rely on standard unique indexes since we want to allow reuse.
+  // The 'partialFilterExpression' in the model handles this for Mongo unique indexes.
+
   await org.save();
 
-  // Optional: Remove org-related roles from all users
+  // Remove org-related roles and unset orgId from all users
+  const orgObjectId = new mongoose.Types.ObjectId(orgId);
+
   await User.updateMany(
-    { "role.orgId": orgId },
     {
-      $pull: {
-        role: { orgId: orgId },
-      },
-      $set: {
-        orgId: null,
-      },
+      $or: [
+        { orgId: orgObjectId },
+        { "roles.scopeId": orgObjectId }
+      ]
+    },
+    {
+      $pull: { roles: { scopeId: orgObjectId } },
+      $set: { orgId: null }
     }
   );
+
+  // Update Owner's permissions to allow creating another org
+  const owner = await User.findById(userId);
+  if (owner) {
+    // Clean up any lingering role in the current owner object
+    owner.roles = owner.roles.filter(r => !(r.scope === Scopes.ORG && r.scopeId?.toString() === orgId.toString()));
+    owner.orgId = null;
+    await owner.save();
+
+    // Refresh tokens for immediate effect
+    const { accessToken, refreshToken } = generateTokens(owner._id, owner.roles);
+    await storeRefreshToken(owner._id, refreshToken);
+    setCookies(res, accessToken, refreshToken);
+    await redis.del(`user_profile:${userId}`);
+  }
 
   res.status(200).json({
     success: true,
@@ -337,4 +437,462 @@ export const deleteOrg = TryCatchHandler(async (req, res, next) => {
   });
 });
 
-// to-do --> express input validation & image uploading
+export const getDashboardStats = TryCatchHandler(async (req, res, next) => {
+  // Priority: 1. URL Param (if mounted with :orgId), 2. Query Param, 3. Context (if guard middleware used), 4. User's active Org
+  const orgId =
+    req.params.orgId ||
+    req.query.orgId ||
+    req.orgContext?.orgId ||
+    req.user.cachedProfile?.orgId ||
+    req.user.orgId; // Fallback if orgId was manually attached elsewhere
+
+  if (!orgId) {
+    return next(new CustomError("Organization ID is required", 400));
+  }
+
+  const organization = await Organizer.findOne({ _id: orgId, isDeleted: false });
+  if (!organization) {
+    return next(new CustomError("Organization not found", 404));
+  }
+
+  // Fetch metrics
+  const totalEvents = await Event.countDocuments({ orgId, isDeleted: { $ne: true } });
+  const upcomingEvents = await Event.countDocuments({
+    orgId,
+    status: { $in: ["registration-open", "registration-closed"] },
+    isDeleted: { $ne: true },
+  });
+  const totalParticipantsQuery = await Event.aggregate([
+    { $match: { orgId, isDeleted: { $ne: true } } },
+    { $project: { participantsCount: { $size: "$teamId" } } },
+    { $group: { _id: null, total: { $sum: "$participantsCount" } } },
+  ]);
+  const totalParticipants = totalParticipantsQuery[0]?.total || 0;
+
+  const totalPrizeMoneyQuery = await Event.aggregate([
+    { $match: { orgId, isDeleted: { $ne: true } } },
+    { $group: { _id: null, total: { $sum: "$prizePool" } } },
+  ]);
+  const totalPrizeMoney = totalPrizeMoneyQuery[0]?.total || 0;
+
+  const recentEvents = await Event.find({ orgId, isDeleted: { $ne: true } })
+    .sort({ createdAt: -1 })
+    .limit(5);
+
+  const recentActivities = [
+    { type: "System", description: `Welcome to ${organization.name} dashboard`, time: "Just now" },
+  ];
+
+  res.status(200).json({
+    success: true,
+    stats: {
+      totalEvents,
+      upcomingEvents,
+      totalParticipants,
+      totalPrizeMoney,
+    },
+    recentEvents,
+    recentActivities,
+    org: organization,
+  });
+});
+
+// Transfer Ownership
+export const transferOwnership = TryCatchHandler(async (req, res, next) => {
+  const { newOwnerId } = req.body;
+  const { userId } = req.user;
+  const orgId = req.params.orgId || req.orgContext?.orgId;
+
+  if (!orgId) {
+    return next(new CustomError("Organization ID is required", 400));
+  }
+
+  if (!newOwnerId) {
+    return next(new CustomError("New owner ID is required", 400));
+  }
+
+  const org = await Organizer.findOne({ _id: orgId, isDeleted: false });
+  if (!org) {
+    return next(new CustomError("Organization not found", 404));
+  }
+
+  // Verify current user is the owner or co-owner (Double check)
+  const isAuthorized =
+    req.orgContext?.isSuperAdmin ||
+    req.orgContext?.role === Roles.ORG.OWNER ||
+    req.orgContext?.role === Roles.ORG.CO_OWNER ||
+    org.ownerId.toString() === userId.toString();
+
+  if (!isAuthorized) {
+    return next(new CustomError("Only the organization owner or co-owner can transfer ownership", 403));
+  }
+
+  // Find the new owner
+  const newOwner = await User.findById(newOwnerId);
+  if (!newOwner) {
+    return next(new CustomError("New owner not found", 404));
+  }
+
+  // Check if new owner is part of the org
+  const newOwnerOrgRoleIndex = newOwner.roles.findIndex(
+    (r) => r.scope === "org" && r.scopeId?.toString() === orgId.toString()
+  );
+
+  if (newOwnerOrgRoleIndex === -1) {
+    return next(new CustomError("User must be a member of the organization to become owner", 400));
+  }
+
+  // Update Org Owner
+  org.ownerId = newOwnerId;
+  await org.save();
+
+  // Demote current owner to Manager
+  const currentUser = await User.findById(userId);
+  const currentOwnerRoleIndex = currentUser.roles.findIndex(
+    (r) => r.scope === "org" && r.scopeId?.toString() === orgId.toString()
+  );
+
+  if (currentOwnerRoleIndex !== -1) {
+    currentUser.roles[currentOwnerRoleIndex].role = Roles.ORG.MANAGER;
+    await currentUser.save();
+  }
+
+  // Promote new owner to Owner
+  newOwner.roles[newOwnerOrgRoleIndex].role = Roles.ORG.OWNER;
+  // If new owner already has another active orgId, this might be tricky (they might own multiple orgs conceptually, but schema has single `orgId`?)
+  // Assuming `orgId` on User is "active org". We can set it to this one.
+  newOwner.orgId = orgId;
+  newOwner.canCreateOrg = false;
+  await newOwner.save();
+
+  // Clear cache
+  await redis.del(`user_profile:${userId}`);
+  await redis.del(`user_profile:${newOwnerId}`);
+
+  // Refresh tokens for current user (immediate role update for the demoted previous owner)
+  const { accessToken, refreshToken } = generateTokens(currentUser._id, currentUser.roles);
+  await storeRefreshToken(currentUser._id, refreshToken);
+  setCookies(res, accessToken, refreshToken);
+
+  // Fetch updated organization with members for the response
+  const updatedOrg = await Organizer.findById(orgId);
+  const members = await User.find({
+    "roles.scopeId": orgId
+  }).select("username email roles avatar joinedDate");
+
+  // Re-format members to include their role in THIS org (same logic as getOrgDetails)
+  const formattedMembers = members.map(m => {
+    const mObj = m.toObject();
+    const roleRecord = m.roles.find(r => r.scopeId?.toString() === orgId.toString());
+    return {
+      ...mObj,
+      role: roleRecord ? roleRecord.role : "org:player"
+    };
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Ownership transferred successfully",
+    org: { ...updatedOrg.toObject(), members: formattedMembers },
+    user: currentUser
+  });
+});
+
+// Start of Member Join Requests Logic
+
+export const joinOrg = TryCatchHandler(async (req, res, next) => {
+  const { orgId } = req.params;
+  const { userId } = req.user;
+  const { message } = req.body;
+
+  const user = await User.findById(userId);
+  if (user.orgId) {
+    throw new CustomError("You are already in an organization", 400);
+  }
+
+  const org = await Organizer.findById(orgId);
+  if (!org) {
+    throw new CustomError("Organization not found", 404);
+  }
+
+  if (org.isDeleted) {
+    throw new CustomError("Organization does not exist", 404);
+  }
+
+  if (!org.isHiring) {
+    throw new CustomError("This organization is not currently recruiting", 400);
+  }
+
+  const existingRequest = await JoinRequest.findOne({
+    requester: userId,
+    target: orgId,
+    status: "pending",
+  });
+
+  if (existingRequest) {
+    throw new CustomError("You already have a pending request for this organization", 400);
+  }
+
+  const joinRequest = await JoinRequest.create({
+    requester: userId,
+    target: orgId,
+    targetModel: "Organizer",
+    message: message || `User ${user.username} wants to join your organization.`,
+  });
+
+  // Notify Org Owner
+  await createNotification({
+    recipient: org.ownerId,
+    sender: userId,
+    type: "ORG_JOIN_REQUEST", // Ensure this type is handled in frontend or create generic type
+    content: {
+      title: "New Join Request",
+      message: `${user.username} has requested to join your organization.`,
+    },
+    relatedData: {
+      orgId: org._id,
+      requestId: joinRequest._id,
+    },
+  });
+
+  res.status(201).json({
+    success: true,
+    message: "Join request sent successfully",
+    joinRequest,
+  });
+});
+
+export const getOrgJoinRequests = TryCatchHandler(async (req, res, next) => {
+  // orgId should be validated by middleware or params
+  const orgId = req.params.orgId || req.orgContext?.orgId;
+
+  if (!orgId) {
+    return next(new CustomError("Organization ID is required", 400));
+  }
+
+  const requests = await JoinRequest.find({
+    target: orgId,
+    status: "pending",
+  })
+    .populate("requester", "username avatar _id email")
+    .sort("-createdAt");
+
+  res.status(200).json({
+    success: true,
+    message: "Fetched join requests successfully",
+    requests,
+  });
+});
+
+export const manageJoinRequest = TryCatchHandler(async (req, res, next) => {
+  const { requestId } = req.params;
+  const { action } = req.body; // 'accepted' or 'rejected'
+  const { userId } = req.user;
+
+  if (!["accepted", "rejected"].includes(action)) {
+    throw new CustomError("Invalid action. Use 'accepted' or 'rejected'", 400);
+  }
+
+  const joinRequest = await JoinRequest.findById(requestId).populate("target");
+  if (!joinRequest) {
+    throw new CustomError("Join request not found", 404);
+  }
+
+  if (joinRequest.status !== "pending") {
+    throw new CustomError(`Request has already been ${joinRequest.status}`, 400);
+  }
+
+  // Verify ownership/management permission of the target org
+  // This is partially covered by middleware, but ensuring the request belongs to the managed org is crucial
+  // Assuming req.orgContext.orgId matches joinRequest.target._id if using guardOrgAccess middleware
+
+  if (req.params.orgId && joinRequest.target._id.toString() !== req.params.orgId.toString()) {
+    throw new CustomError("Request does not belong to the specified organization", 400);
+  }
+
+  try {
+    if (action === "accepted") {
+      const requester = await User.findById(joinRequest.requester);
+      if (!requester) throw new CustomError("Requester not found", 404);
+      if (requester.orgId) throw new CustomError("Requester is already in an organization", 400);
+
+      // 1. Update JoinRequest (Atomic)
+      await JoinRequest.findByIdAndUpdate(requestId, {
+        status: "accepted",
+        handledBy: userId,
+        handledAt: new Date()
+      });
+
+      // 2. Add to Org (Atomic)
+      const org = joinRequest.target;
+
+      // Note: Organizer model doesn't have a members array limit check like Team has 10.
+      // We assume unlimited or soft limit for now.
+
+      // 3. Update user orgId and roles (Atomic)
+      await User.findByIdAndUpdate(requester._id, {
+        $set: { orgId: org._id },
+        $push: {
+          roles: {
+            scope: Scopes.ORG,
+            role: Roles.ORG.PLAYER, // Default to PLAYER for join requests
+            scopeId: org._id,
+            scopeModel: "Organizer",
+          }
+        }
+      });
+
+      // 4. Reject other pending requests for this user (Atomic)
+      await JoinRequest.updateMany(
+        { requester: requester._id, status: "pending" },
+        { status: "rejected", message: "User has joined another organization" }
+      );
+
+      // Notify User
+      await createNotification({
+        recipient: requester._id,
+        sender: userId,
+        type: "ORG_JOIN_SUCCESS",
+        content: {
+          title: "Request Accepted!",
+          message: `Your request to join ${org.name} has been accepted. Welcome!`,
+        },
+        relatedData: { orgId: org._id },
+      });
+
+      // Invalidate Redis cache for new member
+      await redis.del(`user_profile:${requester._id}`);
+
+    } else {
+      // Rejection logic
+      await JoinRequest.findByIdAndUpdate(requestId, {
+        status: "rejected",
+        handledBy: userId,
+        handledAt: new Date()
+      });
+
+      // Notify User
+      await createNotification({
+        recipient: joinRequest.requester,
+        sender: userId,
+        type: "ORG_JOIN_REJECT",
+        content: {
+          title: "Request Declined",
+          message: `Your request to join ${joinRequest.target.name} was declined.`,
+        },
+        relatedData: { orgId: joinRequest.target._id },
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Join request ${action} successfully`,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Start of Staff/Member Invite Logic
+import Invitation from "../models/invitation.model.js";
+
+export const inviteStaffToOrg = TryCatchHandler(async (req, res, next) => {
+  const { orgId } = req.params;
+  const { userId } = req.user; // Sender (must be Owner/Manager)
+  const { userId: targetUserId, message, role } = req.body; // Target user to invite
+
+  if (!targetUserId) throw new CustomError("Target user ID is required", 400);
+
+  // Validate Org
+  const org = await Organizer.findById(orgId);
+  if (!org || org.isDeleted) throw new CustomError("Organization not found", 404);
+
+  // Validate User to invite
+  const targetUser = await User.findById(targetUserId);
+  if (!targetUser) throw new CustomError("User not found", 404);
+  if (targetUser.orgId) throw new CustomError("User is already in an organization", 400);
+
+  // Check existing invite
+  const existingInvite = await Invitation.findOne({
+    entityId: orgId,
+    entityModel: "Organizer",
+    receiver: targetUserId,
+    status: "pending"
+  });
+
+  if (existingInvite) throw new CustomError("Invite already pending for this user", 400);
+
+  // Create Invitation
+  const newInvite = await Invitation.create({
+    entityId: orgId,
+    entityModel: "Organizer",
+    receiver: targetUserId,
+    receiverModel: "User",
+    sender: userId,
+    status: "pending",
+    message: message || "You have been invited to join the organization.",
+    role: role || Roles.ORG.STAFF // Default to Staff if using this endpoint, or pass dynamic
+  });
+
+  // Notify User
+  await createNotification({
+    recipient: targetUserId,
+    sender: userId,
+    type: "ORG_INVITE",
+    content: {
+      title: "Organization Invitation",
+      message: `You have been invited to join ${org.name} as ${role || "Staff"}.`,
+    },
+    relatedData: {
+      orgId: org._id,
+      inviteId: newInvite._id,
+      role: newInvite.role
+    },
+    actions: [
+      { label: "Accept", actionType: "ACCEPT", payload: { orgId: org._id, inviteId: newInvite._id, role: newInvite.role } },
+      { label: "Reject", actionType: "REJECT", payload: { orgId: org._id, inviteId: newInvite._id } },
+    ]
+  });
+
+  res.status(201).json({
+    success: true,
+    message: "Invitation sent successfully",
+    invitation: newInvite
+  });
+});
+
+export const getOrgPendingInvites = TryCatchHandler(async (req, res, next) => {
+  const { orgId } = req.params;
+
+  const invites = await Invitation.find({
+    entityId: orgId,
+    entityModel: "Organizer",
+    status: "pending"
+  })
+    .populate("receiver", "username email avatar")
+    .populate("sender", "username")
+    .sort("-createdAt");
+
+  res.status(200).json({
+    success: true,
+    message: "Fetched pending invites",
+    invites
+  });
+});
+
+export const cancelOrgInvite = TryCatchHandler(async (req, res, next) => {
+  const { orgId, inviteId } = req.params;
+
+  const invite = await Invitation.findOne({ _id: inviteId, entityId: orgId });
+  if (!invite) throw new CustomError("Invitation not found", 404);
+  if (invite.status !== "pending") throw new CustomError("Cannot cancel non-pending invite", 400);
+
+  await Invitation.findByIdAndDelete(inviteId);
+
+  res.status(200).json({
+    success: true,
+    message: "Invitation cancelled successfully"
+  });
+});
+
+

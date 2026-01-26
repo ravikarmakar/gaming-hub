@@ -13,6 +13,7 @@ export const getPlayers = TryCatchHandler(async (req, res, next) => {
         esportsRole,
         isAccountVerified,
         hasTeam,
+        hasOrg,
         page = 1,
         limit = 12
     } = req.query;
@@ -42,6 +43,14 @@ export const getPlayers = TryCatchHandler(async (req, res, next) => {
             query.teamId = { $ne: null };
         } else {
             query.teamId = null;
+        }
+    }
+
+    if (hasOrg !== undefined) {
+        if (hasOrg === "true") {
+            query.orgId = { $ne: null };
+        } else {
+            query.orgId = null;
         }
     }
 

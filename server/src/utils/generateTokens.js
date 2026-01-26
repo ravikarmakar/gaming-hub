@@ -23,7 +23,6 @@ export const generateTokens = (userId, roles) => {
 
 export const storeRefreshToken = async (userId, refreshToken) => {
   if (!userId || !refreshToken) {
-    console.log("NULL VALUE DETECTED IN STORE");
     throw new Error("userId or refreshToken is missing");
   }
 

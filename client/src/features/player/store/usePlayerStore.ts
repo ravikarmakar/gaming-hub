@@ -20,6 +20,7 @@ interface PlayerStoreState {
     append?: boolean;
   }) => Promise<void>;
   fetchPlayerById: (id: string, forceRefresh?: boolean) => Promise<User | null>;
+  searchByUsername: (query: string, page?: number, limit?: number) => Promise<void>;
   clearPlayers: () => void;
 }
 
@@ -80,6 +81,14 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => ({
       });
       return null;
     }
+  },
+
+  searchByUsername: async (query, page = 1, limit = 20) => {
+    await get().fetchPlayers({
+      username: query,
+      page,
+      limit,
+    });
   },
 
   clearPlayers: () => {

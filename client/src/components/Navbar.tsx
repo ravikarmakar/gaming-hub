@@ -13,24 +13,23 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-import {
-  ORG_ADMIN_ROLES,
-  PLATFORM_SUPER_ADMIN_ROLES,
-  SCOPES,
-} from "@/features/auth/lib/roles";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/routes";
-import { hasAnyRole } from "@/features/auth/lib/permissions";
 import NavItems from "./shared/NavItems";
 import ProfileMenu from "./shared/ProfileMenu";
 import { DashboardButton } from "./shared/DashboardButton";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
 import { useNotificationStore } from "@/features/notifications/store/useNotificationStore";
+import { useAccess } from "@/features/auth/hooks/useAccess";
+import { ORG_ACTIONS_ACCESS, ORG_ACTIONS } from "@/features/organizer/lib/access";
 
 const Navbar = () => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { setIsCreateOrgOpen } = useOrganizerStore();
   const [scrolled, setScrolled] = useState(false);
+  const { can } = useAccess()
 
   const { user, isLoading } = useAuthStore();
   const { unreadCount, fetchNotifications } = useNotificationStore();
@@ -50,12 +49,9 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const isSuperAdmin = hasAnyRole(
-    user,
-    SCOPES.PLATFORM,
-    PLATFORM_SUPER_ADMIN_ROLES
-  );
-  const hasAnyOrgRole = hasAnyRole(user, SCOPES.ORG, ORG_ADMIN_ROLES);
+  const isSuperAdmin = false;
+
+  const hasAnyOrgRole = can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.viewDashboardButton]);
 
   return (
     <motion.nav
@@ -83,7 +79,7 @@ const Navbar = () => {
                   loading="lazy"
                 />
               </div>
-              <span className="hidden sm:block text-xl font-bold tracking-tighter text-white">
+              <span className="hidden sm:block text-xl font-bold tracking-tighter text-white font-orbitron">
                 NEXUS
               </span>
             </Link>
@@ -96,18 +92,6 @@ const Navbar = () => {
 
           {/* Right side Actions */}
           <div className="flex items-center gap-3">
-            {user?.canCreateOrg && (
-              <Button
-                variant="ghost"
-                onClick={() => navigate(ROUTES.CREATE_ORG)}
-                className="hidden lg:flex relative overflow-hidden group px-4 py-2 text-sm font-semibold text-purple-200 hover:text-white transition-colors"
-                disabled={isLoading}
-              >
-                <span className="relative z-10">Create Org</span>
-                <div className="absolute inset-0 bg-purple-600/10 group-hover:bg-purple-600/20 transition-colors" />
-              </Button>
-            )}
-
             <div className="hidden sm:flex items-center gap-2">
               <DashboardButton
                 isSuperAdmin={isSuperAdmin}
@@ -132,6 +116,7 @@ const Navbar = () => {
                   <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#0a0514] opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Link>
               )}
+
               <ProfileMenu />
 
               {/* Mobile Menu Toggle */}
@@ -188,12 +173,18 @@ const Navbar = () => {
                       </nav>
 
                       <div className="flex flex-col gap-3 pt-4 border-t border-purple-500/10">
-                        <DashboardButton
-                          isSuperAdmin={isSuperAdmin}
-                          hasAnyOrgRole={hasAnyOrgRole}
-                          isLoading={isLoading}
-                          user={user}
-                        />
+                        {user?.canCreateOrg && !user?.orgId && (
+                          <Button
+                            variant="outline"
+                            className="w-full h-12 flex items-center justify-center gap-2 font-bold text-white transition-all bg-purple-500/10 border-purple-500/20 hover:border-purple-500/50 hover:bg-purple-500/20 rounded-xl"
+                            onClick={() => {
+                              setIsMobileMenuOpen(false);
+                              setTimeout(() => setIsCreateOrgOpen(true), 150);
+                            }}
+                          >
+                            Create Organization
+                          </Button>
+                        )}
 
                         {!user && !isLoading && (
                           <Button

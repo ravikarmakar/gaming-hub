@@ -89,9 +89,8 @@ export const GlowButton: React.FC<GlowButtonProps> = ({
 
   return (
     <button
-      className={`${baseClasses} ${sizeClasses[size]} ${
-        variantClasses[variant]
-      } ${className} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+      className={`${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]
+        } ${className} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
       onClick={onClick}
       disabled={disabled}
       onMouseEnter={hoverProps.onMouseEnter}
@@ -99,13 +98,11 @@ export const GlowButton: React.FC<GlowButtonProps> = ({
     >
       {(variant === "primary" || variant === "danger") && (
         <div
-          className={`absolute inset-0 bg-gradient-to-r ${
-            variant === "primary"
-              ? "from-blue-400 to-purple-500"
-              : "from-red-400 to-pink-500"
-          } opacity-0 transition-opacity duration-300 ${
-            hoverProps.isHovered ? "opacity-20" : ""
-          }`}
+          className={`absolute inset-0 bg-gradient-to-r ${variant === "primary"
+            ? "from-blue-400 to-purple-500"
+            : "from-red-400 to-pink-500"
+            } opacity-0 transition-opacity duration-300 ${hoverProps.isHovered ? "opacity-20" : ""
+            }`}
         />
       )}
       <span className="relative z-10 flex items-center justify-center gap-2">

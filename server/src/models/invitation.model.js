@@ -1,3 +1,81 @@
+// import mongoose from "mongoose";
+
+// const invitationSchema = new mongoose.Schema({
+//   type: {
+//     type: String,
+//     enum: [
+//       "TEAM_JOIN",
+//       "ORG_JOIN",
+//       "TOURNAMENT_REGISTER",
+//       "TEAM_CHALLENGE",
+//       "SCRIM_INVITE"
+//     ],
+//     required: true,
+//   },
+
+//   action: {
+//     type: String,
+//     enum: ["ADD_TEAM_MEMBER", "ADD_ORG_MEMBER", "REGISTER", "CHALLENGE", "ASSIGN_ROLE"],
+//     required: true,
+//   },
+
+//   entityId: {
+//     type: mongoose.Schema.Types.ObjectId,
+//     required: true,
+//     refPath: "entityModel",
+//   },
+//   entityModel: {
+//     type: String,
+//     enum: ["Team", "Event", "Tournament", "Organizer"],
+//     required: true,
+//   },
+
+//   receiver: {
+//     type: mongoose.Schema.Types.ObjectId,
+//     required: true,
+//     refPath: "receiverModel",
+//   },
+//   receiverModel: {
+//     type: String,
+//     enum: ["User", "Team"],
+//     required: true,
+//   },
+
+//   sender: {
+//     type: mongoose.Schema.Types.ObjectId,
+//     ref: "User",
+//     required: true,
+//   },
+
+//   role: {
+//     type: String,
+//     default: null, // team:player, org:staff, etc
+//   },
+
+//   status: {
+//     type: String,
+//     enum: ["pending", "accepted", "rejected", "expired"],
+//     default: "pending",
+//   },
+
+//   message: {
+//     type: String,
+//     maxlength: 200,
+//   },
+
+//   expiresAt: {
+//     type: Date,
+//     index: { expireAfterSeconds: 0 },
+//   },
+
+//   sentAt: { type: Date, default: Date.now },
+// }, { timestamps: true });
+
+// const Invitation = mongoose.model("Invitation", invitationSchema);
+
+// export default Invitation;
+
+
 import mongoose from "mongoose";
 
 const invitationSchema = new mongoose.Schema(
@@ -10,7 +88,7 @@ const invitationSchema = new mongoose.Schema(
     entityModel: {
       type: String,
       required: true,
-      enum: ["Team", "Event", "Tournament"],
+      enum: ["Team", "Event", "Tournament", "Organizer"],
       default: "Team",
     },
     receiver: {
@@ -38,6 +116,10 @@ const invitationSchema = new mongoose.Schema(
       type: String,
       maxlength: 200,
       default: "",
+    },
+    role: {
+      type: String,
+      default: "member", // or use specific roles like 'org:staff', 'team:player'
     },
     expiresAt: {
       type: Date,

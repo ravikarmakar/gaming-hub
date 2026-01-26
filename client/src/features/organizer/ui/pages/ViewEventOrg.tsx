@@ -4,19 +4,21 @@ import { Loader2, Trophy } from "lucide-react";
 import { useEventStore } from "@/features/events/store/useEventStore";
 
 import { TournamentGrid } from "../components/TournamentGrid";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
 const TournamentCard: React.FC = () => {
-  const { id } = useParams();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
 
   const { fetchEventsByOrgId, isLoading, orgEvents } = useEventStore();
 
   useEffect(() => {
-    if (id) {
-      fetchEventsByOrgId(id);
+    if (user?.orgId) {
+      fetchEventsByOrgId(user.orgId);
     }
-  }, [id, fetchEventsByOrgId]);
+  }, [user?.orgId, fetchEventsByOrgId]);
 
   const onButtonClick = (eventId: string) => {
     navigate(`/organizer/event/${eventId}`);

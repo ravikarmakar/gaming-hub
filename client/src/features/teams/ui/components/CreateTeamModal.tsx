@@ -40,13 +40,8 @@ import { MAX_FILE_SIZE, teamSchema } from "@/schemas/team-validation/teamSchema"
 
 type TeamForm = z.infer<typeof teamSchema>;
 
-interface CreateTeamModalProps {
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-}
-
-const CreateTeamModal: React.FC<CreateTeamModalProps> = ({ isOpen, setIsOpen }) => {
-  const { createTeam, isLoading, error, clearError } = useTeamStore();
+const CreateTeamModal = () => {
+  const { createTeam, isLoading, error, clearError, isCreateTeamOpen, setIsCreateTeamOpen } = useTeamStore();
 
   const form = useForm<TeamForm>({
     resolver: zodResolver(teamSchema),
@@ -73,20 +68,23 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({ isOpen, setIsOpen }) 
       // Refresh the user profile to update teamId and roles in the auth store
       await useAuthStore.getState().checkAuth();
       toast.success("Team created successfully!");
-      setIsOpen(false);
+      setIsCreateTeamOpen(false);
       reset();
     }
   };
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isCreateTeamOpen) {
       clearError();
     }
-  }, [isOpen, clearError]);
+  }, [isCreateTeamOpen, clearError]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden bg-[#0a0514] border-purple-500/20 shadow-[0_0_50px_rgba(139,92,246,0.15)] rounded-2xl">
+    <Dialog open={isCreateTeamOpen} onOpenChange={setIsCreateTeamOpen}>
+      <DialogContent
+        onCloseAutoFocus={(e) => e.preventDefault()}
+        className="sm:max-w-[480px] p-0 overflow-hidden bg-[#0a0514] border-purple-500/20 shadow-[0_0_50px_rgba(139,92,246,0.15)] rounded-2xl"
+      >
         <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,0.05),transparent_40%)] pointer-events-none" />
 
         <AnimatePresence mode="wait">
@@ -235,7 +233,7 @@ const CreateTeamModal: React.FC<CreateTeamModalProps> = ({ isOpen, setIsOpen }) 
                     <div className="flex gap-2">
                       <Button
                         type="button"
-                        onClick={() => setIsOpen(false)}
+                        onClick={() => setIsCreateTeamOpen(false)}
                         variant="ghost"
                         size="sm"
                         className="flex-1 text-purple-300 hover:text-white hover:bg-purple-500/10 rounded-xl text-xs h-9"

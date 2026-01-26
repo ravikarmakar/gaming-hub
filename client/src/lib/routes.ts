@@ -7,7 +7,6 @@ export const ROUTES = {
   PLAYER_PROFILE: "/player/:id",
   EMAIL_VERIFY: "/verify-email",
   SUPER_ADMIN: "/super-admin/:id",
-  CREATE_ORG: "/create-org",
   NOTIFICATIONS: "/notifications",
   ALL_PLAYERS: "/players",
   ALL_TEAMS: "/teams",

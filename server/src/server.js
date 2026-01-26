@@ -15,7 +15,7 @@ import organizerRouter from "./routes/organizer.route.js";
 // Team Imports
 import teamRouter from "./routes/team.route.js";
 import notificationRouter from "./routes/notification.route.js";
-import invitationRouter from "./routes/team-routes/invitation.route.js";
+import invitationRouter from "./routes/invitation.route.js";
 
 // Event Imports
 import eventRouter from "./routes/event.route.js";
@@ -41,12 +41,12 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/teams", teamRouter);
 app.use("/api/notifications", notificationRouter);
-
 app.use("/api/organizers", organizerRouter);
+app.use("/api/invitations", invitationRouter);
 app.use("/api/players", userRouter);
+
 app.use("/api/events", eventRouter);
 
-app.use("/api/invitations", invitationRouter);
 app.use("/api/prize", prizeRouter);
 app.use("/api/rounds", roundsRouter);
 app.use("/api/groups", groupsRouter);

@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 
-import { ROUTES } from "@/lib/routes";
-import { User } from "@/features/auth/store/useAuthStore";
 import { cn } from "@/lib/utils";
+import { User } from "@/features/auth/store/useAuthStore";
+import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 
 type DashboardButtonProps = {
   isSuperAdmin: boolean;
@@ -32,10 +32,7 @@ export const DashboardButton = ({
       <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg blur opacity-20 group-hover:opacity-100 transition duration-500" />
       <Button
         variant="outline"
-        onClick={() => {
-          if (isSuperAdmin) navigate(ROUTES.SUPER_ADMIN);
-          else navigate(`/organizer-dashboard/${user.orgId}`);
-        }}
+        onClick={() => navigate(ORGANIZER_ROUTES.DASHBOARD)}
         className={cn(
           "relative w-full h-10 px-4 flex items-center gap-2 font-bold text-white transition-all bg-[#0a0514] border-purple-500/20 hover:border-purple-500/50 hover:bg-purple-500/5 group-active:scale-95",
           "sm:w-auto sm:px-5 rounded-lg"

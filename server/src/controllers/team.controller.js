@@ -174,7 +174,7 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
   if (req.user) {
     const existingRequest = await JoinRequest.findOne({
       requester: req.user._id,
-      team: teamId,
+      target: teamId,
       status: "pending"
     });
     hasPendingRequest = !!existingRequest;
@@ -183,7 +183,7 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
     const isMember = team.teamMembers.some(m => m.user._id.toString() === req.user._id.toString());
     if (isMember) {
       pendingRequestsCount = await JoinRequest.countDocuments({
-        team: teamId,
+        target: teamId,
         status: "pending"
       });
     }
@@ -197,7 +197,7 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
       roleInTeam: member.roleInTeam,
       username: member.user.username,
       avatar: member.user.avatar,
-      systemRole: member.user.roles.find(role => role.scope === Scopes.TEAM).role,
+      systemRole: member.user.roles.find(role => role.scope === Scopes.TEAM)?.role || 'player',
       joinedAt: member.joinedAt,
       isActive: member.isActive,
     })),
@@ -764,7 +764,7 @@ export const deleteTeam = TryCatchHandler(async (req, res, next) => {
     await pipeline.exec();
 
     // 4. Async cleanup of related data
-    JoinRequest.deleteMany({ team: team._id }).catch(err =>
+    JoinRequest.deleteMany({ target: team._id }).catch(err =>
       console.error(`Failed to cleanup join requests for team ${team._id}:`, err)
     );
 

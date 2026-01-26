@@ -1,6 +1,9 @@
 import { useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import { Loader2, AlertCircle, Info, Users } from "lucide-react";
+
+import { ROUTES } from "@/lib/routes";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -14,6 +17,7 @@ import { useAccess } from "@/features/auth/hooks/useAccess";
 import { TEAM_ACTIONS, TEAM_ACTIONS_ACCESS } from "../../lib/access";
 
 const TeamMembersPage = () => {
+  const navigate = useNavigate();
   const {
     currentTeam,
     getTeamById,
@@ -68,6 +72,10 @@ const TeamMembersPage = () => {
     },
     [updateMemberRole, user?.teamId, getTeamById]
   );
+
+  const handleViewProfile = useCallback((id: string) => {
+    navigate(ROUTES.PLAYER_PROFILE.replace(":id", id));
+  }, [navigate]);
 
   if (isLoading && !currentTeam) {
     return (
@@ -137,6 +145,7 @@ const TeamMembersPage = () => {
               currentUserId={user?._id ?? ""}
               onRemove={handleRemove}
               onEditRole={handleEditRole}
+              onViewProfile={handleViewProfile}
               isLoading={isLoading}
             />
           </section>

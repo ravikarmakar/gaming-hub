@@ -2,6 +2,8 @@ import Invitation from "../models/invitation.model.js";
 import Team from "../models/team.model.js";
 import { Notification } from "../models/notification.model.js";
 import User from "../models/user.model.js";
+import Organizer from "../models/organizer.model.js";
+import { Roles, Scopes } from "../config/roles.js";
 import mongoose from "mongoose";
 
 export const getAllInvitations = async (req, res) => {
@@ -66,14 +68,16 @@ export const inviteMemberInTeam = async (req, res) => {
       });
     }
 
-    // Only Captain or Owner can send invites
+    // Only Manager or Owner can send invites
     const isAuthorized =
       teamToInviteFrom.owner?.equals(userId) ||
-      teamToInviteFrom.captain?.equals(userId);
+      teamToInviteFrom.captain?.equals(userId) ||
+      teamToInviteFrom.teamMembers.some(m => m.user?.equals(userId) && m.roleInTeam === "manager");
+
     if (!isAuthorized) {
       return res.status(403).json({
         success: false,
-        message: "Only the Captain or Owner can invite players.",
+        message: "Only the Team Manager or Owner can invite players.",
       });
     }
 
@@ -128,6 +132,7 @@ export const inviteMemberInTeam = async (req, res) => {
       sender: userId,
       status: "pending",
       message: message || "",
+      role: Roles.TEAM.PLAYER, // Default role for team invites
     });
     await newInvitation.save();
 
@@ -165,6 +170,94 @@ export const inviteMemberInTeam = async (req, res) => {
     });
   } catch (error) {
     console.error("Error inviting player:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+export const respondToInvitation = async (req, res) => {
+  try {
+    const { inviteId } = req.params;
+    const { action } = req.body; // "accepted" | "rejected"
+    const userId = req.user._id;
+
+    if (!["accepted", "rejected"].includes(action)) {
+      return res.status(400).json({ success: false, message: "Invalid action" });
+    }
+
+    const invite = await Invitation.findById(inviteId).populate("entityId");
+    if (!invite) return res.status(404).json({ success: false, message: "Invitation not found" });
+
+    if (invite.status !== "pending") return res.status(400).json({ success: false, message: "Invitation is not pending" });
+
+    // Authorization: Receiver checks
+    if (!invite.receiver.equals(userId)) return res.status(403).json({ success: false, message: "Not authorized to respond to this invitation" });
+
+    if (action === "rejected") {
+      // Delete or update status
+      await Invitation.findByIdAndDelete(inviteId);
+      return res.status(200).json({ success: true, message: "Invitation rejected" });
+    }
+
+    if (action === "accepted") {
+      // Handle based on Entity Model
+      if (invite.entityModel === "Organizer") {
+        const org = invite.entityId;
+        const user = await User.findById(userId);
+
+        if (user.orgId) {
+          return res.status(400).json({ success: false, message: "You are already in an organization" });
+        }
+
+        // Update User
+        await User.findByIdAndUpdate(userId, {
+          $set: { orgId: org._id },
+          $push: {
+            roles: {
+              scope: Scopes.ORG,
+              role: invite.role || Roles.ORG.STAFF, // Use role from invite or default
+              scopeId: org._id,
+              scopeModel: "Organization"
+            }
+          }
+        });
+
+      } else if (invite.entityModel === "Team") {
+        const team = invite.entityId;
+        const user = await User.findById(userId);
+
+        if (user.teamId) {
+          return res.status(400).json({ success: false, message: "You are already in a team" });
+        }
+
+        // Update User
+        await User.findByIdAndUpdate(userId, {
+          $set: { teamId: team._id },
+          $push: {
+            roles: {
+              scope: Scopes.TEAM,
+              role: invite.role === Roles.TEAM.MANAGER ? Roles.TEAM.MANAGER : Roles.TEAM.PLAYER,
+              scopeId: team._id,
+              scopeModel: "Team"
+            }
+          }
+        });
+
+        // Update Team Document
+        await Team.findByIdAndUpdate(team._id, {
+          $push: { teamMembers: { user: userId, roleInTeam: invite.role === Roles.TEAM.MANAGER ? "manager" : "player" } }
+        });
+      }
+
+      // Finalize Invite
+      // await Invitation.findByIdAndDelete(inviteId); // Or mark accepted
+      invite.status = "accepted";
+      await invite.save();
+
+      return res.status(200).json({ success: true, message: "Invitation accepted" });
+    }
+
+  } catch (error) {
+    console.error("Error responding to invitation:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };

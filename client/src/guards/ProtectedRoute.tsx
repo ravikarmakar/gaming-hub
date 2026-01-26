@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { ROUTES } from "@/lib/routes";
 
@@ -38,6 +37,11 @@ const ProtectedRoute = () => {
   // Redirect to email verification if not verified (mandatory)
   if (!user.isAccountVerified && location.pathname !== ROUTES.EMAIL_VERIFY) {
     return <Navigate to={ROUTES.EMAIL_VERIFY} replace />;
+  }
+
+  // Redirect to home if already verified and trying to access verify-email
+  if (user.isAccountVerified && location.pathname === ROUTES.EMAIL_VERIFY) {
+    return <Navigate to={ROUTES.HOME} replace />;
   }
 
   return <Outlet />;

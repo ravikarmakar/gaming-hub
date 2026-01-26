@@ -10,6 +10,7 @@ import {
     Calendar,
     CheckCircle2,
     XCircle,
+    User2,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -42,6 +43,7 @@ interface MemberCardProps {
     currentUserId: string;
     onRemove: (id: string) => void;
     onEditRole: (role: string, id: string) => void;
+    onViewProfile: (id: string) => void;
     onTransferRequest?: (member: TeamMembersTypes) => void;
     isLoading: boolean;
 }
@@ -85,6 +87,7 @@ export const MemberCard = ({
     currentUserId,
     onRemove,
     onEditRole,
+    onViewProfile,
     isLoading,
 }: MemberCardProps) => {
     const [isEditingRole, setIsEditingRole] = useState(false);
@@ -149,45 +152,60 @@ export const MemberCard = ({
                         </div>
                     </div>
 
-                    {isOwner && (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 hover:bg-white/10"
-                                >
-                                    <MoreVertical className="w-4 h-4 text-gray-400" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                                align="end"
-                                className="bg-[#0F0720]/95 border-white/10 backdrop-blur-xl shadow-2xl min-w-[180px]"
+                    <div className="flex gap-2">
+                        {/* Always visible View Profile button (except for self) */}
+                        {!isCurrentUser && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onViewProfile(member.user)}
+                                className="h-8 w-8 p-0 hover:bg-white/10 text-gray-400 hover:text-blue-400"
+                                title="View Profile"
                             >
-                                <DropdownMenuItem
-                                    onClick={() => setIsEditingRole(true)}
-                                    className="text-gray-300 hover:bg-white/10 focus:bg-white/10 transition-colors cursor-pointer"
+                                <User2 className="w-4 h-4" />
+                            </Button>
+                        )}
+
+                        {isOwner && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0 hover:bg-white/10"
+                                    >
+                                        <MoreVertical className="w-4 h-4 text-gray-400" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                    align="end"
+                                    className="bg-[#1A1C2E] border-white/10 shadow-2xl min-w-[180px]"
                                 >
-                                    <Edit className="w-4 h-4 mr-2 text-purple-400" />
-                                    Edit Role
-                                </DropdownMenuItem>
-                                {/* Only allow removing if it's not the owner themselves */}
-                                {canRemoveRoster && !isMemberOwner && !isCurrentUser && (
-                                    <>
-                                        <DropdownMenuSeparator className="bg-white/10" />
-                                        <DropdownMenuItem
-                                            onClick={() => onRemove(member.user)}
-                                            disabled={isLoading}
-                                            className="text-red-400 hover:bg-red-500/10 focus:bg-red-500/10 transition-colors cursor-pointer"
-                                        >
-                                            <Trash className="w-4 h-4 mr-2" />
-                                            {isLoading ? "Removing..." : "Remove Member"}
-                                        </DropdownMenuItem>
-                                    </>
-                                )}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
+                                    <DropdownMenuItem
+                                        onClick={() => setIsEditingRole(true)}
+                                        className="text-gray-200 focus:bg-white/10 focus:text-white cursor-pointer"
+                                    >
+                                        <Edit className="w-4 h-4 mr-2 text-purple-400" />
+                                        Edit Role
+                                    </DropdownMenuItem>
+                                    {/* Only allow removing if it's not the owner themselves */}
+                                    {canRemoveRoster && !isMemberOwner && !isCurrentUser && (
+                                        <>
+                                            <DropdownMenuSeparator className="bg-white/10" />
+                                            <DropdownMenuItem
+                                                onClick={() => onRemove(member.user)}
+                                                disabled={isLoading}
+                                                className="text-red-400 focus:bg-red-500/10 focus:text-red-300 cursor-pointer"
+                                            >
+                                                <Trash className="w-4 h-4 mr-2" />
+                                                {isLoading ? "Removing..." : "Remove Member"}
+                                            </DropdownMenuItem>
+                                        </>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+                    </div>
                 </div>
 
                 <div className="space-y-3">
@@ -202,12 +220,12 @@ export const MemberCard = ({
                                     <SelectTrigger className="h-8 bg-white/5 border-white/10 text-white hover:bg-white/10 transition-all">
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-[#0F0720]/95 border-white/10 backdrop-blur-xl shadow-2xl">
+                                    <SelectContent className="bg-[#1A1C2E] border-white/10 shadow-2xl">
                                         {roles.map((role) => (
                                             <SelectItem
                                                 key={role.value}
                                                 value={role.value}
-                                                className="text-gray-300 hover:bg-white/10 focus:bg-white/10 transition-colors cursor-pointer"
+                                                className="text-gray-200 focus:bg-white/10 focus:text-white cursor-pointer"
                                             >
                                                 {role.label}
                                             </SelectItem>
@@ -229,7 +247,7 @@ export const MemberCard = ({
                                         setIsEditingRole(false);
                                         setSelectedRole(member.roleInTeam);
                                     }}
-                                    className="h-8 hover:bg-white/10"
+                                    className="h-8 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10"
                                 >
                                     Cancel
                                 </Button>

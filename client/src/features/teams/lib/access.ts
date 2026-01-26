@@ -1,4 +1,5 @@
 import { SCOPES } from "@/features/auth/lib/scopes";
+export const TEAM_SCOPES = SCOPES;
 
 export const TEAM_ROLES = {
     OWNER: "team:owner",
@@ -16,6 +17,7 @@ export const TEAM_ACTIONS = {
     manageStaff: "team:manageStaff",
     manageRoster: "team:manageRoster",
     updateTeamSettings: "team:updateTeamSettings",
+    inviteMember: "team:inviteMember",
 } as const;
 
 export const TEAM_ACCESS = {
@@ -66,8 +68,11 @@ export const TEAM_ACTIONS_ACCESS = {
         scope: SCOPES.TEAM,
         roles: [TEAM_ROLES.OWNER, TEAM_ROLES.MANAGER],
     },
-
     [TEAM_ACTIONS.rejectJoinRequest]: {
+        scope: SCOPES.TEAM,
+        roles: [TEAM_ROLES.OWNER, TEAM_ROLES.MANAGER],
+    },
+    [TEAM_ACTIONS.inviteMember]: {
         scope: SCOPES.TEAM,
         roles: [TEAM_ROLES.OWNER, TEAM_ROLES.MANAGER],
     },

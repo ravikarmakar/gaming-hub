@@ -1,6 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Toaster } from "react-hot-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "../Footer";
 
@@ -22,7 +21,6 @@ const MainLayout = () => {
         </motion.main>
       </AnimatePresence>
       <Footer />
-      <Toaster position="top-center" />
     </>
   );
 };

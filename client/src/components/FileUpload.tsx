@@ -149,7 +149,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const showFileIcon = !isImage || !preview; // Show generic file icon if not image or no preview
 
   return (
-    <div className={`space-y-1.5 ${className || ""}`}>
+    <div className={`${compact ? "space-y-1" : "space-y-1.5"} ${className || ""}`}>
       {label && (
         <div className="flex items-center justify-between">
           <label
@@ -217,14 +217,14 @@ const FileUpload: React.FC<FileUploadProps> = ({
           {!internalFile ? (
             <motion.div
               whileHover={disabled ? {} : { scale: 1.01 }}
-              className={`flex flex-col items-center justify-center ${compact ? "p-3" : "p-6"}`}
+              className={`flex flex-col items-center justify-center ${compact ? "p-1.5" : "p-6"}`}
             >
-              <div className={`rounded-full bg-purple-500/10 ${compact ? "p-2 mb-2" : "p-3 mb-4"}`}>
-                <Upload size={compact ? 18 : 24} className="text-purple-400" />
+              <div className={`rounded-full bg-purple-500/10 ${compact ? "p-1.5 mb-1" : "p-3 mb-4"}`}>
+                <Upload size={compact ? 14 : 24} className="text-purple-400" />
               </div>
-              <p className={`mb-1 text-gray-300 ${compact ? "text-xs" : "text-sm"}`}>
+              <p className={`mb-0.5 text-gray-300 ${compact ? "text-[10px]" : "text-sm"}`}>
                 <span className="font-medium text-purple-400">
-                  {compact ? "Upload Logo" : "Click to upload"}
+                  {compact ? "Upload" : "Click to upload"}
                 </span>{" "}
                 {!compact && "or drag and drop"}
               </p>

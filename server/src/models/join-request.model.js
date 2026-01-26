@@ -7,10 +7,16 @@ const joinRequestSchema = new mongoose.Schema(
             ref: "User",
             required: true,
         },
-        team: {
+        target: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Team",
             required: true,
+            refPath: 'targetModel'
+        },
+        targetModel: {
+            type: String,
+            required: true,
+            enum: ['Team', 'Organizer'],
+            default: 'Team'
         },
         status: {
             type: String,
@@ -33,8 +39,8 @@ const joinRequestSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// Prevent multiple pending requests from the same user to the same team
-joinRequestSchema.index({ requester: 1, team: 1, status: 1 }, {
+// Prevent multiple pending requests from the same user to the same target
+joinRequestSchema.index({ requester: 1, target: 1, status: 1 }, {
     unique: true,
     partialFilterExpression: { status: "pending" }
 });

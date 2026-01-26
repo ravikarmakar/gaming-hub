@@ -1,11 +1,12 @@
 import { useEffect, useRef, lazy, Suspense } from "react";
 import { Toaster } from "react-hot-toast";
-import { Route, Routes, Navigate } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
 
 // Stores & Constants
 import { ROUTES } from "./lib/routes";
-import { TEAM_ROUTES } from "./features/teams/lib/routes";
+import { TEAM_ROUTES } from "@/features/teams/lib/routes";
+import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { useAuthStore } from "./features/auth/store/useAuthStore";
 
 // Layouts & Guards
@@ -18,6 +19,8 @@ import PublicRoute from "./guards/PublicRoute";
 import { NotFound } from "./components/NotFound";
 import LoadingSpinner from "./components/LoadingSpinner";
 import { ErrorFallback } from "./components/ErrorFallback";
+import CreateOrgDialog from "@/features/organizer/ui/components/CreateOrgDialog";
+import CreateTeamModal from "./features/teams/ui/components/CreateTeamModal";
 
 // Lazy Loaded Pages
 const HomePage = lazy(() => import("@/features/home/ui/pages/HomePage"));
@@ -28,12 +31,14 @@ const VerifyEmail = lazy(() => import("@/features/auth/ui/components/verify-emai
 const DiscordCallback = lazy(() => import("@/features/auth/ui/components/discord-callback"));
 
 // Organizer Features
-const CreateOrg = lazy(() => import("@/features/organizer/ui/pages/CreateOrg"));
-const OrganizerProfile = lazy(() => import("./pages/organiser/OrganizerProfile"));
-const Dashboard = lazy(() => import("./pages/organiser/Dashboard"));
-const Members = lazy(() => import("./pages/organiser/Members"));
-const OrganizerLayout = lazy(() => import("@/features/organizer/ui/components/OrganiserLayout"));
+const OrganizerProfile = lazy(() => import("@/features/organizer/ui/pages/OrganizerProfile"));
+const OrganizerDashboard = lazy(() => import("@/features/organizer/ui/pages/OrganizerDashboard"));
+const OrganizerMemberPage = lazy(() => import("@/features/organizer/ui/pages/OrganizerMemberPage"));
+const OrganizerLayout = lazy(() => import("@/features/organizer/ui/layouts/OrganizerLayout"));
 const ViewEventOrg = lazy(() => import("@/features/organizer/ui/pages/ViewEventOrg"));
+const OrganizerSettingsPage = lazy(() => import("@/features/organizer/ui/pages/OrganizerSettingsPage"));
+const OrganizerJoinRequestsPage = lazy(() => import("@/features/organizer/ui/pages/OrganizerJoinRequestsPage"));
+const OrganizerNotificationsPage = lazy(() => import("@/features/organizer/ui/pages/OrganizerNotificationsPage"));
 
 // Player Features
 const PlayerIdPage = lazy(() => import("@/features/player/ui/pages/PlayerIdPage"));
@@ -78,7 +83,9 @@ const App = () => {
 
   return (
     <>
-      <Toaster />
+      <Toaster position="top-center" />
+      <CreateOrgDialog />
+      <CreateTeamModal />
       <ErrorBoundary FallbackComponent={ErrorFallback}>
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
@@ -89,8 +96,7 @@ const App = () => {
 
               <Route element={<ProtectedRoute />}>
                 <Route path={ROUTES.EMAIL_VERIFY} element={<VerifyEmail />} />
-                <Route path={ROUTES.CREATE_ORG} element={<CreateOrg />} />
-                <Route path={ROUTES.ORG_PROFILE} element={<OrganizerProfile />} />
+                <Route path={ORGANIZER_ROUTES.PROFILE} element={<OrganizerProfile />} />
                 <Route path={ROUTES.ALL_PLAYERS} element={<FindPlayers />} />
                 <Route path={ROUTES.PLAYER_PROFILE} element={<PlayerIdPage />} />
                 <Route path={TEAM_ROUTES.PROFILE} element={<TeamIdPage />} />
@@ -112,15 +118,17 @@ const App = () => {
               </Route>
             </Route>
 
+            {/* Organizer Routes */}
             <Route element={<ProtectedRoute />}>
-              <Route path={ROUTES.ORG_DASHBOARD} element={<OrganizerLayout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="members" element={<Members />} />
-                <Route path="tournaments" element={<ViewEventOrg />} />
-                <Route path="add-tournaments" element={<CreateTournament />} />
-                <Route path="analytics" element={<div>Analytics</div>} />
-                <Route path="games" element={<div>Games</div>} />
-                <Route path="notifications" element={<div>Notifi</div>} />
+              <Route path={ORGANIZER_ROUTES.DASHBOARD} element={<OrganizerLayout />}>
+                <Route index element={<OrganizerDashboard />} />
+                <Route path={ORGANIZER_ROUTES.MEMBERS} element={<OrganizerMemberPage />} />
+                <Route path={ORGANIZER_ROUTES.TOURNAMENTS} element={<ViewEventOrg />} />
+                <Route path={ORGANIZER_ROUTES.ADD_TOURNAMENTS} element={<CreateTournament />} />
+                <Route path={ORGANIZER_ROUTES.ANALYTICS} element={<div>Analytics</div>} />
+                <Route path={ORGANIZER_ROUTES.NOTIFICATIONS} element={<OrganizerNotificationsPage />} />
+                <Route path={ORGANIZER_ROUTES.JOIN_REQUESTS} element={<OrganizerJoinRequestsPage />} />
+                <Route path={ORGANIZER_ROUTES.SETTINGS} element={<OrganizerSettingsPage />} />
               </Route>
 
               <Route path={ROUTES.SUPER_ADMIN} element={<SuperAdminLayout />}>
@@ -136,11 +144,6 @@ const App = () => {
                 <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
               </Route>
             </Route>
-
-            {/* Safety Redirects for common manual URL entry errors */}
-            <Route path="/verify-otp" element={<Navigate to={ROUTES.EMAIL_VERIFY} replace />} />
-            <Route path="/player/verify-otp" element={<Navigate to={ROUTES.EMAIL_VERIFY} replace />} />
-            <Route path="/players/verify-otp" element={<Navigate to={ROUTES.EMAIL_VERIFY} replace />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

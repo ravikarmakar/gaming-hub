@@ -26,7 +26,9 @@ export function useAccess() {
         return user.roles?.some((r) => {
             if (r.scope !== rule.scope) return false;
             if (!rule.roles.includes(r.role)) return false;
-            if (resolvedScopeId && r.scopeId !== resolvedScopeId) return false;
+
+            // Convert to string for safe comparison (handling both String and ObjectId types)
+            if (resolvedScopeId && r.scopeId?.toString() !== resolvedScopeId.toString()) return false;
             return true;
         }) ?? false;
     }

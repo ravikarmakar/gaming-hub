@@ -31,7 +31,7 @@ export const sendJoinRequest = TryCatchHandler(async (req, res, next) => {
 
     const existingRequest = await JoinRequest.findOne({
         requester: userId,
-        team: teamId,
+        target: teamId,
         status: "pending",
     });
 
@@ -41,7 +41,8 @@ export const sendJoinRequest = TryCatchHandler(async (req, res, next) => {
 
     const joinRequest = await JoinRequest.create({
         requester: userId,
-        team: teamId,
+        target: teamId,
+        targetModel: "Team",
         message: message || `Player ${user.username} wants to join your team.`,
     });
 
@@ -75,7 +76,7 @@ export const getTeamJoinRequests = TryCatchHandler(async (req, res, next) => {
     // Access controlled by verifyTeamPermission(TEAM_ACTIONS.manageRoster) middleware
 
     const requests = await JoinRequest.find({
-        team: teamId,
+        target: teamId,
         status: "pending",
     })
         .populate("requester", "username avatar _id")
@@ -98,7 +99,7 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
         throw new CustomError("Invalid action. Use 'accepted' or 'rejected'", 400);
     }
 
-    const joinRequest = await JoinRequest.findById(requestId).populate("team");
+    const joinRequest = await JoinRequest.findById(requestId).populate("target");
     if (!joinRequest) {
         throw new CustomError("Join request not found", 404);
     }
@@ -123,7 +124,7 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
             });
 
             // 2. Add to team (Atomic)
-            const team = joinRequest.team;
+            const team = joinRequest.target;
 
             // Check limit
             if (team.teamMembers.length >= 10) {
@@ -183,14 +184,14 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                 type: "TEAM_JOIN_REJECT",
                 content: {
                     title: "Request Declined",
-                    message: `Your request to join ${joinRequest.team.teamName} was declined.`,
+                    message: `Your request to join ${joinRequest.target.teamName} was declined.`,
                 },
-                relatedData: { teamId: joinRequest.team._id },
+                relatedData: { teamId: joinRequest.target._id },
             });
         }
 
         // Fetch full team data after update to sync frontend
-        const updatedTeamDoc = await Team.findById(joinRequest.team._id)
+        const updatedTeamDoc = await Team.findById(joinRequest.target._id)
             .populate("teamMembers.user", "username avatar _id")
             .lean();
 

@@ -106,6 +106,8 @@ export const isVerified = TryCatchHandler(async (req, res, next) => {
       } catch (saveCacheError) {
         console.error("Redis setex error in isVerified:", saveCacheError);
       }
+      // Attach fresh profile for downstream RBAC checks
+      req.user.cachedProfile = user;
     }
   }
 

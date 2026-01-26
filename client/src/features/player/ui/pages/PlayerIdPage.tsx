@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Award, BarChart3, User, Settings, Info } from "lucide-react";
+import { Award, BarChart3, Settings, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { usePlayerStore } from "../../store/usePlayerStore";

@@ -1,6 +1,5 @@
-import { useState } from "react";
-import { Loader2, LogOut, PlusCircle, User, Settings, Bell, UserCog } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Loader2, LogOut, PlusCircle, User, Settings, Bell, UserCog, Building, LayoutDashboard } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,13 +17,24 @@ import {
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/routes";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import CreateTeamModal from "@/features/teams/ui/components/CreateTeamModal";
+import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
+import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
+import { useAccess } from "@/features/auth/hooks/useAccess";
+import { ORG_ACTIONS, ORG_ACTIONS_ACCESS } from "@/features/organizer/lib/access";
+import { TEAM_ACCESS } from "@/features/teams/lib/access";
 
 const ProfileMenu = () => {
   const navigate = useNavigate();
   const { user, logout, isLoading } = useAuthStore();
-  const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false);
+  const { setIsCreateOrgOpen } = useOrganizerStore();
+  const { setIsCreateTeamOpen } = useTeamStore();
+
+  const { can } = useAccess();
+
+  const canViewOrgDashboard = user?.orgId && can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.viewDashboardButton]);
+  const canViewTeamDashboard = user?.teamId && can(TEAM_ACCESS.dashboard);
 
   const profileOptions = [
     {
@@ -41,12 +51,12 @@ const ProfileMenu = () => {
           href: TEAM_ROUTES.PROFILE.replace(":id", user.teamId),
           color: "text-purple-400",
         },
-        {
+        ...(canViewTeamDashboard ? [{
           name: "Team Dashboard",
           icon: Settings,
           href: TEAM_ROUTES.DASHBOARD,
           color: "text-indigo-400",
-        },
+        }] : []),
       ]
       : [
         {
@@ -62,15 +72,36 @@ const ProfileMenu = () => {
       href: ROUTES.NOTIFICATIONS,
       color: "text-amber-400",
     },
+    ...(user?.canCreateOrg && !user?.orgId
+      ? [
+        {
+          name: "Create Organization",
+          icon: PlusCircle,
+          onClick: () => setIsCreateOrgOpen(true),
+          color: "text-purple-400",
+        },
+      ]
+      : []),
+    ...(user?.orgId
+      ? [
+        {
+          name: "Organization Profile",
+          icon: Building,
+          href: ORGANIZER_ROUTES.PROFILE.replace(":id", user.orgId),
+          color: "text-purple-400",
+        },
+        ...(canViewOrgDashboard ? [{
+          name: "Organization Dashboard",
+          icon: LayoutDashboard,
+          href: ORGANIZER_ROUTES.DASHBOARD.replace(":id", user.orgId),
+          color: "text-indigo-400",
+        }] : []),
+      ]
+      : []),
   ];
 
   return (
     <>
-      <CreateTeamModal
-        isOpen={isCreateTeamOpen}
-        setIsOpen={setIsCreateTeamOpen}
-      />
-
       {isLoading ? (
         <Skeleton className="w-10 h-10 bg-purple-500/10 border border-purple-500/20 rounded-full" />
       ) : user ? (
@@ -117,9 +148,19 @@ const ProfileMenu = () => {
               {profileOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.name}
+                  onSelect={(e) => {
+                    if (!option.href) {
+                      e.preventDefault();
+                      // Apply 150ms timeout for Create Organization to allow menu to close
+                      if (option.name === "Create Organization") {
+                        setTimeout(() => option.onClick?.(), 150);
+                      } else {
+                        setTimeout(() => option.onClick?.(), 100);
+                      }
+                    }
+                  }}
                   onClick={() => {
                     if (option.href) navigate(option.href);
-                    else option.onClick?.();
                   }}
                   className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg cursor-pointer transition-colors focus:bg-purple-500/10 focus:text-white"
                 >

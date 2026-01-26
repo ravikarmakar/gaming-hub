@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { toast } from "react-hot-toast";
 import {
   Calendar,
@@ -50,7 +51,6 @@ const categories = ["Solo", "Duo", "Squad"] as const;
 
 export default function CreateTournament(): JSX.Element {
   const navigate = useNavigate();
-  const { id } = useParams();
 
   const { createEvent, error, isLoading } = useEventStore();
 
@@ -113,7 +113,7 @@ export default function CreateTournament(): JSX.Element {
     if (newEvent) {
       toast.success("Tournament created successfully!");
 
-      navigate(`/organizer-dashboard/${id}/tournaments`);
+      navigate(ORGANIZER_ROUTES.TOURNAMENTS);
     } else {
       toast.error(error || "Failed to create tournament. Please try again.");
     }
@@ -418,7 +418,7 @@ export default function CreateTournament(): JSX.Element {
                 <Button
                   onClick={handleSubmit}
                   disabled={isLoading}
-                  className="w-full py-6 text-lg font-semibold text-white transition-all shadow-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-blue-500/50"
+                  className="w-full py-6 text-lg font-semibold text-white transition-all shadow-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-purple-500/50"
                 >
                   Create Event
                 </Button>

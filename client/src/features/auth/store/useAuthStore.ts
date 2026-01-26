@@ -69,7 +69,7 @@ const getErrorMessage = (error: unknown, defaultMsg: string): string => {
     : "Network error. Please check your connection.";
 };
 
-export const useAuthStore = create<AuthStateTypes>((set) => ({
+export const useAuthStore = create<AuthStateTypes>((set, get) => ({
   user: null,
   error: null,
   isLoading: true,
@@ -133,7 +133,13 @@ export const useAuthStore = create<AuthStateTypes>((set) => ({
   },
 
   checkAuth: async () => {
-    set({ checkingAuth: true, error: null, isLoading: true });
+    const { user } = get();
+    // Only show global loading/checking state if we don't have a user yet
+    if (!user) {
+      set({ checkingAuth: true, isLoading: true });
+    }
+    set({ error: null });
+
     try {
       const response = await axiosInstance.get(AUTH_ENDPOINTS.GET_PROFILE);
       set({ user: response.data.user });

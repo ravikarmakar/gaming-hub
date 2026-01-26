@@ -131,6 +131,42 @@ export const handleNotificationAction = TryCatchHandler(async (req, res, next) =
 });
 
 /**
+ * @desc Get notifications for a specific organization
+ * @route GET /api/v1/notifications/org/:orgId
+ * @access Private
+ */
+export const getOrgNotifications = TryCatchHandler(async (req, res) => {
+    const { orgId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const notifications = await Notification.find({ "relatedData.orgId": orgId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("sender", "username avatar")
+        .populate("relatedData.teamId", "teamName imageUrl")
+        .populate("relatedData.eventId", "eventName banner");
+
+    const totalCount = await Notification.countDocuments({ "relatedData.orgId": orgId });
+    const unreadCount = await Notification.countDocuments({
+        "relatedData.orgId": orgId,
+        status: "unread",
+    });
+
+    res.status(200).json({
+        success: true,
+        notifications,
+        pagination: {
+            currentPage: Number(page),
+            totalPages: Math.ceil(totalCount / limit),
+            totalCount,
+            unreadCount,
+        },
+    });
+});
+
+/**
  * @desc Create a notification (Internal utility)
  */
 export const createNotification = async (data) => {

@@ -6,6 +6,7 @@ export const Roles = {
   },
   ORG: {
     OWNER: "org:owner",
+    CO_OWNER: "org:co_owner",
     MANAGER: "org:manager",
     STAFF: "org:staff",
     PLAYER: "org:player",

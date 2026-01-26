@@ -86,6 +86,9 @@ interface TeamStateTypes {
   error: null | string;
   currentTeam: Team | null;
   joinRequests: any[];
+  isCreateTeamOpen: boolean; // Added state
+  setIsCreateTeamOpen: (isOpen: boolean) => void; // Added action
+
   createTeam: (teamData: FormData) => Promise<Team | null>;
   getTeamById: (id: string, forceRefresh?: boolean) => Promise<Team | null>;
   updateMemberRole: (role: string, memberId: string) => Promise<Team | null>;
@@ -109,7 +112,7 @@ interface TeamStateTypes {
     append?: boolean;
   }) => Promise<void>;
   updateTeam: (teamData: FormData) => Promise<Team | null>;
-  inviteMember: (playerId: string) => Promise<{ success: boolean; message: string }>;
+  inviteMember: (playerId: string, message?: string) => Promise<{ success: boolean; message: string }>;
   sendJoinRequest: (teamId: string, message?: string) => Promise<{ success: boolean; message: string }>;
   fetchJoinRequests: () => Promise<void>;
   handleJoinRequest: (requestId: string, action: 'accepted' | 'rejected') => Promise<{ success: boolean; message: string }>;
@@ -137,6 +140,9 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
   error: null,
   currentTeam: null,
   joinRequests: [],
+  isCreateTeamOpen: false,
+
+  setIsCreateTeamOpen: (isOpen) => set({ isCreateTeamOpen: isOpen }),
 
   clearError: () => set({ error: null }),
 
@@ -407,12 +413,12 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
     }
   },
 
-  inviteMember: async (playerId: string) => {
+  inviteMember: async (playerId: string, message?: string) => {
     set({ isLoading: true, error: null });
     try {
       const response = await axiosInstance.post(
         TEAM_ENDPOINTS.INVITE_MEMBER,
-        { playerId }
+        { playerId, message }
       );
       set({ isLoading: false });
       return { success: true, message: response.data.message };

@@ -3,19 +3,21 @@ import { useParams } from "react-router-dom";
 import { Loader2, AlertCircle, Info, Trophy, Users, Globe, Target } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { TeamOrbs } from "../components/TeamOrbs";
 import { TeamHero } from "../components/TeamHero";
 import { TeamStatsGrid } from "../components/TeamStatsGrid";
 import { TeamMembersList } from "../components/TeamMembersList";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
-import { AccessControl } from "@/features/auth/ui/components/AccessControl";
+import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useAccess } from "@/features/auth/hooks/useAccess";
 import { TEAM_ACCESS as ACCESS } from "@/features/teams/lib/access";
 
 export default function TeamIdPage() {
   const { id } = useParams<{ id: string }>();
   const { currentTeam, getTeamById, isLoading, error } = useTeamStore();
+  const { can } = useAccess();
 
   useEffect(() => {
     if (id) {
@@ -142,7 +144,7 @@ export default function TeamIdPage() {
                         {currentTeam.isRecruiting ? 'YES' : 'NO'}
                       </span>
                     </div>
-                    <AccessControl check={ACCESS.MANAGE}>
+                    {can(ACCESS.settings) && (
                       <div className="flex items-center justify-between py-2">
                         <div className="flex items-center gap-2 text-gray-400 text-sm">
                           <Trophy className="w-4 h-4" />
@@ -152,7 +154,7 @@ export default function TeamIdPage() {
                           {currentTeam.isVerified ? 'VERIFIED' : 'CITIZEN'}
                         </span>
                       </div>
-                    </AccessControl>
+                    )}
                   </div>
                 </Card>
               </div>
