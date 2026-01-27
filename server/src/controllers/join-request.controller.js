@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 import JoinRequest from "../models/join-request.model.js";
 import Team from "../models/team.model.js";
 import User from "../models/user.model.js";
+import Event from "../models/event.model.js";
+import EventRegistration from "../models/event-registration.model.js";
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
 import { createNotification } from "./notification.controller.js";
@@ -114,103 +116,152 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
         if (action === "accepted") {
             const requester = await User.findById(joinRequest.requester);
             if (!requester) throw new CustomError("Requester not found", 404);
-            if (requester.teamId) throw new CustomError("Requester is already in a team", 400);
 
-            // 1. Update JoinRequest (Atomic)
+            if (joinRequest.targetModel === "Team") {
+                if (requester.teamId) throw new CustomError("Requester is already in a team", 400);
+                const team = joinRequest.target;
+
+                if (team.teamMembers.length >= 10) {
+                    throw new CustomError("Team is full (max 10 members).", 400);
+                }
+
+                await Team.findByIdAndUpdate(team._id, {
+                    $push: { teamMembers: { user: requester._id, roleInTeam: "player" } }
+                });
+
+                await User.findByIdAndUpdate(requester._id, {
+                    $set: { teamId: team._id },
+                    $push: {
+                        roles: {
+                            scope: Scopes.TEAM,
+                            role: Roles.TEAM.PLAYER,
+                            scopeId: team._id,
+                            scopeModel: "Team",
+                        }
+                    }
+                });
+
+                await createNotification({
+                    recipient: requester._id,
+                    sender: userId,
+                    type: "TEAM_JOIN_SUCCESS",
+                    content: { title: "Request Accepted!", message: `You joined ${team.teamName}.` },
+                    relatedData: { teamId: team._id },
+                });
+
+            } else if (joinRequest.targetModel === "Organizer") {
+                if (requester.orgId) throw new CustomError("Requester is already in an organization", 400);
+                const org = joinRequest.target;
+
+                await User.findByIdAndUpdate(requester._id, {
+                    $set: { orgId: org._id },
+                    $push: {
+                        roles: {
+                            scope: Scopes.ORG,
+                            role: Roles.ORG.STAFF,
+                            scopeId: org._id,
+                            scopeModel: "Organizer",
+                        }
+                    }
+                });
+
+                await createNotification({
+                    recipient: requester._id,
+                    sender: userId,
+                    type: "ORG_JOIN_SUCCESS",
+                    content: { title: "Staff Onboarding!", message: `You are now staff at ${org.name}.` },
+                    relatedData: { orgId: org._id },
+                });
+
+            } else if (joinRequest.targetModel === "Event") {
+                if (!requester.teamId) throw new CustomError("Requester must have a team to join events", 400);
+                const event = await Event.findById(joinRequest.target);
+                if (!event) throw new CustomError("Event not found", 404);
+
+                const team = await Team.findById(requester.teamId);
+                if (!team) throw new CustomError("Team not found", 404);
+
+                // Identify Core Roles and Substitutes
+                const coreRoles = ["igl", "rusher", "sniper", "support"];
+                const players = [];
+                const substitutes = [];
+                const foundCoreRoles = new Set();
+
+                team.teamMembers.forEach(member => {
+                    if (member.isActive) {
+                        if (coreRoles.includes(member.roleInTeam)) {
+                            players.push(member.user);
+                            foundCoreRoles.add(member.roleInTeam);
+                        } else {
+                            substitutes.push(member.user);
+                        }
+                    }
+                });
+
+                if (foundCoreRoles.size < 4) {
+                    throw new CustomError("Team must have an IGL, Rusher, Sniper, and Support to join.", 400);
+                }
+
+                // Create EventRegistration
+                await EventRegistration.create({
+                    eventId: event._id,
+                    teamId: requester.teamId,
+                    status: "approved",
+                    players,
+                    substitutes,
+                });
+
+                event.joinedSlots = (event.joinedSlots || 0) + 1;
+                await event.save();
+
+                await createNotification({
+                    recipient: requester._id,
+                    sender: userId,
+                    type: "EVENT_REGISTRATION_SUCCESS",
+                    content: { title: "Deployment Approved!", message: `Your team joined ${event.title}.` },
+                    relatedData: { eventId: event._id },
+                });
+            }
+
+            // Update JoinRequest status common for all
             await JoinRequest.findByIdAndUpdate(requestId, {
                 status: "accepted",
                 handledBy: userId,
                 handledAt: new Date()
             });
 
-            // 2. Add to team (Atomic)
-            const team = joinRequest.target;
-
-            // Check limit
-            if (team.teamMembers.length >= 10) {
-                throw new CustomError("Team is full (max 10 members). Cannot accept new members.", 400);
+            // Handle any side effects like rejecting other team requests if user joined one
+            if (joinRequest.targetModel === "Team") {
+                await JoinRequest.updateMany(
+                    { requester: requester._id, targetModel: "Team", status: "pending" },
+                    { status: "rejected", message: "User has joined another team" }
+                );
+                await redis.del(`user_profile:${requester._id}`);
             }
 
-            await Team.findByIdAndUpdate(team._id, {
-                $push: { teamMembers: { user: requester._id, roleInTeam: "player" } }
-            });
-
-            // 3. Update user teamId and roles (Atomic)
-            await User.findByIdAndUpdate(requester._id, {
-                $set: { teamId: team._id },
-                $push: {
-                    roles: {
-                        scope: Scopes.TEAM,
-                        role: Roles.TEAM.PLAYER,
-                        scopeId: team._id,
-                        scopeModel: "Team",
-                    }
-                }
-            });
-
-            // 4. Reject other pending requests for this user (Atomic)
-            await JoinRequest.updateMany(
-                { requester: requester._id, status: "pending" },
-                { status: "rejected", message: "User has joined another team" }
-            );
-
-            // Notify Player
-            await createNotification({
-                recipient: requester._id,
-                sender: userId,
-                type: "TEAM_JOIN_SUCCESS",
-                content: {
-                    title: "Request Accepted!",
-                    message: `Your request to join ${team.teamName} has been accepted. Welcome!`,
-                },
-                relatedData: { teamId: team._id },
-            });
-
-            // Invalidate Redis cache for new member
-            await redis.del(`user_profile:${requester._id}`);
-
         } else {
-            // Rejection logic
+            // Rejection logic for all
             await JoinRequest.findByIdAndUpdate(requestId, {
                 status: "rejected",
                 handledBy: userId,
                 handledAt: new Date()
             });
 
-            // Notify Player
             await createNotification({
                 recipient: joinRequest.requester,
                 sender: userId,
-                type: "TEAM_JOIN_REJECT",
+                type: "REQUEST_DECLINED",
                 content: {
                     title: "Request Declined",
-                    message: `Your request to join ${joinRequest.target.teamName} was declined.`,
+                    message: `Your request for ${joinRequest.targetModel.toLowerCase()} access was declined.`,
                 },
-                relatedData: { teamId: joinRequest.target._id },
+                relatedData: { targetId: joinRequest.target._id, model: joinRequest.targetModel },
             });
         }
 
-        // Fetch full team data after update to sync frontend
-        const updatedTeamDoc = await Team.findById(joinRequest.target._id)
-            .populate("teamMembers.user", "username avatar _id")
-            .lean();
-
-        const transformedTeam = {
-            ...updatedTeamDoc,
-            teamMembers: updatedTeamDoc.teamMembers.map(member => ({
-                user: member.user._id,
-                roleInTeam: member.roleInTeam,
-                username: member.user.username,
-                avatar: member.user.avatar,
-                joinedAt: member.joinedAt,
-                isActive: member.isActive,
-            })),
-        };
-
         res.status(200).json({
             success: true,
-            message: `Join request ${action} successfully`,
-            team: action === "accepted" ? transformedTeam : null
+            message: `Request ${action} successfully`,
         });
     } catch (error) {
         next(error);

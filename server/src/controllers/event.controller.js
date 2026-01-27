@@ -4,6 +4,8 @@ import mongoose from "mongoose";
 import Organizer from "../models/organizer.model.js";
 import User from "../models/user.model.js";
 import Event from "../models/event.model.js";
+import EventRegistration from "../models/event-registration.model.js";
+import JoinRequest from "../models/join-request.model.js";
 
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
@@ -39,14 +41,14 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
     return handleError("Organization not found or inactive", 404);
   }
 
-  const isOrgOwner = roles.some(
+  const hasAuth = roles.some(
     (r) =>
       r.scope === "org" &&
-      r.scopeModel === "Organization" &&
-      r.role === "org:owner" &&
+      r.scopeModel === "Organizer" &&
+      (r.role === "org:owner" || r.role === "org:manager") &&
       r.scopeId.toString() === user.orgId.toString()
   );
-  if (!isOrgOwner)
+  if (!hasAuth)
     return handleError("Not authorized for this organization", 403);
 
   for (const field of requiredFields) {
@@ -56,16 +58,12 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
   }
 
   const startDate = new Date(req.body.startDate);
-  const registrationEnds = new Date(req.body.registrationEnds);
+  const registrationEndsAt = new Date(req.body.registrationEndsAt);
 
-  if (registrationEnds >= startDate) {
-    return next(
-      new CustomError("Registration must end before event start", 400)
-    );
-  }
 
-  if (Number(req.body.slots) <= 0) {
-    return handleError("Slots must be greater than 0", 400);
+  const slotsNum = Number(req.body.slots);
+  if (isNaN(slotsNum) || slotsNum <= 0) {
+    return handleError("Slots must be a number greater than 0", 400);
   }
 
   if (Number(req.body.prizePool) < 0) {
@@ -98,12 +96,21 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
   }
 
   const event = await Event.create({
-    ...req.body,
+    title: req.body.title,
+    game: req.body.game,
+    eventType: (req.body.eventType || "tournament").toLowerCase(),
+    category: (req.body.category || "solo").toLowerCase(),
+    startDate,
+    registrationEndsAt,
+    maxSlots: slotsNum,
+    registrationMode: req.body.registrationMode || "open",
+    status: req.body.status || "registration-open",
     orgId: user.orgId,
-    createdBy: user._id,
+    description: req.body.description,
+    prizePool: Number(req.body.prizePool) || 0,
     image: imageUrl,
-    trending: false,
-    eventEndsAt: req.body.registrationEndsAt,
+    eventEndAt: req.body.eventEndAt ? new Date(req.body.eventEndAt) : null,
+    prizeDistribution: req.body.prizeDistribution ? (typeof req.body.prizeDistribution === 'string' ? JSON.parse(req.body.prizeDistribution) : req.body.prizeDistribution) : [],
   });
 
   res.status(201).json(event);
@@ -139,15 +146,11 @@ export const fetchEventDetailsById = TryCatchHandler(async (req, res, next) => {
     return next(new AppError("Invalid event id", 400));
   }
 
-  const event = await Event.findById(eventId);
+  const event = await Event.findByIdAndUpdate(eventId, { $inc: { views: 1 } }, { new: true });
 
   if (!event) {
     return next(new CustomError("Event not found", 404));
   }
-
-  // Optional: increase views count
-  // event.views += 1;
-  // await event.save();
 
   res.status(200).json({
     success: true,
@@ -198,56 +201,126 @@ export const registerEvent = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Event registration is not open", 400));
   }
 
-  // Slot check
-  if (event.teamId.length >= event.slots) {
-    return next(new CustomError("Event registration is full", 400));
+  // Check if already registered or requested
+  const existingReg = await EventRegistration.findOne({ eventId, teamId: team._id });
+  if (existingReg) {
+    return next(new CustomError("Your team is already registered for this event", 400));
   }
 
-  // Duplicate check
-  const isAlreadyRegistered = event.teamId.some(
-    (id) => id.toString() === team._id.toString()
-  );
-  if (isAlreadyRegistered) {
-    return next(
-      new CustomError("Your team is already registered for this event", 400)
-    );
-  }
-
-  // Register team
-  event.teamId.push(team._id);
-  await event.save();
-
-  // Update team history
-  if (!team.playedTournaments.includes(eventId)) {
-    team.playedTournaments.push(eventId);
-    await team.save();
-  }
-
-  // Update users history
-  await User.updateMany(
-    {
-      _id: { $in: team.teamMembers.map((m) => m.user) },
-      eventHistory: { $ne: eventId },
-    },
-    { $push: { eventHistory: eventId } }
-  );
-
-  return res.status(200).json({
-    success: true,
-    message: "Yor Team successfully registered for the tournament",
+  const existingReq = await JoinRequest.findOne({
+    requester: userId,
+    target: eventId,
+    targetModel: "Event",
+    status: "pending"
   });
+  if (existingReq) {
+    return next(new CustomError("You already have a pending registration request", 400));
+  }
+
+  if (event.registrationMode === "open") {
+    // 1. Identify Core Roles and Substitutes
+    const coreRoles = ["igl", "rusher", "sniper", "support"];
+    const players = [];
+    const substitutes = [];
+
+    // Map to track if we found at least one of each core role
+    const foundCoreRoles = new Set();
+
+    team.teamMembers.forEach(member => {
+      if (member.isActive) {
+        if (coreRoles.includes(member.roleInTeam)) {
+          players.push(member.user);
+          foundCoreRoles.add(member.roleInTeam);
+        } else {
+          substitutes.push(member.user);
+        }
+      }
+    });
+
+    // Handle duplicate core roles (if team has 2 rushers, only one is required for 'core', but user wants all core roles registered)
+    // Actually per user: "IGL, Rusher, Sniper, and Support roles will be automatically registered... Any other roles will be listed as substitutes."
+    // And "Any other roles will be listed as substitutes."
+    // And "they fift player can register... if 4 player crotore these okay"
+
+    // Validation: Must have at least one of each core role
+    if (foundCoreRoles.size < 4) {
+      return next(new CustomError("Your team must have an IGL, Rusher, Sniper, and Support to register.", 400));
+    }
+
+    // Register team directly
+    await EventRegistration.create({
+      eventId: event._id,
+      teamId: team._id,
+      status: "approved",
+      players,
+      substitutes,
+    });
+
+    // Increment joinedSlots on event
+    event.joinedSlots = (event.joinedSlots || 0) + 1;
+    await event.save();
+
+    // Update team and user history (as before)
+    if (!team.playedTournaments.includes(eventId)) {
+      team.playedTournaments.push(eventId);
+      await team.save();
+    }
+    await User.updateMany(
+      { _id: { $in: team.teamMembers.map((m) => m.user) }, eventHistory: { $ne: eventId } },
+      { $push: { eventHistory: eventId } }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Your Team successfully registered for the tournament",
+    });
+  } else {
+    // Create JoinRequest for invite-only event
+    await JoinRequest.create({
+      requester: userId,
+      target: eventId,
+      targetModel: "Event",
+      message: `Team ${team.teamName} wants to join ${event.title}.`,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Registration request sent to organizer for approval",
+    });
+  }
 });
 
 export const isTeamRegistered = TryCatchHandler(async (req, res, next) => {
   const { eventId, teamId } = req.params;
 
-  const event = await Event.findOne({
-    _id: eventId,
-    teamId: teamId,
+  // Check approved registration
+  const registration = await EventRegistration.findOne({
+    eventId,
+    teamId,
   });
 
+  if (registration) {
+    return res.json({ registered: true, status: "approved" });
+  }
+
+  // Check pending request (since teamId is at User level, we check for User's pending request for this Event)
+  const user = await User.findOne({ teamId });
+  if (user) {
+    const request = await JoinRequest.findOne({
+      requester: user._id,
+      target: eventId,
+      targetModel: "Event",
+      status: "pending",
+    });
+
+    if (request) {
+      return res.json({ registered: true, status: "pending" });
+    }
+  }
+
   res.json({
-    registered: !!event,
+    registered: false,
+    status: "none",
   });
 });
 
@@ -255,17 +328,15 @@ export const fetchAllRegisteredTeams = TryCatchHandler(
   async (req, res, next) => {
     const { eventId } = req.params;
 
-    const event = await Event.findById(eventId)
+    const registrations = await EventRegistration.find({ eventId })
       .populate("teamId", "teamName imageUrl")
-      .select("teamsId");
+      .lean();
 
-    if (!event) {
-      return next(new CustomError("Event not found", 404));
-    }
+    const teams = registrations.map(reg => reg.teamId);
 
     return res.status(200).json({
-      totalTeams: event.teamId.length,
-      teams: event.teamId,
+      totalTeams: teams.length,
+      teams: teams,
     });
   }
 );
@@ -300,25 +371,84 @@ export const closeRegistration = async (req, res) => {
 };
 
 // Update Event
-export const updateEvent = async (req, res) => {
-  try {
-    const updatedEvent = await Event.findByIdAndUpdate(
-      req.params.eventId,
-      req.body,
-      { new: true }
-    );
+export const updateEvent = TryCatchHandler(async (req, res, next) => {
+  const { eventId } = req.params;
+  const { userId, roles } = req.user;
 
-    if (!updatedEvent) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Event not found" });
-    }
-
-    res.status(200).json({ success: true, event: updatedEvent });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  const event = await Event.findById(eventId);
+  if (!event) {
+    return next(new CustomError("Event not found", 404));
   }
-};
+
+  const user = await findUserById(userId);
+  const hasAuth = roles.some(
+    (r) =>
+      r.scope === "org" &&
+      r.scopeModel === "Organizer" &&
+      (r.role === "org:owner" || r.role === "org:manager") &&
+      r.scopeId.toString() === event.orgId.toString()
+  );
+
+  if (!hasAuth) {
+    return next(new CustomError("Not authorized to update this event", 403));
+  }
+
+  // Handle image update if file provided
+  let imageUrl = event.image;
+  if (req.file) {
+    /*
+    const imageKitResponse = await uploadOnImageKit(req.file.path, req.file.filename, "events");
+    if (imageKitResponse) {
+      imageUrl = imageKitResponse.url;
+    }
+    */
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+  }
+
+  const updateData = { ...req.body };
+
+  if (req.body.slots) {
+    updateData.maxSlots = Number(req.body.slots);
+    delete updateData.slots;
+  }
+
+  if (req.body.prizePool) {
+    updateData.prizePool = Number(req.body.prizePool);
+  }
+
+  if (imageUrl) {
+    updateData.image = imageUrl;
+  }
+
+  if (req.body.category) {
+    updateData.category = req.body.category.toLowerCase();
+  }
+
+  if (req.body.eventType) {
+    updateData.eventType = req.body.eventType.toLowerCase();
+  }
+
+  if (req.body.prizeDistribution) {
+    try {
+      updateData.prizeDistribution = typeof req.body.prizeDistribution === 'string' ? JSON.parse(req.body.prizeDistribution) : req.body.prizeDistribution;
+    } catch (e) {
+      console.error("Error parsing prizeDistribution:", e);
+    }
+  }
+
+  const updatedEvent = await Event.findByIdAndUpdate(eventId, updateData, {
+    new: true,
+    runValidators: true,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Event updated successfully",
+    event: updatedEvent,
+  });
+});
 
 // Delete Event
 export const deleteEvent = async (req, res) => {
@@ -338,6 +468,37 @@ export const deleteEvent = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const unregisterEvent = TryCatchHandler(async (req, res, next) => {
+  const { userId } = req.user;
+  const { eventId } = req.params;
+
+  const user = await findUserById(userId);
+  if (!user.teamId) {
+    return next(new CustomError("You are not part of any team", 400));
+  }
+
+  const registration = await EventRegistration.findOneAndDelete({
+    eventId,
+    teamId: user.teamId,
+  });
+
+  if (!registration) {
+    return next(new CustomError("You are not registered for this event", 400));
+  }
+
+  // Decrement joinedSlots on event
+  const event = await Event.findById(eventId);
+  if (event) {
+    event.joinedSlots = Math.max(0, (event.joinedSlots || 0) - 1);
+    await event.save();
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Successfully unregistered from the event",
+  });
+});
 
 export const getAllEvents = TryCatchHandler(async (req, res, next) => {
   try {

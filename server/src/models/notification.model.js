@@ -31,7 +31,7 @@ const notificationSchema = new mongoose.Schema(
         relatedData: {
             teamId: { type: mongoose.Schema.Types.ObjectId, ref: "Team" },
             eventId: { type: mongoose.Schema.Types.ObjectId, ref: "Event" },
-            orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization" },
+            orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organizer" },
             inviteId: { type: mongoose.Schema.Types.ObjectId }, // Generic ID for action-based notifications
         },
         actions: [

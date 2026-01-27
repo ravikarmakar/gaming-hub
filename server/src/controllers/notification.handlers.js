@@ -116,7 +116,7 @@ export const notificationHandlers = {
                             scope: Scopes.ORG,
                             role: invitedRole,
                             scopeId: orgId,
-                            scopeModel: "Organization",
+                            scopeModel: "Organizer",
                         },
                     },
                 });

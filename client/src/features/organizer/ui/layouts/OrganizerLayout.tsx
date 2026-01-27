@@ -48,6 +48,7 @@ const organizerSidebarLinks = [
     label: "Add Tournaments",
     icon: PlusCircle,
     href: ORGANIZER_ROUTES.ADD_TOURNAMENTS,
+    matches: [ORGANIZER_ROUTES.EDIT_TOURNAMENT],
     access: ORG_ACCESS.createTournament,
   },
   {

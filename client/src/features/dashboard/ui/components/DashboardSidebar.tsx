@@ -29,6 +29,7 @@ interface SidebarItem {
   label: string;
   icon: React.ElementType;
   href: string;
+  matches?: string[];
 }
 
 interface Props {
@@ -77,15 +78,15 @@ export const DashboardSidebar = ({ sidebarItems }: Props) => {
         <SidebarGroupContent className="px-3">
           <SidebarMenu className="space-y-0.5">
             {sidebarItems.map((item) => {
-              const isActive =
+              const isMatch = (item: SidebarItem) =>
                 pathname === item.href ||
-                (item.href !== '/' &&
-                  pathname.startsWith(item.href) &&
-                  !sidebarItems.some(other =>
-                    other.href !== item.href &&
-                    other.href.length > item.href.length &&
-                    pathname.startsWith(other.href)
-                  ));
+                item.matches?.some(match => pathname === match || pathname.startsWith(match + "/")) ||
+                (item.href !== '/' && pathname.startsWith(item.href + "/"));
+
+              const isActive = isMatch(item) && !sidebarItems.some(other =>
+                other.href !== item.href &&
+                (isMatch(other) && (other.href.length > item.href.length || (other.matches && !item.matches)))
+              );
 
               return (
                 <SidebarMenuItem key={item.href}>

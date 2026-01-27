@@ -186,6 +186,10 @@ export const PlayerSearchCommand = ({
                   const isAlreadyInTeam = !!player.teamId || existingMemberIds.includes(player._id);
                   const isInviting = invitingId === player._id;
 
+                  const normalizedAvatar = player.avatar?.includes("default-avatar-url.com")
+                    ? `https://ui-avatars.com/api/?name=${player.username}&background=random`
+                    : (player.avatar || `https://ui-avatars.com/api/?name=${player.username}&background=random`);
+
                   return (
                     <CommandItem
                       key={player._id}
@@ -193,18 +197,18 @@ export const PlayerSearchCommand = ({
                       onSelect={() => !isAlreadyInTeam && !isInvited && toggleSelection(player._id!)}
                       disabled={isAlreadyInTeam || isInvited}
                       className={`
-                      px-3 py-3 mx-2 my-1 rounded-lg cursor-pointer
-                      transition-all duration-200
-                      hover:bg-white/5
-                      data-[selected=true]:bg-white/5
-                      ${isSelected ? "bg-purple-500/10 border border-purple-500/20" : "border border-transparent"}
-                      ${isAlreadyInTeam || isInvited ? "opacity-50 cursor-not-allowed grayscale-[0.5]" : ""}
-                    `}
+                        px-3 py-3 mx-2 my-1 rounded-lg cursor-pointer
+                        transition-all duration-200
+                        hover:bg-white/5
+                        data-[selected=true]:bg-white/5
+                        ${isSelected ? "bg-purple-500/10 border border-purple-500/20" : "border border-transparent"}
+                        ${isAlreadyInTeam || isInvited ? "opacity-50 cursor-not-allowed grayscale-[0.5]" : ""}
+                      `}
                     >
                       <div className="flex items-center gap-3 w-full min-h-[44px]">
                         {/* Avatar */}
                         <Avatar className="w-9 h-9 border border-purple-500/20">
-                          <AvatarImage src={player.avatar} alt={player.username} />
+                          <AvatarImage src={normalizedAvatar} alt={player.username} />
                           <AvatarFallback className="bg-gradient-to-br from-purple-500/20 to-blue-500/20 text-white text-sm">
                             {player.username.charAt(0).toUpperCase()}
                           </AvatarFallback>

@@ -2,6 +2,7 @@ export const TEAM_BASE = "/dashboard/team";
 
 export const TEAM_ROUTES = {
     DASHBOARD: TEAM_BASE,
+    ALL_TEAMS: "/teams",
     PROFILE: "/team/:id",
     MEMBERS: `${TEAM_BASE}/members`,
     PERFORMANCE: `${TEAM_BASE}/performance`,

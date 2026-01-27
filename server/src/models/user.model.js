@@ -34,7 +34,7 @@ const userSchema = new mongoose.Schema(
     oauthProvider: { type: String }, // "google", "discord", etc.
     avatar: {
       type: String,
-      default: "https://default-avatar-url.com/avatar.png",
+      default: "https://ui-avatars.com/api/?name=gamer&background=random",
     },
     isAccountVerified: { type: Boolean, default: false },
     verifyOtp: { type: String, default: "", select: false },

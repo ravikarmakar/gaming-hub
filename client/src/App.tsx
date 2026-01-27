@@ -4,23 +4,24 @@ import { Route, Routes } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
 
 // Stores & Constants
-import { ROUTES } from "./lib/routes";
+import { ROUTES } from "@/lib/routes";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
-import { useAuthStore } from "./features/auth/store/useAuthStore";
+import { EVENT_ROUTES } from "@/features/events/lib/routes";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
 // Layouts & Guards
 import AuthLayout from "@/features/auth/ui/components/auth-layout";
 import MainLayout from "@/components/layouts/MainLayout";
-import ProtectedRoute from "./guards/ProtectedRoute";
-import PublicRoute from "./guards/PublicRoute";
+import ProtectedRoute from "@/guards/ProtectedRoute";
+import PublicRoute from "@/guards/PublicRoute";
 
 // Shared Components
-import { NotFound } from "./components/NotFound";
-import LoadingSpinner from "./components/LoadingSpinner";
-import { ErrorFallback } from "./components/ErrorFallback";
+import { NotFound } from "@/components/NotFound";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { ErrorFallback } from "@/components/ErrorFallback";
 import CreateOrgDialog from "@/features/organizer/ui/components/CreateOrgDialog";
-import CreateTeamModal from "./features/teams/ui/components/CreateTeamModal";
+import CreateTeamModal from "@/features/teams/ui/components/CreateTeamModal";
 
 // Lazy Loaded Pages
 const HomePage = lazy(() => import("@/features/home/ui/pages/HomePage"));
@@ -35,7 +36,7 @@ const OrganizerProfile = lazy(() => import("@/features/organizer/ui/pages/Organi
 const OrganizerDashboard = lazy(() => import("@/features/organizer/ui/pages/OrganizerDashboard"));
 const OrganizerMemberPage = lazy(() => import("@/features/organizer/ui/pages/OrganizerMemberPage"));
 const OrganizerLayout = lazy(() => import("@/features/organizer/ui/layouts/OrganizerLayout"));
-const ViewEventOrg = lazy(() => import("@/features/organizer/ui/pages/ViewEventOrg"));
+const OrganizerTournaments = lazy(() => import("@/features/organizer/ui/pages/OrganizerTournaments"));
 const OrganizerSettingsPage = lazy(() => import("@/features/organizer/ui/pages/OrganizerSettingsPage"));
 const OrganizerJoinRequestsPage = lazy(() => import("@/features/organizer/ui/pages/OrganizerJoinRequestsPage"));
 const OrganizerNotificationsPage = lazy(() => import("@/features/organizer/ui/pages/OrganizerNotificationsPage"));
@@ -46,22 +47,22 @@ const FindPlayers = lazy(() => import("@/features/player/ui/pages/FindPlayers"))
 
 // Team Features
 const TeamIdPage = lazy(() => import("@/features/teams/ui/pages/TeamIdPage"));
-const TeamDashboard = lazy(() => import("./features/teams/ui/pages/TeamDashboard"));
-const TeamDashboardLayout = lazy(() => import("./features/teams/ui/layouts/TeamLayout"));
+const TeamDashboard = lazy(() => import("@/features/teams/ui/pages/TeamDashboard"));
+const TeamDashboardLayout = lazy(() => import("@/features/teams/ui/layouts/TeamLayout"));
 const TeamMembersPage = lazy(() => import("@/features/teams/ui/pages/TeamMembersPage"));
 const TeamStaffPage = lazy(() => import("@/features/teams/ui/pages/TeamStaffPage"));
 const TeamNotificationsPage = lazy(() => import("@/features/teams/ui/pages/TeamNotificationsPage"));
 const TeamSettings = lazy(() => import("@/features/teams/ui/pages/TeamSettings"));
-const AllTeams = lazy(() => import("@/features/teams/ui/pages/FindTeams"));
+const Teams = lazy(() => import("@/features/teams/ui/pages/FindTeams"));
 
 // Event/Tournament Features
 const CreateTournament = lazy(() => import("@/features/events/ui/pages/CreateTournament"));
-const ViewEventById = lazy(() => import("@/features/events/ui/pages/ViewEventById"));
-const ViewAllEvents = lazy(() => import("@/features/events/ui/pages/ViewAllEvents"));
+const TournamentById = lazy(() => import("@/features/events/ui/pages/TournamentById"));
+const AllTournaments = lazy(() => import("@/features/events/ui/pages/AllTournaments"));
 
 // Super Admin
 const SuperAdminLayout = lazy(() => import("@/components/layouts/SuperAdminLayout"));
-const DashboardPage = lazy(() => import("./pages/super-admin/DashboardPage"));
+const DashboardPage = lazy(() => import("@/pages/super-admin/DashboardPage"));
 
 // Notification Features
 const NotificationsPage = lazy(() => import("@/features/notifications/ui/pages/NotificationsPage"));
@@ -91,8 +92,8 @@ const App = () => {
           <Routes>
             <Route element={<MainLayout />}>
               <Route index element={<HomePage />} />
-              <Route path={ROUTES.ALL_EVENTS} element={<ViewAllEvents />} />
-              <Route path={ROUTES.ALL_TEAMS} element={<AllTeams />} />
+              <Route path={EVENT_ROUTES.TOURNAMENTS} element={<AllTournaments />} />
+              <Route path={TEAM_ROUTES.ALL_TEAMS} element={<Teams />} />
 
               <Route element={<ProtectedRoute />}>
                 <Route path={ROUTES.EMAIL_VERIFY} element={<VerifyEmail />} />
@@ -101,7 +102,7 @@ const App = () => {
                 <Route path={ROUTES.PLAYER_PROFILE} element={<PlayerIdPage />} />
                 <Route path={TEAM_ROUTES.PROFILE} element={<TeamIdPage />} />
                 <Route path={ROUTES.NOTIFICATIONS} element={<NotificationsPage />} />
-                <Route path={ROUTES.EVENT_DETAILS} element={<ViewEventById />} />
+                <Route path={EVENT_ROUTES.TOURNAMENT_DETAILS} element={<TournamentById />} />
               </Route>
             </Route>
 
@@ -123,8 +124,9 @@ const App = () => {
               <Route path={ORGANIZER_ROUTES.DASHBOARD} element={<OrganizerLayout />}>
                 <Route index element={<OrganizerDashboard />} />
                 <Route path={ORGANIZER_ROUTES.MEMBERS} element={<OrganizerMemberPage />} />
-                <Route path={ORGANIZER_ROUTES.TOURNAMENTS} element={<ViewEventOrg />} />
+                <Route path={ORGANIZER_ROUTES.TOURNAMENTS} element={<OrganizerTournaments />} />
                 <Route path={ORGANIZER_ROUTES.ADD_TOURNAMENTS} element={<CreateTournament />} />
+                <Route path={ORGANIZER_ROUTES.EDIT_TOURNAMENT} element={<CreateTournament />} />
                 <Route path={ORGANIZER_ROUTES.ANALYTICS} element={<div>Analytics</div>} />
                 <Route path={ORGANIZER_ROUTES.NOTIFICATIONS} element={<OrganizerNotificationsPage />} />
                 <Route path={ORGANIZER_ROUTES.JOIN_REQUESTS} element={<OrganizerJoinRequestsPage />} />

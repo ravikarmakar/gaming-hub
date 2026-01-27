@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Upload, X, Check, AlertTriangle, FileIcon } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Upload, X, AlertTriangle, ImageIcon, FileText } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface FileUploadProps {
   label?: string;
@@ -10,7 +11,7 @@ interface FileUploadProps {
   maxSize?: number;
   error?: string;
   onChange: (file: File | null) => void;
-  value?: File | null;
+  value?: File | null | string;
   hint?: string;
   required?: boolean;
   disabled?: boolean;
@@ -22,8 +23,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
   label,
   name,
   id,
-  accept = "image/*",
-  maxSize = 5 * 1024 * 1024,
+  accept = "image/*,application/pdf",
+  maxSize = 10 * 1024 * 1024,
   error,
   onChange,
   value,
@@ -34,13 +35,20 @@ const FileUpload: React.FC<FileUploadProps> = ({
   compact = false,
 }) => {
   const [internalFile, setInternalFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(typeof value === "string" ? value : null);
   const [isDragging, setIsDragging] = useState(false);
   const [internalErrors, setInternalErrors] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setInternalFile(value || null);
+    if (value instanceof File) {
+      setInternalFile(value);
+    } else if (typeof value === "string") {
+      setPreview(value);
+    } else if (value === null) {
+      setInternalFile(null);
+      setPreview(null);
+    }
   }, [value]);
 
   const validateAndPreviewFile = useCallback(
@@ -50,73 +58,45 @@ const FileUpload: React.FC<FileUploadProps> = ({
       if (file) {
         if (file.size > maxSize) {
           newErrors.push(
-            `File size exceeds the limit of ${Math.round(
-              maxSize / (1024 * 1024)
-            )}MB.`
+            `File exceeds ${Math.round(maxSize / (1024 * 1024))}MB limit.`
           );
         }
 
-        // Validate file type
         const acceptedTypesArray = accept.split(",").map((type) => type.trim());
-        const isImageAccept = acceptedTypesArray.some(
-          (type) => type === "image/*" || type.startsWith("image/")
-        );
+        const isImage = file.type.startsWith("image/");
 
-        if (isImageAccept && !file.type.startsWith("image/")) {
-          newErrors.push("Only image files are supported for preview.");
-        } else if (
-          !acceptedTypesArray.includes(file.type) &&
-          !isImageAccept &&
-          !acceptedTypesArray.includes("application/pdf")
-        ) {
-          // More robust check for specific types if not image/*
-          newErrors.push(
-            `File type '${file.type
-            }' not supported. Accepted: ${acceptedTypesArray.join(", ")}`
-          );
+        const isAccepted = acceptedTypesArray.some(type => {
+          if (type === "image/*") return isImage;
+          return file.type === type;
+        });
+
+        if (!isAccepted) {
+          newErrors.push(`Format ${file.type.split('/')[1].toUpperCase()} not supported.`);
         }
 
-        // Create preview for images
-        if (file.type.startsWith("image/")) {
+        if (isImage) {
           const reader = new FileReader();
-          reader.onloadend = () => {
-            setPreview(reader.result as string);
-          };
+          reader.onloadend = () => setPreview(reader.result as string);
           reader.readAsDataURL(file);
         } else {
-          // For non-image files (e.g., PDFs), no preview image
           setPreview(null);
         }
-      } else {
-        setPreview(null);
       }
 
       setInternalErrors(newErrors);
-      onChange(newErrors.length > 0 ? null : file); // Notify react-hook-form
+      if (newErrors.length === 0) {
+        onChange(file);
+      } else {
+        onChange(null);
+      }
     },
     [maxSize, accept, onChange]
   );
 
-  // Handle file input change event
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
-    setInternalFile(file); // Update internal state immediately
-    validateAndPreviewFile(file); // Validate and trigger onChange
-  };
-
-  // Drag and drop handlers
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (disabled) return;
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (disabled) return;
-    setIsDragging(false);
+    setInternalFile(file);
+    validateAndPreviewFile(file);
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -124,198 +104,141 @@ const FileUpload: React.FC<FileUploadProps> = ({
     e.stopPropagation();
     if (disabled) return;
     setIsDragging(false);
-
     const file = e.dataTransfer.files?.[0] || null;
-    setInternalFile(file); // Update internal state immediately
-    validateAndPreviewFile(file); // Validate and trigger onChange
+    setInternalFile(file);
+    validateAndPreviewFile(file);
   };
 
-  // Remove the selected file
-  const removeFile = () => {
+  const removeFile = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setInternalFile(null);
     setPreview(null);
     setInternalErrors([]);
-    onChange(null); // Notify react-hook-form about removal
-
-    // Reset the native input value to allow selecting the same file again
-    if (inputRef.current) {
-      inputRef.current.value = "";
-    }
+    onChange(null);
+    if (inputRef.current) inputRef.current.value = "";
   };
 
-  // Combine internal errors with errors from react-hook-form/zod
   const displayedErrors = [...internalErrors, ...(error ? [error] : [])];
-  const isImage = internalFile?.type.startsWith("image/");
-  const showFileIcon = !isImage || !preview; // Show generic file icon if not image or no preview
+  const isImage = internalFile?.type.startsWith("image/") || (preview && typeof value === 'string');
 
   return (
-    <div className={`${compact ? "space-y-1" : "space-y-1.5"} ${className || ""}`}>
+    <div className={cn("space-y-2", className)}>
       {label && (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-1 px-1">
           <label
             htmlFor={id || name}
-            className="block text-sm font-medium text-gray-200"
+            className="text-[10px] font-black text-gray-500 uppercase tracking-widest"
           >
-            {label} {required && <span className="text-purple-400">*</span>}
+            {label} {required && <span className="text-purple-500">*</span>}
           </label>
-
-          {hint && (
-            <span className="text-xs text-gray-400 transition-colors duration-200 group-hover:text-gray-300">
-              {hint}
-            </span>
-          )}
+          {hint && <span className="text-[10px] text-gray-600 font-bold uppercase">{hint}</span>}
         </div>
       )}
 
-      <div className="relative group">
-        {/* Gradient border effect (visual flair) */}
-        <div
-          className={`
-            absolute -inset-0.5 rounded-lg blur-sm opacity-0 transition-opacity duration-300
-            ${isDragging ? "opacity-50" : "group-hover:opacity-20"}
-            bg-gradient-to-r from-purple-600 to-blue-600
-            ${disabled ? "hidden" : ""}
-          `}
-        ></div>
+      <div
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => !disabled && inputRef.current?.click()}
+        className={cn(
+          "relative group cursor-pointer transition-all duration-500",
+          "rounded-2xl border-2 border-dashed overflow-hidden",
+          isDragging ? "border-purple-500 bg-purple-500/10 shadow-glow" : "border-white/10 bg-white/5 hover:border-white/20",
+          displayedErrors.length > 0 ? "border-rose-500/50 bg-rose-500/5" : "",
+          disabled && "opacity-50 cursor-not-allowed"
+        )}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          id={id || name}
+          name={name}
+          accept={accept}
+          onChange={handleInputChange}
+          className="hidden"
+          disabled={disabled}
+        />
 
-        {/* Upload area - styled like a shadcn Input */}
-        <div
-          className={`
-            relative bg-gray-900/80 rounded-lg overflow-hidden
-            ${displayedErrors.length > 0
-              ? "border border-red-500/50"
-              : "border border-gray-700 group-hover:border-gray-600"
-            }
-            ${isDragging
-              ? "border-purple-500/70 shadow-[0_0_10px_rgba(168,85,247,0.15)]"
-              : ""
-            }
-            transition-all duration-300
-            ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}
-          `}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => !disabled && inputRef.current?.click()}
-        >
-          {/* Hidden native file input */}
-          <input
-            ref={inputRef}
-            type="file"
-            id={id || name}
-            name={name}
-            accept={accept}
-            onChange={handleInputChange}
-            className="sr-only" // Hide visually but keep accessible
-            aria-invalid={displayedErrors.length > 0}
-            aria-describedby={
-              displayedErrors.length > 0 ? `${name}-error` : undefined
-            }
-            disabled={disabled}
-          />
-
-          {!internalFile ? (
+        <AnimatePresence mode="wait">
+          {!internalFile && !preview ? (
             <motion.div
-              whileHover={disabled ? {} : { scale: 1.01 }}
-              className={`flex flex-col items-center justify-center ${compact ? "p-1.5" : "p-6"}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className={cn("flex flex-col items-center justify-center py-10 px-4 text-center", compact && "py-6")}
             >
-              <div className={`rounded-full bg-purple-500/10 ${compact ? "p-1.5 mb-1" : "p-3 mb-4"}`}>
-                <Upload size={compact ? 14 : 24} className="text-purple-400" />
-              </div>
-              <p className={`mb-0.5 text-gray-300 ${compact ? "text-[10px]" : "text-sm"}`}>
-                <span className="font-medium text-purple-400">
-                  {compact ? "Upload" : "Click to upload"}
-                </span>{" "}
-                {!compact && "or drag and drop"}
-              </p>
-              {!compact && (
-                <p className="text-xs text-gray-500">
-                  {accept.includes("image")
-                    ? "SVG, PNG, JPG or GIF"
-                    : "Supported files"}
-                  {maxSize
-                    ? ` (max. ${Math.round(maxSize / (1024 * 1024))}MB)`
-                    : ""}
-                </p>
-              )}
-            </motion.div>
-          ) : (
-            <div className={compact ? "p-2" : "p-4"}>
-              <div className="flex items-center gap-4">
-                {showFileIcon ? (
-                  <div className={`flex items-center justify-center flex-shrink-0 bg-gray-800 rounded-lg ${compact ? "w-10 h-10" : "w-16 h-16"}`}>
-                    <FileIcon size={compact ? 16 : 24} className="text-gray-400" />
-                  </div>
-                ) : (
-                  <div className={`flex-shrink-0 overflow-hidden bg-gray-800 rounded-lg ${compact ? "w-10 h-10" : "w-16 h-16"}`}>
-                    <motion.img
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      src={preview || ""} // preview will be null if showFileIcon is true
-                      alt="File preview"
-                      className="object-cover w-full h-full"
-                    />
-                  </div>
-                )}
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-200 truncate">
-                      {internalFile.name}
-                    </p>
-
-                    {!disabled && (
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                        type="button"
-                        onClick={removeFile}
-                        className="p-1 text-gray-400 transition-colors bg-gray-800 rounded-full hover:bg-gray-700 hover:text-red-400"
-                      >
-                        <X size={16} />
-                      </motion.button>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="text-xs text-gray-400">
-                      {(internalFile.size / 1024).toFixed(1)} KB
-                    </div>
-
-                    {displayedErrors.length === 0 && (
-                      <div className="flex items-center gap-1 text-xs text-green-400">
-                        <Check size={12} />
-                        <span>Ready to upload</span>
-                      </div>
-                    )}
-                  </div>
+              <div className="relative mb-4">
+                <div className="absolute inset-0 bg-purple-600/20 blur-xl rounded-full" />
+                <div className="relative p-4 rounded-2xl bg-white/5 border border-white/10 group-hover:scale-110 transition-transform duration-500">
+                  <Upload className="text-purple-400" size={24} />
                 </div>
               </div>
-            </div>
+              <p className="text-sm font-bold text-white mb-1">
+                Broadcasting Module: <span className="text-purple-400">Initiate Upload</span>
+              </p>
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                DRAG & DROP OR CLICK TO BROWSE
+              </p>
+              <div className="mt-4 flex gap-2 opacity-50">
+                <ImageIcon size={14} className="text-gray-400" />
+                <FileText size={14} className="text-gray-400" />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="relative aspect-video w-full overflow-hidden group/preview"
+            >
+              {isImage ? (
+                <img src={preview!} alt="Preview" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-slate-900 flex flex-col items-center justify-center p-6">
+                  <div className="p-6 rounded-3xl bg-red-500/10 border border-red-500/20 mb-4">
+                    <FileText className="text-red-400" size={48} />
+                  </div>
+                  <p className="text-sm font-black text-white uppercase tracking-wider truncate max-w-xs">
+                    {internalFile?.name || "Document Encrypted"}
+                  </p>
+                </div>
+              )}
+
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/preview:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-4 backdrop-blur-sm">
+                <button
+                  type="button"
+                  onClick={removeFile}
+                  className="p-3 rounded-xl bg-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-lg"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+                <div className="px-3 py-1.5 rounded-lg bg-black/50 backdrop-blur-md border border-white/10 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                    {internalFile ? `${(internalFile.size / 1024 / 1024).toFixed(2)} MB` : "ACTIVE PREVIEW"}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       </div>
 
-      {/* Error message with animation */}
       <AnimatePresence>
         {displayedErrors.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: -10, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: "auto" }}
-            exit={{ opacity: 0, y: -10, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="mt-1 space-y-1"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="px-1"
           >
-            {displayedErrors.map((errMsg, idx) => (
-              <p
-                key={idx}
-                id={`${name}-error-${idx}`}
-                className="flex items-center gap-1.5 text-xs text-red-400"
-                role="alert"
-              >
-                <AlertTriangle size={12} className="flex-shrink-0" />
-                <span>{errMsg}</span>
-              </p>
+            {displayedErrors.map((err, i) => (
+              <div key={i} className="flex items-center gap-2 mt-2 text-rose-500">
+                <AlertTriangle size={12} />
+                <p className="text-[10px] font-black uppercase tracking-widest">{err}</p>
+              </div>
             ))}
           </motion.div>
         )}

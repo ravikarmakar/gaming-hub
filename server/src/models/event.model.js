@@ -4,44 +4,63 @@ const eventSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     game: { type: String, required: true },
+
+    eventType: {
+      type: String,
+      enum: ["scrims", "tournament"],
+      required: true,
+    },
+
+    category: {
+      type: String,
+      enum: ["solo", "duo", "squad"],
+      required: true,
+    },
+
     startDate: { type: Date, required: true },
-    eventEndsAt: { type: Date },
     registrationEndsAt: { type: Date, required: true },
-    slots: { type: Number, required: true }, // Total slots available
-    category: { type: String, required: true }, // Solo, Duo, Squad
-    prizePool: { type: Number, default: 0 },
-    image: { type: String, required: true },
-    description: { type: String, required: true },
-    trending: { type: Boolean },
+
+    maxSlots: { type: Number, required: true },
+    joinedSlots: { type: Number, default: 0 },
+
+    registrationMode: {
+      type: String,
+      enum: ["open", "invite-only"],
+      default: "open",
+    },
+
     status: {
       type: String,
-      enum: ["registration-open", "registration-closed", "live", "completed"],
+      enum: [
+        "registration-open",
+        "registration-closed",
+        "live",
+        "completed",
+      ],
       default: "registration-open",
     },
-    likes: { type: Number, default: 0 },
-    views: { type: Number, default: 0 },
+
     orgId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organizer",
       required: true,
     },
-    teamId: [
+    description: { type: String, default: "" },
+    prizePool: { type: Number, default: 0 },
+    image: { type: String, default: "" },
+    views: { type: Number, default: 0 },
+    likes: { type: Number, default: 0 },
+    trending: { type: Boolean, default: false },
+    eventEndAt: { type: Date },
+    prizeDistribution: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Team",
+        rank: { type: Number, required: true },
+        amount: { type: Number, required: true },
+        label: { type: String, default: "" },
       },
     ],
   },
   { timestamps: true }
 );
 
-// 🔹 Validation: Ensure registration deadline is future-dated
-eventSchema.pre("save", function (next) {
-  if (this.registrationEnds < Date.now()) {
-    return next(new Error("Registration deadline must be in the future."));
-  }
-  next();
-});
-
-const Event = mongoose.model("Event", eventSchema);
-export default Event;
+export default mongoose.model("Event", eventSchema);

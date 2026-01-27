@@ -14,8 +14,6 @@ export const ROUTES = {
   ORG_PROFILE: "/organizer/:id",
   ORG_DASHBOARD: "/organizer-dashboard/:id",
 
-  ALL_EVENTS: "/tournaments",
-  EVENT_DETAILS: "/organizer/event/:eventId",
   TERMS: "/terms",
   PRIVACY: "/privacy",
   TRENDING: "/trending",

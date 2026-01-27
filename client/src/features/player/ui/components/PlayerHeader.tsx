@@ -33,6 +33,11 @@ export const PlayerHeader: React.FC<Props> = ({ player }) => {
 
   const canInvite = can(TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.inviteMember]);
 
+  // Tactical Fallback for legacy broken avatar URLs
+  const avatarUrl = player.avatar?.includes("default-avatar-url.com")
+    ? `https://ui-avatars.com/api/?name=${player.username}&background=random`
+    : (player.avatar || `https://ui-avatars.com/api/?name=${player.username}&background=random`);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -46,7 +51,7 @@ export const PlayerHeader: React.FC<Props> = ({ player }) => {
       <div className="relative group shrink-0">
         <div className="absolute -inset-1 bg-gradient-to-tr from-violet-600 to-fuchsia-600 rounded-full blur opacity-20 group-hover:opacity-40 transition duration-500" />
         <Avatar className="w-40 h-40 md:w-48 md:h-48 border-4 border-[#050505] shadow-2xl ring-2 ring-white/5 transition-transform duration-500 group-hover:scale-[1.02]">
-          <AvatarImage src={player.avatar} className="object-cover" />
+          <AvatarImage src={avatarUrl} className="object-cover" />
           <AvatarFallback className="bg-[#1a1528] text-violet-400">
             <Users className="w-16 h-16 opacity-20" />
           </AvatarFallback>

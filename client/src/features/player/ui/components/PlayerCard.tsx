@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { User, ShieldCheck, Gamepad2, Users, Star, Activity } from "lucide-react";
 import { User as UserType } from "@/features/auth/store/useAuthStore";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 interface PlayerCardProps {
     player: UserType;
@@ -10,6 +12,11 @@ interface PlayerCardProps {
 }
 
 const PlayerCard: React.FC<PlayerCardProps> = ({ player, index }) => {
+    const [isLoaded, setIsLoaded] = useState(false);
+    const avatarUrl = player.avatar?.includes("default-avatar-url.com")
+        ? `https://ui-avatars.com/api/?name=${player.username}&background=random`
+        : (player.avatar || `https://ui-avatars.com/api/?name=${player.username}&background=random`);
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -37,8 +44,18 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, index }) => {
                     <div className="relative mb-5">
                         <div className="absolute -inset-2 bg-gradient-to-tr from-violet-600 to-fuchsia-600 rounded-full blur-md opacity-20 group-hover:opacity-60 transition duration-500" />
                         <div className="relative w-24 h-24 rounded-full bg-[#0d091a] border border-white/10 flex items-center justify-center overflow-hidden transition-transform duration-500 group-hover:scale-105">
-                            {player.avatar ? (
-                                <img src={player.avatar} alt={player.username} className="w-full h-full object-cover" />
+                            {!isLoaded && <Skeleton className="absolute inset-0 z-10 w-full h-full rounded-full bg-white/10 animate-pulse" />}
+                            {avatarUrl ? (
+                                <img
+                                    src={avatarUrl}
+                                    alt={player.username}
+                                    onLoad={() => setIsLoaded(true)}
+                                    loading="lazy"
+                                    className={cn(
+                                        "w-full h-full object-cover transition-all duration-700",
+                                        isLoaded ? "opacity-100 blur-0 scale-100" : "opacity-0 blur-sm scale-110"
+                                    )}
+                                />
                             ) : (
                                 <User className="w-10 h-10 text-violet-400/40" />
                             )}

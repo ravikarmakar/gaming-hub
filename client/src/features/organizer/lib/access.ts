@@ -24,7 +24,7 @@ export const ORG_ACCESS = {
     },
     createTournament: {
         scope: SCOPES.ORG,
-        roles: [ORG_ROLE.OWNER, ORG_ROLE.CO_OWNER, ORG_ROLE.MANAGER],
+        roles: [ORG_ROLE.OWNER, ORG_ROLE.CO_OWNER, ORG_ROLE.MANAGER,],
     },
     joinRequests: {
         scope: SCOPES.ORG,

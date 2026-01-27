@@ -1,23 +1,12 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import {
-  Calendar,
-  Trophy,
-  Users,
-  ImageIcon,
-  DollarSign,
-  Clock,
-} from "lucide-react";
+import { Trash2, LayoutGrid, X, Shield, Gamepad2, Trophy, Users, Clock, ChevronLeft, Loader2, DollarSign, ChevronRight, ImageIcon } from "lucide-react";
+import { useForm, Controller, SubmitHandler, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { motion } from "framer-motion";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,402 +19,421 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { useEventStore } from "@/features/events/store/useEventStore";
+import {
+  GlassCard,
+  NeonBadge,
+  SectionHeader
+} from "@/features/events/ui/components/ThemedComponents";
+import FileUpload from "@/components/FileUpload";
+import { EventFormValues, eventSchema } from "@/features/events/lib/eventSchema";
+import { categoryOptions, eventTypeOptions, statusOptions } from "@/features/events/lib/constants";
+import { Category, Status } from "@/features/events/lib/types";
 
-interface EventFormData {
-  title: string;
-  game: string;
-  startDate: string;
-  registrationEndsAt: string;
-  slots: string;
-  category: string;
-  prizePool: string;
-  image: File | null;
-  description: string;
-  status: "registration-open" | "registration-closed" | "live" | "completed";
-  orgId?: string;
-  teamId?: string;
-}
-
-const categories = ["Solo", "Duo", "Squad"] as const;
-
-export default function CreateTournament(): JSX.Element {
+export default function CreateTournament() {
   const navigate = useNavigate();
+  const { eventId } = useParams();
+  const { createEvent, updateEvent, deleteEvent, fetchEventDetailsById, eventDetails, isLoading } = useEventStore();
+  const [isEditMode, setIsEditMode] = useState(false);
 
-  const { createEvent, error, isLoading } = useEventStore();
-
-  const [formData, setFormData] = useState<EventFormData>({
-    title: "",
-    game: "",
-    startDate: "",
-    registrationEndsAt: "",
-    slots: "",
-    category: "",
-    prizePool: "",
-    image: null,
-    description: "",
-    status: "registration-open",
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    control,
+    formState: { errors },
+  } = useForm<EventFormValues>({
+    resolver: zodResolver(eventSchema),
+    mode: "onChange",
+    defaultValues: {
+      eventType: "tournament",
+      status: "registration-open",
+      category: "squad",
+      registrationMode: "open",
+      prizeDistribution: [{ rank: 1, amount: 0, label: "Champion" }],
+    },
   });
 
-  const [imagePreview, setImagePreview] = useState<string>("");
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "prizeDistribution",
+  });
 
-  const handleChange = (field: keyof EventFormData, value: string): void => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData((prev) => ({ ...prev, image: file }));
-
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  useEffect(() => {
+    if (eventId) {
+      setIsEditMode(true);
+      fetchEventDetailsById(eventId);
     }
-  };
+  }, [eventId, fetchEventDetailsById]);
 
-  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-
-    const fd = new FormData();
-
-    // text / primitive fields
-    Object.entries(formData).forEach(([key, value]) => {
-      if (!value || key === "image") return;
-
-      if (key === "startDate" || key === "registrationEnds") {
-        fd.append(key, new Date(value).toISOString());
-      } else {
-        fd.append(key, String(value));
+  useEffect(() => {
+    if (isEditMode && eventDetails) {
+      reset({
+        title: eventDetails.title,
+        game: eventDetails.game,
+        eventType: eventDetails.eventType,
+        startDate: eventDetails.startDate ? new Date(eventDetails.startDate).toISOString().slice(0, 16) : "",
+        registrationEndsAt: eventDetails.registrationEndsAt ? new Date(eventDetails.registrationEndsAt).toISOString().slice(0, 16) : "",
+        slots: eventDetails.maxSlots?.toString() || "",
+        category: eventDetails.category as Category,
+        registrationMode: eventDetails.registrationMode,
+        prizePool: eventDetails.prizePool?.toString() || "",
+        description: eventDetails.description,
+        status: eventDetails.status as Status,
+        prizeDistribution: eventDetails.prizeDistribution || [{ rank: 1, amount: 0, label: "Champion" }],
+      });
+      if (eventDetails.image) {
+        setValue("image", eventDetails.image);
       }
-    });
-
-    // file field
-    if (formData.image) {
-      fd.append("image", formData.image);
     }
+  }, [isEditMode, eventDetails, reset, setValue]);
 
-    const newEvent = await createEvent(fd);
 
-    if (newEvent) {
-      toast.success("Tournament created successfully!");
+  const onFormSubmit: SubmitHandler<EventFormValues> = async (data) => {
+    try {
+      const fd = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (key === "slots") {
+            fd.append("maxSlots", String(value));
+            fd.append("slots", String(value));
+          } else if (key === "prizeDistribution") {
+            fd.append(key, JSON.stringify(value));
+          } else if (key === "image" && value instanceof File) {
+            fd.append("image", value);
+          } else if (key === "category" || key === "eventType" || key === "status") {
+            fd.append(key, String(value).toLowerCase());
+          } else if (key !== "image") {
+            fd.append(key, String(value));
+          }
+        }
+      });
 
-      navigate(ORGANIZER_ROUTES.TOURNAMENTS);
-    } else {
-      toast.error(error || "Failed to create tournament. Please try again.");
+      let result;
+      if (isEditMode && eventId) {
+        result = await updateEvent(eventId, fd);
+      } else {
+        result = await createEvent(fd);
+      }
+
+      if (result) {
+        toast.success(isEditMode ? "Arena parameters updated!" : "Arena forged successfully!");
+        navigate(ORGANIZER_ROUTES.TOURNAMENTS, { replace: true });
+      }
+    } catch (error) {
+      console.error("Submission error:", error);
+      toast.error("Failed to process request. Check tactical data.");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!eventId) return;
+    if (window.confirm("Confirm deletion of this arena? This operation is irreversible.")) {
+      const success = await deleteEvent(eventId);
+      if (success) {
+        toast.success("Arena decommissioned.");
+        navigate(ORGANIZER_ROUTES.TOURNAMENTS);
+      }
     }
   };
 
   return (
-    <div className="min-h-screen p-4 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        <Card className="border-gray-700 bg-gray-800/50 backdrop-blur-sm">
-          <CardHeader className="pb-6 space-y-1">
-            <CardTitle className="flex items-center gap-2 text-3xl font-bold text-white">
-              <Trophy className="w-8 h-8 text-yellow-500" />
-              Create New Tournament
-            </CardTitle>
-            <CardDescription className="text-gray-400">
-              Fill in the details to create an exciting gaming tournament
-            </CardDescription>
-          </CardHeader>
+    <div className="min-h-screen bg-[#06070D] text-white pb-24 relative overflow-hidden">
+      {/* Background FX */}
+      <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-purple-600/10 to-transparent pointer-events-none" />
+      <div className="absolute top-40 right-10 w-96 h-96 bg-blue-600/5 rounded-full blur-[120px] pointer-events-none" />
 
-          <CardContent>
-            <div className="space-y-6">
-              {/* Title & Game */}
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="title" className="font-medium text-gray-200">
-                    Event Title *
-                  </Label>
-                  <Input
-                    id="title"
-                    placeholder="Enter event title"
-                    value={formData.title}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      handleChange("title", e.target.value)
-                    }
-                    className="text-white border-gray-600 bg-gray-700/50 placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
-                    required
-                  />
-                </div>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          {/* Top Nav */}
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={() => navigate(ORGANIZER_ROUTES.TOURNAMENTS)}
+              className="group flex items-center gap-2 text-xs font-black text-gray-500 hover:text-white transition-all tracking-[0.2em] uppercase"
+            >
+              <ChevronLeft size={16} className="transition-transform group-hover:-translate-x-1" />
+              Return to Command
+            </button>
 
-                <div className="space-y-2">
-                  <Label htmlFor="game" className="font-medium text-gray-200">
-                    Game *
-                  </Label>
-                  <Input
-                    id="game"
-                    placeholder="e.g., PUBG, Valorant, CS:GO"
-                    value={formData.game}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      handleChange("game", e.target.value)
-                    }
-                    className="text-white border-gray-600 bg-gray-700/50 placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
-                    required
-                  />
-                </div>
+            {isEditMode && (
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                className="px-4 py-2 text-xs font-black tracking-widest bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-all rounded-lg"
+              >
+                <Trash2 size={14} /> DECOMMISSION ARENA
+              </Button>
+            )}
+          </div>
+
+          {/* Form Header */}
+          <div className="mb-12">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="h-12 w-12 rounded-2xl bg-purple-600 flex items-center justify-center shadow-glow">
+                <Trophy size={24} className="text-white" />
               </div>
-
-              {/* Dates */}
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="startDate"
-                    className="flex items-center gap-2 font-medium text-gray-200"
-                  >
-                    <Calendar className="w-4 h-4 text-blue-400" />
-                    Start Date *
-                  </Label>
-                  <Input
-                    id="startDate"
-                    type="datetime-local"
-                    value={formData.startDate}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      handleChange("startDate", e.target.value)
-                    }
-                    className="text-white border-gray-600 bg-gray-700/50 focus:border-blue-500 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="registrationEnds"
-                    className="flex items-center gap-2 font-medium text-gray-200"
-                  >
-                    <Clock className="w-4 h-4 text-orange-400" />
-                    Registration Ends *
-                  </Label>
-                  <Input
-                    id="registrationEnds"
-                    type="datetime-local"
-                    value={formData.registrationEndsAt}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      handleChange("registrationEndsAt", e.target.value)
-                    }
-                    className="text-white border-gray-600 bg-gray-700/50 focus:border-blue-500 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Slots, Category, Prize Pool */}
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="slots"
-                    className="flex items-center gap-2 font-medium text-gray-200"
-                  >
-                    <Users className="w-4 h-4 text-green-400" />
-                    Total Slots *
-                  </Label>
-                  <Input
-                    id="slots"
-                    type="number"
-                    placeholder="100"
-                    min="1"
-                    value={formData.slots}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      handleChange("slots", e.target.value)
-                    }
-                    className="text-white border-gray-600 bg-gray-700/50 placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="category"
-                    className="font-medium text-gray-200"
-                  >
-                    Category *
-                  </Label>
-                  <Select
-                    value={formData.category}
-                    onValueChange={(value: string) =>
-                      handleChange("category", value)
-                    }
-                  >
-                    <SelectTrigger className="text-white border-gray-600 bg-gray-700/50 focus:border-blue-500 focus:ring-blue-500">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-700">
-                      {categories.map((item) => (
-                        <SelectItem
-                          key={item}
-                          value={item}
-                          className="text-white hover:bg-gray-700"
-                        >
-                          {item}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="prizePool"
-                    className="flex items-center gap-2 font-medium text-gray-200"
-                  >
-                    <DollarSign className="w-4 h-4 text-yellow-400" />
-                    Prize Pool
-                  </Label>
-                  <Input
-                    id="prizePool"
-                    type="number"
-                    placeholder="10000"
-                    min="0"
-                    value={formData.prizePool}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      handleChange("prizePool", e.target.value)
-                    }
-                    className="text-white border-gray-600 bg-gray-700/50 placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Image Upload */}
-              <div className="space-y-2">
-                <Label
-                  htmlFor="image"
-                  className="flex items-center gap-2 font-medium text-gray-200"
-                >
-                  <ImageIcon className="w-4 h-4 text-purple-400" />
-                  Event Image *
-                </Label>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-center w-full">
-                    <label
-                      htmlFor="image"
-                      className="flex flex-col items-center justify-center w-full h-48 transition-colors border-2 border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-700/30 hover:bg-gray-700/50"
-                    >
-                      {imagePreview ? (
-                        <div className="relative w-full h-full">
-                          <img
-                            src={imagePreview}
-                            alt="Preview"
-                            className="object-cover w-full h-full rounded-lg"
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center transition-opacity rounded-lg opacity-0 bg-black/50 hover:opacity-100">
-                            <p className="text-sm text-white">
-                              Click to change image
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <ImageIcon className="w-12 h-12 mb-3 text-gray-400" />
-                          <p className="mb-2 text-sm text-gray-400">
-                            <span className="font-semibold">
-                              Click to upload
-                            </span>{" "}
-                            or drag and drop
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            PNG, JPG, JPEG (MAX. 5MB)
-                          </p>
-                        </div>
-                      )}
-                      <Input
-                        id="image"
-                        type="file"
-                        accept="image/png,image/jpeg,image/jpg"
-                        onChange={handleImageChange}
-                        className="hidden"
-                        required
-                      />
-                    </label>
-                  </div>
-                  {formData.image && (
-                    <p className="text-sm text-gray-400">
-                      Selected: {formData.image.name} (
-                      {(formData.image.size / 1024 / 1024).toFixed(2)} MB)
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="space-y-2">
-                <Label
-                  htmlFor="description"
-                  className="font-medium text-gray-200"
-                >
-                  Description *
-                </Label>
-                <Textarea
-                  id="description"
-                  placeholder="Provide event details, rules, and any important information..."
-                  value={formData.description}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                    handleChange("description", e.target.value)
-                  }
-                  className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500 min-h-[120px] resize-y"
-                  required
-                />
-              </div>
-
-              {/* Status */}
-              <div className="space-y-2">
-                <Label htmlFor="status" className="font-medium text-gray-200">
-                  Status
-                </Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value: string) =>
-                    handleChange("status", value)
-                  }
-                >
-                  <SelectTrigger className="text-white border-gray-600 bg-gray-700/50 focus:border-blue-500 focus:ring-blue-500">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-700">
-                    <SelectItem
-                      value="registration-open"
-                      className="text-white hover:bg-gray-700"
-                    >
-                      Registration Open
-                    </SelectItem>
-                    <SelectItem
-                      value="registration-closed"
-                      className="text-white hover:bg-gray-700"
-                    >
-                      Registration Closed
-                    </SelectItem>
-                    <SelectItem
-                      value="live"
-                      className="text-white hover:bg-gray-700"
-                    >
-                      Live
-                    </SelectItem>
-                    <SelectItem
-                      value="completed"
-                      className="text-white hover:bg-gray-700"
-                    >
-                      Completed
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Submit Button */}
-              <div className="pt-4">
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isLoading}
-                  className="w-full py-6 text-lg font-semibold text-white transition-all shadow-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-purple-500/50"
-                >
-                  Create Event
-                </Button>
+              <div>
+                <NeonBadge variant="purple">{isEditMode ? "Parameters Modification" : "Arena Foundation"}</NeonBadge>
+                <h1 className="text-4xl font-black text-white tracking-tighter mt-1">
+                  {isEditMode ? "Modify Operational Data" : "Forge New Battleground"}
+                </h1>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Left Side: General Info */}
+              <div className="lg:col-span-2 space-y-8">
+                <GlassCard className="p-8 space-y-6">
+                  <SectionHeader title="Universal Intel" icon={Shield} />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">Mission Title</Label>
+                      <Input
+                        {...register("title")}
+                        placeholder="e.g. Operation Winter Strike"
+                        className="bg-white/5 border-white/10 h-12 rounded-xl focus:border-purple-500/50 transition-all font-bold"
+                      />
+                      {errors.title && <p className="text-[10px] text-rose-500 font-bold ml-1">{errors.title.message}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">Game Universe</Label>
+                      <div className="relative">
+                        <Gamepad2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                        <Input
+                          {...register("game")}
+                          placeholder="CS2, Valorant, Apex..."
+                          className="bg-white/5 border-white/10 h-12 pl-12 rounded-xl focus:border-purple-500/50 transition-all font-bold"
+                        />
+                      </div>
+                      {errors.game && <p className="text-[10px] text-rose-500 font-bold ml-1">{errors.game.message}</p>}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">Engagement Format</Label>
+                      <Select value={watch("category")} onValueChange={(val) => setValue("category", val as "solo" | "duo" | "squad")}>
+                        <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
+                          {categoryOptions.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">Protocol Type</Label>
+                      <Select value={watch("eventType")} onValueChange={(val) => setValue("eventType", val as "scrims" | "tournament")}>
+                        <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
+                          {eventTypeOptions.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </GlassCard>
+
+                <GlassCard className="p-8 space-y-6">
+                  <SectionHeader title="Mission Briefing" icon={LayoutGrid} />
+                  <Textarea
+                    {...register("description")}
+                    placeholder="Enter tactical intel, rules of engagement, and mission objectives..."
+                    className="bg-white/5 border-white/10 min-h-[200px] rounded-2xl p-6 focus:border-purple-500/50 transition-all text-gray-300 font-medium leading-relaxed"
+                  />
+                  {errors.description && <p className="text-[10px] text-rose-500 font-bold ml-1">{errors.description.message}</p>}
+                </GlassCard>
+              </div>
+
+              {/* Right Side: Deployment & Rewards */}
+              <div className="space-y-8">
+                <GlassCard className="p-8 space-y-6 border-purple-500/10 shadow-glow">
+                  <SectionHeader title="Deployment Data" icon={Clock} />
+
+                  <Controller
+                    name="startDate"
+                    control={control}
+                    render={({ field }) => (
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Kickoff</Label>
+                        <DatePicker value={field.value} onChange={field.onChange} />
+                      </div>
+                    )}
+                  />
+
+                  <Controller
+                    name="registrationEndsAt"
+                    control={control}
+                    render={({ field }) => (
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Entry Lock</Label>
+                        <DatePicker value={field.value} onChange={field.onChange} />
+                      </div>
+                    )}
+                  />
+
+                  <div className="pt-4 space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Current Protocol Status</Label>
+                      <Select
+                        value={watch("status")}
+                        onValueChange={(val) => setValue("status", val as any)}
+                      >
+                        <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
+                          {statusOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2 pt-2">
+                      <Label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Max Personnel</Label>
+                      <div className="relative">
+                        <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                        <Input
+                          {...register("slots")}
+                          type="number"
+                          className="bg-white/5 border-white/10 h-12 pl-12 rounded-xl font-black"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </GlassCard>
+
+                <GlassCard className="p-8 space-y-6 border-amber-500/10">
+                  <SectionHeader title="Reward Pool" icon={Trophy} />
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Bounty ($)</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-500" size={20} />
+                      <Input
+                        {...register("prizePool")}
+                        placeholder="0.00"
+                        className="bg-white/5 border-white/10 h-14 pl-12 text-2xl font-black text-white rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Rank Distribution</span>
+                      <Button
+                        variant="ghost"
+                        type="button"
+                        onClick={() => append({ rank: fields.length + 1, amount: 0, label: `Rank ${fields.length + 1}` })}
+                        className="h-auto p-0 text-[10px] font-black text-purple-400 hover:text-white hover:bg-transparent transition-colors shadow-none"
+                      >
+                        + ADD SLICE
+                      </Button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {fields.map((field, index) => (
+                        <div key={field.id} className="flex gap-2 group/rank">
+                          <div className="flex-1 grid grid-cols-2 gap-2">
+                            <Input
+                              type="number"
+                              {...register(`prizeDistribution.${index}.rank` as const, { valueAsNumber: true })}
+                              className="bg-white/5 border-white/10 h-10 text-xs font-bold rounded-lg"
+                              placeholder="Rank"
+                            />
+                            <Input
+                              type="number"
+                              {...register(`prizeDistribution.${index}.amount` as const, { valueAsNumber: true })}
+                              className="bg-white/5 border-white/10 h-10 text-xs font-bold rounded-lg text-emerald-400"
+                              placeholder="Amount"
+                            />
+                          </div>
+                          {fields.length > 1 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              type="button"
+                              onClick={() => remove(index)}
+                              className="h-10 w-10 text-gray-600 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                            >
+                              <X size={14} />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </GlassCard>
+
+                <GlassCard className="p-8 space-y-6 border-purple-500/10">
+                  <SectionHeader title="Arena Visuals" icon={ImageIcon} />
+                  <Controller
+                    name="image"
+                    control={control}
+                    render={({ field, fieldState }) => (
+                      <FileUpload
+                        label="Arena Banner"
+                        hint="Recommended: 16:9 Aspect Ratio"
+                        value={field.value}
+                        onChange={field.onChange}
+                        error={fieldState.error?.message}
+                      />
+                    )}
+                  />
+                </GlassCard>
+              </div>
+            </div>
+
+            {/* Form Actions */}
+            <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/5 rounded-xl">
+                  <Shield size={20} className="text-purple-400" />
+                </div>
+                <p className="text-xs text-gray-500 font-medium max-w-[240px]">
+                  All arena parameters are verified by the Central Command before broadcasting.
+                </p>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full md:w-[320px] h-14 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-2xl flex items-center justify-center gap-2 shadow-glow hover:shadow-glow-lg transition-all"
+              >
+                {isLoading ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <>
+                    {isEditMode ? "COMMIT MODIFICATIONS" : "FORGE ARENA"}
+                    <ChevronRight size={20} />
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </motion.div>
       </div>
     </div>
   );

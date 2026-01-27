@@ -1,30 +1,17 @@
 import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import {
-  ChevronDown,
-  Flame,
-  Gamepad2,
-  Home,
-  Trophy,
-  Users,
-} from "lucide-react";
+import { ChevronDown, Flame, Gamepad2, Home, Trophy, Users } from "lucide-react";
 
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { EVENT_ROUTES } from "@/features/events/lib/routes";
+import { PLAYER_ROUTES } from "@/features/player/lib/routes";
+import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 
 const navItems = [
   { name: "Home", icon: Home, href: ROUTES.HOME },
@@ -33,14 +20,14 @@ const navItems = [
     icon: Gamepad2,
     hasDropdown: true,
     dropdownItems: [
-      { name: "Find players", href: ROUTES.ALL_PLAYERS },
-      { name: "Find team", href: ROUTES.ALL_TEAMS },
+      { name: "Find players", href: PLAYER_ROUTES.ALL_PLAYERS },
+      { name: "Find team", href: TEAM_ROUTES.ALL_TEAMS },
     ],
   },
   {
     name: "Tournaments",
     icon: Trophy,
-    href: ROUTES.ALL_EVENTS,
+    href: EVENT_ROUTES.TOURNAMENTS,
   },
   {
     name: "Trending",

@@ -1,13 +1,10 @@
-import PageLayout from "@/pages/PageLayout";
+
 
 const FreeEvents = () => {
   return (
-    <PageLayout
-      title="Best Free Tournaments"
-      description="Connect with players and join the perfect squad"
-    >
+    <div className="pt-20 px-4 max-w-7xl mx-auto">
       <div>ALL Events Goes here</div>
-    </PageLayout>
+    </div>
   );
 };
 

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Award, BarChart3, Settings, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -10,12 +10,13 @@ import { PlayerAchievements } from "../components/PlayerAchievements";
 import { PlayerStats } from "../components/PlayerStats";
 import { PlayerEquipment } from "../components/PlayerEquipment";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
 const PlayerIdPage = () => {
   const { id } = useParams();
   const { fetchPlayerById, selectedPlayer, isLoading } = usePlayerStore();
+  const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
     if (id) fetchPlayerById(id, true);
@@ -65,7 +66,7 @@ const PlayerIdPage = () => {
 
         {/* Tactical Interface (Tabs) */}
         <div className="pb-24">
-          <Tabs defaultValue="overview" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="flex justify-center mb-10 overflow-x-auto pb-2 scrollbar-none">
               <TabsList className="bg-white/[0.03] border border-white/10 p-1.5 rounded-2xl h-auto flex-nowrap shrink-0">
                 <TabsTrigger
@@ -112,46 +113,18 @@ const PlayerIdPage = () => {
             </div>
 
             <AnimatePresence mode="wait">
-              <TabsContent value="overview">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <PlayerOverview />
-                </motion.div>
-              </TabsContent>
-              <TabsContent value="stats">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <PlayerStats />
-                </motion.div>
-              </TabsContent>
-              <TabsContent value="achievements">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <PlayerAchievements />
-                </motion.div>
-              </TabsContent>
-              <TabsContent value="equipment">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <PlayerEquipment />
-                </motion.div>
-              </TabsContent>
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                {activeTab === "overview" && <PlayerOverview />}
+                {activeTab === "stats" && <PlayerStats />}
+                {activeTab === "achievements" && <PlayerAchievements />}
+                {activeTab === "equipment" && <PlayerEquipment />}
+              </motion.div>
             </AnimatePresence>
           </Tabs>
         </div>

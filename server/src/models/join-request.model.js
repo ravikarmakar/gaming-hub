@@ -15,7 +15,7 @@ const joinRequestSchema = new mongoose.Schema(
         targetModel: {
             type: String,
             required: true,
-            enum: ['Team', 'Organizer'],
+            enum: ['Team', 'Organizer', 'Event'],
             default: 'Team'
         },
         status: {

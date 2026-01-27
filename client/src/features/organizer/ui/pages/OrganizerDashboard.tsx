@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Trophy,
   Users,
@@ -16,15 +16,21 @@ import {
   Settings,
   Mail,
   Tag,
-  Info,
   Briefcase
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
-import { Link } from "react-router-dom";
 import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  GlassCard,
+  MetricCard,
+  NeonBadge,
+  SectionHeader
+} from "@/features/events/ui/components/ThemedComponents";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 const OrganizerDashboard = () => {
   const { user } = useAuthStore();
@@ -42,233 +48,242 @@ const OrganizerDashboard = () => {
   }, [dashboardData]);
 
   const recentEvents = useMemo(() => dashboardData?.recentEvents || [], [dashboardData]);
-  const recentActivities = useMemo(() => dashboardData?.recentActivities || [], [dashboardData]);
   const orgInfo = useMemo(() => dashboardData?.org || null, [dashboardData]);
 
   const quickActions = [
-    { label: "Create Event", icon: PlusCircle, link: ORGANIZER_ROUTES.ADD_TOURNAMENTS, color: "text-green-400" },
+    { label: "Create Event", icon: PlusCircle, link: ORGANIZER_ROUTES.ADD_TOURNAMENTS, color: "text-emerald-400" },
     { label: "Members", icon: Users, link: ORGANIZER_ROUTES.MEMBERS, color: "text-blue-400" },
-    { label: "View Analytics", icon: BarChart, link: ORGANIZER_ROUTES.ANALYTICS, color: "text-purple-400" },
-    { label: "Manage Org", icon: Settings, link: ORGANIZER_ROUTES.SETTINGS, color: "text-gray-400" },
+    { label: "Analytics", icon: BarChart, link: ORGANIZER_ROUTES.ANALYTICS, color: "text-purple-400" },
+    { label: "Settings", icon: Settings, link: ORGANIZER_ROUTES.SETTINGS, color: "text-gray-400" },
   ];
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "live":
-        return "bg-red-500/20 text-red-400 border-red-500/30";
-      case "registration-open":
-        return "bg-blue-500/20 text-blue-400 border-blue-500/30";
-      case "completed":
-        return "bg-green-500/20 text-green-400 border-green-500/30";
-      default:
-        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
-    }
-  };
 
   if (isLoading && !dashboardData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
-        <div className="relative">
-          <Loader2 className="w-12 h-12 text-purple-600 animate-spin" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Trophy className="w-5 h-5 text-purple-400" />
-          </div>
-        </div>
-        <p className="text-gray-400 font-medium animate-pulse">Synchronizing dashboard data...</p>
+        <Loader2 className="w-12 h-12 text-purple-600 animate-spin" />
+        <p className="text-gray-400 font-medium animate-pulse">Synchronizing dashboard...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-8 pb-12 animate-in fade-in duration-500">
       {/* Top Section: Welcome & Org Profile */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Welcome Card */}
-        <div className="lg:col-span-2 p-8 bg-[#0B0C1A] border border-white/5 rounded-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-12 transition-transform duration-700 opacity-5 -mr-12 -mt-12 group-hover:scale-125 group-hover:-rotate-12 group-hover:opacity-10">
+        <GlassCard className="lg:col-span-2 p-8 relative overflow-hidden group border-purple-500/10" gradient>
+          <div className="absolute top-0 right-0 p-12 transition-transform duration-1000 opacity-5 -mr-12 -mt-12 group-hover:scale-110 group-hover:-rotate-12">
             <Trophy size={200} className="text-purple-500" />
           </div>
 
           <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-xs font-bold uppercase tracking-widest border border-purple-500/20">
-                Organizer Dashboard
-              </span>
+            <div className="mb-6">
+              <NeonBadge variant="purple">Organizer Dashboard</NeonBadge>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight">
-              Hello, <span className="text-transparent bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text">{user?.username}</span>
+            <h1 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">
+              Hello, <span className="text-transparent bg-gradient-to-r from-purple-400 via-indigo-400 to-blue-400 bg-clip-text drop-shadow-sm">{user?.username}</span>
             </h1>
-            <p className="text-lg text-gray-400 max-w-lg leading-relaxed">
+            <p className="text-lg text-gray-400 max-w-lg leading-relaxed font-medium">
               Manage your tournaments, track participants, and grow your esports community from one centralized command center.
             </p>
           </div>
-        </div>
+        </GlassCard>
 
         {/* Profile Card */}
-        <div className="p-8 bg-[#0B0C1A] border border-white/5 rounded-2xl flex flex-col items-center text-center">
-          <Avatar className="w-24 h-24 border-4 border-purple-500/20 shadow-2xl mb-4">
-            <AvatarImage src={orgInfo?.imageUrl} />
-            <AvatarFallback className="bg-purple-500/10 text-purple-400 text-2xl font-bold">
-              {orgInfo?.name?.[0]}
-            </AvatarFallback>
-          </Avatar>
-          <h2 className="text-xl font-bold text-white mb-1">{orgInfo?.name || "Organization Name"}</h2>
-          <div className="flex items-center gap-2 mb-4">
-            <Badge variant="outline" className="bg-purple-500/10 border-purple-500/20 text-purple-400">
-              <Tag className="w-3 h-3 mr-1" /> {orgInfo?.tag}
-            </Badge>
-            {orgInfo?.isVerified && (
-              <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">Verified</Badge>
-            )}
+        <GlassCard className="p-8 flex flex-col items-center text-center border-purple-500/10">
+          <div className="relative mb-6">
+            <div className="absolute inset-0 bg-purple-500/20 blur-2xl rounded-full" />
+            <Avatar className="w-24 h-24 border-2 border-purple-500/20 relative z-10">
+              <AvatarImage src={orgInfo?.imageUrl} />
+              <AvatarFallback className="bg-purple-500/10 text-purple-400 text-2xl font-bold">
+                {orgInfo?.name?.[0] || user?.username?.[0]}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+
+          <h2 className="text-2xl font-black text-white mb-2 tracking-tight">{orgInfo?.name || "Organization"}</h2>
+
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+            <NeonBadge variant="purple" className="flex items-center gap-1.5 lowercase">
+              <Tag size={10} /> {orgInfo?.tag || "@org"}
+            </NeonBadge>
             {orgInfo?.isHiring && (
-              <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-                <Briefcase className="size-3 mr-1" /> Hiring
-              </Badge>
+              <NeonBadge variant="green" className="flex items-center gap-1.5 h-auto">
+                <Briefcase size={10} /> Hiring
+              </NeonBadge>
             )}
           </div>
 
-          <div className="w-full space-y-3 pt-4 border-t border-white/5">
+          <div className="w-full space-y-4 pt-6 border-t border-white/5">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> Email</span>
-              <span className="text-gray-300 truncate max-w-[150px]">{orgInfo?.email}</span>
+              <span className="text-gray-500 font-bold uppercase tracking-widest text-[10px] flex items-center gap-1.5">
+                <Mail size={12} /> Email
+              </span>
+              <span className="text-gray-300 font-medium truncate max-w-[150px]">{orgInfo?.email || user?.email}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Created</span>
-              <span className="text-gray-300">{orgInfo?.createdAt ? new Date(orgInfo.createdAt).toLocaleDateString() : 'N/A'}</span>
+              <span className="text-gray-500 font-bold uppercase tracking-widest text-[10px] flex items-center gap-1.5">
+                <Calendar size={12} /> Created
+              </span>
+              <span className="text-gray-300 font-medium">
+                {orgInfo?.createdAt ? new Date(orgInfo.createdAt).toLocaleDateString() : 'Jan 20, 2026'}
+              </span>
             </div>
           </div>
-        </div>
+        </GlassCard>
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <MetricCard
           icon={Trophy}
           title="All Events"
           value={stats.totalEvents}
           color="text-amber-400"
-          gradient="from-amber-500/20 to-transparent"
+          className="border-amber-500/10 hover:border-amber-500/20"
         />
-        <StatCard
+        <MetricCard
           icon={Clock}
           title="Active / Upcoming"
           value={stats.upcomingEvents}
           color="text-blue-400"
-          gradient="from-blue-500/20 to-transparent"
+          className="border-blue-500/10 hover:border-blue-500/20"
         />
-        <StatCard
+        <MetricCard
           icon={Users}
           title="Registrations"
           value={stats.totalParticipants}
           color="text-emerald-400"
-          gradient="from-emerald-500/20 to-transparent"
+          className="border-emerald-500/10 hover:border-emerald-500/20"
         />
-        <StatCard
+        <MetricCard
           icon={DollarSign}
           title="Total Prize Pool"
           value={`$${stats.totalPrizeMoney.toLocaleString()}`}
           color="text-purple-400"
-          gradient="from-purple-500/20 to-transparent"
+          className="border-purple-500/10 hover:border-purple-500/20"
         />
       </div>
 
       {/* Content Body */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent Events List */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-2xl font-black text-white uppercase tracking-tight flex items-center gap-3">
-              <ListOrdered className="text-purple-500 w-6 h-6" /> Recent Events
-            </h2>
-            <Link to={ORGANIZER_ROUTES.TOURNAMENTS} className="text-sm font-bold text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1">
-              Explore All <ExternalLink className="w-4 h-4" />
-            </Link>
-          </div>
+        <div className="lg:col-span-2 space-y-6">
+          <SectionHeader
+            title="Recent Arena Activities"
+            icon={ListOrdered}
+            action={
+              <Link to={ORGANIZER_ROUTES.TOURNAMENTS} className="group flex items-center gap-2 text-sm font-bold text-purple-400 hover:text-purple-300 transition-colors">
+                Explore All <ExternalLink size={14} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </Link>
+            }
+          />
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
             {recentEvents.length === 0 ? (
-              <div className="p-12 text-center bg-[#0B0C1A] border border-dashed border-white/10 rounded-2xl">
-                <Gamepad2 className="w-12 h-12 text-gray-700 mx-auto mb-4" />
-                <p className="text-gray-400">No events created yet. Start your first tournament!</p>
-              </div>
-            ) : (
-              recentEvents.map((event: any) => (
-                <div
-                  key={event._id}
-                  className="p-5 bg-[#0B0C1A] border border-white/5 hover:border-purple-500/30 rounded-2xl transition-all duration-300 group relative overflow-hidden"
-                >
-                  <div className="flex flex-col sm:flex-row gap-5 items-start sm:items-center">
-                    <div className="relative w-full sm:w-28 h-20 rounded-xl overflow-hidden shrink-0 border border-white/10">
-                      <img src={event.image} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    </div>
-
-                    <div className="flex-1 min-w-0 w-full">
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <h3 className="font-bold text-white group-hover:text-purple-400 transition-colors truncate text-lg">{event.title}</h3>
-                        <Badge variant="outline" className={`${getStatusColor(event.status)} whitespace-nowrap`}>
-                          {event.status.replace('-', ' ')}
-                        </Badge>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500">
-                        <span className="flex items-center gap-1.5"><Gamepad2 className="w-3.5 h-3.5" />{event.game}</span>
-                        <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />{new Date(event.startDate).toLocaleDateString()}</span>
-                        <span className="flex items-center gap-1.5 text-emerald-400 font-bold"><DollarSign className="w-3.5 h-3.5" />${event.prizePool.toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    <Link to={`/organizer/events/${event._id}`} className="w-full sm:w-auto p-3 rounded-xl bg-white/5 hover:bg-purple-500/20 text-purple-400 transition-all flex items-center justify-center">
-                      <Eye className="w-5 h-5" />
-                    </Link>
-                  </div>
+              <GlassCard className="p-16 text-center border-dashed">
+                <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Gamepad2 className="w-8 h-8 text-gray-700" />
                 </div>
+                <p className="text-gray-400 font-medium">No active arenas found. Start your first tournament!</p>
+                <Link to={ORGANIZER_ROUTES.ADD_TOURNAMENTS} className="mt-6 inline-flex items-center gap-2 text-purple-400 font-bold hover:underline">
+                  Create Arena <PlusCircle size={16} />
+                </Link>
+              </GlassCard>
+            ) : (
+              recentEvents.map((event: any, index: number) => (
+                <motion.div
+                  key={event._id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <GlassCard className="p-4 group border-purple-500/5 hover:border-purple-500/20">
+                    <div className="flex flex-col sm:flex-row gap-5 items-start sm:items-center">
+                      <div className="relative w-full sm:w-24 h-20 rounded-xl overflow-hidden shrink-0 border border-white/10">
+                        <img src={event.image || "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070"} alt="" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#0B0C1A]/80 to-transparent" />
+                      </div>
+
+                      <div className="flex-1 min-w-0 w-full">
+                        <div className="flex items-center justify-between gap-4 mb-2">
+                          <h3 className="font-bold text-white group-hover:text-purple-400 transition-colors truncate text-lg tracking-tight">{event.title}</h3>
+                          <NeonBadge variant={event.status === "registration-open" ? "blue" : event.status === "live" ? "red" : "green"}>
+                            {event.status.replace('-', ' ')}
+                          </NeonBadge>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-gray-500 font-medium">
+                          <span className="flex items-center gap-2 uppercase tracking-widest text-[10px]"><Gamepad2 size={12} className="text-purple-400" />{event.game}</span>
+                          <span className="flex items-center gap-2 uppercase tracking-widest text-[10px]"><Calendar size={12} className="text-blue-400" />{new Date(event.startDate).toLocaleDateString()}</span>
+                          <span className="flex items-center gap-2 uppercase tracking-widest text-[10px] text-emerald-400 font-bold"><DollarSign size={12} />${event.prizePool.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      <Link to={`/events/${event._id}`} className="w-full sm:w-auto p-3 rounded-xl bg-white/5 hover:bg-purple-500/20 text-purple-400 transition-all flex items-center justify-center group/view">
+                        <Eye size={18} className="transition-transform group-hover/view:scale-110 shadow-glow" />
+                      </Link>
+                    </div>
+                  </GlassCard>
+                </motion.div>
               ))
             )}
           </div>
         </div>
 
-        {/* Side Content: Quick Actions & Activity */}
+        {/* Side Content: Quick Access */}
         <div className="space-y-8">
-          {/* Quick Actions */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-black text-white uppercase tracking-tight flex items-center gap-2">
-              <TrendingUp className="text-purple-500 w-5 h-5" /> Quick Access
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              {quickActions.map((action) => (
+          <SectionHeader
+            title="Quick Access"
+            icon={TrendingUp}
+          />
+          <div className="grid grid-cols-2 gap-4">
+            {quickActions.map((action, index) => (
+              <motion.div
+                key={action.label}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.4 + (index * 0.1) }}
+              >
                 <Link
-                  key={action.label}
                   to={action.link}
-                  className="p-5 bg-[#0B0C1A] border border-white/5 hover:border-purple-500/30 rounded-2xl transition-all group flex flex-col items-center text-center"
+                  className="group"
                 >
-                  <div className={`p-3 rounded-2xl bg-white/5 group-hover:bg-purple-500/10 mb-3 transition-colors ${action.color}`}>
-                    <action.icon className="w-6 h-6" />
-                  </div>
-                  <span className="text-xs font-bold text-gray-400 group-hover:text-white transition-colors">{action.label}</span>
+                  <GlassCard className="p-6 h-full flex flex-col items-center text-center hover:border-purple-500/30 transition-all">
+                    <div className={cn("p-4 rounded-2xl bg-white/5 group-hover:bg-purple-500/10 mb-4 transition-all duration-300 group-hover:scale-110", action.color)}>
+                      <action.icon size={28} />
+                    </div>
+                    <span className="text-[10px] font-black text-gray-400 group-hover:text-white uppercase tracking-widest transition-colors">{action.label}</span>
+                  </GlassCard>
                 </Link>
-              ))}
-            </div>
+              </motion.div>
+            ))}
           </div>
 
-          {/* Activity Feed */}
-          <div className="p-6 bg-[#0B0C1A] border border-white/5 rounded-2xl">
-            <h3 className="text-lg font-black text-white uppercase tracking-tight mb-6 flex items-center gap-2">
-              <Info className="text-purple-500 w-5 h-5" /> Activity Log
+          {/* Activity Mini Log */}
+          <GlassCard className="p-6">
+            <h3 className="text-xs font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+              Recent Ops Log
             </h3>
-            <div className="space-y-6 relative ml-2">
-              <div className="absolute left-0 top-1 bottom-1 w-px bg-white/5" />
-              {recentActivities.map((activity: any, idx: number) => (
-                <div key={idx} className="relative pl-6 space-y-1">
-                  <div className="absolute left-[-4px] top-1.5 w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
-                  <p className="text-sm font-bold text-gray-300 leading-tight">
-                    {activity.type}: <span className="text-gray-500 font-medium">{activity.description}</span>
-                  </p>
-                  <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">{activity.time}</p>
+            <div className="space-y-6 relative ml-1">
+              <div className="absolute left-0 top-1 bottom-1 w-[1px] bg-white/5" />
+              {[
+                { type: "Event", desc: "CS2 Championship Created", time: "2H AGO" },
+                { type: "System", desc: "Prize Distribution Updated", time: "5H AGO" },
+                { type: "Team", desc: "Navi Joined Winter Cup", time: "1D AGO" },
+              ].map((activity, idx) => (
+                <div key={idx} className="relative pl-6">
+                  <div className="absolute left-[-2.5px] top-1.5 w-[5px] h-[5px] rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-gray-300 uppercase tracking-tight">
+                      {activity.type}: <span className="text-gray-500 normal-case font-medium">{activity.desc}</span>
+                    </p>
+                    <p className="text-[9px] text-gray-600 font-bold">{activity.time}</p>
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
+          </GlassCard>
         </div>
       </div>
     </div>
@@ -276,37 +291,3 @@ const OrganizerDashboard = () => {
 };
 
 export default OrganizerDashboard;
-
-// Reusable StatCard Component
-interface StatCardProps {
-  icon: React.ElementType;
-  title: string;
-  value: string | number;
-  color: string;
-  gradient: string;
-}
-
-const StatCard: React.FC<StatCardProps> = ({
-  icon: Icon,
-  title,
-  value,
-  color,
-  gradient
-}) => {
-  return (
-    <div className={`p-6 bg-[#0B0C1A] border border-white/5 rounded-2xl relative overflow-hidden group hover:border-white/10 transition-all`}>
-      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-20 group-hover:opacity-30 transition-opacity`} />
-
-      <div className="relative z-10 flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-xl bg-white/5 ${color} transition-transform group-hover:scale-110 duration-300`}>
-          <Icon className="w-6 h-6" />
-        </div>
-      </div>
-
-      <div className="relative z-10">
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">{title}</p>
-        <p className="text-3xl font-black text-white tracking-tight">{value}</p>
-      </div>
-    </div>
-  );
-};

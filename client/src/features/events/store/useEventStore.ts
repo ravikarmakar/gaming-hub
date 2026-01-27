@@ -1,36 +1,12 @@
 import { create } from "zustand";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 import { axiosInstance } from "@/lib/axios";
 import { Team } from "@/features/teams/store/useTeamStore";
-
-type Status =
-  | "registration-open"
-  | "registration-closed"
-  | "live"
-  | "completed";
-
-export interface Event {
-  _id: string;
-  title: string;
-  game: string;
-  startDate: string;
-  eventEndAt: string;
-  registrationEndsAt: string;
-  slots: number;
-  category: string;
-  prizePool: number;
-  image: string;
-  description: string;
-  trending: boolean;
-  status: Status;
-  likes: number;
-  views: number;
-  orgId?: string;
-  teamId?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import { EVENT_ENDPOINTS } from "../lib/endpoints";
+import { handleApiError } from "@/lib/api-helper";
+import { Event } from "../lib/types";
 
 interface EventStateTypes {
   events: Event[];
@@ -39,20 +15,39 @@ interface EventStateTypes {
   isTeamsLoading: boolean;
   error: string | null;
   eventDetails: Event | null;
+  selectedEvent: Event | null; // Alias for eventDetails
   registerdTeams: Team[];
+
+  // Pagination & Search
+  searchQuery: string;
+  isSearching: boolean;
+  hasMore: boolean;
+  cursor: string | null;
+  limit: number;
 
   createEvent: (eventData: FormData) => Promise<Event | null>;
   fetchEventsByOrgId: (orgId: string) => Promise<void>;
   fetchEventDetailsById: (eventId: string) => Promise<void>;
+  getOneEvent: (id: string) => Promise<void>; // Alias for fetchEventDetailsById
   fetchAllEvents: () => Promise<void>;
-  regitserEvent: (
+
+  // Paginated Fetch
+  fetchEvents: (reset?: boolean) => Promise<void>;
+  setSearchQuery: (query: string) => void;
+  loadMoreEvents: () => Promise<void>;
+  resetEvents: () => void;
+
+  registerEvent: (
     eventId: string
   ) => Promise<{ success: boolean; message?: string }>;
-  isTeamRegistered: (eventId: string, teamId: string) => Promise<boolean>;
+  isTeamRegistered: (eventId: string, teamId: string) => Promise<{ registered: boolean; status: "approved" | "pending" | "none" }>;
   fetchRegisteredTeams: (eventId: string) => Promise<void>;
+  updateEvent: (eventId: string, eventData: FormData) => Promise<Event | null>;
+  deleteEvent: (eventId: string) => Promise<boolean>;
+  cancelRegistration: (id: string) => Promise<void>;
 }
 
-export const useEventStore = create<EventStateTypes>((set) => ({
+export const useEventStore = create<EventStateTypes>((set, get) => ({
   events: [],
   orgEvents: [],
   registerdTeams: [],
@@ -60,156 +55,232 @@ export const useEventStore = create<EventStateTypes>((set) => ({
   isTeamsLoading: false,
   error: null,
   eventDetails: null,
+  selectedEvent: null,
+
+  // Pagination & Search state
+  searchQuery: "",
+  isSearching: false,
+  hasMore: true,
+  cursor: null,
+  limit: 6,
 
   createEvent: async (eventData) => {
     set({ isLoading: true, error: null });
-
     try {
       const response = await axiosInstance.post(
-        "/events/create-event",
+        EVENT_ENDPOINTS.CREATE,
         eventData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+        { headers: { "Content-Type": "multipart/form-data" } }
       );
-
-      set({ isLoading: false });
-      const newEvent: Event = response.data;
-
+      const newEvent = response.data.event || response.data;
+      set((state) => ({
+        events: [newEvent, ...state.events],
+        orgEvents: [newEvent, ...state.orgEvents],
+        isLoading: false
+      }));
       return newEvent;
     } catch (err) {
-      const message = axios.isAxiosError(err)
-        ? (err.response?.data?.message as string) ?? "Failed to create event"
-        : err instanceof Error
-        ? err.message
-        : "Failed to create event";
-
+      const message = handleApiError(err, "Failed to create event");
       set({ isLoading: false, error: message });
-      console.error("Error creating event:", err);
       return null;
     }
   },
   fetchEventsByOrgId: async (orgId) => {
     set({ isLoading: true, error: null });
-
     try {
-      const response = await axiosInstance.get(`/events/org-events/${orgId}`);
-      const orgEvents: Event[] = response.data.data;
-
-      set({ orgEvents, isLoading: false });
+      const response = await axiosInstance.get(EVENT_ENDPOINTS.ORG_EVENTS(orgId));
+      set({ orgEvents: response.data.data, isLoading: false });
     } catch (err) {
-      const message = axios.isAxiosError(err)
-        ? (err.response?.data?.message as string) ??
-          "Failed to fetch org events"
-        : err instanceof Error
-        ? err.message
-        : "Failed to fetch org events";
-
+      const message = handleApiError(err, "Failed to fetch org events");
       set({ isLoading: false, error: message });
-      console.error("Error fetching events:", err);
     }
   },
   fetchEventDetailsById: async (eventId) => {
     set({ isLoading: true, error: null });
-
     try {
-      const response = await axiosInstance.get(
-        `events/event-details/${eventId}`
-      );
-      const eventDetails: Event = response.data.data;
-
-      set({ eventDetails, isLoading: false });
+      const response = await axiosInstance.get(EVENT_ENDPOINTS.DETAILS(eventId));
+      const details = response.data.data || response.data.events; // Support both structures
+      set({ eventDetails: details, selectedEvent: details, isLoading: false });
     } catch (err) {
-      const message = axios.isAxiosError(err)
-        ? (err.response?.data?.message as string) ?? "Failed to fetch event"
-        : err instanceof Error
-        ? err.message
-        : "Failed to fetch event";
-
+      const message = handleApiError(err, "Failed to fetch event details");
       set({ isLoading: false, error: message });
-      console.error("Error fetching event details:", err);
     }
+  },
+  getOneEvent: async (id) => {
+    return get().fetchEventDetailsById(id);
   },
   fetchAllEvents: async () => {
     set({ isLoading: true, error: null });
-
     try {
-      const response = await axiosInstance.get("/events/all-events");
-      const events: Event[] = response.data.data;
-
-      set({ events, isLoading: false });
+      const response = await axiosInstance.get(EVENT_ENDPOINTS.ALL);
+      set({ events: response.data.data, isLoading: false });
     } catch (err) {
-      const message = axios.isAxiosError(err)
-        ? (err.response?.data?.message as string) ?? "Failed to fetch events"
-        : err instanceof Error
-        ? err.message
-        : "Failed to fetch events";
-
+      const message = handleApiError(err, "Failed to fetch events");
       set({ isLoading: false, error: message });
-      console.error("Error fetching events:", err);
     }
   },
-  regitserEvent: async (eventId) => {
+
+  // Paginated & Search logic from global store
+  setSearchQuery: (query) => {
+    set({
+      searchQuery: query,
+      cursor: null,
+      events: [],
+      hasMore: true,
+      isSearching: !!query,
+    });
+    get().fetchEvents(true);
+  },
+
+  fetchEvents: async (reset = false) => {
+    set({ isLoading: true });
+    try {
+      const { searchQuery, cursor, events, limit } = get();
+      const params: any = {
+        cursor: reset ? null : cursor,
+        limit,
+        search: searchQuery || undefined,
+      };
+
+      const res = await axiosInstance.get(EVENT_ENDPOINTS.ALL, { params });
+
+      const newEventsData = res.data.events || res.data.data || [];
+      const existingEventIds = new Set(events.map((e) => e._id));
+      const newEvents = newEventsData.filter(
+        (event: Event) => !existingEventIds.has(event._id)
+      );
+
+      set({
+        events: reset ? newEvents : [...events, ...newEvents],
+        cursor: res.data.nextCursor || null,
+        hasMore: res.data.hasMore !== undefined ? res.data.hasMore : false,
+        isLoading: false,
+      });
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      set({ isLoading: false, hasMore: false });
+    }
+  },
+
+  loadMoreEvents: async () => {
+    if (!get().hasMore || get().isLoading) return;
+    await get().fetchEvents();
+  },
+
+  resetEvents: () => {
+    set({
+      events: [],
+      cursor: null,
+      hasMore: true,
+      isLoading: false,
+      searchQuery: "",
+      isSearching: false,
+    });
+  },
+
+  registerEvent: async (eventId) => {
     set({ isLoading: true, error: null });
     try {
       const response = await axiosInstance.post(
-        `/events/register-event/${eventId}`,
+        EVENT_ENDPOINTS.REGISTER(eventId),
         {}
       );
       set({ isLoading: false });
-
       return { success: true, message: response.data.message };
     } catch (error) {
-      set({
-        isLoading: false,
-        error: axios.isAxiosError(error)
-          ? error.message
-          : "Failed to register event",
-      });
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.message || error.message
+        : "Failed to register event";
+      set({ isLoading: false, error: message });
       console.error("Error registering event:", error);
-      return { success: false, message: "Failed to register event" };
+      return { success: false, message };
     }
   },
   isTeamRegistered: async (eventId, teamId) => {
     try {
       const response = await axiosInstance.get(
-        `events/is-registered/${eventId}/teams/${teamId}`
+        EVENT_ENDPOINTS.IS_REGISTERED(eventId, teamId)
       );
-      set({ isLoading: false });
-      return response.data.registered;
+      return {
+        registered: response.data.registered,
+        status: response.data.status || (response.data.registered ? "approved" : "none")
+      };
     } catch (error) {
-      set({
-        isLoading: false,
-        error: axios.isAxiosError(error)
-          ? error.message
-          : "Failed to check team registration",
-      });
       console.error("Error checking team registration:", error);
-      return false;
+      return { registered: false, status: "none" };
     }
   },
   fetchRegisteredTeams: async (eventId) => {
     set({ isTeamsLoading: true, error: null });
-
     try {
       const response = await axiosInstance.get(
-        `/events/registered-teams/${eventId}`
+        EVENT_ENDPOINTS.REGISTERED_TEAMS(eventId)
       );
       const registerdTeams: Team[] = response.data.teams;
-
       set({ registerdTeams, isTeamsLoading: false });
     } catch (err) {
-      const message = axios.isAxiosError(err)
-        ? (err.response?.data?.message as string) ??
-          "Failed to fetch registered teams"
-        : err instanceof Error
-        ? err.message
-        : "Failed to fetch registered teams";
-
+      const message = handleApiError(err, "Failed to fetch registered teams");
       set({ isTeamsLoading: false, error: message });
-      console.error("Error fetching registered teams:", err);
+    }
+  },
+  updateEvent: async (eventId, eventData) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosInstance.put(EVENT_ENDPOINTS.UPDATE(eventId), eventData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const updatedEvent: Event = response.data.event;
+      set((state) => ({
+        isLoading: false,
+        events: state.events.map((e) => (e._id === eventId ? updatedEvent : e)),
+        orgEvents: state.orgEvents.map((e) => (e._id === eventId ? updatedEvent : e)),
+        eventDetails: state.eventDetails?._id === eventId ? updatedEvent : state.eventDetails,
+        selectedEvent: state.selectedEvent?._id === eventId ? updatedEvent : state.selectedEvent,
+      }));
+      return updatedEvent;
+    } catch (err) {
+      const message = handleApiError(err, "Failed to update event");
+      set({ isLoading: false, error: message });
+      return null;
+    }
+  },
+  deleteEvent: async (eventId) => {
+    set({ isLoading: true, error: null });
+    try {
+      await axiosInstance.delete(EVENT_ENDPOINTS.DELETE(eventId));
+      set((state) => ({
+        isLoading: false,
+        events: state.events.filter((e) => e._id !== eventId),
+        orgEvents: state.orgEvents.filter((e) => e._id !== eventId),
+        eventDetails: state.eventDetails?._id === eventId ? null : state.eventDetails,
+        selectedEvent: state.selectedEvent?._id === eventId ? null : state.selectedEvent,
+      }));
+      return true;
+    } catch (err) {
+      const message = handleApiError(err, "Failed to delete event");
+      set({ isLoading: false, error: message });
+      return false;
+    }
+  },
+  cancelRegistration: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await axiosInstance.put(
+        EVENT_ENDPOINTS.UNREGISTER(id),
+        {},
+        { withCredentials: true }
+      );
+      if (res.status === 200) {
+        toast.success(res.data.message);
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || "Failed to unregister";
+      set({ error: message });
+      toast.error(message);
+    } finally {
+      set({ isLoading: false });
     }
   },
 }));
+
+export default useEventStore;

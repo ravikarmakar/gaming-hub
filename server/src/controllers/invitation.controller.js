@@ -3,6 +3,8 @@ import Team from "../models/team.model.js";
 import { Notification } from "../models/notification.model.js";
 import User from "../models/user.model.js";
 import Organizer from "../models/organizer.model.js";
+import Event from "../models/event.model.js";
+import EventRegistration from "../models/event-registration.model.js";
 import { Roles, Scopes } from "../config/roles.js";
 import mongoose from "mongoose";
 
@@ -216,7 +218,7 @@ export const respondToInvitation = async (req, res) => {
               scope: Scopes.ORG,
               role: invite.role || Roles.ORG.STAFF, // Use role from invite or default
               scopeId: org._id,
-              scopeModel: "Organization"
+              scopeModel: "Organizer"
             }
           }
         });
@@ -246,6 +248,23 @@ export const respondToInvitation = async (req, res) => {
         await Team.findByIdAndUpdate(team._id, {
           $push: { teamMembers: { user: userId, roleInTeam: invite.role === Roles.TEAM.MANAGER ? "manager" : "player" } }
         });
+      } else if (invite.entityModel === "Event") {
+        const event = invite.entityId;
+        const requester = await User.findById(userId);
+
+        if (!requester.teamId) {
+          return res.status(400).json({ success: false, message: "Requester must have a team to join an event" });
+        }
+
+        // Create EventRegistration
+        await EventRegistration.create({
+          eventId: event._id,
+          teamId: requester.teamId,
+          status: "approved",
+        });
+
+        // Increment joinedSlots
+        await Event.findByIdAndUpdate(event._id, { $inc: { joinedSlots: 1 } });
       }
 
       // Finalize Invite

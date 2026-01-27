@@ -11,6 +11,7 @@ import {
   updateEvent,
   deleteEvent,
   closeRegistration,
+  unregisterEvent,
 } from "../controllers/event.controller.js";
 import { isAuthenticated, isVerified } from "../middleware/auth.middleware.js";
 import { upload } from "../utils/multer.js";
@@ -29,7 +30,8 @@ router.post("/register-event/:eventId", registerEvent);
 router.get("/is-registered/:eventId/teams/:teamId", isTeamRegistered);
 router.get("/registered-teams/:eventId", fetchAllRegisteredTeams);
 
-router.put("/:eventId", updateEvent);
+router.put("/:eventId", upload.single("image"), updateEvent);
+router.put("/unregister/:eventId", unregisterEvent);
 router.delete("/:eventId", deleteEvent);
 // router.put("/remove-team/:eventId/:teamId", removeTeam); // to-do
 router.patch("/close-registration/:eventId", closeRegistration);
