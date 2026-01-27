@@ -56,13 +56,13 @@ const FindPlayers: React.FC = () => {
         <div className="min-h-screen bg-[#050505] text-white pt-24 pb-12 px-4 sm:px-6 md:px-12">
             {/* Background Orbs */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-violet-800/20 blur-[120px] rounded-full animate-pulse duration-[12000ms]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-fuchsia-800/20 blur-[120px] rounded-full animate-pulse duration-[15000ms]" />
-                <div className="absolute top-[20%] right-[10%] w-[40%] h-[40%] bg-blue-800/15 blur-[100px] rounded-full animate-pulse duration-[20000ms]" />
-                <div className="absolute top-[50%] left-[10%] w-[35%] h-[35%] bg-indigo-800/10 blur-[110px] rounded-full animate-pulse duration-[25000ms]" />
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-violet-800/20 blur-[120px] rounded-full animate-pulse" style={{ animationDuration: "12000ms" }} />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-fuchsia-800/20 blur-[120px] rounded-full animate-pulse" style={{ animationDuration: "15000ms" }} />
+                <div className="absolute top-[20%] right-[10%] w-[40%] h-[40%] bg-blue-800/15 blur-[100px] rounded-full animate-pulse" style={{ animationDuration: "20000ms" }} />
+                <div className="absolute top-[50%] left-[10%] w-[35%] h-[35%] bg-indigo-800/10 blur-[110px] rounded-full animate-pulse" style={{ animationDuration: "25000ms" }} />
                 <div className="absolute top-[10%] left-[40%] w-[30%] h-[30%] bg-purple-800/10 blur-[90px] rounded-full" />
                 <div className="absolute top-[60%] right-[30%] w-[30%] h-[30%] bg-violet-800/10 blur-[100px] rounded-full" />
-                <div className="absolute bottom-[20%] left-[30%] w-[25%] h-[25%] bg-fuchsia-800/10 blur-[80px] rounded-full animate-pulse duration-[18000ms]" />
+                <div className="absolute bottom-[20%] left-[30%] w-[25%] h-[25%] bg-fuchsia-800/10 blur-[80px] rounded-full animate-pulse" style={{ animationDuration: "18000ms" }} />
             </div>
 
             <div className="max-w-7xl mx-auto relative z-10">

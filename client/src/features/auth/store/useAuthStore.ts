@@ -117,25 +117,28 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       await axiosInstance.post(AUTH_ENDPOINTS.LOGOUT);
+    } catch (error) {
+      // Silently fail on logout errors (state will be cleared anyway)
+      console.error("Logout failed:", error);
+    } finally {
       set({
         user: null,
         isVerifying: false,
-      });
-    } catch (error) {
-      const errMsg = getErrorMessage(error, "Error during logout. Please try again.");
-      set({ error: errMsg, user: null });
-    } finally {
-      set({
         isLoading: false,
         checkingAuth: false,
+        error: null,
       });
     }
   },
 
   checkAuth: async () => {
-    const { user } = get();
-    // Only show global loading/checking state if we don't have a user yet
-    if (!user) {
+    const { user, checkingAuth } = get();
+
+    // Only show global loading during initial app load (no user yet)
+    // Don't change checkingAuth if already false - prevents UI freezes on profile refresh
+    const isInitialLoad = !user && checkingAuth;
+
+    if (isInitialLoad) {
       set({ checkingAuth: true, isLoading: true });
     }
     set({ error: null });
@@ -143,26 +146,28 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
     try {
       const response = await axiosInstance.get(AUTH_ENDPOINTS.GET_PROFILE);
       set({ user: response.data.user });
-    } catch (error) {
-      const errMsg = getErrorMessage(error, "Something went wrong during authentication");
-      set({ error: errMsg, user: null });
+    } catch {
+      // 401 = guest user (normal)
+      set({ user: null });
     } finally {
-      set({ checkingAuth: false, isLoading: false });
+      // Only update checkingAuth if this was the initial load
+      if (isInitialLoad) {
+        set({ checkingAuth: false, isLoading: false });
+      }
     }
   },
 
   refreshToken: async () => {
-    set({ checkingAuth: true, isLoading: true, error: null });
+    // Background process - no UI loading state
     try {
       const response = await axiosInstance.post(AUTH_ENDPOINTS.REFRESH_TOKEN);
       const { user } = response.data;
       if (user) set({ user });
       return response.data;
     } catch (error) {
-      const errMsg = getErrorMessage(error, "Failed to refresh session");
-      set({ user: null, error: errMsg });
-    } finally {
-      set({ checkingAuth: false, isLoading: false });
+      // fail silently in UI but throw for interceptor
+      set({ user: null });
+      throw error;
     }
   },
 

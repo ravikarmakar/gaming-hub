@@ -62,6 +62,9 @@ export const createTeam = TryCatchHandler(async (req, res, next) => {
       },
     });
 
+    // 4. Invalidate user profile cache so checkAuth gets fresh data
+    await redis.del(`user_profile:${userId}`);
+
     res.status(201).json({
       success: true,
       message: "Team created successfully",

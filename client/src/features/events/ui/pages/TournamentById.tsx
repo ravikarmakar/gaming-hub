@@ -266,7 +266,10 @@ const TournamentById = () => {
                                                 eventDetails.registrationMode === "invite-only" ? "Request Deployment" : "Register Personnel"}
                                             <ChevronRight size={18} className="transition-transform group-hover:translate-x-1" />
                                         </span>
-                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-[1500ms]" />
+                                        <div
+                                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform"
+                                            style={{ transitionDuration: "1500ms" }}
+                                        />
                                     </button>
                                 )}
 

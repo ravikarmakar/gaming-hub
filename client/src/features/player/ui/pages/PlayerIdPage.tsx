@@ -40,9 +40,9 @@ const PlayerIdPage = () => {
     <div className="min-h-screen bg-[#050505] text-white">
       {/* Background Decorative Orbs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-violet-800/20 blur-[120px] rounded-full animate-pulse duration-[15000ms]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-fuchsia-800/20 blur-[120px] rounded-full animate-pulse duration-[18000ms]" />
-        <div className="absolute top-[20%] right-[5%] w-[30%] h-[30%] bg-blue-800/10 blur-[100px] rounded-full animate-pulse duration-[25000ms]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-violet-800/20 blur-[120px] rounded-full animate-pulse" style={{ animationDuration: "15000ms" }} />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-fuchsia-800/20 blur-[120px] rounded-full animate-pulse" style={{ animationDuration: "18000ms" }} />
+        <div className="absolute top-[20%] right-[5%] w-[30%] h-[30%] bg-blue-800/10 blur-[100px] rounded-full animate-pulse" style={{ animationDuration: "25000ms" }} />
       </div>
 
       {/* Banner Section */}

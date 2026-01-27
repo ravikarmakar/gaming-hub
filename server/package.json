@@ -6,6 +6,7 @@
     "dev": "nodemon src/server.js",
     "seed": "node src/seeding/seed.js",
     "start": "node src/server.js",
+    "purge": "node src/seeding/purge.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

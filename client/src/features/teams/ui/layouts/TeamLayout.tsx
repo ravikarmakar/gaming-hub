@@ -70,7 +70,7 @@ const TeamLayout = () => {
       if (!link.access) return true;
       return can(link.access);
     });
-  }, [can]);
+  }, [can, user]);  // Include user to recalculate when auth state changes
 
   if (checkingAuth) {
     return (

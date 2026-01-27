@@ -433,9 +433,8 @@ export const sendResetPasswordOtp = TryCatchHandler(async (req, res, next) => {
     from: process.env.SENDER_EMAIL,
     to: email,
     subject: "Password Reset OTP - Gaming Hub",
-    text: `Hello ${
-      user.username || "User"
-    },\n\nWe received a request to reset the password for your Gaming Hub account.\n\nYour One-Time Password (OTP) is: ${otp}\n\nPlease use this OTP to reset your password. This OTP is valid for only 10 minutes.\n\nIf you did not request a password reset, you can safely ignore this email.\n\nRegards,\nGaming Hub Team`,
+    text: `Hello ${user.username || "User"
+      },\n\nWe received a request to reset the password for your Gaming Hub account.\n\nYour One-Time Password (OTP) is: ${otp}\n\nPlease use this OTP to reset your password. This OTP is valid for only 10 minutes.\n\nIf you did not request a password reset, you can safely ignore this email.\n\nRegards,\nGaming Hub Team`,
   };
 
   await transporter.sendMail(mailOptions);

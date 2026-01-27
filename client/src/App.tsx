@@ -75,7 +75,7 @@ const App = () => {
       checkAuth();
       hasCalled.current = true;
     }
-  }, [checkAuth]);
+  }, []);
 
   if (checkingAuth) {
     return <LoadingSpinner />;

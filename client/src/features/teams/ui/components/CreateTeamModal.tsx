@@ -36,11 +36,14 @@ import FileUpload from "@/components/FileUpload";
 import { useTeamStore } from "@/features/teams/store/useTeamStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { MAX_FILE_SIZE, teamSchema } from "@/schemas/team-validation/teamSchema";
+import { TEAM_ROUTES } from "@/features/teams/lib/routes";
+import { useNavigate } from "react-router-dom";
 
 
 type TeamForm = z.infer<typeof teamSchema>;
 
 const CreateTeamModal = () => {
+  const navigate = useNavigate();
   const { createTeam, isLoading, error, clearError, isCreateTeamOpen, setIsCreateTeamOpen } = useTeamStore();
 
   const form = useForm<TeamForm>({
@@ -65,11 +68,17 @@ const CreateTeamModal = () => {
     const result = await createTeam(formData);
 
     if (result) {
-      // Refresh the user profile to update teamId and roles in the auth store
-      await useAuthStore.getState().checkAuth();
-      toast.success("Team created successfully!");
+      // Close modal and reset form FIRST
       setIsCreateTeamOpen(false);
       reset();
+      toast.success("Team created successfully!");
+
+      // Use setTimeout to ensure modal is fully closed before navigation
+      // This avoids React batching issues and ensures state is synced
+      setTimeout(async () => {
+        await useAuthStore.getState().checkAuth();
+        navigate(TEAM_ROUTES.DASHBOARD);
+      }, 100);
     }
   };
 

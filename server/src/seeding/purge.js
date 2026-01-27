@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import mongoose from "mongoose";
 import connectDB from "../config/db.js";
 import User from "../models/user.model.js";
@@ -6,7 +9,7 @@ import Organizer from "../models/organizer.model.js";
 import Event from "../models/event.model.js";
 import JoinRequest from "../models/join-request.model.js";
 import Invitation from "../models/invitation.model.js";
-import Notification from "../models/notification.model.js";
+import { Notification } from "../models/notification.model.js";
 import { redis } from "../config/redisClient.js";
 
 const purgeDatabase = async () => {
