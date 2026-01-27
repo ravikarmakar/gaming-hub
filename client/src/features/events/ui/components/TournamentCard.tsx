@@ -22,8 +22,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import { GlassCard, NeonBadge } from "./ThemedComponents";
-import { Event } from "@/features/events/lib/types";
-import { EVENT_ROUTES } from "@/features/events/lib/routes";
+import { Event, EVENT_ROUTES } from "@/features/events/lib";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { cn } from "@/lib/utils";
 

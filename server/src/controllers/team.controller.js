@@ -65,7 +65,7 @@ export const createTeam = TryCatchHandler(async (req, res, next) => {
     res.status(201).json({
       success: true,
       message: "Team created successfully",
-      team: newTeam,
+      data: newTeam,
     });
   } catch (error) {
     if (req.file && fs.existsSync(req.file.path)) {
@@ -140,7 +140,7 @@ export const updateTeam = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Team updated successfully",
-    team,
+    data: team,
   });
 });
 
@@ -208,7 +208,7 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Team details fetched successfully",
-    team: transformedTeam,
+    data: transformedTeam,
   });
 });
 
@@ -333,7 +333,7 @@ export const fetchAllTeams = TryCatchHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: "Fetched all teams successfully",
-    teams,
+    data: teams,
     pagination: {
       totalCount,
       currentPage: parseInt(page),
@@ -501,7 +501,7 @@ export const removeMember = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Member removed successfully.",
-    team: transformedTeam
+    data: transformedTeam
   });
 });
 
@@ -692,7 +692,7 @@ export const transferTeamOwnerShip = TryCatchHandler(async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: "Team ownership transferred successfully.",
-      team: transformedTeam,
+      data: transformedTeam,
     });
   } catch (error) {
     next(error);
@@ -725,7 +725,7 @@ export const manageMemberRole = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: `The member's role has been updated to '${role}'.`,
-    team,
+    data: team,
   });
 });
 
@@ -868,7 +868,7 @@ export const manageStaffRole = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: `Member successfully ${action === "promote" ? "promoted to Manager" : "demoted to Player"}.`,
-    team: transformedTeam
+    data: transformedTeam
   });
 });
 

@@ -27,9 +27,15 @@ import {
   SectionHeader
 } from "@/features/events/ui/components/ThemedComponents";
 import FileUpload from "@/components/FileUpload";
-import { EventFormValues, eventSchema } from "@/features/events/lib/eventSchema";
-import { categoryOptions, eventTypeOptions, statusOptions } from "@/features/events/lib/constants";
-import { Category, Status } from "@/features/events/lib/types";
+import {
+  EventFormValues,
+  eventSchema,
+  categoryOptions,
+  eventTypeOptions,
+  statusOptions,
+  Category,
+  Status
+} from "@/features/events/lib";
 
 export default function CreateTournament() {
   const navigate = useNavigate();

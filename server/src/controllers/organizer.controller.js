@@ -87,7 +87,7 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
 
   res
     .status(201)
-    .json({ success: true, message: "Org created successfully", org: newOrg });
+    .json({ success: true, message: "Org created successfully", data: newOrg });
 });
 
 export const getOrgDetails = TryCatchHandler(async (req, res, next) => {
@@ -142,7 +142,7 @@ export const getOrgDetails = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Organization details fetched successfully",
-    org: orgWithMembers,
+    data: orgWithMembers,
   });
 });
 
@@ -202,7 +202,7 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Organization updated successfully",
-    org,
+    data: org,
   });
 });
 
@@ -266,7 +266,7 @@ export const addStaff = TryCatchHandler(async (req, res, next) => {
 
   res
     .status(200)
-    .json({ success: true, message: "Members added successfully", results });
+    .json({ success: true, message: "Members added successfully", data: results });
 });
 
 export const updateStaffRole = TryCatchHandler(async (req, res, next) => {
@@ -312,7 +312,7 @@ export const updateStaffRole = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Staff role updated successfully",
-    org: { ...updatedOrg.toObject(), members: formattedMembers }
+    data: { ...updatedOrg.toObject(), members: formattedMembers }
   });
 });
 
@@ -361,7 +361,7 @@ export const removeStaff = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Staff removed from organization successfully",
-    org: { ...updatedOrg.toObject(), members: formattedMembers }
+    data: { ...updatedOrg.toObject(), members: formattedMembers }
   });
 });
 
@@ -485,15 +485,17 @@ export const getDashboardStats = TryCatchHandler(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    stats: {
-      totalEvents,
-      upcomingEvents,
-      totalParticipants,
-      totalPrizeMoney,
-    },
-    recentEvents,
-    recentActivities,
-    org: organization,
+    data: {
+      stats: {
+        totalEvents,
+        upcomingEvents,
+        totalParticipants,
+        totalPrizeMoney,
+      },
+      recentEvents,
+      recentActivities,
+      org: organization,
+    }
   });
 });
 
@@ -593,7 +595,7 @@ export const transferOwnership = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Ownership transferred successfully",
-    org: { ...updatedOrg.toObject(), members: formattedMembers },
+    data: { ...updatedOrg.toObject(), members: formattedMembers },
     user: currentUser
   });
 });
@@ -680,7 +682,7 @@ export const getOrgJoinRequests = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Fetched join requests successfully",
-    requests,
+    data: requests,
   });
 });
 
@@ -857,7 +859,7 @@ export const inviteStaffToOrg = TryCatchHandler(async (req, res, next) => {
   res.status(201).json({
     success: true,
     message: "Invitation sent successfully",
-    invitation: newInvite
+    data: newInvite
   });
 });
 
@@ -876,7 +878,7 @@ export const getOrgPendingInvites = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Fetched pending invites",
-    invites
+    data: invites
   });
 });
 

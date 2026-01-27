@@ -63,4 +63,12 @@ const eventSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes for performance and scalability
+eventSchema.index({ orgId: 1 });
+eventSchema.index({ status: 1 });
+eventSchema.index({ game: 1 });
+eventSchema.index({ category: 1 });
+eventSchema.index({ createdAt: -1 });
+eventSchema.index({ startDate: 1 });
+
 export default mongoose.model("Event", eventSchema);

@@ -1,6 +1,6 @@
 import React from "react";
 import TournamentCard from "./TournamentCard";
-import { Event } from "@/features/events/lib/types";
+import { Event } from "@/features/events/lib";
 
 interface TournamentGridProps {
     events: Event[];

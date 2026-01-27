@@ -82,14 +82,6 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
   // handle image uploading logic here
   let imageUrl = "https://cloudinary/dummy-image-url";
   if (req.file) {
-    /*
-    const imageKitResponse = await uploadOnImageKit(req.file.path, req.file.filename, "events");
-    if (!imageKitResponse) {
-      return handleError("Failed to upload event image", 500);
-    }
-    imageUrl = imageKitResponse.url;
-    */
-    // Cleanup local file immediately since we are skipping upload
     if (fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
     }
@@ -113,7 +105,11 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
     prizeDistribution: req.body.prizeDistribution ? (typeof req.body.prizeDistribution === 'string' ? JSON.parse(req.body.prizeDistribution) : req.body.prizeDistribution) : [],
   });
 
-  res.status(201).json(event);
+  res.status(201).json({
+    success: true,
+    message: "Event created successfully",
+    data: event,
+  });
 });
 
 export const fetchEventByOrg = TryCatchHandler(async (req, res, next) => {
@@ -160,11 +156,43 @@ export const fetchEventDetailsById = TryCatchHandler(async (req, res, next) => {
 });
 
 export const fetchAllEvents = TryCatchHandler(async (req, res, next) => {
-  const events = await Event.find().sort({ createdAt: -1 });
+  let { cursor, limit = 10, search, game, category, status } = req.query;
+
+  limit = parseInt(limit);
+  let query = {};
+
+  if (search) {
+    query.$or = [
+      { title: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  if (game && game !== 'all') query.game = { $regex: `^${game}$`, $options: "i" };
+  if (category && category !== 'all') query.category = category.toLowerCase();
+  if (status && status !== 'all') query.status = status;
+
+  if (cursor) {
+    query._id = { $lt: cursor };
+  }
+
+  const events = await Event.find(query)
+    .sort({ _id: -1 })
+    .limit(limit + 1)
+    .lean();
+
+  let nextCursor = null;
+  if (events.length > limit) {
+    const lastEvent = events.pop();
+    nextCursor = lastEvent._id;
+  }
+  const hasMore = nextCursor !== null;
 
   res.status(200).json({
     success: true,
     data: events,
+    nextCursor,
+    hasMore
   });
 });
 
@@ -247,18 +275,35 @@ export const registerEvent = TryCatchHandler(async (req, res, next) => {
       return next(new CustomError("Your team must have an IGL, Rusher, Sniper, and Support to register.", 400));
     }
 
-    // Register team directly
-    await EventRegistration.create({
-      eventId: event._id,
-      teamId: team._id,
-      status: "approved",
-      players,
-      substitutes,
-    });
+    // Atomic Slot Increment with condition check
+    const updatedEvent = await Event.findOneAndUpdate(
+      {
+        _id: eventId,
+        status: "registration-open",
+        $expr: { $lt: ["$joinedSlots", "$maxSlots"] }
+      },
+      { $inc: { joinedSlots: 1 } },
+      { new: true }
+    );
 
-    // Increment joinedSlots on event
-    event.joinedSlots = (event.joinedSlots || 0) + 1;
-    await event.save();
+    if (!updatedEvent) {
+      return next(new CustomError("Event is full or registration is not open", 400));
+    }
+
+    try {
+      // Register team directly
+      await EventRegistration.create({
+        eventId: event._id,
+        teamId: team._id,
+        status: "approved",
+        players,
+        substitutes,
+      });
+    } catch (error) {
+      // Rollback the slot increment if registration creation fails
+      await Event.updateOne({ _id: eventId }, { $inc: { joinedSlots: -1 } });
+      throw error;
+    }
 
     // Update team and user history (as before)
     if (!team.playedTournaments.includes(eventId)) {
@@ -446,7 +491,7 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Event updated successfully",
-    event: updatedEvent,
+    data: updatedEvent,
   });
 });
 
@@ -487,12 +532,11 @@ export const unregisterEvent = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("You are not registered for this event", 400));
   }
 
-  // Decrement joinedSlots on event
-  const event = await Event.findById(eventId);
-  if (event) {
-    event.joinedSlots = Math.max(0, (event.joinedSlots || 0) - 1);
-    await event.save();
-  }
+  // Atomic Slot Decrement
+  await Event.updateOne(
+    { _id: eventId, joinedSlots: { $gt: 0 } },
+    { $inc: { joinedSlots: -1 } }
+  );
 
   res.status(200).json({
     success: true,
@@ -500,42 +544,7 @@ export const unregisterEvent = TryCatchHandler(async (req, res, next) => {
   });
 });
 
-export const getAllEvents = TryCatchHandler(async (req, res, next) => {
-  try {
-    let { cursor, limit = 10, search } = req.query;
-
-    limit = parseInt(limit);
-
-    let query = {};
-
-    if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { description: { $regex: search, $options: "i" } },
-      ];
-    }
-
-    if (cursor) {
-      query._id = { $lt: cursor };
-    }
-
-    const events = await Event.find(query)
-      .sort({ _id: -1 })
-      .limit(limit + 1);
-
-    let nextCursor = null;
-    if (events.length > limit) {
-      const lastEvent = events.pop();
-      nextCursor = lastEvent._id;
-    }
-    const hasMore = nextCursor !== null;
-
-    // 🔹 Response
-    res.status(200).json({ success: true, events, nextCursor, hasMore });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+// getAllEvents merged into fetchAllEvents
 
 // TO-DO -> Event owner can remove any team from the event
 // TO-DO -> notification feature using socket.io

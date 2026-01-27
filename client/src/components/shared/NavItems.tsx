@@ -9,7 +9,7 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/component
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { EVENT_ROUTES } from "@/features/events/lib/routes";
+import { EVENT_ROUTES } from "@/features/events/lib";
 import { PLAYER_ROUTES } from "@/features/player/lib/routes";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 

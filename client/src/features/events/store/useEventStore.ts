@@ -32,10 +32,17 @@ interface EventStateTypes {
   fetchAllEvents: () => Promise<void>;
 
   // Paginated Fetch
-  fetchEvents: (reset?: boolean) => Promise<void>;
-  setSearchQuery: (query: string) => void;
-  loadMoreEvents: () => Promise<void>;
+  fetchEvents: (params?: {
+    search?: string;
+    game?: string;
+    category?: string;
+    status?: string;
+    cursor?: string | null;
+    limit?: number;
+    append?: boolean;
+  }) => Promise<void>;
   resetEvents: () => void;
+  clearEvents: () => void;
 
   registerEvent: (
     eventId: string
@@ -46,6 +53,8 @@ interface EventStateTypes {
   deleteEvent: (eventId: string) => Promise<boolean>;
   cancelRegistration: (id: string) => Promise<void>;
 }
+
+let abortController: AbortController | null = null;
 
 export const useEventStore = create<EventStateTypes>((set, get) => ({
   events: [],
@@ -72,7 +81,7 @@ export const useEventStore = create<EventStateTypes>((set, get) => ({
         eventData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
-      const newEvent = response.data.event || response.data;
+      const newEvent = response.data.data;
       set((state) => ({
         events: [newEvent, ...state.events],
         orgEvents: [newEvent, ...state.orgEvents],
@@ -99,7 +108,7 @@ export const useEventStore = create<EventStateTypes>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await axiosInstance.get(EVENT_ENDPOINTS.DETAILS(eventId));
-      const details = response.data.data || response.data.events; // Support both structures
+      const details = response.data.data;
       set({ eventDetails: details, selectedEvent: details, isLoading: false });
     } catch (err) {
       const message = handleApiError(err, "Failed to fetch event details");
@@ -120,51 +129,61 @@ export const useEventStore = create<EventStateTypes>((set, get) => ({
     }
   },
 
-  // Paginated & Search logic from global store
-  setSearchQuery: (query) => {
-    set({
-      searchQuery: query,
-      cursor: null,
-      events: [],
-      hasMore: true,
-      isSearching: !!query,
-    });
-    get().fetchEvents(true);
-  },
+  fetchEvents: async (params = {}) => {
+    const {
+      append = false,
+      search,
+      game,
+      category,
+      status,
+      cursor: customCursor,
+      limit: customLimit
+    } = params;
 
-  fetchEvents: async (reset = false) => {
-    set({ isLoading: true });
+    // Abort previous request if it exists
+    if (abortController) {
+      abortController.abort();
+    }
+    abortController = new AbortController();
+
+    set({ isLoading: true, error: null });
+
     try {
-      const { searchQuery, cursor, events, limit } = get();
-      const params: any = {
-        cursor: reset ? null : cursor,
-        limit,
-        search: searchQuery || undefined,
+      const { cursor, limit } = get();
+      const queryParams: any = {
+        cursor: append ? cursor : customCursor || null,
+        limit: customLimit || limit,
+        search: search || undefined,
+        game: game || undefined,
+        category: category || undefined,
+        status: status || undefined,
       };
 
-      const res = await axiosInstance.get(EVENT_ENDPOINTS.ALL, { params });
+      const res = await axiosInstance.get(EVENT_ENDPOINTS.ALL, {
+        params: queryParams,
+        signal: abortController.signal
+      });
 
-      const newEventsData = res.data.events || res.data.data || [];
-      const existingEventIds = new Set(events.map((e) => e._id));
-      const newEvents = newEventsData.filter(
-        (event: Event) => !existingEventIds.has(event._id)
-      );
+      const newEventsData = res.data.data || [];
 
-      set({
-        events: reset ? newEvents : [...events, ...newEvents],
+      set((state) => ({
+        events: append ? [...state.events, ...newEventsData] : newEventsData,
         cursor: res.data.nextCursor || null,
         hasMore: res.data.hasMore !== undefined ? res.data.hasMore : false,
         isLoading: false,
-      });
+      }));
     } catch (error) {
-      console.error("Error fetching events:", error);
-      set({ isLoading: false, hasMore: false });
+      if (axios.isCancel(error)) return;
+      const message = handleApiError(error, "Failed to fetch events");
+      set({ isLoading: false, error: message, hasMore: false });
+    } finally {
+      abortController = null;
     }
   },
 
   loadMoreEvents: async () => {
     if (!get().hasMore || get().isLoading) return;
-    await get().fetchEvents();
+    await get().fetchEvents({ append: true });
   },
 
   resetEvents: () => {
@@ -173,8 +192,16 @@ export const useEventStore = create<EventStateTypes>((set, get) => ({
       cursor: null,
       hasMore: true,
       isLoading: false,
-      searchQuery: "",
-      isSearching: false,
+    });
+  },
+
+  clearEvents: () => {
+    set({
+      events: [],
+      cursor: null,
+      hasMore: true,
+      isLoading: false,
+      error: null
     });
   },
 
@@ -229,7 +256,7 @@ export const useEventStore = create<EventStateTypes>((set, get) => ({
       const response = await axiosInstance.put(EVENT_ENDPOINTS.UPDATE(eventId), eventData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      const updatedEvent: Event = response.data.event;
+      const updatedEvent: Event = response.data.data;
       set((state) => ({
         isLoading: false,
         events: state.events.map((e) => (e._id === eventId ? updatedEvent : e)),

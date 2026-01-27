@@ -102,7 +102,7 @@ interface TeamStateTypes {
   transferTeamOwnerShip: (memberId: string) => Promise<{ success: boolean; message: string }>;
   deleteTeam: () => Promise<{ success: boolean; message: string }>;
   fetchAllTeams: () => Promise<void>;
-  fetchTeamsPaginated: (params: {
+  fetchTeams: (params?: {
     page?: number;
     limit?: number;
     search?: string;
@@ -150,8 +150,9 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await axiosInstance.post(TEAM_ENDPOINTS.CREATE, teamData);
-      set({ currentTeam: response.data.team, isLoading: false });
-      return response.data.team;
+      const team = response.data.data;
+      set({ currentTeam: team, isLoading: false });
+      return team;
     } catch (error) {
       const errMsg = getErrorMessage(error, "Error creating new team");
       set({ error: errMsg, isLoading: false });
@@ -169,8 +170,9 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await axiosInstance.get(TEAM_ENDPOINTS.GET_BY_ID(id));
-      set({ currentTeam: response?.data?.team, isLoading: false });
-      return response.data.team;
+      const team = response.data.data;
+      set({ currentTeam: team, isLoading: false });
+      return team;
     } catch (error) {
       const errMsg = getErrorMessage(error, "Error fetching team details");
       set({ error: errMsg, isLoading: false });
@@ -183,7 +185,7 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
     try {
       const response = await axiosInstance.put(TEAM_ENDPOINTS.REMOVE_MEMBER(id));
       if (response.data.success) {
-        set({ currentTeam: response.data.team, isLoading: false });
+        set({ currentTeam: response.data.data, isLoading: false });
       } else {
         set({ isLoading: false });
       }
@@ -203,7 +205,7 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
         role,
         memberId,
       });
-      const updatedTeam = response.data.team;
+      const updatedTeam = response.data.data;
 
       set({
         currentTeam: updatedTeam,
@@ -228,7 +230,7 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
 
       if (response.data.success) {
         set((state) => ({
-          currentTeam: response.data.team || state.currentTeam,
+          currentTeam: response.data.data || state.currentTeam,
           isLoading: false
         }));
       }
@@ -251,7 +253,7 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
 
       if (response.data.success) {
         set((state) => ({
-          currentTeam: response.data.team || state.currentTeam,
+          currentTeam: response.data.data || state.currentTeam,
           isLoading: false
         }));
       }
@@ -317,7 +319,7 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
         }
 
         set({
-          currentTeam: response.data.team || get().currentTeam,
+          currentTeam: response.data.data || get().currentTeam,
           isLoading: false
         });
       } else {
@@ -365,28 +367,29 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await axiosInstance.get(TEAM_ENDPOINTS.GET_ALL);
-      set({ teams: response.data.teams, isLoading: false });
+      set({ teams: response.data.data, isLoading: false });
     } catch (error) {
       const errMsg = getErrorMessage(error, "Error fetching all teams");
       set({ error: errMsg, isLoading: false });
     }
   },
 
-  fetchTeamsPaginated: async ({ page = 1, limit = 10, search, region, isRecruiting, isVerified, append = false }) => {
+  fetchTeams: async (params = {}) => {
+    const { page = 1, limit = 10, search, region, isRecruiting, isVerified, append = false } = params;
     set({ isLoading: true, error: null });
     try {
-      const params = new URLSearchParams({
+      const queryParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
       });
-      if (search) params.append("search", search);
-      if (region) params.append("region", region);
-      if (isRecruiting !== undefined) params.append("isRecruiting", isRecruiting.toString());
-      if (isVerified !== undefined) params.append("isVerified", isVerified.toString());
+      if (search) queryParams.append("search", search);
+      if (region) queryParams.append("region", region);
+      if (isRecruiting !== undefined) queryParams.append("isRecruiting", isRecruiting.toString());
+      if (isVerified !== undefined) queryParams.append("isVerified", isVerified.toString());
 
-      const response = await axiosInstance.get(`${TEAM_ENDPOINTS.GET_ALL}?${params.toString()}`);
+      const response = await axiosInstance.get(`${TEAM_ENDPOINTS.GET_ALL}?${queryParams.toString()}`);
 
-      const newTeams = response.data.teams;
+      const newTeams = response.data.data || [];
       const pagination = response.data.pagination;
 
       set((state) => ({
@@ -395,7 +398,7 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
         isLoading: false,
       }));
     } catch (error) {
-      const errMsg = getErrorMessage(error, "Error fetching paginated teams");
+      const errMsg = getErrorMessage(error, "Error fetching teams");
       set({ error: errMsg, isLoading: false });
     }
   },
@@ -404,8 +407,8 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await axiosInstance.put(TEAM_ENDPOINTS.UPDATE, teamData);
-      set({ currentTeam: response.data.team, isLoading: false });
-      return response.data.team;
+      set({ currentTeam: response.data.data, isLoading: false });
+      return response.data.data;
     } catch (error) {
       const errMsg = getErrorMessage(error, "Error updating team details");
       set({ error: errMsg, isLoading: false });
@@ -465,8 +468,8 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
           isLoading: false
         };
 
-        if (action === 'accepted' && response.data.team) {
-          nextState.currentTeam = response.data.team;
+        if (action === 'accepted' && response.data.data) {
+          nextState.currentTeam = response.data.data;
         }
 
         return nextState;

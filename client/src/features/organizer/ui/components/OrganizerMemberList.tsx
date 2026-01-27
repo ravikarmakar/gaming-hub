@@ -1,4 +1,4 @@
-import { Users } from "lucide-react";
+import { Users, Loader2 } from "lucide-react";
 import { OrganizerMemberCard } from "./OrganizerMemberCard";
 
 interface Member {
@@ -35,6 +35,15 @@ export const OrganizerMemberList = ({
     currentUserId,
     isLoading,
 }: OrganizerMemberListProps) => {
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
+                <Loader2 className="w-12 h-12 text-purple-500 animate-spin mb-3" />
+                <p className="text-gray-400 text-sm">Loading members...</p>
+            </div>
+        );
+    }
 
     if (!members || members.length === 0) {
         return (

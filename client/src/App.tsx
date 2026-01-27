@@ -7,7 +7,7 @@ import { ErrorBoundary } from "react-error-boundary";
 import { ROUTES } from "@/lib/routes";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
-import { EVENT_ROUTES } from "@/features/events/lib/routes";
+import { EVENT_ROUTES } from "@/features/events/lib";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
 // Layouts & Guards
@@ -61,8 +61,7 @@ const TournamentById = lazy(() => import("@/features/events/ui/pages/TournamentB
 const AllTournaments = lazy(() => import("@/features/events/ui/pages/AllTournaments"));
 
 // Super Admin
-const SuperAdminLayout = lazy(() => import("@/components/layouts/SuperAdminLayout"));
-const DashboardPage = lazy(() => import("@/pages/super-admin/DashboardPage"));
+// const DashboardPage = lazy(() => import("@/pages/super-admin/DashboardPage"));
 
 // Notification Features
 const NotificationsPage = lazy(() => import("@/features/notifications/ui/pages/NotificationsPage"));
@@ -133,9 +132,9 @@ const App = () => {
                 <Route path={ORGANIZER_ROUTES.SETTINGS} element={<OrganizerSettingsPage />} />
               </Route>
 
-              <Route path={ROUTES.SUPER_ADMIN} element={<SuperAdminLayout />}>
+              {/* <Route path={ROUTES.SUPER_ADMIN} element={<SuperAdminLayout />}>
                 <Route index element={<DashboardPage />} />
-              </Route>
+              </Route> */}
             </Route>
 
             <Route element={<PublicRoute />}>

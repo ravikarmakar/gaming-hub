@@ -135,8 +135,8 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const { data } = await axiosInstance.get(ORGANIZER_ENDPOINTS.GET_ORG_DETAILS(orgId));
-      set({ currentOrg: data.org, isLoading: false });
-      return data.org;
+      set({ currentOrg: data.data, isLoading: false });
+      return data.data;
     } catch (error) {
       set({ error: getErrorMessage(error, "Error fetching organizer"), isLoading: false });
       return null;
@@ -156,7 +156,7 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
       const { data } = await axiosInstance.put(ORGANIZER_ENDPOINTS.UPDATE_ORG(orgId), updateData, { headers });
 
       if (data.success) {
-        set({ currentOrg: data.org, isLoading: false });
+        set({ currentOrg: data.data, isLoading: false });
         return true;
       }
       return false;
@@ -216,7 +216,7 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
     try {
       const { data } = await axiosInstance.put(ORGANIZER_ENDPOINTS.UPDATE_STAFF_ROLE(orgId), { userId, newRole: role });
       if (data.success) {
-        set({ currentOrg: data.org, isLoading: false });
+        set({ currentOrg: data.data, isLoading: false });
         return true;
       }
       set({ error: data.message || "Failed to update role", isLoading: false });
@@ -238,7 +238,7 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
     try {
       const { data } = await axiosInstance.put(ORGANIZER_ENDPOINTS.TRANSFER_OWNERSHIP(orgId), { newOwnerId: userId });
       if (data.success) {
-        set({ currentOrg: data.org, isLoading: false });
+        set({ currentOrg: data.data, isLoading: false });
         return true;
       }
       return false;
@@ -259,7 +259,7 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
     try {
       const { data } = await axiosInstance.delete(ORGANIZER_ENDPOINTS.REMOVE_STAFF(orgId, id));
       if (data.success) {
-        set({ currentOrg: data.org, isLoading: false });
+        set({ currentOrg: data.data, isLoading: false });
         return true;
       }
       return false;
@@ -276,7 +276,7 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
         params: { username: query, hasOrg: false, page, limit },
       });
       set((state) => ({
-        availableUsers: page === 1 ? data.players : [...state.availableUsers, ...data.players],
+        availableUsers: page === 1 ? data.data : [...state.availableUsers, ...data.data],
         isLoading: false,
       }));
     } catch (error) {
@@ -295,8 +295,8 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
         params: { orgId }
       });
       set({
-        dashboardData: data,
-        currentOrg: data.org,
+        dashboardData: data.data,
+        currentOrg: data.data.org,
         isLoading: false
       });
     } catch (error) {
@@ -320,7 +320,7 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const { data } = await axiosInstance.get(ORGANIZER_ENDPOINTS.GET_JOIN_REQUESTS(orgId));
-      set({ joinRequests: data.requests, isLoading: false });
+      set({ joinRequests: data.data, isLoading: false });
     } catch (error) {
       set({ error: getErrorMessage(error, "Error fetching join requests"), isLoading: false });
     }
@@ -366,7 +366,7 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const { data } = await axiosInstance.get(`${ORGANIZER_ENDPOINTS.GET_CURRENT_ORG}/${orgId}/invites`);
-      set({ pendingInvites: data.invites, isLoading: false });
+      set({ pendingInvites: data.data, isLoading: false });
     } catch (error) {
       set({ error: getErrorMessage(error, "Error fetching pending invites"), isLoading: false });
     }

@@ -16,28 +16,28 @@ import { categoryOptions } from "../../lib/constants";
 
 
 const AllTournaments = () => {
-    const { fetchAllEvents, events, isLoading } = useEventStore();
+    const { events, isLoading, fetchEvents, clearEvents } = useEventStore();
 
-    const [search, setSearch] = useState("");
     const [gameFilter, setGameFilter] = useState("all");
     const [categoryFilter, setCategoryFilter] = useState("all");
+    const [searchTerm, setSearchTerm] = useState("");
 
     useEffect(() => {
-        fetchAllEvents();
-    }, [fetchAllEvents]);
+        const delayDebounceFn = setTimeout(() => {
+            fetchEvents({
+                search: searchTerm || undefined,
+                game: gameFilter !== "all" ? gameFilter : undefined,
+                category: categoryFilter !== "all" ? categoryFilter : undefined,
+                append: false
+            });
+        }, 500);
 
-    const filteredEvents = useMemo(() => {
-        return events.filter((event) => {
-            const matchesSearch =
-                event.title.toLowerCase().includes(search.toLowerCase()) ||
-                event.game.toLowerCase().includes(search.toLowerCase());
-            const matchesGame = gameFilter === "all" || event.game.toLowerCase() === gameFilter.toLowerCase();
-            const matchesCategory =
-                categoryFilter === "all" || event.category.toLowerCase() === categoryFilter.toLowerCase();
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm, gameFilter, categoryFilter, fetchEvents]);
 
-            return matchesSearch && matchesGame && matchesCategory;
-        });
-    }, [events, search, gameFilter, categoryFilter]);
+    useEffect(() => {
+        return () => clearEvents();
+    }, [clearEvents]);
 
     const uniqueGames = useMemo(() => {
         const games = new Set(events.map((e) => e.game));
@@ -84,8 +84,8 @@ const AllTournaments = () => {
                         <input
                             type="text"
                             placeholder="Search tournaments, games, or arenas..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 transition-all font-medium"
                         />
                     </div>
@@ -136,8 +136,8 @@ const AllTournaments = () => {
                             </GlassCard>
                         ))}
                     </div>
-                ) : filteredEvents.length > 0 ? (
-                    <TournamentGrid events={filteredEvents} />
+                ) : events.length > 0 ? (
+                    <TournamentGrid events={events} />
                 ) : (
                     <div className="col-span-full py-20 text-center">
                         <div className="inline-block p-6 bg-white/5 rounded-full mb-6 italic text-gray-500">

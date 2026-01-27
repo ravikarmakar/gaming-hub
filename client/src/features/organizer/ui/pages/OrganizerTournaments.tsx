@@ -18,7 +18,7 @@ import { Card } from "@/components/ui/card";
 import { useEventStore } from "@/features/events/store/useEventStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
-import { EVENT_ROUTES } from "@/features/events/lib/routes";
+import { EVENT_ROUTES } from "@/features/events/lib";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { ORG_ACCESS } from "@/features/organizer/lib/access";
 

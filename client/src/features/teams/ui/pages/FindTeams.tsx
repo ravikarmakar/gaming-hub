@@ -8,14 +8,14 @@ import { Input } from "@/components/ui/input";
 import TeamFilters from "../components/TeamFilters";
 
 const FindTeams: React.FC = () => {
-    const { paginatedTeams, pagination, isLoading, fetchTeamsPaginated } = useTeamStore();
+    const { paginatedTeams, pagination, isLoading, fetchTeams } = useTeamStore();
     const [search, setSearch] = useState("");
     const [region, setRegion] = useState<string | undefined>();
     const [isRecruiting, setIsRecruiting] = useState<boolean | undefined>();
     const [isVerified, setIsVerified] = useState<boolean | undefined>();
 
     const loadTeams = useCallback((page: number = 1, append: boolean = false) => {
-        fetchTeamsPaginated({
+        fetchTeams({
             page,
             search,
             region,
@@ -23,7 +23,7 @@ const FindTeams: React.FC = () => {
             isVerified,
             append,
         });
-    }, [fetchTeamsPaginated, search, region, isRecruiting, isVerified]);
+    }, [fetchTeams, search, region, isRecruiting, isVerified]);
 
     useEffect(() => {
         // Debounce search
