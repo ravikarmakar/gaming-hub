@@ -2,7 +2,7 @@ import { axiosInstance } from "./axios";
 import type { AxiosRequestConfig } from "axios";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { AUTH_ENDPOINTS } from "@/features/auth/api/endpoints";
+import { AUTH_ENDPOINTS } from "@/features/auth/lib/endpoints";
 
 interface CustomAxiosRequestConfig extends AxiosRequestConfig {
   _retry?: boolean;

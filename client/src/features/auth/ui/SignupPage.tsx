@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useMemo, useTransition } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { FaCheck } from "react-icons/fa";
 import { Mail, Lock, User, AlertCircle, Loader2, ArrowRight } from "lucide-react";
@@ -9,21 +9,20 @@ import { Button } from "@/components/ui/button";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { SocialLogin } from "@/features/auth/ui/components/social-login";
-import { signupSchema, SignupSchemaType } from "@/schemas/auth-validation/signupSchema";
+import { signupSchema, SignupSchemaType } from "@/features/auth/lib/authSchemas";
 import { showSuccessToast, showWarningToast } from "@/lib/toast";
 import { useGoogleAuth, useDiscordAuth } from "@/features/auth/hooks/auth-utils";
 import { ROUTES } from "@/lib/routes";
 
+type SignupValidationErrors = Partial<Record<keyof SignupSchemaType, string>>;
+
 export default function SignupPage() {
     const navigate = useNavigate();
     const { isLoading, error, register } = useAuthStore();
-    const [passwordStrength, setPasswordStrength] = useState(0);
-    const [validationErrors, setValidationErrors] = useState<Record<
-        string,
-        string
-    > | null>(null);
+    const [validationErrors, setValidationErrors] = useState<SignupValidationErrors | null>(null);
 
-    // Use reusable auth hooks
+    const [_isPending, startTransition] = useTransition();
+
     const signInWithGoogle = useGoogleAuth();
     const handleDiscordLogin = useDiscordAuth();
 
@@ -34,7 +33,6 @@ export default function SignupPage() {
         termsAccepted: false,
     });
 
-    // Animation variants
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
@@ -48,20 +46,14 @@ export default function SignupPage() {
         visible: { opacity: 1, y: 0 },
     };
 
-    // Calculate password strength
-    useEffect(() => {
-        if (!formData.password) {
-            setPasswordStrength(0);
-            return;
-        }
-
+    const passwordStrength = useMemo(() => {
+        if (!formData.password) return 0;
         let strength = 0;
         if (formData.password.length >= 8) strength += 1;
         if (/[A-Z]/.test(formData.password)) strength += 1;
         if (/[0-9]/.test(formData.password)) strength += 1;
         if (/[^A-Za-z0-9]/.test(formData.password)) strength += 1;
-
-        setPasswordStrength(strength);
+        return strength;
     }, [formData.password]);
 
     const getPasswordStrengthText = () => {
@@ -76,30 +68,27 @@ export default function SignupPage() {
     const getPasswordStrengthColor = () => {
         if (!formData.password) return "bg-gray-700";
         if (passwordStrength === 1) return "bg-red-500";
-        if (passwordStrength === 2) return "bg-yellow-500";
-        if (passwordStrength === 3) return "bg-blue-500";
-        if (passwordStrength === 4) return "bg-green-500";
+        if (passwordStrength === 2) return "bg-amber-500";
+        if (passwordStrength === 3) return "bg-purple-500";
+        if (passwordStrength === 4) return "bg-emerald-500";
         return "bg-gray-700";
     };
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
 
-        // Clear validation error for this field when user starts typing
-        if (validationErrors?.[name]) {
-            setValidationErrors((prev) => {
-                if (!prev) return null;
-                const updated = { ...prev };
-                delete updated[name];
-                return Object.keys(updated).length === 0 ? null : updated;
-            });
-        }
+        setValidationErrors((prev) => {
+            if (!prev?.[name as keyof SignupSchemaType]) return prev;
+            const updated = { ...prev };
+            delete updated[name as keyof SignupSchemaType];
+            return Object.keys(updated).length === 0 ? null : updated;
+        });
 
         setFormData((prev) => ({
             ...prev,
             [name]: type === "checkbox" ? checked : (name === "email" ? value.trim() : value),
         }));
-    }, [validationErrors]);
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -132,18 +121,22 @@ export default function SignupPage() {
             setValidationErrors(null); // Clear validation errors on success
             showSuccessToast("Registration successful! Welcome to GameVerse!");
 
-            // Navigate to email verification if account needs verification
-            if (!result.isAccountVerified) {
-                navigate(ROUTES.EMAIL_VERIFY);
-            } else {
-                navigate(ROUTES.HOME);
-            }
-
+            // Clear form
             setFormData({
                 username: "",
                 email: "",
                 password: "",
                 termsAccepted: false,
+            });
+
+            // Use React 18 transition for smooth, non-blocking navigation
+            startTransition(() => {
+                // Navigate to email verification if account needs verification
+                if (!result.isAccountVerified) {
+                    void navigate(ROUTES.EMAIL_VERIFY);
+                } else {
+                    void navigate(ROUTES.HOME);
+                }
             });
         }
     };
@@ -160,10 +153,10 @@ export default function SignupPage() {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: -10 }}
                             transition={{ duration: 0.2 }}
-                            className="p-2.5 border rounded-lg bg-red-500/10 border-red-500/20 backdrop-blur-sm"
+                            className="p-3 border rounded-lg bg-red-500/10 border-red-500/30 backdrop-blur-sm shadow-lg shadow-red-500/5"
                         >
-                            <p className="flex items-center justify-center gap-1.5 text-xs text-center text-red-400">
-                                <AlertCircle className="w-4 h-4" />
+                            <p className="flex items-center justify-center gap-2 text-xs text-center text-red-400">
+                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
                                 <span>{error}</span>
                             </p>
                         </motion.div>
@@ -239,9 +232,9 @@ export default function SignupPage() {
                                     <span
                                         className={`
                     ${passwordStrength === 1 ? "text-red-400" : ""}
-                    ${passwordStrength === 2 ? "text-yellow-400" : ""}
-                    ${passwordStrength === 3 ? "text-blue-400" : ""}
-                    ${passwordStrength === 4 ? "text-green-400" : ""}
+                    ${passwordStrength === 2 ? "text-amber-400" : ""}
+                    ${passwordStrength === 3 ? "text-purple-400" : ""}
+                    ${passwordStrength === 4 ? "text-emerald-400" : ""}
                   `}
                                     >
                                         {getPasswordStrengthText()}
@@ -263,7 +256,7 @@ export default function SignupPage() {
                                     onChange={handleChange}
                                     className="sr-only peer"
                                 />
-                                <div className="w-3.5 h-3.5 transition-all duration-200 border-2 border-gray-500 rounded peer-checked:border-purple-500 peer-checked:bg-purple-500/20"></div>
+                                <div className="w-3.5 h-3.5 transition-all duration-200 border-2 border-gray-600 rounded peer-checked:border-purple-500 peer-checked:bg-purple-500/30 shadow-sm"></div>
                                 <div className="absolute text-purple-500 transition-transform duration-200 scale-0 peer-checked:scale-100">
                                     <FaCheck className="w-2.5 h-2.5" />
                                 </div>

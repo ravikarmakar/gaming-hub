@@ -3,7 +3,7 @@ import axios from "axios";
 
 import { axiosInstance } from "@/lib/axios";
 import "../../../lib/axiosInterceptor";
-import { AUTH_ENDPOINTS } from "../api/endpoints";
+import { AUTH_ENDPOINTS } from "../lib/endpoints";
 
 export interface Roles {
   scope: "platform" | "org" | "team";
@@ -91,7 +91,7 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
       set({ error: errMsg });
       return null;
     } finally {
-      set({ isLoading: false, checkingAuth: false });
+      set({ isLoading: false });
     }
   },
 
@@ -109,7 +109,7 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
       set({ error: errMsg });
       return false;
     } finally {
-      set({ isLoading: false, checkingAuth: false });
+      set({ isLoading: false });
     }
   },
 

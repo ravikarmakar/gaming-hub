@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useTransition } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LoaderCircle, ArrowRight, Mail, Lock, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -6,28 +6,32 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-import { loginSchema, LoginSchemaType } from "@/schemas/auth-validation/loginSchema";
+import { loginSchema, LoginSchemaType } from "@/features/auth/lib/authSchemas";
 import { showSuccessToast, showWarningToast } from "@/lib/toast";
 import { useGoogleAuth, useDiscordAuth } from "@/features/auth/hooks/auth-utils";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { SocialLogin } from "@/features/auth/ui/components/social-login";
 import { ROUTES } from "@/lib/routes";
 
+type LoginValidationErrors = Partial<Record<keyof LoginSchemaType, string>>;
+
 export default function LoginPage() {
     const [formData, setFormData] = useState<LoginSchemaType>({
         identifier: "",
         password: "",
     });
-    const [validationErrors, setValidationErrors] = useState<Record<string, string> | null>(null);
+    const [validationErrors, setValidationErrors] = useState<LoginValidationErrors | null>(null);
 
     const navigate = useNavigate();
     const { isLoading, error, login } = useAuthStore();
+
+    // Transition for non-blocking navigation
+    const [_isPending, startTransition] = useTransition();
 
     // Use reusable auth hooks
     const loginWithGoogle = useGoogleAuth();
     const handleDiscordLogin = useDiscordAuth();
 
-    // Animation variants
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
@@ -41,49 +45,41 @@ export default function LoginPage() {
         visible: { opacity: 1, y: 0 },
     };
 
-    // Optimized handleChange with useCallback
     const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
 
-        // Clear validation error for this field when user starts typing
-        if (validationErrors?.[name]) {
-            setValidationErrors((prev) => {
-                if (!prev) return null;
-                const updated = { ...prev };
-                delete updated[name];
-                return Object.keys(updated).length === 0 ? null : updated;
-            });
-        }
+        setValidationErrors((prev) => {
+            if (!prev?.[name as keyof LoginSchemaType]) return prev;
+            const updated = { ...prev };
+            delete updated[name as keyof LoginSchemaType];
+            return Object.keys(updated).length === 0 ? null : updated;
+        });
 
         setFormData((prev) => ({
             ...prev,
-            [name]: name === "identifier" ? value.trim() : value, // Trim email
+            [name]: name === "identifier" ? value.trim() : value,
         }));
-    }, [validationErrors]);
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Zod validation
         const validationResult = loginSchema.safeParse(formData);
 
         if (!validationResult.success) {
-            // Extract validation errors
             const errors = validationResult.error.issues.reduce((acc, issue) => {
-                const field = issue.path[0] as string;
+                const field = issue.path[0] as keyof LoginSchemaType;
                 acc[field] = issue.message;
                 return acc;
-            }, {} as Record<string, string>);
+            }, {} as LoginValidationErrors);
 
             setValidationErrors(errors);
 
-            // Show toast for first error
             const firstError = Object.values(errors)[0];
-            showWarningToast(firstError);
+            if (firstError) showWarningToast(firstError);
             return;
         }
 
-        // Clear validation errors on successful validation
         setValidationErrors(null);
 
         const result = await login(formData.identifier, formData.password);
@@ -97,7 +93,10 @@ export default function LoginPage() {
                 password: "",
             });
 
-            navigate(ROUTES.HOME);
+            // Use React 18 transition for smooth, non-blocking navigation
+            startTransition(() => {
+                void navigate(ROUTES.HOME);
+            });
         }
     };
 
@@ -116,10 +115,10 @@ export default function LoginPage() {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: -10 }}
                             transition={{ duration: 0.2 }}
-                            className="p-2.5 border rounded-lg bg-red-500/10 border-red-500/20 backdrop-blur-sm"
+                            className="p-3 border rounded-lg bg-red-500/10 border-red-500/30 backdrop-blur-sm shadow-lg shadow-red-500/5"
                         >
-                            <p className="flex items-center justify-center gap-1.5 text-xs text-center text-red-400">
-                                <AlertCircle className="w-4 h-4" />
+                            <p className="flex items-center justify-center gap-2 text-xs text-center text-red-400">
+                                <AlertCircle className="w-4 h-4 flex-shrink-0" />
                                 <span>{error}</span>
                             </p>
                         </motion.div>

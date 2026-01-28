@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, Gamepad2, Bell } from "lucide-react";
 import { motion } from "framer-motion";
@@ -33,12 +33,14 @@ const Navbar = () => {
 
   const { user, isLoading } = useAuthStore();
   const { unreadCount, fetchNotifications } = useNotificationStore();
+  const hasFetchedNotifications = useRef(false);
 
   useEffect(() => {
-    if (user) {
+    if (user && !hasFetchedNotifications.current) {
       fetchNotifications();
+      hasFetchedNotifications.current = true;
     }
-  }, [user, fetchNotifications]);
+  }, [user]);
 
   useEffect(() => {
     const handleScroll = () => {

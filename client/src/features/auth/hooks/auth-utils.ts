@@ -1,3 +1,4 @@
+import { useCallback, useTransition } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
 
@@ -7,26 +8,33 @@ import { useAuthStore } from "@/features/auth/store/useAuthStore";
 export const useGoogleAuth = () => {
     const navigate = useNavigate();
     const { googleAuth } = useAuthStore();
+    const [, startTransition] = useTransition();
+
+    const handleSuccess = useCallback(async (authResponse: any) => {
+        try {
+            if (authResponse["code"]) {
+                const result = await googleAuth(authResponse["code"]);
+                if (result) {
+                    showSuccessToast("Google authentication successful!");
+                    startTransition(() => {
+                        void navigate("/");
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Error during Google authentication:", error);
+            showErrorToast("Google authentication failed. Please try again.");
+        }
+    }, [googleAuth, navigate, startTransition]);
+
+    const handleError = useCallback((err: any) => {
+        console.error("Google authentication failed:", err);
+        showErrorToast("Google authentication failed. Please try again.");
+    }, []);
 
     const loginWithGoogle = useGoogleLogin({
-        onSuccess: async (authResponse) => {
-            try {
-                if (authResponse["code"]) {
-                    const result = await googleAuth(authResponse["code"]);
-                    if (result) {
-                        showSuccessToast("Google authentication successful!");
-                        navigate("/");
-                    }
-                }
-            } catch (error) {
-                console.error("Error during Google authentication:", error);
-                showErrorToast("Google authentication failed. Please try again.");
-            }
-        },
-        onError: (err) => {
-            console.error("Google authentication failed:", err);
-            showErrorToast("Google authentication failed. Please try again.");
-        },
+        onSuccess: handleSuccess,
+        onError: handleError,
         flow: "auth-code",
     });
 
@@ -34,7 +42,7 @@ export const useGoogleAuth = () => {
 };
 
 export const useDiscordAuth = () => {
-    const handleDiscordLogin = () => {
+    const handleDiscordLogin = useCallback(() => {
         const clientId = import.meta.env.VITE_DISCORD_CLIENT_ID;
 
         if (!clientId) {
@@ -47,7 +55,7 @@ export const useDiscordAuth = () => {
         );
 
         window.location.href = `https://discord.com/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=identify%20email`;
-    };
+    }, []);
 
     return handleDiscordLogin;
 };

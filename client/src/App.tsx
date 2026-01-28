@@ -16,6 +16,8 @@ import MainLayout from "@/components/layouts/MainLayout";
 import ProtectedRoute from "@/guards/ProtectedRoute";
 import PublicRoute from "@/guards/PublicRoute";
 
+import { useCheckingAuth, useUser } from "@/features/auth/store/authSelectors";
+
 // Shared Components
 import { NotFound } from "@/components/NotFound";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -30,6 +32,7 @@ const SignupPage = lazy(() => import("@/features/auth/ui/SignupPage"));
 const ForgotPassword = lazy(() => import("@/features/auth/ui/components/forgot-password"));
 const VerifyEmail = lazy(() => import("@/features/auth/ui/components/verify-email"));
 const DiscordCallback = lazy(() => import("@/features/auth/ui/components/discord-callback"));
+
 
 // Organizer Features
 const OrganizerProfile = lazy(() => import("@/features/organizer/ui/pages/OrganizerProfile"));
@@ -67,7 +70,9 @@ const AllTournaments = lazy(() => import("@/features/events/ui/pages/AllTourname
 const NotificationsPage = lazy(() => import("@/features/notifications/ui/pages/NotificationsPage"));
 
 const App = () => {
-  const { checkAuth, checkingAuth } = useAuthStore();
+  const checkingAuth = useCheckingAuth();
+  const user = useUser();
+  const { checkAuth } = useAuthStore();
   const hasCalled = useRef(false);
 
   useEffect(() => {
@@ -75,9 +80,9 @@ const App = () => {
       checkAuth();
       hasCalled.current = true;
     }
-  }, []);
+  }, [checkAuth]);
 
-  if (checkingAuth) {
+  if (checkingAuth && user === null) {
     return <LoadingSpinner />;
   }
 
