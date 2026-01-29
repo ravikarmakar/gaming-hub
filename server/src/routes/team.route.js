@@ -18,9 +18,9 @@ import {
   handleJoinRequest,
 } from "../controllers/join-request.controller.js";
 import { isAuthenticated, isVerified, optionalAuthenticate } from "../middleware/auth.middleware.js";
-import { TEAM_ACTIONS } from "../config/access.js";
+import { TEAM_ACTIONS } from "../constants/access.js";
 import { ensurePartOfTeam, ensureTeamCaptain, verifyTeamPermission } from "../middleware/team.middleware.js";
-import { upload } from "../utils/multer.js";
+import { upload } from "../middleware/multer.middleware.js";
 
 const router = express.Router();
 

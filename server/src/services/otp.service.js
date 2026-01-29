@@ -1,4 +1,4 @@
-import { transporter } from "../config/nodemailer.config.js";
+import { transporter } from "../config/mail.js";
 
 // Generates a 6-digit numeric OTP.
 export const generateOTP = () => {

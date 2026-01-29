@@ -14,17 +14,27 @@ import {
 } from "../controllers/auth.controller.js";
 import { isAuthenticated } from "../middleware/auth.middleware.js";
 import { rateLimiter } from "../middleware/rateLimiter.middleware.js";
+import { validateRequest } from "../middleware/validate.middleware.js";
+import {
+  registerValidation,
+  loginValidation,
+  sendResetOtpValidation,
+  resetPasswordValidation,
+  verifyEmailValidation,
+} from "../validations/auth.validation.js";
 
 const router = express.Router();
 
 router.post(
   "/register",
   rateLimiter({ limit: 5, timer: 60, key: "register" }),
+  validateRequest(registerValidation),
   register
 );
 router.post(
   "/login",
   rateLimiter({ limit: 5, timer: 60, key: "login" }),
+  validateRequest(loginValidation),
   login
 );
 router.post(
@@ -37,11 +47,13 @@ router.post(
 router.post(
   "/send-reset-otp",
   rateLimiter({ limit: 5, timer: 60, key: "resetOtp" }),
+  validateRequest(sendResetOtpValidation),
   sendResetPasswordOtp
 );
 router.post(
   "/reset-password",
   rateLimiter({ limit: 5, timer: 60, key: "resetPassword" }),
+  validateRequest(resetPasswordValidation),
   resetPassword
 );
 
@@ -79,6 +91,7 @@ router.post(
 router.post(
   "/verify-account",
   rateLimiter({ limit: 5, timer: 60, key: "verifyAccount" }),
+  validateRequest(verifyEmailValidation),
   verifyEmail
 );
 

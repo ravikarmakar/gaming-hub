@@ -10,7 +10,7 @@ import Event from "../models/event.model.js";
 import JoinRequest from "../models/join-request.model.js";
 import Invitation from "../models/invitation.model.js";
 import { Notification } from "../models/notification.model.js";
-import { redis } from "../config/redisClient.js";
+import { redis } from "../config/redis.js";
 
 const purgeDatabase = async () => {
     await connectDB();

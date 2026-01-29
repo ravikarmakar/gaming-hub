@@ -4,8 +4,8 @@ import { Notification } from "../models/notification.model.js";
 import User from "../models/user.model.js";
 import Organizer from "../models/organizer.model.js";
 import Event from "../models/event.model.js";
-import EventRegistration from "../models/event-registration.model.js";
-import { Roles, Scopes } from "../config/roles.js";
+import EventRegistration from "../models/event-model/event-registration.model.js";
+import { Roles, Scopes } from "../constants/roles.js";
 import mongoose from "mongoose";
 
 export const getAllInvitations = async (req, res) => {

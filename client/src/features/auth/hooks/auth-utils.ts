@@ -2,7 +2,6 @@ import { useCallback, useTransition } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
 
-import { showSuccessToast, showErrorToast } from "../../../lib/toast";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
 export const useGoogleAuth = () => {
@@ -15,7 +14,6 @@ export const useGoogleAuth = () => {
             if (authResponse["code"]) {
                 const result = await googleAuth(authResponse["code"]);
                 if (result) {
-                    showSuccessToast("Google authentication successful!");
                     startTransition(() => {
                         void navigate("/");
                     });
@@ -23,13 +21,11 @@ export const useGoogleAuth = () => {
             }
         } catch (error) {
             console.error("Error during Google authentication:", error);
-            showErrorToast("Google authentication failed. Please try again.");
         }
     }, [googleAuth, navigate, startTransition]);
 
     const handleError = useCallback((err: any) => {
         console.error("Google authentication failed:", err);
-        showErrorToast("Google authentication failed. Please try again.");
     }, []);
 
     const loginWithGoogle = useGoogleLogin({
@@ -46,7 +42,6 @@ export const useDiscordAuth = () => {
         const clientId = import.meta.env.VITE_DISCORD_CLIENT_ID;
 
         if (!clientId) {
-            showErrorToast("Discord login is not configured");
             return;
         }
 

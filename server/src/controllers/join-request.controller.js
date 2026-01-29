@@ -3,12 +3,12 @@ import JoinRequest from "../models/join-request.model.js";
 import Team from "../models/team.model.js";
 import User from "../models/user.model.js";
 import Event from "../models/event.model.js";
-import EventRegistration from "../models/event-registration.model.js";
+import EventRegistration from "../models/event-model/event-registration.model.js";
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
 import { createNotification } from "./notification.controller.js";
-import { Roles, Scopes } from "../config/roles.js";
-import { redis } from "../config/redisClient.js";
+import { Roles, Scopes } from "../constants/roles.js";
+import { redis } from "../config/redis.js";
 
 // @desc    Send a request to join a team
 // @route   POST /api/v1/teams/:teamId/join-request

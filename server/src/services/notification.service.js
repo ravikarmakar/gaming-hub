@@ -2,9 +2,9 @@ import Team from "../models/team.model.js";
 import Invitation from "../models/invitation.model.js";
 import User from "../models/user.model.js";
 import Organizer from "../models/organizer.model.js";
-import { errorHandle } from "../middleware/error.middleware.js";
-import { Roles, Scopes } from "../config/roles.js";
-import { redis } from "../config/redisClient.js";
+import { CustomError } from "../utils/CustomError.js";
+import { Roles, Scopes } from "../constants/roles.js";
+import { redis } from "../config/redis.js";
 
 /**
  * Registry of handlers for different notification types.
@@ -16,21 +16,21 @@ export const notificationHandlers = {
         const invite = await Invitation.findById(inviteId);
 
         if (!invite) {
-            throw new errorHandle("Invitation no longer exists", 404);
+            throw new CustomError("Invitation no longer exists", 404);
         }
 
         const teamId = invite.entityId || notification.relatedData.teamId;
         const team = await Team.findById(teamId);
 
         if (!team) {
-            throw new errorHandle("Team no longer exists", 404);
+            throw new CustomError("Team no longer exists", 404);
         }
 
         if (actionType === "ACCEPT") {
             // Check if user is already in a team
             const fullUser = await User.findById(req.user._id);
             if (fullUser.teamId) {
-                throw new errorHandle("You are already in a team", 400);
+                throw new CustomError("You are already in a team", 400);
             }
 
             // Add user to team
@@ -75,7 +75,7 @@ export const notificationHandlers = {
             }
             return `You have declined the invite to join ${team.teamName}`;
         } else {
-            throw new errorHandle("Invalid action type", 400);
+            throw new CustomError("Invalid action type", 400);
         }
     },
 
@@ -84,21 +84,21 @@ export const notificationHandlers = {
         const invite = await Invitation.findById(inviteId);
 
         if (!invite) {
-            throw new errorHandle("Invitation no longer exists", 404);
+            throw new CustomError("Invitation no longer exists", 404);
         }
 
         const orgId = invite.entityId || notification.relatedData.orgId;
         const org = await Organizer.findById(orgId);
 
         if (!org) {
-            throw new errorHandle("Organization no longer exists", 404);
+            throw new CustomError("Organization no longer exists", 404);
         }
 
         if (actionType === "ACCEPT") {
             const fullUser = await User.findById(req.user._id);
 
             if (fullUser.orgId) {
-                throw new errorHandle("You are already in an organization", 400);
+                throw new CustomError("You are already in an organization", 400);
             }
 
             // Check if user is already a member (redundant but safe)
@@ -139,7 +139,7 @@ export const notificationHandlers = {
             await invite.save();
             return `You have declined the invite to join ${org.name}`;
         } else {
-            throw new errorHandle("Invalid action type", 400);
+            throw new CustomError("Invalid action type", 400);
         }
     },
 

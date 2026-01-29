@@ -1,5 +1,5 @@
 import { CustomError } from "../utils/CustomError.js";
-import { Scopes, Roles } from "../config/roles.js";
+import { Scopes, Roles } from "../constants/roles.js";
 
 /**
  * Middleware to Guard Organization Access

@@ -1,7 +1,8 @@
 import jwt from "jsonwebtoken";
 import { CustomError } from "../utils/CustomError.js";
+import { generateTokens, storeRefreshToken, setCookies } from "../services/auth.service.js";
 import { TryCatchHandler } from "./error.middleware.js";
-import { redis } from "../config/redisClient.js";
+import { redis } from "../config/redis.js";
 import User from "../models/user.model.js";
 
 export const isAuthenticated = TryCatchHandler(async (req, res, next) => {

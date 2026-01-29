@@ -1,5 +1,6 @@
 import User from "../models/user.model.js";
 import { CustomError } from "../utils/CustomError.js";
+import { generateTokens, storeRefreshToken, setCookies } from "./auth.service.js";
 
 export const createNewUser = async (userData) => {
   const user = new User(userData);

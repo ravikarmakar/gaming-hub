@@ -1,4 +1,4 @@
-import { redis } from "../config/redisClient.js";
+import { redis } from "../config/redis.js";
 import { CustomError } from "../utils/CustomError.js";
 
 export const rateLimiter =

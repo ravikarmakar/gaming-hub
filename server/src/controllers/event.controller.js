@@ -4,16 +4,17 @@ import mongoose from "mongoose";
 import Organizer from "../models/organizer.model.js";
 import User from "../models/user.model.js";
 import Event from "../models/event.model.js";
-import EventRegistration from "../models/event-registration.model.js";
+import EventRegistration from "../models/event-model/event-registration.model.js";
 import JoinRequest from "../models/join-request.model.js";
 
 import { TryCatchHandler } from "../middleware/error.middleware.js";
+import { generateTokens, storeRefreshToken, setCookies } from "../services/auth.service.js";
 import { CustomError } from "../utils/CustomError.js";
 
 import { findUserById } from "../services/user.service.js";
 import { findTeamById } from "../services/team.service.js";
 import { findEventById } from "../services/event.service.js";
-import { uploadOnImageKit } from "../utils/imagekit.js";
+import { uploadOnImageKit } from "../services/imagekit.service.js";
 
 const requiredFields = [
   "title",

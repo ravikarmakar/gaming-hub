@@ -1,4 +1,14 @@
+import { ValidationError } from "express-validation";
+
 export const errorHandle = (err, req, res, next) => {
+  if (err instanceof ValidationError) {
+    return res.status(err.statusCode).json({
+      success: false,
+      message: err.details.body ? err.details.body[0].message : err.message,
+      details: err.details,
+    });
+  }
+
   err.message ||= "Internal server error";
   err.statusCode ||= 500;
 

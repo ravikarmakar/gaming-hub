@@ -21,8 +21,8 @@ import {
   isVerified,
 } from "../middleware/auth.middleware.js";
 import { guardOrgAccess } from "../middleware/organizer.middleware.js";
-import { Roles } from "../config/roles.js";
-import { upload } from "../utils/multer.js";
+import { Roles } from "../constants/roles.js";
+import { upload } from "../middleware/multer.middleware.js";
 
 const router = express.Router();
 

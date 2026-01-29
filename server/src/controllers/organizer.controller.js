@@ -3,13 +3,9 @@ import User from "../models/user.model.js";
 import Event from "../models/event.model.js";
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
-import { Roles, Scopes } from "../config/roles.js";
-import { redis } from "../config/redisClient.js";
-import {
-  generateTokens,
-  setCookies,
-  storeRefreshToken,
-} from "../utils/generateTokens.js";
+import { Roles, Scopes } from "../constants/roles.js";
+import { redis } from "../config/redis.js";
+import { generateTokens, storeRefreshToken, setCookies } from "../services/auth.service.js";
 import { findUserById } from "../services/user.service.js";
 import JoinRequest from "../models/join-request.model.js";
 import { createNotification } from "./notification.controller.js";

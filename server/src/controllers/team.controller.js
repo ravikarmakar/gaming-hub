@@ -6,12 +6,12 @@ import User from "../models/user.model.js";
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
 import { findUserById } from "../services/user.service.js";
-import { Roles, Scopes } from "../config/roles.js";
+import { Roles, Scopes } from "../constants/roles.js";
 import { checkTeamNameUnique } from "../services/team.service.js";
-import { uploadOnImageKit } from "../utils/imagekit.js";
+import { uploadOnImageKit } from "../services/imagekit.service.js";
 import { createNotification } from "./notification.controller.js";
 import JoinRequest from "../models/join-request.model.js";
-import { redis } from "../config/redisClient.js";
+import { redis } from "../config/redis.js";
 
 export const createTeam = TryCatchHandler(async (req, res, next) => {
   const { teamName, bio, tag, region } = req.body;

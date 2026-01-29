@@ -1,7 +1,7 @@
 import { motion, useAnimation } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useMediaQuery } from "react-responsive";
-import svg from "../../../public/logos/PROPLAYZFF_1.svg";
+import svg from "/logos/PROPLAYZFF_1.svg";
 
 interface Organization {
   name: string;

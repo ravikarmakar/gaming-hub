@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { redis } from "../config/redisClient.js";
+import { redis } from "../config/redis.js";
 
 export const generateTokens = (userId, roles) => {
   const accessToken = jwt.sign(

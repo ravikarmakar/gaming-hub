@@ -2,7 +2,8 @@ import { findUserById } from "../services/user.service.js";
 import { findTeamById } from "../services/team.service.js";
 import { TryCatchHandler } from "./error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
-import { TEAM_ACTIONS_ACCESS } from "../config/access.js";
+import { generateTokens, storeRefreshToken, setCookies } from "../services/auth.service.js";
+import { TEAM_ACTIONS_ACCESS } from "../constants/access.js";
 
 /**
  * Middleware to ensure the user is part of a team.

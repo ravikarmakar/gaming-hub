@@ -1,4 +1,5 @@
-import { errorHandle, TryCatchHandler } from "../middleware/error.middleware.js";
+import { TryCatchHandler } from "../middleware/error.middleware.js";
+import { CustomError } from "../utils/CustomError.js";
 import { Notification } from "../models/notification.model.js";
 import Team from "../models/team.model.js";
 import Invitation from "../models/invitation.model.js";
@@ -51,7 +52,7 @@ export const markAsRead = TryCatchHandler(async (req, res, next) => {
     });
 
     if (!notification) {
-        return next(new errorHandle("Notification not found", 404));
+        return next(new CustomError("Notification not found", 404));
     }
 
     notification.status = "read";
@@ -80,7 +81,7 @@ export const markAllAsRead = TryCatchHandler(async (req, res) => {
     });
 });
 
-import { notificationHandlers } from "./notification.handlers.js";
+import { notificationHandlers } from "../services/notification.service.js";
 
 /**
  * @desc Handle notification action (Accept/Reject)
@@ -95,11 +96,11 @@ export const handleNotificationAction = TryCatchHandler(async (req, res, next) =
     });
 
     if (!notification) {
-        return next(new errorHandle("Notification not found", 404));
+        return next(new CustomError("Notification not found", 404));
     }
 
     if (notification.status === "archived") {
-        return next(new errorHandle("Notification already handled", 400));
+        return next(new CustomError("Notification already handled", 400));
     }
 
     // Use the strategy pattern to handle different types

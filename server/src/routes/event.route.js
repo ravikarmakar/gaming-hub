@@ -14,7 +14,7 @@ import {
   unregisterEvent,
 } from "../controllers/event.controller.js";
 import { isAuthenticated, isVerified } from "../middleware/auth.middleware.js";
-import { upload } from "../utils/multer.js";
+import { upload } from "../middleware/multer.middleware.js";
 
 const router = express.Router();
 

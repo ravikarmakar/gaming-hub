@@ -1,20 +1,19 @@
 import jwt from "jsonwebtoken";
 import axios from "axios";
 import qs from "qs";
-import { redis } from "../config/redisClient.js";
+import { redis } from "../config/redis.js";
 
 import User from "../models/user.model.js";
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
 import {
   generateTokens,
-  setCookies,
   storeRefreshToken,
-} from "../utils/generateTokens.js";
-import { oauth2Client } from "../config/google.config.js";
-import { discordOAuthConfig } from "../config/discord.config.js";
-import { transporter } from "../config/nodemailer.config.js";
-import { generateOTP, sendVerificationEmail } from "../utils/otp.js";
+  setCookies,
+} from "../services/auth.service.js";
+import { oauth2Client, discordOAuthConfig } from "../config/oauth.js";
+import { transporter } from "../config/mail.js";
+import { generateOTP, sendVerificationEmail } from "../services/otp.service.js";
 
 export const register = TryCatchHandler(async (req, res, next) => {
   const { username, email, password } = req.body;
