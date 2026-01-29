@@ -10,6 +10,7 @@ import {
   sendVerifyOtp,
   verifyEmail,
   sendResetPasswordOtp,
+  verifyResetPasswordOtp,
   resetPassword,
 } from "../controllers/auth.controller.js";
 import { isAuthenticated } from "../middleware/auth.middleware.js";
@@ -19,6 +20,7 @@ import {
   registerValidation,
   loginValidation,
   sendResetOtpValidation,
+  verifyResetOtpValidation,
   resetPasswordValidation,
   verifyEmailValidation,
 } from "../validations/auth.validation.js";
@@ -49,6 +51,12 @@ router.post(
   rateLimiter({ limit: 5, timer: 60, key: "resetOtp" }),
   validateRequest(sendResetOtpValidation),
   sendResetPasswordOtp
+);
+router.post(
+  "/verify-reset-otp",
+  rateLimiter({ limit: 5, timer: 60, key: "verifyResetOtp" }),
+  validateRequest(verifyResetOtpValidation),
+  verifyResetPasswordOtp
 );
 router.post(
   "/reset-password",

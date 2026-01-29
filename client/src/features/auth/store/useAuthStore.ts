@@ -1,38 +1,11 @@
 import { create } from "zustand";
 import axios from "axios";
 
-import { axiosInstance } from "@/lib/axios";
 import "../../../lib/axiosInterceptor";
+import { axiosInstance } from "@/lib/axios";
 import { AUTH_ENDPOINTS } from "../lib/endpoints";
+import { User } from "../lib/types";
 
-export interface Roles {
-  scope: "platform" | "org" | "team";
-  role: string;
-  scopeId: string;
-  scopeModel: string;
-}
-
-type EsportsRole = "player" | "sniper" | "support" | "igl" | "coach" | "rusher";
-
-export interface User {
-  _id?: string;
-  username: string;
-  email: string;
-  avatar: string;
-  roles: Roles[];
-  orgId: string;
-  teamId: string;
-  esportsRole: EsportsRole;
-  canCreateOrg: boolean;
-  isAccountVerified: boolean;
-  verifyOtp: string;
-  verifyOtpExpireAt: number;
-  resetOtp: string;
-  resetOtpExpireAt: number;
-  createdAt: string;
-  updatedAt: string;
-  bio?: string;
-}
 
 interface AuthStateTypes {
   user: User | null;
@@ -55,6 +28,10 @@ interface AuthStateTypes {
   verifyEmail: (otp: string) => Promise<{ success: boolean; message: string }>;
   sendPassResetOtp: (
     email: string
+  ) => Promise<{ success: boolean; message: string }>;
+  verifyPassResetOtp: (
+    email: string,
+    otp: string
   ) => Promise<{ success: boolean; message: string }>;
   resetPassword: (
     email: string,
@@ -266,6 +243,33 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
       };
     } catch (error) {
       const errMsg = getErrorMessage(error, "Failed to send password reset OTP");
+      set({ error: errMsg });
+      return { success: false, message: errMsg };
+    } finally {
+      set({ isLoading: false, checkingAuth: false });
+    }
+  },
+
+  verifyPassResetOtp: async (email, otp) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosInstance.post(AUTH_ENDPOINTS.VERIFY_RESET_OTP, {
+        email,
+        otp,
+      });
+
+      if (!response.data.success) {
+        const errorMsg = response.data.message || "Something went wrong";
+        set({ error: errorMsg });
+        return { success: false, message: errorMsg };
+      }
+
+      return {
+        success: true,
+        message: response.data.message,
+      };
+    } catch (error) {
+      const errMsg = getErrorMessage(error, "Failed to verify reset code");
       set({ error: errMsg });
       return { success: false, message: errMsg };
     } finally {

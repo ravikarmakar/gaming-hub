@@ -1,12 +1,11 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import LoadingSpinner from "@/components/LoadingSpinner";
 
 const PublicRoute = () => {
-  const { user, isLoading, checkingAuth } = useAuthStore();
+  const { user, checkingAuth } = useAuthStore();
 
-  if (isLoading || checkingAuth) {
-    return <LoadingSpinner />;
+  if (checkingAuth) {
+    return null; // App.tsx handles the initial black screen
   }
 
   if (user) {

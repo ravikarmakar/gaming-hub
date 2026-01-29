@@ -83,7 +83,7 @@ const App = () => {
   }, [checkAuth]);
 
   if (checkingAuth && user === null) {
-    return <LoadingSpinner />;
+    return <div className="fixed inset-0 z-[9999] bg-black" />;
   }
 
   return (
@@ -100,7 +100,6 @@ const App = () => {
               <Route path={TEAM_ROUTES.ALL_TEAMS} element={<Teams />} />
 
               <Route element={<ProtectedRoute />}>
-                <Route path={ROUTES.EMAIL_VERIFY} element={<VerifyEmail />} />
                 <Route path={ORGANIZER_ROUTES.PROFILE} element={<OrganizerProfile />} />
                 <Route path={ROUTES.ALL_PLAYERS} element={<FindPlayers />} />
                 <Route path={ROUTES.PLAYER_PROFILE} element={<PlayerIdPage />} />
@@ -139,9 +138,15 @@ const App = () => {
 
               {/* <Route path={ROUTES.SUPER_ADMIN} element={<SuperAdminLayout />}>
                 <Route index element={<DashboardPage />} />
-              </Route> */}
+                </Route> */}
             </Route>
 
+            {/* Auth Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<AuthLayout />}>
+                <Route path={ROUTES.EMAIL_VERIFY} element={<VerifyEmail />} />
+              </Route>
+            </Route>
             <Route element={<PublicRoute />}>
               <Route path={ROUTES.DISCORD_CALLBACK} element={<DiscordCallback />} />
               <Route element={<AuthLayout />}>

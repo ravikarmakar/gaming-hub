@@ -2,12 +2,11 @@ import { useEffect, useRef } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import LoadingSpinner from "@/components/LoadingSpinner";
 import { ROUTES } from "@/lib/routes";
 
 const ProtectedRoute = () => {
   const location = useLocation();
-  const { user, checkingAuth, isLoading, sendVerifyOtp } = useAuthStore();
+  const { user, checkingAuth, sendVerifyOtp } = useAuthStore();
   const hasSentOtp = useRef(false);
 
 
@@ -26,8 +25,8 @@ const ProtectedRoute = () => {
     }
   }, [user, location.pathname, sendVerifyOtp]);
 
-  if (checkingAuth || isLoading) {
-    return <LoadingSpinner />;
+  if (checkingAuth) {
+    return null;
   }
 
   if (!user) {

@@ -38,6 +38,19 @@ export const sendResetOtpValidation = {
     }),
 };
 
+export const verifyResetOtpValidation = {
+    body: Joi.object({
+        email: Joi.string().email().required().messages({
+            "string.empty": "Email is required",
+            "string.email": "Please provide a valid email address",
+        }),
+        otp: Joi.string().length(6).required().messages({
+            "string.empty": "OTP is required",
+            "string.length": "OTP must be exactly 6 digits",
+        }),
+    }),
+};
+
 export const resetPasswordValidation = {
     body: Joi.object({
         email: Joi.string().email().required(),

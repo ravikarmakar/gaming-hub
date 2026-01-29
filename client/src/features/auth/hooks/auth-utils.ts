@@ -46,7 +46,7 @@ export const useDiscordAuth = () => {
         }
 
         const redirectUri = encodeURIComponent(
-            "http://localhost:5173/auth/discord/callback"
+            import.meta.env.VITE_DISCORD_REDIRECT_URI || "http://localhost:5173/auth/discord/callback"
         );
 
         window.location.href = `https://discord.com/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=identify%20email`;

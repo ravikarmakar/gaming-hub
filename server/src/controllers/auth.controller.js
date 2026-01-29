@@ -4,6 +4,7 @@ import qs from "qs";
 import { redis } from "../config/redis.js";
 
 import User from "../models/user.model.js";
+import { Notification } from "../models/notification.model.js";
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
 import {
@@ -39,7 +40,7 @@ export const register = TryCatchHandler(async (req, res, next) => {
   // Generate and save verification OTP
   const otp = generateOTP();
   user.verifyOtp = otp;
-  user.verifyOtpExpireAt = Date.now() + 10 * 60 * 1000; // 10 mins
+  user.verifyOtpExpireAt = Date.now() + 2 * 60 * 1000; // 2 mins
   await user.save();
 
   // Send Verification Email (non-blocking for faster response)
@@ -70,10 +71,25 @@ export const login = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Invalid credentials", 401));
   }
 
+  // Check if user registered via OAuth - cannot use password login
+  if (user.oauthProvider) {
+    return next(new CustomError(
+      `This account uses ${user.oauthProvider} login. Please sign in with ${user.oauthProvider}.`,
+      401
+    ));
+  }
+
   const isMatch = await user.matchPassword(password);
   if (!isMatch) {
     return next(new CustomError("Invalid credentials", 401));
   }
+
+  // Reset OTPs on successful login
+  user.verifyOtp = "";
+  user.verifyOtpExpireAt = 0;
+  user.resetOtp = "";
+  user.resetOtpExpireAt = 0;
+  await user.save();
 
   const { accessToken, refreshToken } = generateTokens(user._id, user.roles);
 
@@ -193,7 +209,15 @@ export const googleLogin = TryCatchHandler(async (req, res, next) => {
   const { email, name, picture } = data;
 
   let user = await User.findOne({ email });
-  if (!user) {
+  if (user) {
+    // Existing user - only allow if they originally signed up with Google
+    if (!user.oauthProvider) {
+      return next(new CustomError("This email is registered with password. Please login with your password.", 400));
+    }
+    if (user.oauthProvider !== "google") {
+      return next(new CustomError(`This email is linked to ${user.oauthProvider}. Please login with ${user.oauthProvider}.`, 400));
+    }
+  } else {
     user = await User.create({
       username: name,
       email,
@@ -259,9 +283,23 @@ export const discordLogin = TryCatchHandler(async (req, res, next) => {
       });
     }
 
-    // Save or find user in DB by email
+    // Check if user exists and validate oauth provider
     let user = await User.findOne({ email });
-    if (!user) {
+    if (user) {
+      // Existing user - only allow if they originally signed up with Discord
+      if (!user.oauthProvider) {
+        return res.status(400).json({
+          success: false,
+          message: "This email is registered with password. Please login with your password.",
+        });
+      }
+      if (user.oauthProvider !== "discord") {
+        return res.status(400).json({
+          success: false,
+          message: `This email is linked to ${user.oauthProvider}. Please login with ${user.oauthProvider}.`,
+        });
+      }
+    } else {
       user = await User.create({
         username,
         avatar,
@@ -305,7 +343,7 @@ export const sendVerifyOtp = TryCatchHandler(async (req, res, next) => {
   const otp = generateOTP();
 
   user.verifyOtp = otp;
-  user.verifyOtpExpireAt = Date.now() + 10 * 60 * 1000; // 10 mins = 600000 ms
+  user.verifyOtpExpireAt = Date.now() + 2 * 60 * 1000; // 2 mins = 120000 ms
 
   await user.save();
   await redis.del(`user_profile:${req.user.userId}`);
@@ -417,13 +455,16 @@ export const sendResetPasswordOtp = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("You first need to verify your email", 401));
 
   if (user.oauthProvider)
-    return next(new CustomError("This email not valid to reset password", 400));
+    return next(new CustomError(
+      `This account uses ${user.oauthProvider} login and has no password. Please sign in with ${user.oauthProvider}.`,
+      400
+    ));
 
   // Generate otp
   const otp = String(Math.floor(100000 + Math.random() * 900000));
 
   user.resetOtp = otp;
-  user.resetOtpExpireAt = Date.now() + 10 * 60 * 1000; // 10 mins = 600000 ms
+  user.resetOtpExpireAt = Date.now() + 2 * 60 * 1000; // 2 mins = 120000 ms
 
   await user.save();
 
@@ -433,7 +474,7 @@ export const sendResetPasswordOtp = TryCatchHandler(async (req, res, next) => {
     to: email,
     subject: "Password Reset OTP - Gaming Hub",
     text: `Hello ${user.username || "User"
-      },\n\nWe received a request to reset the password for your Gaming Hub account.\n\nYour One-Time Password (OTP) is: ${otp}\n\nPlease use this OTP to reset your password. This OTP is valid for only 10 minutes.\n\nIf you did not request a password reset, you can safely ignore this email.\n\nRegards,\nGaming Hub Team`,
+      },\n\nWe received a request to reset the password for your Gaming Hub account.\n\nYour One-Time Password (OTP) is: ${otp}\n\nPlease use this OTP to reset your password. This OTP is valid for only 2 minutes.\n\nIf you did not request a password reset, you can safely ignore this email.\n\nRegards,\nGaming Hub Team`,
   };
 
   await transporter.sendMail(mailOptions);
@@ -441,7 +482,32 @@ export const sendResetPasswordOtp = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message:
-      "Reset password OTP has been sent to your email address. It will expire in 10 minutes.",
+      "Reset password OTP has been sent to your email address. It will expire in 2 minutes.",
+  });
+});
+
+export const verifyResetPasswordOtp = TryCatchHandler(async (req, res, next) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return next(new CustomError("Email and OTP are required", 400));
+  }
+
+  const user = await User.findOne({ email }).select("+resetOtp +resetOtpExpireAt");
+
+  if (!user) return next(new CustomError("User not found", 404));
+
+  if (
+    !user.resetOtp ||
+    user.resetOtp !== otp ||
+    user.resetOtpExpireAt < Date.now()
+  ) {
+    return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "OTP verified successfully. You can now reset your password.",
   });
 });
 
