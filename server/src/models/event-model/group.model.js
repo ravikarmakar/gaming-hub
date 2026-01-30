@@ -21,6 +21,12 @@ const groupSchema = new mongoose.Schema(
       type: Date,
       default: () => new Date(Date.now() + 24 * 60 * 60 * 1000), // ⚡ Default: Next day
     },
+    teams: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Team",
+      },
+    ],
     totalMatch: {
       type: Number,
       default: 1,

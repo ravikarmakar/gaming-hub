@@ -7,6 +7,8 @@ interface TournamentGridProps {
     onButtonClick?: (eventId: string) => void;
     onDeleteClick?: (eventId: string) => void;
     showEditButton?: boolean;
+    hideViewDetails?: boolean;
+    hideActions?: boolean;
 }
 
 export const TournamentGrid: React.FC<TournamentGridProps> = ({
@@ -14,6 +16,8 @@ export const TournamentGrid: React.FC<TournamentGridProps> = ({
     onButtonClick,
     onDeleteClick,
     showEditButton = false,
+    hideViewDetails = false,
+    hideActions = false,
 }) => {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -24,6 +28,8 @@ export const TournamentGrid: React.FC<TournamentGridProps> = ({
                     onButtonClick={onButtonClick}
                     onDeleteClick={onDeleteClick}
                     showEditButton={showEditButton}
+                    hideViewDetails={hideViewDetails}
+                    hideActions={hideActions}
                     index={index}
                 />
             ))}

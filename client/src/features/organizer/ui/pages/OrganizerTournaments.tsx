@@ -18,7 +18,6 @@ import { Card } from "@/components/ui/card";
 import { useEventStore } from "@/features/events/store/useEventStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
-import { EVENT_ROUTES } from "@/features/events/lib";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { ORG_ACCESS } from "@/features/organizer/lib/access";
 
@@ -63,7 +62,7 @@ const OrganizerTournaments: React.FC = () => {
   }, [orgEvents]);
 
   const onButtonClick = (eventId: string) => {
-    navigate(`${EVENT_ROUTES.TOURNAMENTS}/${eventId}`);
+    navigate(`${ORGANIZER_ROUTES.TOURNAMENTS}/${eventId}`);
   };
 
   const handleDeleteTournament = async (eventId: string) => {
@@ -204,7 +203,9 @@ const OrganizerTournaments: React.FC = () => {
               events={filteredEvents}
               onButtonClick={onButtonClick}
               onDeleteClick={handleDeleteTournament}
-              showEditButton={canCreate}
+              showEditButton={true}
+              hideViewDetails={true}
+              hideActions={true}
             />
           </motion.div>
         )}

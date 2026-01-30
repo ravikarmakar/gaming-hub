@@ -31,6 +31,8 @@ interface TournamentCardProps {
     onButtonClick?: (eventId: string) => void;
     onDeleteClick?: (eventId: string) => void;
     showEditButton?: boolean;
+    hideViewDetails?: boolean;
+    hideActions?: boolean;
     index?: number;
 }
 
@@ -39,15 +41,18 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
     onButtonClick,
     onDeleteClick,
     showEditButton = false,
+    hideViewDetails = false,
+    hideActions = false,
     index = 0
 }) => {
     const navigate = useNavigate();
     const [isLoaded, setIsLoaded] = useState(false);
 
     const handleCardClick = (e: React.MouseEvent) => {
-        // Prevent navigation if any button or interactive element inside the card was clicked
         const target = e.target as HTMLElement;
-        if (target.closest('button')) {
+        const button = target.closest('button');
+
+        if (button && !button.innerText.includes('View Details') && !button.className.includes('group-hover/btn')) {
             return;
         }
 
@@ -102,7 +107,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
 
                     {/* Status Overlay */}
                     <div className="absolute top-4 right-4 flex gap-2">
-                        {showEditButton && (
+                        {showEditButton && !hideActions && (
                             <TooltipProvider>
                                 <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                                     <Tooltip>
@@ -192,23 +197,25 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
                         </div>
                     </div>
 
-                    <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between">
+                    <div className={`mt-auto pt-4 border-t border-white/5 flex items-center ${hideViewDetails ? 'justify-start' : 'justify-between'}`}>
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2 text-xs text-gray-400">
                                 <Clock size={12} />
                                 <span>{new Date(event.startDate).toLocaleDateString()}</span>
                             </div>
                         </div>
-                        <Button
-                            variant="link"
-                            className="flex items-center gap-2 text-sm font-bold text-purple-400 hover:text-purple-300 group/btn p-0 h-auto"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleCardClick(e);
-                            }}
-                        >
-                            View Details <ChevronRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
-                        </Button>
+                        {!hideViewDetails && (
+                            <Button
+                                variant="link"
+                                className="flex items-center gap-2 text-sm font-bold text-purple-400 hover:text-purple-300 group/btn p-0 h-auto"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCardClick(e);
+                                }}
+                            >
+                                View Details <ChevronRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
+                            </Button>
+                        )}
                     </div>
                 </div>
             </GlassCard>

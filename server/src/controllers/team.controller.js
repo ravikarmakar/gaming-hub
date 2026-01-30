@@ -648,10 +648,10 @@ export const transferTeamOwnerShip = TryCatchHandler(async (req, res, next) => {
     await User.findByIdAndUpdate(user._id, {
       $set: {
         roles: [
-          // keep platform role safe
-          ...user.roles.filter((r) => r.scope === "platform"),
+          // keep all roles EXCEPT the one for this team
+          ...user.roles.filter((r) => !(r.scope === "team" && r.scopeId?.toString() === team._id.toString())),
 
-          // ONLY current team as PLAYER
+          // Add new role for this team as PLAYER
           {
             scope: "team",
             role: Roles.TEAM.PLAYER, // "team:player"
@@ -668,7 +668,8 @@ export const transferTeamOwnerShip = TryCatchHandler(async (req, res, next) => {
     await User.findByIdAndUpdate(memberId, {
       $set: {
         roles: [
-          ...newCaptainUser.roles.filter((r) => r.scope === "platform"),
+          // keep all roles EXCEPT the one for this team (they likely have a player role here)
+          ...newCaptainUser.roles.filter((r) => !(r.scope === "team" && r.scopeId?.toString() === team._id.toString())),
 
           {
             scope: "team",

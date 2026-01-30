@@ -45,6 +45,7 @@ const OrganizerTournaments = lazy(() => import("@/features/organizer/ui/pages/Or
 const OrganizerSettingsPage = lazy(() => import("@/features/organizer/ui/pages/OrganizerSettingsPage"));
 const OrganizerJoinRequestsPage = lazy(() => import("@/features/organizer/ui/pages/OrganizerJoinRequestsPage"));
 const OrganizerNotificationsPage = lazy(() => import("@/features/organizer/ui/pages/OrganizerNotificationsPage"));
+const OrganizerTournamentDashboard = lazy(() => import("@/features/organizer/ui/pages/OrganizerTournamentDashboard"));
 
 // Player Features
 const PlayerIdPage = lazy(() => import("@/features/player/ui/pages/PlayerIdPage"));
@@ -132,6 +133,7 @@ const App = () => {
                 <Route index element={<OrganizerDashboard />} />
                 <Route path={ORGANIZER_ROUTES.MEMBERS} element={<OrganizerMemberPage />} />
                 <Route path={ORGANIZER_ROUTES.TOURNAMENTS} element={<OrganizerTournaments />} />
+                <Route path={ORGANIZER_ROUTES.TOURNAMENT_DASHBOARD} element={<OrganizerTournamentDashboard />} />
                 <Route path={ORGANIZER_ROUTES.ADD_TOURNAMENTS} element={<CreateTournament />} />
                 <Route path={ORGANIZER_ROUTES.EDIT_TOURNAMENT} element={<CreateTournament />} />
                 <Route path={ORGANIZER_ROUTES.ANALYTICS} element={<div>Analytics</div>} />

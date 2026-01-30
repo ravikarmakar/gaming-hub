@@ -2,7 +2,11 @@ import Round from "../../models/event-model/round.model.js";
 import Event from "../../models/event.model.js";
 export const getRounds = async (req, res) => {
   try {
-    const rounds = await Round.find({});
+    const { eventId } = req.query;
+    const query = {};
+    if (eventId) query.eventId = eventId;
+
+    const rounds = await Round.find(query);
     res.status(200).json({
       success: true,
       data: rounds,

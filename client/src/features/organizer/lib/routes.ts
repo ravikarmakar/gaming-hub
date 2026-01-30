@@ -4,6 +4,7 @@ export const ORGANIZER_ROUTES = {
     DASHBOARD: ORGANIZER_BASE,
     MEMBERS: `${ORGANIZER_BASE}/members`,
     TOURNAMENTS: `${ORGANIZER_BASE}/tournaments`,
+    TOURNAMENT_DASHBOARD: `${ORGANIZER_BASE}/tournaments/:id`,
     ADD_TOURNAMENTS: `${ORGANIZER_BASE}/add-tournaments`,
     EDIT_TOURNAMENT: `${ORGANIZER_BASE}/edit-tournament/:eventId`,
     ANALYTICS: `${ORGANIZER_BASE}/analytics`,
