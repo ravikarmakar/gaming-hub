@@ -1,7 +1,7 @@
 import { axiosInstance } from "@/lib/axios";
 import axios from "axios";
 import { create } from "zustand";
-import { User } from "@/features/auth/store/useAuthStore";
+import { User } from "@/features/auth/lib/types";
 import { ORGANIZER_ENDPOINTS, PLAYER_ENDPOINTS } from "../lib/endpoints";
 import { Notification } from "@/features/notifications/store/useNotificationStore";
 
@@ -113,8 +113,8 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
   availableUsers: [],
   dashboardData: null,
   joinRequests: null,
-  pendingInvites: null,
-  notifications: null,
+  pendingInvites: [],
+  notifications: [],
 
   setIsCreateOrgOpen: (open) => set({ isCreateOrgOpen: open }),
   clearAvailableUsers: () => set({ availableUsers: [] }),
@@ -276,11 +276,15 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
         params: { username: query, hasOrg: false, page, limit },
       });
       set((state) => ({
-        availableUsers: page === 1 ? data.data : [...state.availableUsers, ...data.data],
+        availableUsers: page === 1 ? (data.players || []) : [...state.availableUsers, ...(data.players || [])],
         isLoading: false,
       }));
     } catch (error) {
-      set({ error: getErrorMessage(error, "Error searching users"), isLoading: false });
+      set({
+        error: getErrorMessage(error, "Error searching users"),
+        isLoading: false,
+        availableUsers: []
+      });
     }
   },
 

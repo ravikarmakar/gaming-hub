@@ -77,7 +77,7 @@ export const OrganizerInviteDialog = ({ open, onOpenChange, orgId }: OrganizerIn
                             />
                         </div>
                         <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                            {availableUsers.map((user: any) => (
+                            {availableUsers?.map((user: any) => (
                                 <div key={user._id} onClick={() => handleSelectUser(user)} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
                                     <Avatar className="w-8 h-8">
                                         <AvatarImage src={user.avatar} />
@@ -90,7 +90,7 @@ export const OrganizerInviteDialog = ({ open, onOpenChange, orgId }: OrganizerIn
                                     <UserPlus className="ml-auto w-4 h-4 text-purple-400" />
                                 </div>
                             ))}
-                            {availableUsers.length === 0 && searchTerm && (
+                            {availableUsers?.length === 0 && searchTerm && (
                                 <p className="text-center text-sm text-gray-500 py-4">No users found.</p>
                             )}
                         </div>

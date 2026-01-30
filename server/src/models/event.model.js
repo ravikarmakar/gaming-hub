@@ -48,6 +48,7 @@ const eventSchema = new mongoose.Schema(
     description: { type: String, default: "" },
     prizePool: { type: Number, default: 0 },
     image: { type: String, default: "" },
+    imageFileId: { type: String, default: null, trim: true },
     views: { type: Number, default: 0 },
     likes: { type: Number, default: 0 },
     trending: { type: Boolean, default: false },

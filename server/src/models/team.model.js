@@ -40,7 +40,9 @@ const teamSchema = new mongoose.Schema(
 
     // Branding
     imageUrl: { type: String, default: null, trim: true },
+    imageFileId: { type: String, default: null, trim: true },
     bannerUrl: { type: String, default: null, trim: true },
+    bannerFileId: { type: String, default: null, trim: true },
     bio: { type: String, maxlength: 500, default: "", trim: true },
     socialLinks: {
       twitter: { type: String, default: null },

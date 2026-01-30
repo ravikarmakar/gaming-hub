@@ -10,4 +10,5 @@ export const AUTH_ROUTES = {
     VERIFY_ACCOUNT: "/verify-account",
     SEND_RESET_OTP: "/send-reset-otp",
     FORGOT_PASSWORD: "/forgot-password",
+    SETTINGS: "/settings",
 } as const;

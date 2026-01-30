@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { axiosInstance } from "@/lib/axios";
-import { User } from "@/features/auth/store/useAuthStore";
+import { User } from "@/features/auth/lib/types";
 
 interface PlayerStoreState {
   players: User[] | null;

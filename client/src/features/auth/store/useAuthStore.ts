@@ -26,6 +26,8 @@ interface AuthStateTypes {
   loginWithDiscord: (code: string) => Promise<User | null>;
   sendVerifyOtp: () => Promise<{ success: boolean; message: string }>;
   verifyEmail: (otp: string) => Promise<{ success: boolean; message: string }>;
+  deleteAccount: () => Promise<boolean>;
+  updateProfile: (formData: FormData) => Promise<boolean>;
   sendPassResetOtp: (
     email: string
   ) => Promise<{ success: boolean; message: string }>;
@@ -302,6 +304,46 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
       return { success: false, message: errMsg };
     } finally {
       set({ isLoading: false, checkingAuth: false });
+    }
+  },
+
+  deleteAccount: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const { data } = await axiosInstance.delete(AUTH_ENDPOINTS.DELETE_ACCOUNT);
+      if (data.success) {
+        // Clear auth store on success
+        useAuthStore.setState({ user: null });
+      }
+      set({ isLoading: false, error: null });
+      return data.success;
+    } catch (err: any) {
+      set({
+        isLoading: false,
+        error: err.response?.data?.message || "Failed to delete account",
+      });
+      return false;
+    }
+  },
+
+  updateProfile: async (formData: FormData) => {
+    set({ isLoading: true, error: null });
+    try {
+      const { data } = await axiosInstance.put(AUTH_ENDPOINTS.UPDATE_PROFILE, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (data.success && data.user) {
+        // Update user in auth store
+        useAuthStore.setState({ user: data.user });
+      }
+
+      set({ isLoading: false, error: null });
+      return data.success;
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || "Failed to update profile";
+      set({ isLoading: false, error: errorMsg });
+      return false;
     }
   },
 }));

@@ -81,10 +81,18 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
   }
 
   // handle image uploading logic here
-  let imageUrl = "https://cloudinary/dummy-image-url";
+  let imageUrl = null;
+  let imageFileId = null;
+
   if (req.file) {
-    if (fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+    const uploadRes = await uploadOnImageKit(
+      req.file.path,
+      `event-poster-${Date.now()}`,
+      "/events/posters"
+    );
+    if (uploadRes) {
+      imageUrl = uploadRes.url;
+      imageFileId = uploadRes.fileId;
     }
   }
 
@@ -102,6 +110,7 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
     description: req.body.description,
     prizePool: Number(req.body.prizePool) || 0,
     image: imageUrl,
+    imageFileId: imageFileId,
     eventEndAt: req.body.eventEndAt ? new Date(req.body.eventEndAt) : null,
     prizeDistribution: req.body.prizeDistribution ? (typeof req.body.prizeDistribution === 'string' ? JSON.parse(req.body.prizeDistribution) : req.body.prizeDistribution) : [],
   });
@@ -441,19 +450,27 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
 
   // Handle image update if file provided
   let imageUrl = event.image;
+  let imageFileId = event.imageFileId;
+
   if (req.file) {
-    /*
-    const imageKitResponse = await uploadOnImageKit(req.file.path, req.file.filename, "events");
-    if (imageKitResponse) {
-      imageUrl = imageKitResponse.url;
-    }
-    */
-    if (fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+    const uploadRes = await uploadOnImageKit(
+      req.file.path,
+      `event-poster-${event._id}-${Date.now()}`,
+      "/events/posters"
+    );
+
+    if (uploadRes) {
+      if (event.imageFileId) {
+        await deleteFromImageKit(event.imageFileId);
+      }
+      imageUrl = uploadRes.url;
+      imageFileId = uploadRes.fileId;
     }
   }
 
   const updateData = { ...req.body };
+  if (imageUrl) updateData.image = imageUrl;
+  if (imageFileId) updateData.imageFileId = imageFileId;
 
   if (req.body.slots) {
     updateData.maxSlots = Number(req.body.slots);
@@ -507,6 +524,11 @@ export const deleteEvent = async (req, res) => {
         .json({ success: false, message: "Event not found" });
     }
 
+    // Cleanup ImageKit asset
+    if (deletedEvent.imageFileId) {
+      deleteFromImageKit(deletedEvent.imageFileId);
+    }
+
     res
       .status(200)
       .json({ success: true, message: "Event deleted successfully" });
@@ -545,7 +567,5 @@ export const unregisterEvent = TryCatchHandler(async (req, res, next) => {
   });
 });
 
-// getAllEvents merged into fetchAllEvents
-
-// TO-DO -> Event owner can remove any team from the event
-// TO-DO -> notification feature using socket.io
+// TODO: Event owner can remove any team from the event
+// TODO: Notification feature using socket.io

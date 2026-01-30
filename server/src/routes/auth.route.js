@@ -12,6 +12,8 @@ import {
   sendResetPasswordOtp,
   verifyResetPasswordOtp,
   resetPassword,
+  updateProfile,
+  deleteAccount,
 } from "../controllers/auth.controller.js";
 import { isAuthenticated } from "../middleware/auth.middleware.js";
 import { rateLimiter } from "../middleware/rateLimiter.middleware.js";
@@ -23,7 +25,9 @@ import {
   verifyResetOtpValidation,
   resetPasswordValidation,
   verifyEmailValidation,
+  updateProfileValidation,
 } from "../validations/auth.validation.js";
+import { upload } from "../middleware/multer.middleware.js";
 
 const router = express.Router();
 
@@ -103,6 +107,14 @@ router.post(
   verifyEmail
 );
 
+router.put("/update-profile", upload.single("avatar"),
+  rateLimiter({ limit: 5, timer: 60, key: "updateProfile" }),
+  validateRequest(updateProfileValidation),
+  updateProfile
+);
+
+router.delete("/delete-account", deleteAccount);
+
 export default router;
 
-// TODO: update profile, block user, unblock user
+// TODO: Block user, unblock user

@@ -11,9 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { ROUTES } from "@/lib/routes";
 import { forgotPasswordSchema, ForgotPasswordSchemaType } from "@/features/auth/lib/authSchemas";
 import { useAuthLayout } from "@/features/auth/ui/components/auth-layout";
+import { AUTH_ROUTES } from "../../lib/routes";
 
 interface ForgotPasswordRequestProps {
     onSuccess: (email: string) => void;
@@ -99,7 +99,7 @@ export const ForgotPasswordRequest = ({ onSuccess }: ForgotPasswordRequestProps)
                         type="button"
                         variant="ghost"
                         className="w-full h-8 text-[11px] text-gray-400 hover:text-white"
-                        onClick={() => navigate(ROUTES.LOGIN)}
+                        onClick={() => navigate(AUTH_ROUTES.LOGIN)}
                     >
                         <ChevronLeft className="w-3 h-3 mr-1" />
                         Back to Login

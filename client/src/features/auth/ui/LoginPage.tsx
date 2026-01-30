@@ -17,6 +17,7 @@ import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { SocialLogin } from "@/features/auth/ui/components/social-login";
 import { AuthSubmitButton } from "@/features/auth/ui/components/auth-submit-button";
 import { ROUTES } from "@/lib/routes";
+import { AUTH_ROUTES } from "@/features/auth/lib/routes";
 import { useAuthLayout } from "@/features/auth/ui/components/auth-layout";
 
 export default function LoginPage() {
@@ -115,7 +116,7 @@ export default function LoginPage() {
                         <Button
                             type="button"
                             variant="link"
-                            onClick={() => navigate(ROUTES.FORGOT_PASSWORD)}
+                            onClick={() => navigate(AUTH_ROUTES.FORGOT_PASSWORD)}
                             className="h-auto p-0 text-xs text-purple-400 hover:text-purple-300 hover:no-underline"
                         >
                             Forgot password?
@@ -152,7 +153,7 @@ export default function LoginPage() {
                     >
                         Don't have an account?{" "}
                         <Link
-                            to={ROUTES.REGISTER}
+                            to={AUTH_ROUTES.REGISTER}
                             className="font-medium text-purple-400 transition-all duration-200 hover:text-purple-300 hover:underline underline-offset-2"
                         >
                             Sign up now

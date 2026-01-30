@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { ROUTES } from "@/lib/routes";
+import { AUTH_ROUTES } from "../../lib/routes";
 
 const DiscordCallback = () => {
   const navigate = useNavigate();
@@ -53,7 +54,7 @@ const DiscordCallback = () => {
           <>
             <p className="text-red-400 text-sm">{errorMessage}</p>
             <button
-              onClick={() => navigate(ROUTES.LOGIN)}
+              onClick={() => navigate(AUTH_ROUTES.LOGIN)}
               className="text-purple-400 hover:text-purple-300 text-sm underline"
             >
               Back to Login

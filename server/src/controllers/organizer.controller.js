@@ -2,6 +2,7 @@ import Organizer from "../models/organizer.model.js";
 import User from "../models/user.model.js";
 import Event from "../models/event.model.js";
 import { TryCatchHandler } from "../middleware/error.middleware.js";
+import { uploadOnImageKit, deleteFromImageKit } from "../services/imagekit.service.js";
 import { CustomError } from "../utils/CustomError.js";
 import { Roles, Scopes } from "../constants/roles.js";
 import { redis } from "../config/redis.js";
@@ -16,8 +17,21 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
   const { name, email, description, tag } = req.body;
 
   const imageFile = req.file;
-  // uplaod image here
-  const imageUrl = "https://new-my-image";
+  // upload image here
+  let imageUrl = null
+  let imageFileId = null;
+
+  if (imageFile) {
+    const uploadRes = await uploadOnImageKit(
+      imageFile.path,
+      `org-logo-${Date.now()}`,
+      "/organizers/logos"
+    );
+    if (uploadRes) {
+      imageUrl = uploadRes.url;
+      imageFileId = uploadRes.fileId;
+    }
+  }
 
   const user = await User.findById(userId);
   if (!user) return next(new CustomError("User not found", 404));
@@ -54,6 +68,7 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
   const newOrg = await Organizer.create({
     ownerId: user._id,
     imageUrl,
+    imageFileId,
     name,
     email,
     description,
@@ -161,14 +176,34 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
 
   // Handle Profile Image Upload
   if (files?.image?.[0]) {
-    // Stubbed: in a real app, upload files.image[0] to Cloudinary/S3
-    org.imageUrl = "https://new-profile-image.com";
+    const uploadRes = await uploadOnImageKit(
+      files.image[0].path,
+      `org-logo-${org._id}-${Date.now()}`,
+      "/organizers/logos"
+    );
+    if (uploadRes) {
+      if (org.imageFileId) {
+        await deleteFromImageKit(org.imageFileId);
+      }
+      org.imageUrl = uploadRes.url;
+      org.imageFileId = uploadRes.fileId;
+    }
   }
 
   // Handle Banner Image Upload
   if (files?.banner?.[0]) {
-    // Stubbed: in a real app, upload files.banner[0] to Cloudinary/S3
-    org.bannerUrl = "https://new-banner-image.com";
+    const uploadRes = await uploadOnImageKit(
+      files.banner[0].path,
+      `org-banner-${org._id}-${Date.now()}`,
+      "/organizers/banners"
+    );
+    if (uploadRes) {
+      if (org.bannerFileId) {
+        await deleteFromImageKit(org.bannerFileId);
+      }
+      org.bannerUrl = uploadRes.url;
+      org.bannerFileId = uploadRes.fileId;
+    }
   }
 
   // Update fields if provided
@@ -427,6 +462,14 @@ export const deleteOrg = TryCatchHandler(async (req, res, next) => {
     await redis.del(`user_profile:${userId}`);
   }
 
+  // Cleanup ImageKit assets
+  if (org.imageFileId) {
+    deleteFromImageKit(org.imageFileId);
+  }
+  if (org.bannerFileId) {
+    deleteFromImageKit(org.bannerFileId);
+  }
+
   res.status(200).json({
     success: true,
     message: "Organization deleted successfully",
@@ -460,8 +503,7 @@ export const getDashboardStats = TryCatchHandler(async (req, res, next) => {
   });
   const totalParticipantsQuery = await Event.aggregate([
     { $match: { orgId, isDeleted: { $ne: true } } },
-    { $project: { participantsCount: { $size: "$teamId" } } },
-    { $group: { _id: null, total: { $sum: "$participantsCount" } } },
+    { $group: { _id: null, total: { $sum: "$joinedSlots" } } },
   ]);
   const totalParticipants = totalParticipantsQuery[0]?.total || 0;
 

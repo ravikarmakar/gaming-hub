@@ -13,4 +13,6 @@ export const AUTH_ENDPOINTS = {
     SEND_RESET_OTP: `${AUTH_BASE}/send-reset-otp`,
     VERIFY_RESET_OTP: `${AUTH_BASE}/verify-reset-otp`,
     RESET_PASSWORD: `${AUTH_BASE}/reset-password`,
+    UPDATE_PROFILE: `${AUTH_BASE}/update-profile`,
+    DELETE_ACCOUNT: `${AUTH_BASE}/delete-account`,
 } as const;

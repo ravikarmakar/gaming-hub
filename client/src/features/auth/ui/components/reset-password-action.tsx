@@ -10,12 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { ROUTES } from "@/lib/routes";
 import { verifyOtpSchema, resetPasswordSchema, VerifyOtpSchemaType, ResetPasswordSchemaType, } from "@/features/auth/lib/authSchemas";
 import { scaleVariants } from "@/features/auth/lib/animations";
 import { useAuthLayout } from "@/features/auth/ui/components/auth-layout";
 import { useCountdown } from "@/hooks/use-countdown";
 import { AuthSubmitButton } from "@/features/auth/ui/components/auth-submit-button";
+import { AUTH_ROUTES } from "../../lib/routes";
 
 interface ResetPasswordActionProps {
     email: string;
@@ -91,7 +91,7 @@ export const ResetPasswordAction = ({ email, onRestart }: ResetPasswordActionPro
         const { success, message } = await resetPassword(email, otpValue, values.password);
         if (success) {
             toast.success(message || "Password reset successful! Please login.");
-            navigate(ROUTES.LOGIN);
+            navigate(AUTH_ROUTES.LOGIN);
         } else {
             toast.error(error || "Reset failed");
         }

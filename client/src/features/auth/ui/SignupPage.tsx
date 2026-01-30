@@ -18,6 +18,7 @@ import { useGoogleAuth, useDiscordAuth } from "@/features/auth/hooks/auth-utils"
 import { showSuccessToast } from "@/lib/toast";
 import { ROUTES } from "@/lib/routes";
 import { useAuthLayout } from "@/features/auth/ui/components/auth-layout";
+import { AUTH_ROUTES } from "../lib/routes";
 
 export default function SignupPage() {
     const navigate = useNavigate();
@@ -90,7 +91,7 @@ export default function SignupPage() {
             startTransition(() => {
                 // Navigate to email verification if account needs verification
                 if (!result.isAccountVerified) {
-                    void navigate(ROUTES.EMAIL_VERIFY);
+                    void navigate(AUTH_ROUTES.VERIFY_ACCOUNT);
                 } else {
                     void navigate(ROUTES.HOME);
                 }
@@ -268,7 +269,7 @@ export default function SignupPage() {
                     >
                         Already have an account?{" "}
                         <Link
-                            to={ROUTES.LOGIN}
+                            to={AUTH_ROUTES.LOGIN}
                             className="font-medium text-purple-400 transition-all duration-200 hover:text-purple-300 hover:underline underline-offset-2"
                         >
                             Login here

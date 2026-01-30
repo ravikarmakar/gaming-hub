@@ -9,7 +9,9 @@ const organizerSchema = new mongoose.Schema(
       index: true,
     },
     imageUrl: { type: String, default: null, trim: true },
+    imageFileId: { type: String, default: null, trim: true },
     bannerUrl: { type: String, default: null, trim: true },
+    bannerFileId: { type: String, default: null, trim: true },
     name: {
       type: String,
       trim: true,

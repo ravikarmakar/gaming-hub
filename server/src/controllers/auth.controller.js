@@ -4,7 +4,6 @@ import qs from "qs";
 import { redis } from "../config/redis.js";
 
 import User from "../models/user.model.js";
-import { Notification } from "../models/notification.model.js";
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
 import {
@@ -15,6 +14,7 @@ import {
 import { oauth2Client, discordOAuthConfig } from "../config/oauth.js";
 import { transporter } from "../config/mail.js";
 import { generateOTP, sendVerificationEmail } from "../services/otp.service.js";
+import { uploadOnImageKit, deleteFromImageKit } from "../services/imagekit.service.js";
 
 export const register = TryCatchHandler(async (req, res, next) => {
   const { username, email, password } = req.body;
@@ -544,5 +544,79 @@ export const resetPassword = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Password has been reset successfully. You can now log in.",
+  });
+});
+
+export const updateProfile = TryCatchHandler(async (req, res, next) => {
+  const userId = req.user.userId;
+  const { username, bio, esportsRole } = req.body;
+
+  const user = await User.findById(userId);
+  if (!user) return next(new CustomError("User not found", 404));
+
+  if (username) user.username = username;
+  if (bio !== undefined) user.bio = bio;
+  if (esportsRole) user.esportsRole = esportsRole;
+
+  if (req.file) {
+    const uploadRes = await uploadOnImageKit(
+      req.file.path,
+      `avatar-${userId}-${Date.now()}`,
+      "/users/avatars"
+    );
+
+    if (uploadRes) {
+      // Delete old avatar if it exists and is not the default one
+      if (user.avatarFileId) {
+        await deleteFromImageKit(user.avatarFileId);
+      }
+      user.avatar = uploadRes.url;
+      user.avatarFileId = uploadRes.fileId;
+    }
+  }
+
+  await user.save();
+  await redis.del(`user_profile:${userId}`);
+
+  res.status(200).json({
+    success: true,
+    message: "Profile updated successfully",
+    user,
+  });
+});
+
+export const deleteAccount = TryCatchHandler(async (req, res, next) => {
+  const userId = req.user.userId;
+
+  const user = await User.findById(userId);
+  if (!user) return next(new CustomError("User not found", 404));
+
+  // Cleanup ImageKit asset
+  if (user.avatarFileId) {
+    await deleteFromImageKit(user.avatarFileId);
+  }
+
+  // Handle other related data if necessary (e.g., if he's a captain, what happens to team?)
+  // For now, simple soft delete or hard delete. User requested "delete there profile"
+  // I'll stick to the project's pattern of soft delete if exists, but here hard delete seems requested for "cost less"
+  // Actually, for users, soft delete is common. But let's look at isDeleted in user model.
+  // user.model.js has isDeleted: { type: Boolean, default: false }.
+
+  user.isDeleted = true;
+  user.username = `deleteduser_${userId}`; // Avoid unique constraint issues
+  user.email = `deleted_${userId}@deleted.com`;
+  user.avatar = "https://ui-avatars.com/api/?name=deleted&background=777";
+  user.avatarFileId = null;
+
+  await user.save();
+  await redis.del(`user_profile:${userId}`);
+
+  // Clear cookies
+  res.clearCookie("accessToken");
+  res.clearCookie("refreshToken");
+
+  res.status(200).json({
+    success: true,
+    message: "Account deleted successfully",
   });
 });

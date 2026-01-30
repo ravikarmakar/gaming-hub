@@ -24,6 +24,8 @@ import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { ORG_ACTIONS, ORG_ACTIONS_ACCESS } from "@/features/organizer/lib/access";
 import { TEAM_ACCESS } from "@/features/teams/lib/access";
+import { PLAYER_ROUTES } from "@/features/player/lib/routes";
+import { AUTH_ROUTES } from "@/features/auth/lib/routes";
 
 const ProfileMenu = () => {
   const navigate = useNavigate();
@@ -40,7 +42,7 @@ const ProfileMenu = () => {
     {
       name: "My Profile",
       icon: User,
-      href: ROUTES.PLAYER_PROFILE.replace(":id", user?._id ?? ""),
+      href: PLAYER_ROUTES.PLAYER_DETAILS.replace(":id", user?._id ?? ""),
       color: "text-blue-400",
     },
     ...(user?.teamId
@@ -98,6 +100,12 @@ const ProfileMenu = () => {
         }] : []),
       ]
       : []),
+    {
+      name: "Settings",
+      icon: UserCog,
+      href: PLAYER_ROUTES.PLAYER_SETTINGS.replace(":id", user?._id ?? ""),
+      color: "text-blue-400",
+    }
   ];
 
   return (
@@ -173,7 +181,10 @@ const ProfileMenu = () => {
             <DropdownMenuSeparator className="bg-purple-500/10 mx-2" />
 
             <DropdownMenuItem
-              onClick={() => logout()}
+              onClick={async () => {
+                await logout();
+                navigate("/");
+              }}
               disabled={isLoading}
               className="flex items-center gap-3 px-3 py-2.5 mt-1 text-sm font-medium rounded-lg cursor-pointer text-red-400 transition-colors focus:bg-red-500/10 focus:text-red-400"
             >
@@ -193,7 +204,7 @@ const ProfileMenu = () => {
         </DropdownMenu>
       ) : (
         <Button
-          onClick={() => navigate(ROUTES.LOGIN)}
+          onClick={() => navigate(AUTH_ROUTES.LOGIN)}
           className="relative overflow-hidden group px-6 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-full shadow-lg shadow-purple-600/20 transition-all duration-300 active:scale-95"
         >
           <span className="relative z-10 text-sm">Join Now</span>

@@ -14,21 +14,15 @@ export const uploadOnImageKit = async (localFilePath, fileName, folder = "/gamin
     try {
         if (!localFilePath) return null;
 
-        const auth = imagekit.getAuthenticationParameters();
-        console.log("IK AUTH OK:", auth);
-
-        console.log(">>> [uploadOnImageKit] Path:", localFilePath);
-        // Read file as Buffer
-        const fileBuffer = fs.readFileSync(localFilePath);
+        // Create a ReadStream for the file
+        const fileStream = fs.createReadStream(localFilePath);
 
         // Upload to ImageKit using the correct method for v7+ SDK
-        console.log(">>> [uploadOnImageKit] Calling imagekit.files.upload...");
         const response = await imagekit.files.upload({
-            file: fileBuffer,
+            file: fileStream,
             fileName: fileName || `file-${Date.now()}`,
             folder: folder,
         });
-        console.log(">>> [uploadOnImageKit] SDK response received.");
 
         // Remove the local temporary file
         if (fs.existsSync(localFilePath)) {
@@ -43,6 +37,17 @@ export const uploadOnImageKit = async (localFilePath, fileName, folder = "/gamin
         if (fs.existsSync(localFilePath)) {
             fs.unlinkSync(localFilePath);
         }
+        return null;
+    }
+};
+
+export const deleteFromImageKit = async (fileId) => {
+    try {
+        if (!fileId) return null;
+        const response = await imagekit.files.delete(fileId);
+        return response;
+    } catch (error) {
+        console.error("ImageKit Deletion Error:", error);
         return null;
     }
 };

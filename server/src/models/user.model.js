@@ -36,6 +36,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "https://ui-avatars.com/api/?name=gamer&background=random",
     },
+    avatarFileId: { type: String, default: null, trim: true },
     isAccountVerified: { type: Boolean, default: false },
     verifyOtp: { type: String, default: "", select: false },
     verifyOtpExpireAt: { type: Number, default: 0, select: false },

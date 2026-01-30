@@ -8,7 +8,7 @@ import { CustomError } from "../utils/CustomError.js";
 import { findUserById } from "../services/user.service.js";
 import { Roles, Scopes } from "../constants/roles.js";
 import { checkTeamNameUnique } from "../services/team.service.js";
-import { uploadOnImageKit } from "../services/imagekit.service.js";
+import { uploadOnImageKit, deleteFromImageKit } from "../services/imagekit.service.js";
 import { createNotification } from "./notification.controller.js";
 import JoinRequest from "../models/join-request.model.js";
 import { redis } from "../config/redis.js";
@@ -25,14 +25,18 @@ export const createTeam = TryCatchHandler(async (req, res, next) => {
     if (!user.isAccountVerified) throw new CustomError("Account is not verified yet", 401);
 
     // 1. Image handling with ImageKit
-    let imageUrl = "https://placehold.co/400x400/0f0720/white?text=Team";
+    let imageUrl;
+    let imageFileId = null;
     if (req.file) {
       const uploadRes = await uploadOnImageKit(
         req.file.path,
         `team-logo-${Date.now()}`,
         "/teams/logos"
       );
-      if (uploadRes) imageUrl = uploadRes.url;
+      if (uploadRes) {
+        imageUrl = uploadRes.url;
+        imageFileId = uploadRes.fileId;
+      }
     }
 
     const teamData = {
@@ -41,6 +45,7 @@ export const createTeam = TryCatchHandler(async (req, res, next) => {
       region,
       captain: user._id,
       imageUrl,
+      imageFileId,
       bio,
       teamMembers: [{ user: user._id, roleInTeam: "igl" }],
     };
@@ -107,7 +112,14 @@ export const updateTeam = TryCatchHandler(async (req, res, next) => {
         `team-logo-${team._id}-${Date.now()}`,
         "/teams/logos"
       );
-      if (uploadRes) team.imageUrl = uploadRes.url;
+      if (uploadRes) {
+        // Delete old logo if it exists
+        if (team.imageFileId) {
+          await deleteFromImageKit(team.imageFileId);
+        }
+        team.imageUrl = uploadRes.url;
+        team.imageFileId = uploadRes.fileId;
+      }
     }
 
     if (req.files.banner && req.files.banner[0]) {
@@ -116,7 +128,14 @@ export const updateTeam = TryCatchHandler(async (req, res, next) => {
         `team-banner-${team._id}-${Date.now()}`,
         "/teams/banners"
       );
-      if (uploadRes) team.bannerUrl = uploadRes.url;
+      if (uploadRes) {
+        // Delete old banner if it exists
+        if (team.bannerFileId) {
+          await deleteFromImageKit(team.bannerFileId);
+        }
+        team.bannerUrl = uploadRes.url;
+        team.bannerFileId = uploadRes.fileId;
+      }
     }
   }
 
@@ -770,6 +789,14 @@ export const deleteTeam = TryCatchHandler(async (req, res, next) => {
     JoinRequest.deleteMany({ target: team._id }).catch(err =>
       console.error(`Failed to cleanup join requests for team ${team._id}:`, err)
     );
+
+    // 5. Cleanup images from ImageKit to save costs
+    if (team.imageFileId) {
+      deleteFromImageKit(team.imageFileId);
+    }
+    if (team.bannerFileId) {
+      deleteFromImageKit(team.bannerFileId);
+    }
 
     res.status(200).json({
       success: true,

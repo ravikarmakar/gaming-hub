@@ -66,3 +66,18 @@ export const verifyEmailValidation = {
         }),
     }),
 };
+
+export const updateProfileValidation = {
+    body: Joi.object({
+        username: Joi.string().min(3).max(30).optional().messages({
+            "string.min": "Username must be at least 3 characters",
+            "string.max": "Username must be less than 30 characters",
+        }),
+        bio: Joi.string().max(500).allow("").optional().messages({
+            "string.max": "Bio must be less than 500 characters",
+        }),
+        esportsRole: Joi.string().valid("rusher", "sniper", "support", "igl", "coach", "player").optional().messages({
+            "any.only": "Please select a valid esports role",
+        }),
+    }),
+};

@@ -5,9 +5,11 @@ import { ErrorBoundary } from "react-error-boundary";
 
 // Stores & Constants
 import { ROUTES } from "@/lib/routes";
+import { AUTH_ROUTES } from "@/features/auth/lib/routes";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { EVENT_ROUTES } from "@/features/events/lib";
+import { PLAYER_ROUTES } from "@/features/player/lib/routes";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
 // Layouts & Guards
@@ -16,7 +18,7 @@ import MainLayout from "@/components/layouts/MainLayout";
 import ProtectedRoute from "@/guards/ProtectedRoute";
 import PublicRoute from "@/guards/PublicRoute";
 
-import { useCheckingAuth, useUser } from "@/features/auth/store/authSelectors";
+import { useCheckingAuth } from "@/features/auth/store/authSelectors";
 
 // Shared Components
 import { NotFound } from "@/components/NotFound";
@@ -47,6 +49,7 @@ const OrganizerNotificationsPage = lazy(() => import("@/features/organizer/ui/pa
 // Player Features
 const PlayerIdPage = lazy(() => import("@/features/player/ui/pages/PlayerIdPage"));
 const FindPlayers = lazy(() => import("@/features/player/ui/pages/FindPlayers"));
+const PlayerSettings = lazy(() => import("@/features/player/ui/pages/PlayerSettings"));
 
 // Team Features
 const TeamIdPage = lazy(() => import("@/features/teams/ui/pages/TeamIdPage"));
@@ -71,7 +74,6 @@ const NotificationsPage = lazy(() => import("@/features/notifications/ui/pages/N
 
 const App = () => {
   const checkingAuth = useCheckingAuth();
-  const user = useUser();
   const { checkAuth } = useAuthStore();
   const hasCalled = useRef(false);
 
@@ -82,7 +84,8 @@ const App = () => {
     }
   }, [checkAuth]);
 
-  if (checkingAuth && user === null) {
+  // Only show the global blackout for the initial auth check when we're sure we're loading
+  if (checkingAuth && !hasCalled.current) {
     return <div className="fixed inset-0 z-[9999] bg-black" />;
   }
 
@@ -101,8 +104,9 @@ const App = () => {
 
               <Route element={<ProtectedRoute />}>
                 <Route path={ORGANIZER_ROUTES.PROFILE} element={<OrganizerProfile />} />
-                <Route path={ROUTES.ALL_PLAYERS} element={<FindPlayers />} />
-                <Route path={ROUTES.PLAYER_PROFILE} element={<PlayerIdPage />} />
+                <Route path={PLAYER_ROUTES.ALL_PLAYERS} element={<FindPlayers />} />
+                <Route path={PLAYER_ROUTES.PLAYER_DETAILS} element={<PlayerIdPage />} />
+                <Route path={PLAYER_ROUTES.PLAYER_SETTINGS} element={<PlayerSettings />} />
                 <Route path={TEAM_ROUTES.PROFILE} element={<TeamIdPage />} />
                 <Route path={ROUTES.NOTIFICATIONS} element={<NotificationsPage />} />
                 <Route path={EVENT_ROUTES.TOURNAMENT_DETAILS} element={<TournamentById />} />
@@ -144,15 +148,15 @@ const App = () => {
             {/* Auth Routes */}
             <Route element={<ProtectedRoute />}>
               <Route element={<AuthLayout />}>
-                <Route path={ROUTES.EMAIL_VERIFY} element={<VerifyEmail />} />
+                <Route path={AUTH_ROUTES.VERIFY_ACCOUNT} element={<VerifyEmail />} />
               </Route>
             </Route>
             <Route element={<PublicRoute />}>
-              <Route path={ROUTES.DISCORD_CALLBACK} element={<DiscordCallback />} />
+              <Route path={AUTH_ROUTES.DISCORD_CALLBACK} element={<DiscordCallback />} />
               <Route element={<AuthLayout />}>
-                <Route path={ROUTES.LOGIN} element={<LoginPage />} />
-                <Route path={ROUTES.REGISTER} element={<SignupPage />} />
-                <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
+                <Route path={AUTH_ROUTES.LOGIN} element={<LoginPage />} />
+                <Route path={AUTH_ROUTES.REGISTER} element={<SignupPage />} />
+                <Route path={AUTH_ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
               </Route>
             </Route>
 

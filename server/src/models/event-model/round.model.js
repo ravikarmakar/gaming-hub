@@ -11,6 +11,10 @@ const roundSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    roundNumber: {
+      type: Number,
+      required: true,
+    },
     // groups: [{ type: mongoose.Schema.Types.ObjectId, ref: "Group" }],
     status: {
       type: String,
@@ -28,6 +32,7 @@ roundSchema.pre("save", async function (next) {
       .model("Round")
       .countDocuments({ eventId: this.eventId });
     this.roundName = `Round-${roundCount + 1}`;
+    this.roundNumber = roundCount + 1;
   }
   next();
 });
