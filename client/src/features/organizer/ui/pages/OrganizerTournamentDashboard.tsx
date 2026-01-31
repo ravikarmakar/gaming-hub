@@ -9,7 +9,8 @@ import {
     PlayCircle,
     Trash2,
     Edit2,
-    AlertTriangle
+    AlertTriangle,
+    Loader2
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +20,7 @@ import toast from "react-hot-toast";
 
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { useEventStore } from "@/features/events/store/useEventStore";
+import { useTournamentStore } from "@/features/organizer/store/useTournamentStore";
 import { RoundsManager } from "@/features/organizer/ui/components/RoundsManager";
 
 // Placeholder components
@@ -30,12 +32,15 @@ export default function OrganizerTournamentDashboard() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("overview");
     const { eventDetails, fetchEventDetailsById, deleteEvent } = useEventStore();
+    const { rounds, fetchRounds, finishEvent } = useTournamentStore();
+    const [isFinishing, setIsFinishing] = useState(false);
 
     useEffect(() => {
         if (id) {
             fetchEventDetailsById(id);
+            fetchRounds(id);
         }
-    }, [id, fetchEventDetailsById]);
+    }, [id, fetchEventDetailsById, fetchRounds]);
 
     if (!id) {
         return <div className="p-6 text-white">Invalid Tournament ID</div>;
@@ -57,6 +62,24 @@ export default function OrganizerTournamentDashboard() {
         navigate(ORGANIZER_ROUTES.EDIT_TOURNAMENT.replace(":eventId", id));
     };
 
+    const handleFinishTournament = async () => {
+        if (!id) return;
+        if (!window.confirm("Are you sure you want to finish this tournament? This will publish the final leaderboard.")) return;
+
+        setIsFinishing(true);
+        const success = await finishEvent(id);
+        setIsFinishing(false);
+        if (success) {
+            toast.success("Tournament finished! Final results are now public.");
+            fetchEventDetailsById(id); // Refresh status
+        }
+    };
+
+    const lastRound = rounds.length > 0 ? rounds[rounds.length - 1] : null;
+    const isGrandFinale = lastRound?.groups && lastRound.groups.length === 1;
+    const allRoundsCompleted = rounds.length > 0 && rounds.every(r => r.status === 'completed');
+    const canFinish = allRoundsCompleted || (isGrandFinale && lastRound?.status === 'completed');
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Back Button */}
@@ -77,20 +100,50 @@ export default function OrganizerTournamentDashboard() {
                             {eventDetails?.title || "Loading..."}
                         </h1>
                         <Badge variant="outline" className="border-green-500/20 text-green-400 bg-green-500/10">
-                            {eventDetails?.status?.toUpperCase() || "LOADING"}
+                            {eventDetails?.registrationStatus?.toUpperCase() || "LOADING"}
+                        </Badge>
+                        <Badge variant="outline" className="border-blue-500/20 text-blue-400 bg-blue-500/10">
+                            {eventDetails?.eventProgress?.toUpperCase() || "LOADING"}
                         </Badge>
                     </div>
                     <p className="text-gray-400">Manage rounds, groups, and results for Event ID: {id}</p>
                 </div>
 
                 <div className="flex gap-3">
-                    <Button variant="outline" className="border-red-500/20 text-red-400 hover:bg-red-500/10" onClick={handleDelete}>
-                        End Tournament
-                    </Button>
-                    <Button className="bg-purple-600 hover:bg-purple-700 text-white">
-                        <PlayCircle className="w-4 h-4 mr-2" />
-                        Resume Matches
-                    </Button>
+                    {/* Start Event Button - Only visible when not started */}
+                    {(eventDetails?.eventProgress === "pending") && (
+                        <Button
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                            onClick={async () => {
+                                if (await useTournamentStore.getState().startEvent(id)) {
+                                    toast.success("Event Started!");
+                                    fetchEventDetailsById(id);
+                                }
+                            }}
+                        >
+                            <PlayCircle className="w-4 h-4 mr-2" />
+                            Start Event
+                        </Button>
+                    )}
+
+                    {/* End Tournament Button */}
+                    {eventDetails?.eventProgress === "ongoing" && (
+                        <Button
+                            variant="outline"
+                            className="border-purple-500/20 text-purple-400 hover:bg-purple-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={handleFinishTournament}
+                            disabled={!canFinish || isFinishing}
+                        >
+                            {isFinishing ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                                <Trophy className="w-4 h-4 mr-2" />
+                            )}
+                            Finish Tournament
+                        </Button>
+                    )}
+
+                    {/* Resume Button? Maybe not needed if we have Start Event logic distinct. Keeping generic if needed or removing as per plan */}
                 </div>
             </div>
 
@@ -101,10 +154,15 @@ export default function OrganizerTournamentDashboard() {
                         <Trophy className="w-4 h-4 mr-2" />
                         Overview
                     </TabsTrigger>
-                    <TabsTrigger value="rounds" className="data-[state=active]:bg-blue-600/20 data-[state=active]:text-blue-300">
-                        <Swords className="w-4 h-4 mr-2" />
-                        Rounds & Groups
-                    </TabsTrigger>
+
+                    {/* Hide Rounds Tab if not started */}
+                    {!(eventDetails?.registrationStatus === "registration-open" && eventDetails?.eventProgress === "pending") && (
+                        <TabsTrigger value="rounds" className="data-[state=active]:bg-blue-600/20 data-[state=active]:text-blue-300">
+                            <Swords className="w-4 h-4 mr-2" />
+                            Rounds & Groups
+                        </TabsTrigger>
+                    )}
+
                     <TabsTrigger value="teams" className="data-[state=active]:bg-green-600/20 data-[state=active]:text-green-300">
                         <Users className="w-4 h-4 mr-2" />
                         Teams
@@ -119,9 +177,12 @@ export default function OrganizerTournamentDashboard() {
                     <TabsContent value="overview" className="m-0">
                         <TournamentOverview />
                     </TabsContent>
-                    <TabsContent value="rounds" className="m-0">
-                        <RoundsManager eventId={id} />
-                    </TabsContent>
+
+                    {!(eventDetails?.registrationStatus === "registration-open" && eventDetails?.eventProgress === "pending") && (
+                        <TabsContent value="rounds" className="m-0">
+                            <RoundsManager eventId={id} />
+                        </TabsContent>
+                    )}
                     <TabsContent value="teams" className="m-0">
                         <TeamsList />
                     </TabsContent>
@@ -136,7 +197,8 @@ export default function OrganizerTournamentDashboard() {
                                 <Button
                                     onClick={handleEdit}
                                     variant="outline"
-                                    className="h-auto p-4 flex flex-col items-center justify-center gap-2 border-white/10 hover:bg-white/5 hover:border-purple-500/50 group"
+                                    disabled={eventDetails?.registrationStatus !== "registration-open"}
+                                    className="h-auto p-4 flex flex-col items-center justify-center gap-2 border-white/10 hover:bg-white/5 hover:border-purple-500/50 group disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <Edit2 className="w-6 h-6 text-purple-400 group-hover:scale-110 transition-transform" />
                                     <span className="font-bold text-gray-300">Edit Details</span>

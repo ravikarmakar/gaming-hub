@@ -10,6 +10,24 @@ export interface Team {
     teamLogo?: string;
 }
 
+export interface LeaderboardEntry {
+    _id: string;
+    teamId: Team; // Populated
+    score: number;
+    position: number;
+    kills: number;
+    wins: number;
+    totalPoints: number;
+    matchesPlayed: number;
+    isQualified: boolean;
+}
+
+export interface Leaderboard {
+    _id: string;
+    groupId: string;
+    teamScore: LeaderboardEntry[];
+}
+
 export interface Group {
     _id: string;
     groupName: string;
@@ -17,6 +35,8 @@ export interface Group {
     matchTime: string;
     teams: Team[];
     roundId: string;
+    matchesPlayed?: number;
+    status?: 'pending' | 'ongoing' | 'completed';
 }
 
 export interface Round {
@@ -26,6 +46,10 @@ export interface Round {
     status: "pending" | "ongoing" | "completed";
     eventId: string;
     groups?: Group[];
+    startTime?: string;
+    gapMinutes?: number;
+    matchesPerGroup?: number;
+    qualifyingTeams?: number;
 }
 
 interface TournamentState {
@@ -37,16 +61,29 @@ interface TournamentState {
     currentPage: number;
     totalPages: number;
 
+    // Leaderboard
+    leaderboard: Leaderboard | null;
+
     isLoading: boolean;
     isCreating: boolean;
     error: string | null;
 
     // Actions
     fetchRounds: (eventId: string) => Promise<void>;
-    createRound: (eventId: string, roundName?: string) => Promise<boolean>;
+    createRound: (eventId: string, params: { roundName?: string; startTime?: string; gapMinutes?: number; matchesPerGroup?: number; qualifyingTeams?: number }) => Promise<boolean>;
+    updateRound: (roundId: string, roundName: string) => Promise<boolean>;
+    updateRoundStatus: (roundId: string, status: "pending" | "ongoing" | "completed") => Promise<boolean>;
+    deleteRound: (roundId: string) => Promise<boolean>;
 
     fetchGroups: (roundId: string, page?: number, limit?: number) => Promise<void>;
     createGroups: (roundId: string, totalMatch?: number, matchTime?: string) => Promise<boolean>;
+    updateGroup: (groupId: string, data: { groupName?: string; totalMatch?: number; roomId?: number; roomPassword?: number; totalSelectedTeam?: number; matchTime?: string }) => Promise<boolean>;
+    startEvent: (eventId: string) => Promise<boolean>;
+    finishEvent: (eventId: string) => Promise<boolean>;
+
+    fetchLeaderboard: (groupId: string) => Promise<void>;
+    updateTeamScore: (groupId: string, teamId: string, stats: { kills?: number; position?: number; wins?: number; matchesPlayed?: number; score?: number; isQualified?: boolean }) => Promise<boolean>;
+    updateGroupResults: (groupId: string, results: { teamId: string, rank: number, kills: number }[]) => Promise<boolean>;
 }
 
 export const useTournamentStore = create<TournamentState>((set, get) => ({
@@ -79,10 +116,13 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
         }
     },
 
-    createRound: async (eventId, roundName) => {
+    createRound: async (eventId, params) => {
         set({ isCreating: true, error: null });
         try {
-            const res = await axiosInstance.post("/rounds/create", { eventId, roundName });
+            const res = await axiosInstance.post("/rounds/create", {
+                eventId,
+                ...params
+            });
             const newRound = res.data.rounds; // Controller returns { rounds: newRound } confusingly named
             set((state) => ({
                 rounds: [...state.rounds, newRound],
@@ -92,6 +132,55 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
         } catch (err) {
             const message = handleApiError(err, "Failed to create round");
             set({ isCreating: false, error: message });
+            return false;
+        }
+    },
+
+    updateRound: async (roundId, roundName) => {
+        set({ isLoading: true, error: null });
+        try {
+            await axiosInstance.put(`/rounds/${roundId}`, { roundName });
+            set((state) => ({
+                rounds: state.rounds.map(r => r._id === roundId ? { ...r, roundName } : r),
+                isLoading: false
+            }));
+            return true;
+        } catch (err) {
+            const message = handleApiError(err, "Failed to update round");
+            set({ isLoading: false, error: message });
+            return false;
+        }
+    },
+    updateRoundStatus: async (roundId, status) => {
+        set({ isLoading: true, error: null });
+        try {
+            await axiosInstance.put(`/rounds/${roundId}`, { status });
+            set((state) => ({
+                rounds: state.rounds.map(r => r._id === roundId ? { ...r, status } : r),
+                isLoading: false
+            }));
+            return true;
+        } catch (err) {
+            const message = handleApiError(err, "Failed to update round status");
+            set({ isLoading: false, error: message });
+            return false;
+        }
+    },
+
+    deleteRound: async (roundId) => {
+        set({ isLoading: true, error: null });
+        try {
+            await axiosInstance.delete(`/rounds/${roundId}`);
+            set((state) => ({
+                rounds: state.rounds.filter(r => r._id !== roundId),
+                groups: [], // Clear groups as they belong to the deleted round (if it was selected)
+                totalGroups: 0,
+                isLoading: false
+            }));
+            return true;
+        } catch (err) {
+            const message = handleApiError(err, "Failed to delete round");
+            set({ isLoading: false, error: message });
             return false;
         }
     },
@@ -119,13 +208,23 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
     createGroups: async (roundId, totalMatch = 1, matchTime) => {
         set({ isCreating: true, error: null });
         try {
-            await axiosInstance.post("/groups/create", {
+            const res = await axiosInstance.post("/groups/create", {
                 roundId,
                 totalMatch,
                 matchTime
             });
-            set({ isCreating: false });
-            // Refresh groups for the current round
+
+            // Update rounds state to reflect the new groups count immediately
+            set((state) => ({
+                isCreating: false,
+                rounds: state.rounds.map(r =>
+                    r._id === roundId
+                        ? { ...r, groups: res.data.groups }
+                        : r
+                )
+            }));
+
+            // Refresh groups for the current round grid
             await get().fetchGroups(roundId, 1);
             return true;
         } catch (err) {
@@ -135,6 +234,109 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
             set({ isCreating: false, error: message });
             return false;
         }
-    }
+    },
 
+    updateGroup: async (groupId, data) => {
+        set({ isLoading: true, error: null });
+        try {
+            await axiosInstance.put(`/groups/${groupId}`, data);
+            set((state) => ({
+                groups: state.groups.map(g => g._id === groupId ? { ...g, ...data } : g),
+                isLoading: false
+            }));
+            return true;
+        } catch (err) {
+            const message = handleApiError(err, "Failed to update group");
+            set({ isLoading: false, error: message });
+            return false;
+        }
+    },
+
+    // Leaderboard State
+    leaderboard: null,
+
+    fetchLeaderboard: async (groupId) => {
+        set({ isLoading: true, error: null });
+        try {
+            const res = await axiosInstance.get(`/leaderboards/${groupId}`);
+            set({ leaderboard: res.data, isLoading: false });
+        } catch (err) {
+            const message = handleApiError(err, "Failed to fetch leaderboard");
+            set({ isLoading: false, error: message });
+        }
+    },
+
+    updateTeamScore: async (groupId, teamId, stats) => {
+        set({ isLoading: true, error: null });
+        try {
+            const res = await axiosInstance.put(`/leaderboards/${groupId}/score`, {
+                teamId,
+                ...stats,
+            });
+            // Update local leaderboard state
+            set((state) => ({
+                leaderboard: state.leaderboard ? {
+                    ...state.leaderboard,
+                    teamScore: state.leaderboard.teamScore.map(t =>
+                        t.teamId._id === teamId ? { ...t, ...stats, ...res.data.leaderboard?.teamScore?.find((TS: any) => TS.teamId === teamId) } : t
+                    )
+                } : null,
+                isLoading: false
+            }));
+            return true;
+        } catch (err) {
+            const message = handleApiError(err, "Failed to update score");
+            set({ isLoading: false, error: message });
+            return false;
+        }
+    },
+
+    updateGroupResults: async (groupId, results) => {
+        set({ isLoading: true, error: null });
+        try {
+            const res = await axiosInstance.put(`/leaderboards/${groupId}/results`, { results });
+
+            // Update local state
+            set((state) => ({
+                isLoading: false,
+                leaderboard: res.data.leaderboard,
+                // Use actual group data from server which contains updated matchesPlayed and status
+                groups: state.groups.map(g => g._id === groupId ? res.data.group : g),
+                rounds: state.rounds.map(r => ({
+                    ...r,
+                    groups: r.groups?.map(g => g._id === groupId ? res.data.group : g)
+                }))
+            }));
+            return true;
+        } catch (err) {
+            const message = handleApiError(err, "Failed to submit results");
+            set({ isLoading: false, error: message });
+            return false;
+        }
+    },
+
+    startEvent: async (eventId) => {
+        set({ isLoading: true, error: null });
+        try {
+            await axiosInstance.post(`/events/${eventId}/start`);
+            set({ isLoading: false });
+            return true;
+        } catch (err) {
+            const message = handleApiError(err, "Failed to start event");
+            set({ isLoading: false, error: message });
+            return false;
+        }
+    },
+    finishEvent: async (eventId: string) => {
+        set({ isLoading: true, error: null });
+        try {
+            await axiosInstance.post(`/events/${eventId}/finish`);
+            set({ isLoading: false });
+            return true;
+        } catch (err) {
+            const message = handleApiError(err, "Failed to finish event");
+            set({ isLoading: false, error: message });
+            return false;
+        }
+    }
 }));

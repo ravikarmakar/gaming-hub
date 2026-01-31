@@ -10,7 +10,7 @@ const groupSchema = new mongoose.Schema(
     },
     groupName: {
       type: String,
-      required: true,
+      trim: true,
     },
     status: {
       type: String,
@@ -31,16 +31,35 @@ const groupSchema = new mongoose.Schema(
       type: Number,
       default: 1,
     },
+    matchesPlayed: {
+      type: Number,
+      default: 0,
+    },
     roomId: {
       type: Number,
     },
     roomPassword: {
       type: Number,
     },
+    totalSelectedTeam: {
+      type: Number,
+      default: 0,
+    },
     isDeleted: { type: Boolean, default: false }, // ⚡ Soft delete
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+groupSchema.pre("save", function (next) {
+  if (
+    this.status === "pending" &&
+    this.matchTime <= new Date()
+  ) {
+    this.status = "ongoing";
+  }
+  next();
+});
+
 
 // Virtual Field: isUpcoming**
 groupSchema.virtual("isUpcoming").get(function () {

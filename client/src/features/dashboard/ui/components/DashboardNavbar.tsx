@@ -2,16 +2,13 @@ import { useLocation, Link } from "react-router-dom";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/routes";
-import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import ProfileMenu from "@/components/shared/ProfileMenu";
 import {
   Search,
   Slash,
-  Plus,
   Shield,
   Users
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
@@ -156,14 +153,6 @@ export const DashboardNavbar = () => {
         <div className="flex items-center gap-3">
           {/* Role Indicator */}
           {getRoleBadge()}
-
-          {/* Quick Action - Only show on relevant pages */}
-          {pathname === ORGANIZER_ROUTES.TOURNAMENTS && (
-            <Button size="sm" className="hidden sm:flex bg-white text-black hover:bg-gray-200 h-9 gap-2 font-medium">
-              <Plus className="w-4 h-4" />
-              Create
-            </Button>
-          )}
 
           <div className="h-6 w-px bg-white/10 mx-1 hidden sm:block" />
 

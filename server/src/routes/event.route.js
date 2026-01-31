@@ -12,6 +12,8 @@ import {
   deleteEvent,
   closeRegistration,
   unregisterEvent,
+  startEvent,
+  finishEvent,
 } from "../controllers/event.controller.js";
 import { isAuthenticated, isVerified } from "../middleware/auth.middleware.js";
 import { upload } from "../middleware/multer.middleware.js";
@@ -35,6 +37,8 @@ router.put("/unregister/:eventId", unregisterEvent);
 router.delete("/:eventId", deleteEvent);
 // router.put("/remove-team/:eventId/:teamId", removeTeam); // to-do
 router.patch("/close-registration/:eventId", closeRegistration);
+router.post("/:eventId/start", startEvent);
+router.post("/:eventId/finish", finishEvent);
 
 // router.get("/featured", featuredEvents);
 // router.get("/trending", TrendingEvents);

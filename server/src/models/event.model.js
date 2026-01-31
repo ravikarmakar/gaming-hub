@@ -1,5 +1,17 @@
 import mongoose from "mongoose";
 
+export const registrationStatusEnum = [
+  "registration-open",
+  "registration-closed",
+  "live",
+];
+
+export const eventProgressEnum = [
+  "pending",
+  "ongoing",
+  "completed",
+];
+
 const eventSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
@@ -29,15 +41,20 @@ const eventSchema = new mongoose.Schema(
       default: "open",
     },
 
-    status: {
+    // Registration tracking (For UI)
+    registrationStatus: {
       type: String,
-      enum: [
-        "registration-open",
-        "registration-closed",
-        "live",
-        "completed",
-      ],
+      enum: registrationStatusEnum,
       default: "registration-open",
+      index: true,
+    },
+
+    // Tournament progress tracking 
+    eventProgress: {
+      type: String,
+      enum: eventProgressEnum,
+      default: "pending",
+      index: true,
     },
 
     orgId: {

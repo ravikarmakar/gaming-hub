@@ -1,4 +1,5 @@
-export type Status = "registration-open" | "registration-closed" | "live" | "completed";
+export type RegistrationStatus = "registration-open" | "registration-closed" | "live";
+export type EventProgress = "pending" | "ongoing" | "completed";
 export type EventType = "scrims" | "tournament";
 export type Category = "solo" | "duo" | "squad";
 export type RegistrationMode = "open" | "invite-only";
@@ -14,7 +15,8 @@ export interface Event {
     maxSlots: number;
     joinedSlots: number;
     registrationMode: RegistrationMode;
-    status: Status;
+    registrationStatus: RegistrationStatus;
+    eventProgress: EventProgress;
     orgId: string;
     image?: string;
     description?: string;

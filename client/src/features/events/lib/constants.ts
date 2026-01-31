@@ -1,8 +1,7 @@
-export const statusOptions = [
+export const registrationStatusOptions = [
     { value: "registration-open", label: "Registration Open" },
     { value: "registration-closed", label: "Registration Closed" },
     { value: "live", label: "Live" },
-    { value: "completed", label: "Completed" },
 ];
 
 export const eventTypeOptions = [

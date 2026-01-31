@@ -15,11 +15,26 @@ const roundSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    // groups: [{ type: mongoose.Schema.Types.ObjectId, ref: "Group" }],
     status: {
       type: String,
       enum: ["pending", "ongoing", "completed"],
       default: "pending",
+    },
+    // Configuration for Groups
+    startTime: {
+      type: Date, // When the first match starts
+    },
+    gapMinutes: {
+      type: Number, // Gap between groups
+      default: 0,
+    },
+    matchesPerGroup: {
+      type: Number,
+      default: 1,
+    },
+    qualifyingTeams: {
+      type: Number,
+      default: 1,
     },
   },
   { timestamps: true }

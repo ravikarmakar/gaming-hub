@@ -148,12 +148,16 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
                         )}
                         <NeonBadge
                             variant={
-                                event.status === "registration-open" ? "green" :
-                                    event.status === "live" ? "orange" :
-                                        event.status === "completed" ? "blue" : "red"
+                                event.registrationStatus === "registration-open" ? "green" :
+                                    event.eventProgress === "ongoing" ? "orange" :
+                                        event.eventProgress === "completed" ? "blue" : "red"
                             }
                         >
-                            {event.status.split('-').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                            {(event.registrationStatus === "registration-open" ? "Registration Open" :
+                                event.eventProgress === "ongoing" ? "Live" :
+                                    event.eventProgress === "completed" ? "Completed" :
+                                        event.registrationStatus || "Unknown"
+                            ).toUpperCase()}
                         </NeonBadge>
                     </div>
 

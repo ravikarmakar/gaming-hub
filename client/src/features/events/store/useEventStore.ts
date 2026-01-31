@@ -24,6 +24,9 @@ interface EventStateTypes {
   hasMore: boolean;
   cursor: string | null;
   limit: number;
+  hasMoreTeams: boolean;
+  teamsCursor: string | null;
+  teamsLimit: number;
 
   createEvent: (eventData: FormData) => Promise<Event | null>;
   fetchEventsByOrgId: (orgId: string) => Promise<void>;
@@ -48,7 +51,8 @@ interface EventStateTypes {
     eventId: string
   ) => Promise<{ success: boolean; message?: string }>;
   isTeamRegistered: (eventId: string, teamId: string) => Promise<{ registered: boolean; status: "approved" | "pending" | "none" }>;
-  fetchRegisteredTeams: (eventId: string) => Promise<void>;
+  fetchRegisteredTeams: (eventId: string, params?: { append?: boolean, limit?: number }) => Promise<void>;
+  resetRegisteredTeams: () => void;
   updateEvent: (eventId: string, eventData: FormData) => Promise<Event | null>;
   deleteEvent: (eventId: string) => Promise<boolean>;
   cancelRegistration: (id: string) => Promise<void>;
@@ -72,6 +76,9 @@ export const useEventStore = create<EventStateTypes>((set, get) => ({
   hasMore: true,
   cursor: null,
   limit: 6,
+  hasMoreTeams: true,
+  teamsCursor: null,
+  teamsLimit: 10,
 
   createEvent: async (eventData) => {
     set({ isLoading: true, error: null });
@@ -237,18 +244,47 @@ export const useEventStore = create<EventStateTypes>((set, get) => ({
       return { registered: false, status: "none" };
     }
   },
-  fetchRegisteredTeams: async (eventId) => {
+  fetchRegisteredTeams: async (eventId, params = {}) => {
+    const { append = false, limit: customLimit } = params;
+    const { teamsCursor, teamsLimit, isTeamsLoading } = get();
+
+    if (append && !get().hasMoreTeams) return;
+    if (isTeamsLoading) return; // Prevent double fetch
+
     set({ isTeamsLoading: true, error: null });
     try {
       const response = await axiosInstance.get(
-        EVENT_ENDPOINTS.REGISTERED_TEAMS(eventId)
+        EVENT_ENDPOINTS.REGISTERED_TEAMS(eventId),
+        {
+          params: {
+            cursor: append ? teamsCursor : null,
+            limit: customLimit || teamsLimit
+          }
+        }
       );
-      const registerdTeams: Team[] = response.data.teams;
-      set({ registerdTeams, isTeamsLoading: false });
+
+      const newTeams: Team[] = response.data.teams;
+      const nextCursor = response.data.nextCursor;
+      const hasMore = response.data.hasMore;
+
+      set((state) => ({
+        registerdTeams: append ? [...state.registerdTeams, ...newTeams] : newTeams,
+        teamsCursor: nextCursor,
+        hasMoreTeams: hasMore,
+        isTeamsLoading: false
+      }));
     } catch (err) {
       const message = handleApiError(err, "Failed to fetch registered teams");
       set({ isTeamsLoading: false, error: message });
     }
+  },
+  resetRegisteredTeams: () => {
+    set({
+      registerdTeams: [],
+      teamsCursor: null,
+      hasMoreTeams: true,
+      isTeamsLoading: false
+    });
   },
   updateEvent: async (eventId, eventData) => {
     set({ isLoading: true, error: null });

@@ -50,7 +50,9 @@ const OrganizerTournaments: React.FC = () => {
       const matchesGame = gameFilter === "all" || event.game.toLowerCase() === gameFilter.toLowerCase();
       const matchesCategory =
         categoryFilter === "all" || event.category.toLowerCase() === categoryFilter.toLowerCase();
-      const matchesStatus = statusFilter === "all" || event.status === statusFilter;
+      const matchesStatus = statusFilter === "all" ||
+        event.registrationStatus === statusFilter ||
+        event.eventProgress === statusFilter;
 
       return matchesSearch && matchesGame && matchesCategory && matchesStatus;
     });

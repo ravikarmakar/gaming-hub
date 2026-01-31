@@ -208,8 +208,8 @@ const OrganizerDashboard = () => {
                       <div className="flex-1 min-w-0 w-full">
                         <div className="flex items-center justify-between gap-4 mb-2">
                           <h3 className="font-bold text-white group-hover:text-purple-400 transition-colors truncate text-lg tracking-tight">{event.title}</h3>
-                          <NeonBadge variant={event.status === "registration-open" ? "blue" : event.status === "live" ? "red" : "green"}>
-                            {event.status.replace('-', ' ')}
+                          <NeonBadge variant={event.registrationStatus === "registration-open" ? "blue" : event.registrationStatus === "live" ? "red" : "green"}>
+                            {(event.registrationStatus || "unknown").replace('-', ' ')}
                           </NeonBadge>
                         </div>
 

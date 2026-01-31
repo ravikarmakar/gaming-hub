@@ -32,9 +32,9 @@ import {
   eventSchema,
   categoryOptions,
   eventTypeOptions,
-  statusOptions,
+  registrationStatusOptions,
   Category,
-  Status
+  RegistrationStatus,
 } from "@/features/events/lib";
 
 export default function CreateTournament() {
@@ -88,7 +88,7 @@ export default function CreateTournament() {
         registrationMode: eventDetails.registrationMode,
         prizePool: eventDetails.prizePool?.toString() || "",
         description: eventDetails.description,
-        status: eventDetails.status as Status,
+        status: eventDetails.registrationStatus as RegistrationStatus,
         prizeDistribution: eventDetails.prizeDistribution || [{ rank: 1, amount: 0, label: "Champion" }],
       });
       if (eventDetails.image) {
@@ -309,7 +309,7 @@ export default function CreateTournament() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
-                          {statusOptions.map((option) => (
+                          {registrationStatusOptions.map((option) => (
                             <SelectItem key={option.value} value={option.value}>
                               {option.label}
                             </SelectItem>

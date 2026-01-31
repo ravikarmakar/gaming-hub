@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { X, Users, Trophy } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Users, Trophy, Loader2 } from "lucide-react";
 
 import { useEventStore } from "@/features/events/store/useEventStore";
 import { GlassCard, NeonBadge } from "./ThemedComponents";
@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 
 interface TeamListProps {
   eventId: string;
-  setIsOpen: (isOpen: boolean) => void;
 }
 
 const TeamItem = ({ team, index }: { team: any; index: number }) => {
@@ -56,7 +55,7 @@ const TeamItem = ({ team, index }: { team: any; index: number }) => {
       </div>
       <NeonBadge
         variant="purple"
-        className="opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100"
+        className="opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 hidden sm:block"
       >
         Verified
       </NeonBadge>
@@ -64,31 +63,56 @@ const TeamItem = ({ team, index }: { team: any; index: number }) => {
   );
 };
 
-const TeamList = ({ eventId, setIsOpen }: TeamListProps) => {
-  const { registerdTeams, fetchRegisteredTeams, isTeamsLoading } =
-    useEventStore();
+const TeamList = ({ eventId }: TeamListProps) => {
+  const {
+    registerdTeams,
+    fetchRegisteredTeams,
+    isTeamsLoading,
+    hasMoreTeams,
+    resetRegisteredTeams
+  } = useEventStore();
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    resetRegisteredTeams();
     fetchRegisteredTeams(eventId);
-  }, [eventId, fetchRegisteredTeams]);
+  }, [eventId, fetchRegisteredTeams, resetRegisteredTeams]);
 
-  if (isTeamsLoading) {
+  useEffect(() => {
+    if (!observerTarget.current || !hasMoreTeams || isTeamsLoading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isTeamsLoading && hasMoreTeams) {
+          fetchRegisteredTeams(eventId, { append: true });
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    observer.observe(observerTarget.current);
+    return () => observer.disconnect();
+  }, [eventId, hasMoreTeams, isTeamsLoading, fetchRegisteredTeams]);
+
+  // Initial loading state (only for first page)
+  if (isTeamsLoading && registerdTeams.length === 0) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="w-8 h-8 border-2 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+      <div className="flex flex-col items-center justify-center p-12 space-y-4">
+        <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest animate-pulse">Scanning Arena for Battalions...</p>
       </div>
     );
   }
 
   return (
-    <GlassCard className="p-8 border-purple-500/10 shadow-2xl relative overflow-visible">
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/5">
+    <GlassCard className="p-4 sm:p-8 border-purple-500/10 shadow-2xl relative overflow-visible">
+      <div className="flex items-center justify-between mb-6 sm:mb-8 pb-4 border-b border-white/5">
         <div className="flex items-center gap-4">
           <div className="h-10 w-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
             <Users size={20} />
           </div>
           <div>
-            <h3 className="text-xl font-black text-white uppercase tracking-tight">
+            <h3 className="text-lg sm:text-xl font-black text-white uppercase tracking-tight">
               Registered Battalions
             </h3>
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
@@ -96,23 +120,36 @@ const TeamList = ({ eventId, setIsOpen }: TeamListProps) => {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setIsOpen(false)}
-          className="h-8 w-8 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-all hover:bg-white/10"
-        >
-          <X className="w-4 h-4" />
-        </button>
       </div>
 
-      <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+      <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar scroll-smooth">
         {registerdTeams?.length > 0 ? (
-          registerdTeams.map((team, index) => (
-            <TeamItem key={team._id} team={team} index={index} />
-          ))
+          <>
+            {registerdTeams.map((team, index) => (
+              <TeamItem key={`${team._id}-${index}`} team={team} index={index} />
+            ))}
+
+            {/* Observer Target & Loader */}
+            <div ref={observerTarget} className="py-6 flex flex-col items-center justify-center gap-3">
+              {hasMoreTeams ? (
+                <>
+                  <Loader2 className="w-5 h-5 text-purple-500/50 animate-spin" />
+                  <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest">Awaiting More Units...</p>
+                </>
+              ) : (
+                <div className="flex items-center gap-3 w-full opacity-30">
+                  <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/10" />
+                  <p className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em]">All Personnel Accounted For</p>
+                  <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/10" />
+                </div>
+              )}
+            </div>
+          </>
         ) : (
-          <div className="py-12 text-center bg-white/5 border border-dashed border-white/10 rounded-2xl">
-            <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">
-              No Combat Units Detected.
+          <div className="py-20 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-2xl">
+            <Users className="w-12 h-12 text-gray-600 mx-auto mb-4 opacity-20" />
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">
+              No Combat Units Detected in Sector.
             </p>
           </div>
         )}

@@ -1,12 +1,31 @@
 import Round from "../../models/event-model/round.model.js";
 import Event from "../../models/event.model.js";
+import EventRegistration from "../../models/event-model/event-registration.model.js";
+import mongoose from "mongoose";
+
 export const getRounds = async (req, res) => {
   try {
     const { eventId } = req.query;
-    const query = {};
-    if (eventId) query.eventId = eventId;
+    if (!eventId) {
+      return res.status(400).json({ message: "Event ID is required" });
+    }
 
-    const rounds = await Round.find(query);
+    // Use aggregation to fetch rounds along with their groups
+    const rounds = await Round.aggregate([
+      {
+        $match: { eventId: new mongoose.Types.ObjectId(eventId) }
+      },
+      {
+        $lookup: {
+          from: "groups",
+          localField: "_id",
+          foreignField: "roundId",
+          as: "groups"
+        }
+      },
+      { $sort: { roundNumber: 1 } } // Sort by round number
+    ]);
+
     res.status(200).json({
       success: true,
       data: rounds,
@@ -23,40 +42,29 @@ export const getRounds = async (req, res) => {
 
 export const createRound = async (req, res) => {
   try {
-    const { eventId, roundName } = req.body;
+    const { eventId, roundName, startTime, gapMinutes, matchesPerGroup, qualifyingTeams } = req.body;
 
-    // Event ID check karo
+    // Event ID check
     if (!eventId) {
       return res.status(400).json({ message: "Event ID is required!" });
     }
 
-    // Event exist karta hai ya nahi?
+    // Check if Event exists
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found!" });
     }
 
-    // Check if Event has Teams
-    if (!event.teams || event.teams.length === 0) {
+    // Check if Teams are registered (using EventRegistration)
+    const totalTeams = await EventRegistration.countDocuments({ eventId });
+    if (totalTeams === 0) {
       return res.status(400).json({
         message:
           "Cannot create a round. No teams have registered in this event!",
       });
     }
 
-    // Check if Teams are at least 50% of Total Slots
-    // const totalSlots = event.slots || 0;
-    // const totalTeams = event.teams.length;
-
-    // if (totalTeams < totalSlots * 0.5) {
-    //   return res.status(400).json({
-    //     message: `At least 50% (${Math.ceil(
-    //       totalSlots * 0.5
-    //     )}) teams should be registered to create a round!`,
-    //   });
-    // }
-
-    // Kya koi "ongoing" round hai?
+    // Check for ongoing round
     const existingOngoingRound = await Round.findOne({
       eventId,
       status: "ongoing",
@@ -67,20 +75,23 @@ export const createRound = async (req, res) => {
         .json({ message: "An ongoing round already exists!" });
     }
 
-    // Total rounds count (Auto-generate round name)
+    // Total rounds count (Auto-generate round name if not provided)
     const roundCount = await Round.countDocuments({ eventId });
-    const newRoundName = `Round-${roundCount + 1}`;
 
-    // Naya round create karna
+    // Create new round
     const newRound = await Round.create({
       eventId,
-      roundName: roundName || newRoundName,
+      roundName: roundName || `Round-${roundCount + 1}`,
       status: "pending",
+      roundNumber: roundCount + 1,
+      startTime,
+      gapMinutes,
+      matchesPerGroup,
+      qualifyingTeams
     });
 
-    // Update Event's rounds Array
-    event.rounds.push(newRound._id);
-    await event.save();
+    // Note: We do not push to event.rounds because Event schema does not have a rounds array
+    // The relationship is handled by Round.eventId
 
     return res.status(201).json({
       message: "New round created successfully!",
@@ -125,6 +136,74 @@ export const getRoundDetails = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in getRoundDetails:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const updateRound = async (req, res) => {
+  try {
+    const { roundId } = req.params;
+    const { roundName, startTime, gapMinutes, matchesPerGroup, qualifyingTeams, status } = req.body;
+
+    if (!roundId) return res.status(400).json({ message: "Round ID required" });
+
+    const updateData = {};
+    if (roundName) updateData.roundName = roundName;
+    if (startTime) updateData.startTime = startTime;
+    if (gapMinutes !== undefined) updateData.gapMinutes = gapMinutes;
+    if (matchesPerGroup !== undefined) updateData.matchesPerGroup = matchesPerGroup;
+    if (qualifyingTeams !== undefined) updateData.qualifyingTeams = qualifyingTeams;
+    if (status) updateData.status = status;
+
+    const round = await Round.findByIdAndUpdate(
+      roundId,
+      updateData,
+      { new: true }
+    );
+
+    if (!round) return res.status(404).json({ message: "Round not found" });
+
+    res.status(200).json({
+      success: true,
+      message: "Round updated successfully",
+      round // Return specific round or handle in store
+    });
+  } catch (error) {
+    console.error("Error updating round:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const deleteRound = async (req, res) => {
+  try {
+    const { roundId } = req.params;
+
+    if (!roundId) return res.status(400).json({ message: "Round ID required" });
+
+    const round = await Round.findById(roundId);
+    if (!round) return res.status(404).json({ message: "Round not found" });
+
+    // 1. Find all groups for this round
+    const groups = await mongoose.model("Group").find({ roundId });
+    const groupIds = groups.map(g => g._id);
+
+    // 2. Delete Leaderboards for these groups
+    if (groupIds.length > 0) {
+      await mongoose.model("Leaderboard").deleteMany({ groupId: { $in: groupIds } });
+    }
+
+    // 3. Delete Groups
+    await mongoose.model("Group").deleteMany({ roundId });
+
+    // 4. Delete Round
+    await Round.findByIdAndDelete(roundId);
+
+    res.status(200).json({
+      success: true,
+      message: "Round and all associated data deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting round:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };

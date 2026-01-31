@@ -3,6 +3,8 @@ import {
   getRounds,
   createRound,
   getRoundDetails,
+  updateRound,
+  deleteRound,
 } from "../../controllers/event-controllers/round.controller.js";
 import {
   isAuthenticated,
@@ -17,6 +19,8 @@ router.post(
   "/create",
   createRound
 );
+router.put("/:roundId", updateRound);
+router.delete("/:roundId", deleteRound);
 router.get("/:roundId", getRoundDetails);
 router.get("/", getRounds);
 

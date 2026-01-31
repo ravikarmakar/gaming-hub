@@ -21,22 +21,23 @@ const leaderboardSchema = new mongoose.Schema(
         wins: { type: Number, default: 0 },
         totalPoints: { type: Number, default: 0 },
         matchesPlayed: { type: Number, default: 0 },
+        isQualified: { type: Boolean, default: false }, // ✅ Manual Qualification Status
       },
     ],
   },
   { timestamps: true }
 );
 
+import pointSystem from "../../config/pointSystem.js";
+
 // 🔹 **Auto-Update `totalPoints` & `matchesPlayed` Before Save**
 leaderboardSchema.pre("save", async function (next) {
-  const updates = this.teamScore.map(async (team) => {
-    team.totalPoints = team.score + team.kills * 2 + team.wins * 5;
-    team.matchesPlayed = await mongoose
-      .model("Match")
-      .countDocuments({ teamId: team.teamId });
+  this.teamScore.forEach((team) => {
+    // Total Points = Place Points (score) + Kills * Kill Point
+    team.totalPoints = (team.score || 0) + (team.kills || 0) * (pointSystem.killPoint || 1);
+    // team.matchesPlayed = await mongoose.model("Match").countDocuments({ teamId: team.teamId }); // Match model does not exist yet
   });
 
-  await Promise.all(updates);
   next();
 });
 

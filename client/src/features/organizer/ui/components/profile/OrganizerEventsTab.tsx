@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Event } from "@/features/events/store/useEventStore";
+import { Event } from "@/features/events/lib/types";
 import { X, Menu, Play, Gamepad2, Calendar, Clock, MapPin, Users, Eye, Heart, ChevronRight } from "lucide-react";
 // import { useNavigate } from "react-router-dom";
 // import { ROUTES } from "@/lib/routes";
@@ -13,14 +13,18 @@ export const OrganizerEventsTab = ({ events }: OrganizerEventsTabProps) => {
     // const navigate = useNavigate();
 
     const filteredEvents = useMemo(() => {
-        if (!events) return [];
-        // Sort by most recent start date (assuming startDate exists and is ISO string)
-        return [...events].sort(
-            (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
-        );
+        if (!events || !Array.isArray(events)) return [];
+        // Filter out invalid events and sort
+        return [...events]
+            .filter(event => event && event.startDate)
+            .sort((a, b) => {
+                const dateA = new Date(a.startDate).getTime();
+                const dateB = new Date(b.startDate).getTime();
+                return (isNaN(dateB) ? 0 : dateB) - (isNaN(dateA) ? 0 : dateA);
+            });
     }, [events]);
 
-    const getStatusColor = (status: Event["status"]) => {
+    const getStatusColor = (status: string) => {
         switch (status) {
             case "live":
                 return "bg-red-500/20 text-red-400 border-red-500/30";
@@ -96,16 +100,16 @@ export const OrganizerEventsTab = ({ events }: OrganizerEventsTabProps) => {
                             <div className="absolute top-2 right-2 sm:top-4 sm:right-4">
                                 <span
                                     className={`px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs font-medium border ${getStatusColor(
-                                        event.status
+                                        event.registrationStatus
                                     )}`}
                                 >
-                                    {event.status === "live" && (
+                                    {event.registrationStatus === "live" && (
                                         <div className="inline-block w-1.5 h-1.5 sm:w-2 sm:h-2 mr-1 sm:mr-2 bg-red-500 rounded-full animate-pulse" />
                                     )}
-                                    {formatStatus(event.status)}
+                                    {formatStatus(event.registrationStatus)}
                                 </span>
                             </div>
-                            {event.status === "live" && (
+                            {event.registrationStatus === "live" && (
                                 <div className="absolute flex items-center gap-1 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full top-2 left-2 sm:top-4 sm:left-4 bg-red-500/90 backdrop-blur-sm">
                                     <Play className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
                                     <span className="text-xs font-medium">LIVE</span>
@@ -147,7 +151,7 @@ export const OrganizerEventsTab = ({ events }: OrganizerEventsTabProps) => {
                                         <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                         <span>
                                             {/* Using slots as maxParticipants */}
-                                            {0}/{event.slots}
+                                            {event.joinedSlots || 0}/{event.maxSlots || event.slots || 0}
                                         </span>
                                     </div>
                                 </div>
@@ -156,15 +160,15 @@ export const OrganizerEventsTab = ({ events }: OrganizerEventsTabProps) => {
                                     <div className="flex items-center gap-3 text-gray-400 sm:gap-4">
                                         <div className="flex items-center gap-1">
                                             <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                            <span>{event.views}</span>
+                                            <span>{event.views || 0}</span>
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <Heart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                            <span>{event.likes}</span>
+                                            <span>{event.likes || 0}</span>
                                         </div>
                                     </div>
                                     <div className="mt-1 text-base font-bold text-green-400 sm:mt-0 sm:text-lg">
-                                        ${event.prizePool.toLocaleString()}
+                                        ${(event.prizePool || 0).toLocaleString()}
                                     </div>
                                 </div>
                             </div>

@@ -6,6 +6,8 @@ import User from "../models/user.model.js";
 import Event from "../models/event.model.js";
 import EventRegistration from "../models/event-model/event-registration.model.js";
 import JoinRequest from "../models/join-request.model.js";
+import Round from "../models/event-model/round.model.js";
+import Group from "../models/event-model/group.model.js";
 
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { generateTokens, storeRefreshToken, setCookies } from "../services/auth.service.js";
@@ -382,16 +384,38 @@ export const isTeamRegistered = TryCatchHandler(async (req, res, next) => {
 export const fetchAllRegisteredTeams = TryCatchHandler(
   async (req, res, next) => {
     const { eventId } = req.params;
+    let { cursor, limit = 10 } = req.query;
 
-    const registrations = await EventRegistration.find({ eventId })
+    limit = parseInt(limit);
+    let query = { eventId };
+
+    if (cursor) {
+      query._id = { $gt: cursor }; // Using $gt for chronological order (ASC) or matching the append logic
+    }
+
+    const registrations = await EventRegistration.find(query)
+      .sort({ _id: 1 }) // Sorting by ID to ensure consistent pagination
+      .limit(limit + 1)
       .populate("teamId", "teamName imageUrl")
       .lean();
+
+    let nextCursor = null;
+    let hasMore = false;
+
+    if (registrations.length > limit) {
+      const extraItem = registrations.pop();
+      nextCursor = extraItem._id;
+      hasMore = true;
+    }
 
     const teams = registrations.map(reg => reg.teamId);
 
     return res.status(200).json({
+      success: true,
       totalTeams: teams.length,
       teams: teams,
+      nextCursor,
+      hasMore
     });
   }
 );
@@ -569,3 +593,84 @@ export const unregisterEvent = TryCatchHandler(async (req, res, next) => {
 
 // TODO: Event owner can remove any team from the event
 // TODO: Notification feature using socket.io
+
+export const startEvent = TryCatchHandler(async (req, res, next) => {
+  const { eventId } = req.params;
+  const { userId, roles } = req.user;
+
+  // 1. Fetch Event
+  const event = await Event.findById(eventId);
+  if (!event) return next(new CustomError("Event not found", 404));
+
+  // 2. Authorization Check (Owner/Manager)
+  const hasAuth = roles.some(
+    (r) =>
+      r.scope === "org" &&
+      r.scopeModel === "Organizer" &&
+      (r.role === "org:owner" || r.role === "org:manager") &&
+      r.scopeId.toString() === event.orgId.toString()
+  );
+
+  if (!hasAuth) {
+    return next(new CustomError("Not authorized to start this event", 403));
+  }
+
+  // 3. Status Check
+  if (event.eventProgress === "ongoing" || event.eventProgress === "completed") {
+    return next(new CustomError("Event is already active or completed", 400));
+  }
+
+  // 4. Update Event Status
+  // "we will only chnage two thing registration will close and progress is ongoing"
+  event.registrationStatus = "registration-closed";
+  event.eventProgress = "ongoing";
+
+  // Also updating the legacy/root status field if it exists in schema or is used elsewhere, 
+  // though it seemed undefined in schema. Safest to update registrationStatus primarily.
+  // If 'status' field exists and is used for registration status:
+  if (event.status) event.status = "registration-closed";
+
+  await event.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Event started successfully! Registration closed, progress set to ongoing.",
+    data: event
+  });
+});
+
+export const finishEvent = TryCatchHandler(async (req, res, next) => {
+  const { eventId } = req.params;
+  const { userId, roles } = req.user;
+
+  const event = await Event.findById(eventId);
+  if (!event) return next(new CustomError("Event not found", 404));
+
+  const hasAuth = roles.some(
+    (r) =>
+      r.scope === "org" &&
+      r.scopeModel === "Organizer" &&
+      (r.role === "org:owner" || r.role === "org:manager") &&
+      r.scopeId.toString() === event.orgId.toString()
+  );
+
+  if (!hasAuth) {
+    return next(new CustomError("Not authorized to finish this event", 403));
+  }
+
+  if (event.eventProgress === "completed") {
+    return next(new CustomError("Event is already completed", 400));
+  }
+
+  event.eventProgress = "completed";
+  event.registrationStatus = "registration-closed";
+  if (event.status) event.status = "registration-closed";
+
+  await event.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Event finished successfully! Final leaderboard is now available.",
+    data: event
+  });
+});
