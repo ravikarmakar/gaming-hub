@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import {
     ShieldAlert,
@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -32,12 +32,12 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { useTeamStore, TeamMembersTypes } from "@/features/teams/store/useTeamStore";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useTeamStore } from "@/features/teams/store/useTeamStore";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { TEAM_ACTIONS, TEAM_ACTIONS_ACCESS, TEAM_ACCESS } from "@/features/teams/lib/access";
 import { TEAM_ROUTES } from "../../lib/routes";
 import { Navigate } from "react-router-dom";
+import { TeamMembersTypes } from "@/features/teams/lib/types";
 
 export function formatTeamRole(systemRole?: string) {
     if (!systemRole) return "";
@@ -49,15 +49,8 @@ export function formatTeamRole(systemRole?: string) {
 }
 
 const TeamStaffPage = () => {
-    const {
-        currentTeam,
-        getTeamById,
-        isLoading,
-        promoteMember,
-        demoteMember,
-        transferTeamOwnerShip,
-    } = useTeamStore();
-    const { user } = useAuthStore();
+    const { currentTeam, promoteMember, demoteMember, transferTeamOwnerShip, isLoading } = useTeamStore();
+    // user removed as it was only used for fetching
     const { can } = useAccess();
 
     const [actionTarget, setActionTarget] = useState<TeamMembersTypes | null>(null);
@@ -69,29 +62,10 @@ const TeamStaffPage = () => {
     const canTransferOwnerShip = can(TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.transferTeamOwnerShip]);
 
 
-    useEffect(() => {
-        if (user?.teamId) {
-            getTeamById(user.teamId);
-        }
-    }, [user?.teamId, getTeamById]);
-
-    useEffect(() => {
-        if (!actionTarget) {
-            const timer = setTimeout(() => {
-                document.body.style.pointerEvents = 'auto';
-            }, 100);
-            return () => clearTimeout(timer);
-        }
-    }, [actionTarget]);
-
-
-    if (isLoading && !currentTeam) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-[#0B0C1A]">
-                <Loader2 className="w-10 h-10 text-purple-400 animate-spin" />
-            </div>
-        );
-    }
+    // Layout handles fetching
+    // useEffect(() => {
+    //    if (user?.teamId) getTeamById(user.teamId);
+    // }, [user?.teamId, getTeamById]);
 
     if (!currentTeam) return null;
 
@@ -130,109 +104,124 @@ const TeamStaffPage = () => {
 
     return (
         <>
-            <ScrollArea className="h-full bg-[#0B0C1A]">
-                <div className="px-4 md:px-8 py-8 pb-20 mx-auto max-w-5xl space-y-8">
+            <div className="h-full">
+                <div className="w-full space-y-8">
                     <div className="flex items-center gap-3 mb-8">
                         <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.1)]">
                             <ShieldAlert className="w-6 h-6 text-orange-400" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-white tracking-tight">Staff Management</h1>
+                            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter">Staff Management</h1>
                             <p className="text-gray-400 text-sm">Manage system access, promotions, and ownership</p>
                         </div>
                     </div>
 
-                    <div className="grid gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {currentTeam.teamMembers?.map((member) => {
                             const isMemberOwner = member.systemRole === "team:owner";
 
                             return (
-                                <Card key={member.user} className="bg-[#111222] border-white/5 p-4 flex items-center justify-between group hover:border-white/10 transition-colors">
-                                    <div className="flex items-center gap-4">
-                                        <Avatar className="h-12 w-12 border-2 border-white/10">
-                                            <AvatarImage src={member.avatar} />
-                                            <AvatarFallback className="bg-gray-800 text-gray-400">
-                                                {member.username.substring(0, 2).toUpperCase()}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <h3 className="font-bold text-white">{member.username}</h3>
-                                                {member.systemRole && (
-                                                    <Badge
-                                                        variant="outline"
-                                                        className={`text-[10px] px-2 py-0.5 h-5 border ${member.systemRole === "team:owner"
-                                                            ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                                                            : member.systemRole === "team:manager"
-                                                                ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
-                                                                : "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                                                            }`}
-                                                    >
-                                                        {formatTeamRole(member.systemRole)}
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-1.5 mt-1">
-                                                <span className="text-xs text-gray-500 font-medium">Team Role:</span>
-                                                <Badge variant="secondary" className="bg-white/5 hover:bg-white/10 text-gray-300 border-0 text-[10px] uppercase tracking-wider font-semibold">
-                                                    {member.roleInTeam}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <Card key={member.user} className="group relative border-white/5 bg-zinc-900/50 backdrop-blur-sm hover:bg-zinc-900/80 hover:border-purple-500/30 transition-all duration-300 overflow-hidden">
+                                    {/* Gradient overlay on hover */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
-                                    <div className="flex items-center gap-3">
-                                        {canManageStaff && !isMemberOwner && (
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-white/80 hover:text-white hover:bg-purple-500/20 border border-white/5 hover:border-purple-500/20 transition-all font-medium"
-                                                    >
-                                                        <UserCog className="w-4 h-4 mr-2 text-purple-400" />
-                                                        Manage Access
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="bg-[#0F0720] border-white/10 text-gray-200">
-                                                    <DropdownMenuLabel>System Team Roles</DropdownMenuLabel>
-                                                    <DropdownMenuSeparator className="bg-white/10" />
-                                                    <DropdownMenuItem
-                                                        onClick={() => confirmAction(member, "promote")}
-                                                        className="focus:bg-green-500/20 focus:text-green-400 cursor-pointer"
-                                                    >
-                                                        <BadgeCheck className="w-4 h-4 mr-2" />
-                                                        Promote to Manager
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => confirmAction(member, "demote")}
-                                                        className="focus:bg-red-500/20 focus:text-red-400 cursor-pointer"
-                                                    >
-                                                        <ShieldAlert className="w-4 h-4 mr-2" />
-                                                        Demote to Player
-                                                    </DropdownMenuItem>
-                                                    {canTransferOwnerShip && (
-                                                        <>
-                                                            <DropdownMenuSeparator className="bg-white/10" />
-                                                            <DropdownMenuItem
-                                                                onClick={() => confirmAction(member, "transfer")}
-                                                                className="focus:bg-amber-500/20 focus:text-amber-400 cursor-pointer text-amber-500"
-                                                            >
-                                                                <Crown className="w-4 h-4 mr-2" />
-                                                                Transfer Ownership
-                                                            </DropdownMenuItem>
-                                                        </>
+                                    <div className="p-5 relative z-10">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="relative">
+                                                    <div className="w-14 h-14 rounded-xl bg-zinc-800 border-2 border-white/5 overflow-hidden shadow-lg group-hover:shadow-purple-500/20 transition-all duration-300">
+                                                        <Avatar className="w-full h-full">
+                                                            <AvatarImage src={member.avatar} alt={member.username} className="object-cover" />
+                                                            <AvatarFallback className="bg-zinc-800 text-gray-400">
+                                                                {member.username?.substring(0, 2).toUpperCase() || "??"}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                    </div>
+                                                    {member.isActive && (
+                                                        <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500/20 border border-emerald-500 rounded-full flex items-center justify-center">
+                                                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                                                        </div>
                                                     )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        )}
+                                                </div>
+
+                                                <div className="space-y-1">
+                                                    <h3 className="font-bold text-lg text-white group-hover:text-purple-400 transition-colors uppercase tracking-tight">
+                                                        {member.username || "Unknown"}
+                                                    </h3>
+                                                    {member.systemRole && (
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={`text-[10px] px-2 py-0.5 h-5 border-0 font-bold uppercase tracking-widest ${member.systemRole === "team:owner"
+                                                                ? "bg-amber-500/10 text-amber-500"
+                                                                : member.systemRole === "team:manager"
+                                                                    ? "bg-purple-500/10 text-purple-400"
+                                                                    : "bg-blue-500/10 text-blue-400"
+                                                                }`}
+                                                        >
+                                                            {formatTeamRole(member.systemRole)}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {canManageStaff && !isMemberOwner && (
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
+                                                        >
+                                                            <UserCog className="w-4 h-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="bg-zinc-950 border-white/10 text-gray-200 shadow-2xl min-w-[180px]">
+                                                        <DropdownMenuLabel className="text-xs font-bold text-gray-500 uppercase">System Team Roles</DropdownMenuLabel>
+                                                        <DropdownMenuSeparator className="bg-white/10" />
+                                                        <DropdownMenuItem
+                                                            onClick={() => confirmAction(member, "promote")}
+                                                            className="focus:bg-green-500/10 focus:text-green-400 cursor-pointer h-10"
+                                                        >
+                                                            <BadgeCheck className="w-4 h-4 mr-2" />
+                                                            Promote to Manager
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => confirmAction(member, "demote")}
+                                                            className="focus:bg-red-500/10 focus:text-red-400 cursor-pointer h-10"
+                                                        >
+                                                            <ShieldAlert className="w-4 h-4 mr-2" />
+                                                            Demote to Player
+                                                        </DropdownMenuItem>
+                                                        {canTransferOwnerShip && (
+                                                            <>
+                                                                <DropdownMenuSeparator className="bg-white/10" />
+                                                                <DropdownMenuItem
+                                                                    onClick={() => confirmAction(member, "transfer")}
+                                                                    className="focus:bg-amber-500/10 focus:text-amber-400 cursor-pointer text-amber-500 h-10"
+                                                                >
+                                                                    <Crown className="w-4 h-4 mr-2" />
+                                                                    Transfer Ownership
+                                                                </DropdownMenuItem>
+                                                            </>
+                                                        )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center gap-1.5 mt-auto pt-4 border-t border-white/5">
+                                            <span className="text-[10px] text-gray-500 font-black uppercase tracking-widest">In-Game Role</span>
+                                            <Badge variant="secondary" className="bg-white/5 hover:bg-white/10 text-gray-300 border-0 text-[10px] uppercase tracking-wider font-bold">
+                                                {member.roleInTeam}
+                                            </Badge>
+                                        </div>
                                     </div>
                                 </Card>
                             );
                         })}
                     </div>
                 </div>
-            </ScrollArea>
+            </div>
 
             <AlertDialog open={!!actionTarget} onOpenChange={(open) => !open && setActionTarget(null)}>
                 <AlertDialogContent className="bg-[#0F0720]/95 border-white/10 backdrop-blur-xl shadow-[0_0_50px_rgba(0,0,0,0.5)]">

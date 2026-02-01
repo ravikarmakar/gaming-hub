@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Loader2, Inbox } from "lucide-react";
+
 import { useNotificationStore } from "@/features/notifications/store/useNotificationStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import NotificationItem from "@/features/notifications/ui/components/NotificationItem";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 const TeamNotificationsPage: React.FC = () => {
     const { notifications, isLoading, fetchNotifications } = useNotificationStore();
@@ -24,8 +25,8 @@ const TeamNotificationsPage: React.FC = () => {
     }, [notifications, user?.teamId]);
 
     return (
-        <ScrollArea className="h-full bg-[#0a0514]">
-            <div className="max-w-4xl mx-auto px-4 py-12 relative z-10">
+        <div className="h-full">
+            <div className="w-full relative z-10">
                 {/* Header */}
                 <div className="flex flex-col mb-12">
                     <motion.div
@@ -42,7 +43,7 @@ const TeamNotificationsPage: React.FC = () => {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="text-4xl font-black text-white tracking-tight"
+                        className="text-3xl md:text-4xl font-black text-white tracking-tighter"
                     >
                         Team <span className="text-purple-500/50">Notifications</span>
                     </motion.h1>
@@ -50,7 +51,7 @@ const TeamNotificationsPage: React.FC = () => {
                 </div>
 
                 {/* Notifications List */}
-                <div className="space-y-4">
+                <div className="space-y-4 w-full">
                     {isLoading && teamNotifications.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20">
                             <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-4" />
@@ -79,7 +80,7 @@ const TeamNotificationsPage: React.FC = () => {
                     )}
                 </div>
             </div>
-        </ScrollArea>
+        </div>
     );
 };
 

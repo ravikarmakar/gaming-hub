@@ -15,7 +15,7 @@ router.use(isAuthenticated, isVerified);
 router.get("/", getAllInvitations);
 
 // Generic Invitation Handling
-router.post("/invite", authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), inviteMember);
+router.post("/invite-member", authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), inviteMember);
 router.put("/:invitationId/respond", respondToInvitation);
 
 export default router;

@@ -1,11 +1,12 @@
 import React from 'react';
+import toast from 'react-hot-toast';
 import { Shield, MapPin, Globe, Share2, MoreVertical, CheckCircle, Users, Loader2 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
-import { Team } from '../../store/useTeamStore';
 
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useTeamStore } from '@/features/teams/store/useTeamStore';
-import toast from 'react-hot-toast';
+import { Team } from '../../lib/types';
 
 interface TeamHeroProps {
     team: Team;
@@ -137,8 +138,8 @@ export const TeamHero: React.FC<TeamHeroProps> = ({ team }) => {
                             onClick={handleJoinRequest}
                             disabled={isRequestingJoin || requestStatus}
                             className={`flex-1 md:flex-none h-12 text-white border-0 shadow-lg transition-all hover:-translate-y-0.5 min-w-[140px] md:min-w-[160px] font-bold text-sm md:text-base rounded-xl ${requestStatus
-                                    ? 'bg-emerald-500/20 text-emerald-400 cursor-default hover:translate-y-0 shadow-none'
-                                    : 'bg-purple-600 hover:bg-purple-500 shadow-[0_0_20px_rgba(147,51,234,0.3)]'
+                                ? 'bg-emerald-500/20 text-emerald-400 cursor-default hover:translate-y-0 shadow-none'
+                                : 'bg-purple-600 hover:bg-purple-500 shadow-[0_0_20px_rgba(147,51,234,0.3)]'
                                 }`}
                         >
                             {isRequestingJoin ? (

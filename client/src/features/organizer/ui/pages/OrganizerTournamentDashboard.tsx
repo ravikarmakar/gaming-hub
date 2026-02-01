@@ -23,9 +23,8 @@ import { useEventStore } from "@/features/events/store/useEventStore";
 import { useTournamentStore } from "@/features/organizer/store/useTournamentStore";
 import { RoundsManager } from "@/features/organizer/ui/components/RoundsManager";
 
-// Placeholder components
-const TournamentOverview = () => <div className="p-4 text-gray-400">Overview Stats & Charts</div>;
-const TeamsList = () => <div className="p-4 text-gray-400">Registered Teams Management</div>;
+import { TournamentOverview } from "@/features/organizer/ui/components/TournamentOverview";
+import { RegisteredTeamsList } from "@/features/organizer/ui/components/RegisteredTeamsList";
 
 export default function OrganizerTournamentDashboard() {
     const { id } = useParams<{ id: string }>();
@@ -96,7 +95,7 @@ export default function OrganizerTournamentDashboard() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gray-900/40 p-6 rounded-2xl border border-white/5 backdrop-blur-xl">
                 <div className="space-y-2">
                     <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-extrabold text-white bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
+                        <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter">
                             {eventDetails?.title || "Loading..."}
                         </h1>
                         <Badge variant="outline" className="border-green-500/20 text-green-400 bg-green-500/10">
@@ -184,7 +183,7 @@ export default function OrganizerTournamentDashboard() {
                         </TabsContent>
                     )}
                     <TabsContent value="teams" className="m-0">
-                        <TeamsList />
+                        <RegisteredTeamsList eventId={id} />
                     </TabsContent>
                     <TabsContent value="settings" className="m-0 p-6 space-y-8">
                         {/* Actions Section */}

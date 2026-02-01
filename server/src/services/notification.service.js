@@ -4,7 +4,37 @@ import User from "../models/user.model.js";
 import Organizer from "../models/organizer.model.js";
 import { CustomError } from "../utils/CustomError.js";
 import { Roles, Scopes } from "../constants/roles.js";
+import { Notification } from "../models/notification.model.js";
 import { redis } from "../config/redis.js";
+
+/**
+ * Service to create a notification with actions
+ */
+export const createNotificationWithActions = async ({
+    recipient,
+    sender,
+    type,
+    title,
+    message,
+    relatedData = {},
+    actions = []
+}) => {
+    try {
+        const notification = await Notification.create({
+            recipient,
+            sender,
+            type,
+            content: { title, message },
+            relatedData,
+            actions
+        });
+        return notification;
+    } catch (error) {
+        console.error(`Error creating notification (${type}):`, error);
+        // We generally don't want to block the main flow if notification fails
+        return null;
+    }
+};
 
 /**
  * Registry of handlers for different notification types.
@@ -36,13 +66,18 @@ export const notificationHandlers = {
             // Add user to team
             const alreadyMember = team.teamMembers.some((m) => m.user.toString() === req.user._id.toString());
             if (!alreadyMember) {
-                team.teamMembers.push({
-                    user: req.user._id,
-                    roleInTeam: invite.role === Roles.TEAM.MANAGER ? "manager" : "player",
-                    joinedAt: new Date(),
-                    isActive: true
+                await Team.findByIdAndUpdate(teamId, {
+                    $push: {
+                        teamMembers: {
+                            user: req.user._id,
+                            username: fullUser.username,
+                            avatar: fullUser.avatar,
+                            roleInTeam: invite.role === Roles.TEAM.MANAGER ? "manager" : "player",
+                            joinedAt: new Date(),
+                            isActive: true
+                        }
+                    }
                 });
-                await team.save();
 
                 // Update user's teamId and roles
                 const teamRole = invite.role === Roles.TEAM.MANAGER ? Roles.TEAM.MANAGER : Roles.TEAM.PLAYER;
@@ -60,6 +95,7 @@ export const notificationHandlers = {
 
                 // Invalidate Redis cache
                 await redis.del(`user_profile:${req.user._id}`);
+                await redis.del(`team_details:${teamId}`);
             }
 
             if (invite) {

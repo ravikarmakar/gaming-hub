@@ -90,20 +90,19 @@ const OrganizerTournaments: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-row items-center justify-between gap-4 md:gap-6">
         <div className="space-y-1">
-          <h1 className="text-4xl font-extrabold tracking-tight text-white bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-            Tournament Command Center
+          <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter">
+            All Tournaments
           </h1>
-          <p className="text-gray-400 text-lg">Manage, track, and evolve your gaming events</p>
         </div>
         {canCreate && (
           <Button
             onClick={() => navigate(ORGANIZER_ROUTES.ADD_TOURNAMENTS)}
-            className="h-12 px-6 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-purple-500/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="h-12 w-12 md:w-auto p-0 md:px-6 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-purple-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center"
           >
-            <Plus className="w-5 h-5 mr-2" />
-            Create New Tournament
+            <Plus className="w-5 h-5 md:mr-2" />
+            <span className="hidden md:inline">New Tournament</span>
           </Button>
         )}
       </div>

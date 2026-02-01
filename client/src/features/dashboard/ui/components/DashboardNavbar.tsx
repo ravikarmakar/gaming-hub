@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 // Map routes to human-readable names
 const ROUTE_NAME_MAP: Record<string, string> = {
@@ -104,6 +105,7 @@ export const DashboardNavbar = () => {
 
         {/* Left: Breadcrumbs & Context */}
         <div className="flex items-center gap-4 min-w-0">
+          <SidebarTrigger className="md:hidden text-gray-400 hover:text-white" />
           <div className="flex items-center text-sm text-gray-400 font-medium">
             <Link
               to={ROUTES.HOME}
@@ -114,7 +116,7 @@ export const DashboardNavbar = () => {
             </Link>
 
             {breadcrumbs.map((crumb, i) => (
-              <div key={i} className="flex items-center">
+              <div key={i} className={cn("flex items-center", i < breadcrumbs.length - 1 ? "hidden sm:flex" : "flex")}>
                 <Slash className="w-3 h-3 mx-2 text-gray-700 -rotate-12" />
                 {i === breadcrumbs.length - 1 ? (
                   <span className={cn("text-white font-semibold truncate max-w-[150px]", accentColor)}>

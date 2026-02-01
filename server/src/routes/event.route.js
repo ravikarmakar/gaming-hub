@@ -16,6 +16,7 @@ import {
   unregisterEvent,
   startEvent,
   finishEvent,
+  fetchTournamentsByTeam,
 } from "../controllers/event.controller.js";
 
 import { isAuthenticated } from "../middleware/auth.middleware.js";
@@ -32,6 +33,7 @@ router.get("/event-details/:eventId", isAuthenticated, authorize(Scopes.PLATFORM
 router.post("/register-event/:eventId", isAuthenticated, authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER], { attachDoc: true }), registerEvent);
 router.get("/is-registered/:eventId/teams/:teamId", isAuthenticated, authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER], { attachDoc: true }), isTeamRegistered);
 router.get("/registered-teams/:eventId", isAuthenticated, authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER], { attachDoc: true }), fetchAllRegisteredTeams);
+router.get("/team-events/:teamId", isAuthenticated, fetchTournamentsByTeam);
 
 router.put("/:eventId", isAuthenticated, authorize(Scopes.EVENT, [Roles.ORG.OWNER, Roles.ORG.MANAGER], { parentScope: Scopes.ORG, attachDoc: true }), upload.single("image"), updateEvent);
 router.put("/unregister/:eventId", isAuthenticated, authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER], { attachDoc: true }), unregisterEvent);

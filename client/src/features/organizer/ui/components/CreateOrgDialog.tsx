@@ -25,9 +25,9 @@ import {
 } from "@/components/ui/dialog";
 import FileUpload from "@/components/FileUpload";
 
-import { orgSchema, OrgFormSchema } from "@/schemas/org/createOrg";
 import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { OrgFormSchema, orgSchema } from "../../lib/orgSchemas";
 
 const CreateOrgDialog: React.FC = () => {
     const [isSuccess, setIsSuccess] = useState(false);
@@ -144,7 +144,7 @@ const CreateOrgDialog: React.FC = () => {
                                                     <Input
                                                         placeholder="Nexus Gaming"
                                                         {...field}
-                                                        className="pl-9 h-9 text-xs bg-white/5 border-white/10 focus:border-purple-500/50 transition-all rounded-lg text-white placeholder:text-white/10"
+                                                        className="pl-9 h-9 text-xs bg-white/5 border-white/10 focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg text-white placeholder:text-white/10"
                                                     />
                                                 </div>
                                             </FormControl>
@@ -170,7 +170,7 @@ const CreateOrgDialog: React.FC = () => {
                                                         {...field}
                                                         onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                                                         maxLength={5}
-                                                        className="pl-9 h-9 text-xs bg-white/5 border-white/10 focus:border-purple-500/50 transition-all rounded-lg text-white font-mono font-bold tracking-widest placeholder:text-white/10"
+                                                        className="pl-9 h-9 text-xs bg-white/5 border-white/10 focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg text-white font-mono font-bold tracking-widest placeholder:text-white/10"
                                                     />
                                                 </div>
                                             </FormControl>
@@ -196,7 +196,7 @@ const CreateOrgDialog: React.FC = () => {
                                                     placeholder="contact@nexus.com"
                                                     type="email"
                                                     {...field}
-                                                    className="pl-9 h-9 text-xs bg-white/5 border-white/10 focus:border-purple-500/50 transition-all rounded-lg text-white placeholder:text-white/10"
+                                                    className="pl-9 h-9 text-xs bg-white/5 border-white/10 focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg text-white placeholder:text-white/10"
                                                 />
                                             </div>
                                         </FormControl>
@@ -243,7 +243,7 @@ const CreateOrgDialog: React.FC = () => {
                                                     placeholder="Brief mission..."
                                                     {...field}
                                                     rows={2}
-                                                    className="pl-9 pt-2 text-xs bg-white/5 border-white/10 focus:border-purple-500/50 transition-all rounded-lg text-white resize-none min-h-[60px] placeholder:text-white/10"
+                                                    className="pl-9 pt-2 text-xs bg-white/5 border-white/10 focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg text-white resize-none min-h-[60px] placeholder:text-white/10"
                                                 />
                                             </div>
                                         </FormControl>

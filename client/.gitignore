@@ -32,3 +32,6 @@ pz1.tsx
 pz3.tsx
 
 .env
+
+test
+__tests__

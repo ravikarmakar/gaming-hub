@@ -11,6 +11,7 @@ import {
   storeRefreshToken,
   setCookies,
 } from "../services/auth.service.js";
+import { syncUserInTeams } from "../services/team.service.js";
 import { oauth2Client, discordOAuthConfig } from "../config/oauth.js";
 import { transporter } from "../config/mail.js";
 import { generateOTP, sendVerificationEmail } from "../services/otp.service.js";
@@ -127,7 +128,7 @@ export const logout = TryCatchHandler(async (req, res, next) => {
       }
 
       if (accessToken) {
-        p.setex(`blacklist_token:${accessToken}`, 15 * 60, "true");
+        p.set(`blacklist_token:${accessToken}`, "true", { ex: 15 * 60 });
       }
 
       await p.exec();
@@ -390,7 +391,7 @@ export const verifyEmail = TryCatchHandler(async (req, res, next) => {
   await user.save();
 
   // Update cache for 1 minute (adjust time as needed)
-  await redis.setex(cacheKey, 60, JSON.stringify(user));
+  await redis.set(cacheKey, JSON.stringify(user), { ex: 60 });
 
   res.status(200).json({
     success: true,
@@ -436,7 +437,7 @@ export const getProfile = TryCatchHandler(async (req, res, next) => {
   if (!user) return next(new CustomError("User not found", 404));
 
   try {
-    await redis.setex(cacheKey, 60, JSON.stringify(user));
+    await redis.set(cacheKey, JSON.stringify(user), { ex: 60 });
   } catch (setCacheError) {
     console.error("Redis setex error in getProfile:", setCacheError);
   }
@@ -577,6 +578,12 @@ export const updateProfile = TryCatchHandler(async (req, res, next) => {
 
   await user.save();
   await redis.del(`user_profile:${userId}`);
+
+  // Sync denormalized data in teams (Scalability Sync)
+  syncUserInTeams(userId, {
+    username: user.username,
+    avatar: user.avatar,
+  }).catch((err) => console.error("Denormalization sync failed:", err));
 
   res.status(200).json({
     success: true,

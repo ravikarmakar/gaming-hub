@@ -28,9 +28,20 @@ const teamSchema = new mongoose.Schema(
           ref: "User",
           required: true,
         },
+        username: { type: String, required: true }, // Denormalized for scalability
+        avatar: { type: String, default: "" }, // Denormalized for scalability
         roleInTeam: {
           type: String,
-          enum: ["igl", "rusher", "sniper", "support", "player", "coach", "analyst", "substitute"],
+          enum: [
+            "igl",
+            "rusher",
+            "sniper",
+            "support",
+            "player",
+            "coach",
+            "analyst",
+            "substitute",
+          ],
           required: true,
         },
         joinedAt: { type: Date, default: Date.now },
@@ -102,7 +113,8 @@ teamSchema.index({ isDeleted: 1 });
 teamSchema.index({ "teamMembers.user": 1 });
 teamSchema.index({ "playedTournaments.event": 1 });
 teamSchema.index({ "stats.winRate": -1 }); // For leaderboards
-teamSchema.index({ isRecruiting: 1, region: 1 }); // For team discovery
+teamSchema.index({ isVerified: 1, createdAt: -1 }); // Optimized for landing pages
+teamSchema.index({ region: 1, isRecruiting: 1, createdAt: -1 }); // Optimized for discovery
 // Partial Indexes for uniqueness ensuring name reuse after soft delete
 teamSchema.index({ teamName: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });
 teamSchema.index({ slug: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });

@@ -636,3 +636,37 @@ export const finishEvent = TryCatchHandler(async (req, res, next) => {
     data: event
   });
 });
+export const fetchTournamentsByTeam = TryCatchHandler(async (req, res, next) => {
+  const { teamId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(teamId)) {
+    return next(new CustomError("Invalid Team ID", 400));
+  }
+
+  const registrations = await EventRegistration.find({ teamId })
+    .populate({
+      path: "eventId",
+      select: "title game startDate status image prizePool eventType category eventProgress registrationStatus",
+      populate: {
+        path: "orgId",
+        select: "orgName imageUrl"
+      }
+    })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const tournaments = registrations.map(reg => {
+    if (!reg.eventId) return null;
+    const event = reg.eventId;
+    return {
+      ...event,
+      registrationStatus: reg.status,
+      joinedAt: reg.createdAt
+    };
+  }).filter(t => t !== null);
+
+  res.status(200).json({
+    success: true,
+    data: tournaments,
+  });
+});

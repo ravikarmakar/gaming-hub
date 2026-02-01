@@ -10,6 +10,7 @@ import { CustomError } from "../utils/CustomError.js";
 import { createNotification } from "./notification.controller.js";
 import { Roles, Scopes } from "../constants/roles.js";
 import { redis } from "../config/redis.js";
+import { addMemberToTeam, getTransformedTeam } from "../services/team.service.js";
 
 // @desc    Send a request to join a Team, Organization, or Event
 // @route   POST /api/v1/teams/:teamId/join-request
@@ -123,6 +124,7 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
     const { requestId } = req.params;
     const { action } = req.body; // 'accepted' or 'rejected'
     const { userId } = req.user;
+    let responseData = null;
 
     if (!["accepted", "rejected"].includes(action)) {
         throw new CustomError("Invalid action. Use 'accepted' or 'rejected'", 400);
@@ -145,27 +147,13 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
             if (!requester) throw new CustomError("Requester not found", 404);
 
             if (joinRequest.targetModel === "Team") {
-                if (requester.teamId) throw new CustomError("Requester is already in a team", 400);
                 const team = joinRequest.target;
 
-                if (team.teamMembers.length >= 10) {
-                    throw new CustomError("Team is full (max 10 members).", 400);
-                }
-
-                await Team.findByIdAndUpdate(team._id, {
-                    $push: { teamMembers: { user: requester._id, roleInTeam: "player" } }
-                });
-
-                await User.findByIdAndUpdate(requester._id, {
-                    $set: { teamId: team._id },
-                    $push: {
-                        roles: {
-                            scope: Scopes.TEAM,
-                            role: Roles.TEAM.PLAYER,
-                            scopeId: team._id,
-                            scopeModel: "Team",
-                        }
-                    }
+                // Use Service Layer for the heavy lifting (handles roster update, roles, and denormalization)
+                await addMemberToTeam({
+                    teamId: team._id,
+                    userId: requester._id,
+                    roleInTeam: "player"
                 });
 
                 await createNotification({
@@ -175,6 +163,9 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                     content: { title: "Request Accepted!", message: `You joined ${team.teamName}.` },
                     relatedData: { teamId: team._id },
                 });
+
+                // Fetch updated team for response using helper
+                responseData = await getTransformedTeam(team._id);
 
             } else if (joinRequest.targetModel === "Organizer") {
                 if (requester.orgId) throw new CustomError("Requester is already in an organization", 400);
@@ -289,6 +280,7 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
         res.status(200).json({
             success: true,
             message: `Request ${action} successfully`,
+            data: responseData
         });
     } catch (error) {
         next(error);

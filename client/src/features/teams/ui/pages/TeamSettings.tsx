@@ -1,5 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
 import {
     Globe,
@@ -20,8 +22,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
 
 import FileUpload from "@/components/FileUpload";
 import { useTeamStore } from "@/features/teams/store/useTeamStore";
@@ -30,141 +46,111 @@ import { TEAM_ACCESS } from "@/features/teams/lib/access";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { DeleteTeamSection } from "../components/DeleteTeamSection";
+import { teamSchema, MAX_FILE_SIZE, TeamForm } from "@/features/teams/lib/teamSchema";
 
-// Simple custom Switch since UI component is missing
-const Switch = ({ checked, onCheckedChange }: { checked: boolean, onCheckedChange: (val: boolean) => void }) => (
-    <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        onClick={() => onCheckedChange(!checked)}
-        className={`
-      relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none
-      ${checked ? "bg-purple-600" : "bg-gray-700"}
-    `}
-    >
-        <span
-            className={`
-        inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200
-        ${checked ? "translate-x-6" : "translate-x-1"}
-      `}
-        />
-    </button>
-);
 
 const TeamSettings = () => {
-    const { currentTeam, getTeamById, updateTeam, isLoading } = useTeamStore();
+    const { updateTeam, isLoading, currentTeam } = useTeamStore();
     const { user } = useAuthStore();
     const { can } = useAccess();
-
-    const [formData, setFormData] = useState({
-        teamName: "",
-        tag: "",
-        bio: "",
-        region: "",
-        isRecruiting: false,
-        twitter: "",
-        discord: "",
-        youtube: "",
-        instagram: "",
-        image: null as File | null,
-        banner: null as File | null,
-    });
 
     const [previews, setPreviews] = useState({
         image: null as string | null,
         banner: null as string | null,
     });
 
-    useEffect(() => {
-        if (user?.teamId) {
-            getTeamById(user.teamId);
-        }
-    }, [user?.teamId, getTeamById]);
+    const form = useForm<TeamForm>({
+        resolver: zodResolver(teamSchema),
+        defaultValues: {
+            teamName: "",
+            tag: "",
+            bio: "",
+            region: "INDIA",
+            isRecruiting: false,
+            twitter: "",
+            discord: "",
+            youtube: "",
+            instagram: "",
+        },
+    });
 
+    // Sync form with currentTeam data
     useEffect(() => {
         if (currentTeam) {
-            setFormData({
+            form.reset({
                 teamName: currentTeam.teamName || "",
                 tag: currentTeam.tag || "",
                 bio: currentTeam.bio || "",
-                region: (currentTeam.region as string) || "INDIA",
+                region: (currentTeam.region as any) || "INDIA",
                 isRecruiting: currentTeam.isRecruiting || false,
                 twitter: currentTeam.socialLinks?.twitter || "",
                 discord: currentTeam.socialLinks?.discord || "",
                 youtube: currentTeam.socialLinks?.youtube || "",
                 instagram: currentTeam.socialLinks?.instagram || "",
-                image: null,
-                banner: null,
             });
             setPreviews({
                 image: currentTeam.imageUrl,
                 banner: currentTeam.bannerUrl,
             });
         }
-    }, [currentTeam]);
-    const isDirty = useMemo(() => {
-        if (!currentTeam) return false;
-        const social = currentTeam.socialLinks || {};
-        return (
-            formData.teamName !== (currentTeam.teamName || "") ||
-            formData.tag !== (currentTeam.tag || "") ||
-            formData.bio !== (currentTeam.bio || "") ||
-            formData.region !== ((currentTeam.region as string) || "INDIA") ||
-            formData.isRecruiting !== (currentTeam.isRecruiting || false) ||
-            formData.twitter !== (social.twitter || "") ||
-            formData.discord !== (social.discord || "") ||
-            formData.youtube !== (social.youtube || "") ||
-            formData.instagram !== (social.instagram || "") ||
-            formData.image !== null ||
-            formData.banner !== null
-        );
-    }, [formData, currentTeam]);
+    }, [currentTeam, form]);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
+    const onSubmit = async (data: TeamForm) => {
+        const formData = new FormData();
+
+        // Append text fields
+        formData.append("teamName", data.teamName);
+        formData.append("tag", data.tag);
+        if (data.bio) formData.append("bio", data.bio);
+        formData.append("region", data.region);
+        formData.append("isRecruiting", String(data.isRecruiting));
+
+        if (data.twitter) formData.append("twitter", data.twitter);
+        if (data.discord) formData.append("discord", data.discord);
+        if (data.youtube) formData.append("youtube", data.youtube);
+        if (data.instagram) formData.append("instagram", data.instagram);
+
+        // Append files if they exist
+        if (data.image instanceof File) formData.append("image", data.image);
+        if (data.banner instanceof File) formData.append("banner", data.banner);
+
+        const result = await updateTeam(formData);
+        if (result) {
+            toast.success("Team settings updated successfully!");
+        } else {
+            toast.error("Failed to update team settings");
+        }
     };
 
-    const handleSwitchChange = (checked: boolean) => {
-        setFormData((prev) => ({ ...prev, isRecruiting: checked }));
-    };
-
-    const handleSelectChange = (value: string) => {
-        setFormData((prev) => ({ ...prev, region: value }));
-    };
-
-    const handleFileChange = (name: "image" | "banner", file: File | null) => {
-        setFormData((prev) => ({ ...prev, [name]: file }));
+    const handleFileChange = (field: any, file: File | null, type: "image" | "banner") => {
+        field.onChange(file);
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
-                setPreviews((prev) => ({ ...prev, [name]: reader.result as string }));
+                setPreviews((prev) => ({ ...prev, [type]: reader.result as string }));
             };
             reader.readAsDataURL(file);
         } else {
-            // Revert preview to the one from currentTeam when clearing a selected file
+            // Revert to original if cleared
             setPreviews((prev) => ({
                 ...prev,
-                [name]: currentTeam ? (name === "image" ? currentTeam.imageUrl : currentTeam.bannerUrl) : null
+                [type]: currentTeam ? (type === "image" ? currentTeam.imageUrl : currentTeam.bannerUrl) : null,
             }));
         }
     };
 
     const handleReset = () => {
         if (currentTeam) {
-            setFormData({
+            form.reset({
                 teamName: currentTeam.teamName || "",
                 tag: currentTeam.tag || "",
                 bio: currentTeam.bio || "",
-                region: (currentTeam.region as string) || "INDIA",
+                region: (currentTeam.region as any) || "INDIA",
                 isRecruiting: currentTeam.isRecruiting || false,
                 twitter: currentTeam.socialLinks?.twitter || "",
                 discord: currentTeam.socialLinks?.discord || "",
                 youtube: currentTeam.socialLinks?.youtube || "",
                 instagram: currentTeam.socialLinks?.instagram || "",
-                image: null,
-                banner: null,
             });
             setPreviews({
                 image: currentTeam.imageUrl,
@@ -174,40 +160,7 @@ const TeamSettings = () => {
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        const data = new FormData();
-        data.append("teamName", formData.teamName);
-        data.append("tag", formData.tag);
-        data.append("bio", formData.bio);
-        data.append("region", formData.region);
-        data.append("isRecruiting", String(formData.isRecruiting));
-        data.append("twitter", formData.twitter);
-        data.append("discord", formData.discord);
-        data.append("youtube", formData.youtube);
-        data.append("instagram", formData.instagram);
-
-        if (formData.image) data.append("image", formData.image);
-        if (formData.banner) data.append("banner", formData.banner);
-
-        const result = await updateTeam(data);
-        if (result) {
-            toast.success("Team settings updated successfully!");
-        } else {
-            toast.error("Failed to update team settings");
-        }
-    };
-
     const canManageSettings = can(TEAM_ACCESS.settings);
-
-    if (isLoading && !currentTeam) {
-        return (
-            <div className="flex items-center justify-center min-h-[60vh] bg-[#0B0C1A]">
-                <Loader2 className="w-10 h-10 text-purple-400 animate-spin" />
-            </div>
-        );
-    }
 
     if (!currentTeam) return null;
 
@@ -218,56 +171,55 @@ const TeamSettings = () => {
     const isOwner = currentTeam?.captain?.toString() === user?._id?.toString();
 
     return (
-        <ScrollArea className="h-full bg-[#0B0C1A]">
-            <div className="px-4 md:px-8 py-8 mx-auto max-w-5xl">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)]">
-                            <Settings className="w-6 h-6 text-purple-400" />
+        <div className="w-full">
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                    <div className="flex flex-col mb-8 md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 border rounded-lg bg-purple-500/10 border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)]">
+                                <Settings className="w-6 h-6 text-purple-400" />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter">Team Settings</h1>
+                                <p className="text-sm text-gray-400">Manage your team's identity and professional presence</p>
+                            </div>
                         </div>
-                        <div>
-                            <h1 className="text-2xl font-bold text-white tracking-tight">Team Settings</h1>
-                            <p className="text-gray-400 text-sm">Manage your team's identity and professional presence</p>
-                        </div>
+
+                        {form.formState.isDirty && (
+                            <div className="flex items-center gap-3 duration-300 animate-in fade-in slide-in-from-right-4">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    className="text-gray-400 transition-all border border-transparent hover:text-white hover:bg-white/5 hover:border-white/10"
+                                    onClick={handleReset}
+                                >
+                                    Reset
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="bg-purple-600 hover:bg-purple-700 text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] border border-purple-500/50 min-w-[120px] transition-all"
+                                >
+                                    {isLoading ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                            Saving...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="w-4 h-4 mr-2" />
+                                            Save Changes
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        )}
                     </div>
 
-                    {isDirty && (
-                        <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                className="text-gray-400 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10 transition-all"
-                                onClick={handleReset}
-                            >
-                                Reset
-                            </Button>
-                            <Button
-                                type="submit"
-                                form="team-settings-form"
-                                disabled={isLoading}
-                                className="bg-purple-600 hover:bg-purple-700 text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] border border-purple-500/50 min-w-[120px] transition-all"
-                            >
-                                {isLoading ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        Saving...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save className="w-4 h-4 mr-2" />
-                                        Save Changes
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                    )}
-                </div>
-
-                <form id="team-settings-form" onSubmit={handleSubmit} className="space-y-8">
                     {/* Branding Section */}
-                    <Card className="bg-[#111222] border-purple-500/20">
+                    <Card className="bg-[#0F111A]/60 border-white/10 backdrop-blur-xl shadow-2xl shadow-purple-500/5">
                         <CardHeader>
-                            <CardTitle className="text-white flex items-center gap-2">
+                            <CardTitle className="flex items-center gap-2 text-white">
                                 <ImageIcon className="w-5 h-5 text-purple-400" />
                                 Branding & Visuals
                             </CardTitle>
@@ -276,196 +228,284 @@ const TeamSettings = () => {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                    <Label className="text-gray-300">Team Logo</Label>
-                                    <FileUpload
-                                        name="image"
-                                        onChange={(file) => handleFileChange("image", file)}
-                                        accept="image/*"
-                                        compact
-                                    />
-                                    {previews.image && (
-                                        <div className="mt-2 relative w-24 h-24 rounded-lg overflow-hidden border border-purple-500/20 bg-black/40 group">
-                                            <img src={previews.image} alt="Logo preview" className="object-cover w-full h-full" />
-                                            {formData.image && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleFileChange("image", null)}
-                                                    className="absolute top-1 right-1 p-1 bg-red-500/80 hover:bg-red-500 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                                                >
-                                                    <X className="w-3 h-3" />
-                                                </button>
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                <FormField
+                                    control={form.control}
+                                    name="image"
+                                    render={({ field }) => (
+                                        <div className="space-y-4">
+                                            <Label className="text-gray-300">Team Logo</Label>
+                                            <FormControl>
+                                                <FileUpload
+                                                    name="image"
+                                                    onChange={(file) => handleFileChange(field, file, "image")}
+                                                    accept="image/*"
+                                                    compact
+                                                    maxSize={MAX_FILE_SIZE}
+                                                />
+                                            </FormControl>
+                                            {previews.image && (
+                                                <div className="relative w-24 h-24 mt-2 overflow-hidden border rounded-lg border-purple-500/20 bg-black/40 group">
+                                                    <img src={previews.image} alt="Logo preview" className="object-cover w-full h-full" />
+                                                    {field.value && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleFileChange(field, null, "image")}
+                                                            className="absolute p-1 text-white transition-opacity bg-red-500/80 rounded-full opacity-0 top-1 right-1 hover:bg-red-500 group-hover:opacity-100"
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             )}
+                                            <FormMessage />
                                         </div>
                                     )}
-                                </div>
-                                <div className="space-y-4">
-                                    <Label className="text-gray-300">Team Banner</Label>
-                                    <FileUpload
-                                        name="banner"
-                                        onChange={(file) => handleFileChange("banner", file)}
-                                        accept="image/*"
-                                        compact
-                                    />
-                                    {previews.banner && (
-                                        <div className="mt-2 relative w-full h-24 rounded-lg overflow-hidden border border-purple-500/20 bg-black/40 group">
-                                            <img src={previews.banner} alt="Banner preview" className="object-cover w-full h-full" />
-                                            {formData.banner && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleFileChange("banner", null)}
-                                                    className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-500 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                                                >
-                                                    <X className="w-3 h-3" />
-                                                </button>
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="banner"
+                                    render={({ field }) => (
+                                        <div className="space-y-4">
+                                            <Label className="text-gray-300">Team Banner</Label>
+                                            <FormControl>
+                                                <FileUpload
+                                                    name="banner"
+                                                    onChange={(file) => handleFileChange(field, file, "banner")}
+                                                    accept="image/*"
+                                                    compact
+                                                    maxSize={MAX_FILE_SIZE}
+                                                />
+                                            </FormControl>
+                                            {previews.banner && (
+                                                <div className="relative w-full h-24 mt-2 overflow-hidden border rounded-lg border-purple-500/20 bg-black/40 group">
+                                                    <img src={previews.banner} alt="Banner preview" className="object-cover w-full h-full" />
+                                                    {field.value && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleFileChange(field, null, "banner")}
+                                                            className="absolute p-1.5 text-white transition-opacity bg-red-500/80 rounded-full opacity-0 top-2 right-2 hover:bg-red-500 group-hover:opacity-100"
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             )}
+                                            <FormMessage />
                                         </div>
                                     )}
-                                </div>
+                                />
                             </div>
                         </CardContent>
                     </Card>
 
                     {/* General Information */}
-                    <Card className="bg-[#111222] border-purple-500/20">
+                    <Card className="bg-[#0F111A]/60 border-white/10 backdrop-blur-xl shadow-2xl shadow-purple-500/5">
                         <CardHeader>
-                            <CardTitle className="text-white flex items-center gap-2">
+                            <CardTitle className="flex items-center gap-2 text-white">
                                 <LayoutDashboard className="w-5 h-5 text-purple-400" />
                                 General Information
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="teamName" className="text-gray-300">Team Name</Label>
-                                    <Input
-                                        id="teamName"
-                                        name="teamName"
-                                        value={formData.teamName}
-                                        onChange={handleInputChange}
-                                        className="bg-black/20 border-purple-500/20 text-white placeholder:text-gray-600 focus:border-purple-500/50"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="tag" className="text-gray-300">Team Tag (Max 5 chars)</Label>
-                                    <Input
-                                        id="tag"
-                                        name="tag"
-                                        maxLength={5}
-                                        value={formData.tag}
-                                        onChange={handleInputChange}
-                                        className="bg-black/20 border-purple-500/20 text-white placeholder:text-gray-600 focus:border-purple-500/50 uppercase"
-                                    />
-                                </div>
-                            </div>
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                <FormField
+                                    control={form.control}
+                                    name="teamName"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-gray-300">Team Name</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    {...field}
+                                                    className="text-white bg-black/20 border-purple-500/20 placeholder:text-gray-600 focus:border-purple-500/50"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
-                            <div className="space-y-2">
-                                <Label htmlFor="bio" className="text-gray-300">Team Bio</Label>
-                                <Textarea
-                                    id="bio"
-                                    name="bio"
-                                    rows={4}
-                                    value={formData.bio}
-                                    onChange={handleInputChange}
-                                    className="bg-black/20 border-purple-500/20 text-white placeholder:text-gray-600 focus:border-purple-500/50"
-                                    placeholder="Tell the world about your team..."
+                                <FormField
+                                    control={form.control}
+                                    name="tag"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-gray-300">Team Tag (Max 5 chars)</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    {...field}
+                                                    maxLength={5}
+                                                    className="uppercase text-white bg-black/20 border-purple-500/20 placeholder:text-gray-600 focus:border-purple-500/50"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <Label className="text-gray-300">Region</Label>
-                                    <Select value={formData.region} onValueChange={handleSelectChange}>
-                                        <SelectTrigger className="bg-black/20 border-purple-500/20 text-white">
-                                            <SelectValue placeholder="Select region" />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-[#111222] border-purple-500/20 text-white">
-                                            {["NA", "EU", "ASIA", "SEA", "SA", "OCE", "MENA", "INDIA"].map((reg) => (
-                                                <SelectItem key={reg} value={reg}>{reg}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="flex items-center justify-between p-4 rounded-lg bg-black/20 border border-purple-500/10">
-                                    <div className="space-y-0.5">
-                                        <Label className="text-gray-300">Recruitment Status</Label>
-                                        <p className="text-xs text-gray-500">Allow other players to see you're looking for members</p>
-                                    </div>
-                                    <Switch
-                                        checked={formData.isRecruiting}
-                                        onCheckedChange={handleSwitchChange}
-                                    />
-                                </div>
+                            <FormField
+                                control={form.control}
+                                name="bio"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-gray-300">Team Bio</FormLabel>
+                                        <FormControl>
+                                            <Textarea
+                                                {...field}
+                                                rows={4}
+                                                className="text-white bg-black/20 border-purple-500/20 placeholder:text-gray-600 focus:border-purple-500/50"
+                                                placeholder="Tell the world about your team..."
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                <FormField
+                                    control={form.control}
+                                    name="region"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-gray-300">Region</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger className="text-white bg-black/20 border-purple-500/20">
+                                                        <SelectValue placeholder="Select region" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent className="bg-[#0F111A] border-white/10 text-white">
+                                                    {["NA", "EU", "ASIA", "SEA", "SA", "OCE", "MENA", "INDIA"].map((reg) => (
+                                                        <SelectItem key={reg} value={reg} className="focus:bg-purple-500/10 cursor-pointer">{reg}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="isRecruiting"
+                                    render={({ field }) => (
+                                        <FormItem className="flex items-center justify-between p-4 border rounded-lg bg-black/20 border-purple-500/10">
+                                            <div className="space-y-0.5">
+                                                <FormLabel className="text-gray-300">Recruitment Status</FormLabel>
+                                                <p className="text-xs text-gray-500">Allow other players to see you're looking for members</p>
+                                            </div>
+                                            <FormControl>
+                                                <Switch
+                                                    checked={field.value || false}
+                                                    onCheckedChange={field.onChange}
+                                                />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
                             </div>
                         </CardContent>
                     </Card>
 
                     {/* Social Links */}
-                    <Card className="bg-[#111222] border-purple-500/20">
+                    <Card className="bg-[#0F111A]/60 border-white/10 backdrop-blur-xl shadow-2xl shadow-purple-500/5">
                         <CardHeader>
-                            <CardTitle className="text-white flex items-center gap-2">
+                            <CardTitle className="flex items-center gap-2 text-white">
                                 <Globe className="w-5 h-5 text-purple-400" />
                                 Social Presence
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="relative">
-                                    <Twitter className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
-                                    <Input
-                                        name="twitter"
-                                        placeholder="Twitter URL"
-                                        value={formData.twitter}
-                                        onChange={handleInputChange}
-                                        className="pl-10 bg-black/20 border-purple-500/20 text-white"
-                                    />
-                                </div>
-                                <div className="relative">
-                                    <Badge variant="outline" className="border-purple-500/20 text-gray-400 mr-2 absolute left-1 top-2.5 h-6 scale-75">
-                                        #
-                                    </Badge>
-                                    <Input
-                                        name="discord"
-                                        placeholder="Discord Invite Link"
-                                        value={formData.discord}
-                                        onChange={handleInputChange}
-                                        className="pl-10 bg-black/20 border-purple-500/20 text-white"
-                                    />
-                                </div>
-                                <div className="relative">
-                                    <Youtube className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
-                                    <Input
-                                        name="youtube"
-                                        placeholder="YouTube Channel"
-                                        value={formData.youtube}
-                                        onChange={handleInputChange}
-                                        className="pl-10 bg-black/20 border-purple-500/20 text-white"
-                                    />
-                                </div>
-                                <div className="relative">
-                                    <Instagram className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
-                                    <Input
-                                        name="instagram"
-                                        placeholder="Instagram Profile"
-                                        value={formData.instagram}
-                                        onChange={handleInputChange}
-                                        className="pl-10 bg-black/20 border-purple-500/20 text-white"
-                                    />
-                                </div>
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <FormField
+                                    control={form.control}
+                                    name="twitter"
+                                    render={({ field }) => (
+                                        <FormItem className="relative">
+                                            <Twitter className="absolute w-4 h-4 text-gray-500 left-3 top-3" />
+                                            <FormControl>
+                                                <Input
+                                                    {...field}
+                                                    placeholder="Twitter URL"
+                                                    className="pl-10 text-white bg-black/20 border-purple-500/20"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="discord"
+                                    render={({ field }) => (
+                                        <FormItem className="relative">
+                                            <Badge variant="outline" className="mr-2 border-purple-500/20 text-gray-400 absolute left-1 top-2.5 h-6 scale-75">
+                                                #
+                                            </Badge>
+                                            <FormControl>
+                                                <Input
+                                                    {...field}
+                                                    placeholder="Discord Invite Link"
+                                                    className="pl-10 text-white bg-black/20 border-purple-500/20"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="youtube"
+                                    render={({ field }) => (
+                                        <FormItem className="relative">
+                                            <Youtube className="absolute w-4 h-4 text-gray-500 left-3 top-3" />
+                                            <FormControl>
+                                                <Input
+                                                    {...field}
+                                                    placeholder="YouTube Channel"
+                                                    className="pl-10 text-white bg-black/20 border-purple-500/20"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="instagram"
+                                    render={({ field }) => (
+                                        <FormItem className="relative">
+                                            <Instagram className="absolute w-4 h-4 text-gray-500 left-3 top-3" />
+                                            <FormControl>
+                                                <Input
+                                                    {...field}
+                                                    placeholder="Instagram Profile"
+                                                    className="pl-10 text-white bg-black/20 border-purple-500/20"
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </div>
                         </CardContent>
                     </Card>
-
                 </form>
+            </Form>
 
-                {isOwner && (
-                    <div className="pt-4 mt-8 border-t border-red-500/10">
-                        <DeleteTeamSection />
-                    </div>
-                )}
-            </div>
-        </ScrollArea>
+            {isOwner && (
+                <div className="pt-4 mt-8 border-t border-red-500/10">
+                    <DeleteTeamSection />
+                </div>
+            )}
+        </div>
     );
 };
 

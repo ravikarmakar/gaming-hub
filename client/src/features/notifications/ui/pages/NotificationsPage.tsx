@@ -13,34 +13,34 @@ const NotificationsPage: React.FC = () => {
     }, [fetchNotifications]);
 
     return (
-        <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-[#0a0514] relative overflow-hidden">
+        <div className="min-h-screen pt-24 pb-12 bg-[#0a0514] relative overflow-hidden">
             {/* Background Ambient Orbs */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-purple-600/5 blur-[120px]" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-600/5 blur-[120px]" />
             </div>
 
-            <div className="max-w-4xl mx-auto relative z-10">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-                    <div>
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+                    <div className="flex flex-col gap-3">
                         <motion.div
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className="flex items-center gap-3 mb-2"
+                            className="flex items-center gap-2.5"
                         >
-                            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                                <Bell className="w-5 h-5 text-purple-400" />
+                            <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                                <Bell className="w-4 h-4 text-purple-400" />
                             </div>
-                            <span className="text-purple-400 font-bold tracking-wider text-sm">NOTIFICATIONS</span>
+                            <span className="text-purple-400 font-bold tracking-[0.2em] text-[9px] uppercase opacity-70">Nexus Messaging</span>
                         </motion.div>
                         <motion.h1
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.1 }}
-                            className="text-4xl md:text-5xl font-black text-white tracking-tight"
+                            className="text-3xl md:text-4xl font-black text-white tracking-tight"
                         >
-                            Inbox <span className="text-purple-500/50">{unreadCount > 0 ? `(${unreadCount})` : ""}</span>
+                            Inbox <span className="text-purple-500/20 font-light ml-1 text-2xl">{unreadCount > 0 ? unreadCount : ""}</span>
                         </motion.h1>
                     </div>
 
@@ -53,9 +53,9 @@ const NotificationsPage: React.FC = () => {
                         <Button
                             variant="outline"
                             size="sm"
-                            className="bg-white/5 border-white/10 text-gray-400 hover:text-white rounded-xl h-10"
+                            className="flex-1 sm:flex-none bg-white/[0.03] border-white/10 text-gray-400 hover:text-white rounded-xl h-10 px-4 backdrop-blur-sm transition-all hover:bg-white/[0.08] text-xs font-bold"
                         >
-                            <Filter className="w-4 h-4 mr-2" />
+                            <Filter className="w-3.5 h-3.5 mr-2" />
                             Filter
                         </Button>
                         <Button
@@ -63,10 +63,10 @@ const NotificationsPage: React.FC = () => {
                             size="sm"
                             onClick={() => markAllAsRead()}
                             disabled={isLoading || unreadCount === 0}
-                            className="bg-white/5 border-white/10 text-gray-400 hover:text-red-400 rounded-xl h-10"
+                            className="flex-1 sm:flex-none bg-white/[0.03] border-white/10 text-gray-400 hover:text-red-400 rounded-xl h-10 px-4 backdrop-blur-sm transition-all hover:bg-red-500/10 hover:border-red-500/20 text-xs font-bold"
                         >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Clear All
+                            <Trash2 className="w-3.5 h-3.5 mr-2" />
+                            Clear
                         </Button>
                     </motion.div>
                 </div>

@@ -1,7 +1,7 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronLeft, ChevronRight, Edit2, ArrowLeft, Eye } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, Edit2, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useTournamentStore, Group } from "@/features/organizer/store/useTournamentStore";
 import {
@@ -39,12 +39,19 @@ export const GroupsGrid = ({ roundId }: GroupsGridProps) => {
     const [editingGroup, setEditingGroup] = useState<Group | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
 
-    // ✅ Get Effective Match Count (Round Level overrides Group Level)
-    const currentRound = rounds.find(r => r._id === roundId);
-    const currentGroup = groups.find(g => g._id === selectedGroupId);
-    const roundMatches = currentRound?.matchesPerGroup;
-    const effectiveTotalMatch = roundMatches || currentGroup?.totalMatch || 1;
-    const isGroupCompleted = currentGroup?.status === 'completed';
+    // ✅ Memoized Selectors for performance
+    const { currentGroup, effectiveTotalMatch, isGroupCompleted, roundMatches } = useMemo(() => {
+        const round = rounds.find(r => r._id === roundId);
+        const group = groups.find(g => g._id === selectedGroupId);
+        const rm = round?.matchesPerGroup;
+        const totalMatch = rm || group?.totalMatch || 1;
+        return {
+            currentGroup: group,
+            effectiveTotalMatch: totalMatch,
+            isGroupCompleted: group?.status === 'completed',
+            roundMatches: rm
+        };
+    }, [rounds, groups, roundId, selectedGroupId]);
 
     // ✅ Batch Entry State
     const [isResultsMode, setIsResultsMode] = useState(false);
@@ -57,16 +64,14 @@ export const GroupsGrid = ({ roundId }: GroupsGridProps) => {
     const [editRoomId, setEditRoomId] = useState("");
     const [editPassword, setEditPassword] = useState("");
 
-
-
-    const openEditModal = (group: Group) => {
+    const openEditModal = useCallback((group: Group) => {
         setEditingGroup(group);
         setEditName(group.groupName);
         setEditMatches(group.totalMatch);
         setEditRoomId("");
         setEditPassword("");
         setIsEditOpen(true);
-    };
+    }, []);
 
     // ✅ Initialize tempResults when leaderboard loads or results mode is toggled
     useEffect(() => {
@@ -108,10 +113,8 @@ export const GroupsGrid = ({ roundId }: GroupsGridProps) => {
         }
     };
 
-
-
     // ✅ Handle Result Input Change
-    const handleResultChange = (teamId: string, field: 'kills' | 'rank', value: number) => {
+    const handleResultChange = useCallback((teamId: string, field: 'kills' | 'rank', value: number) => {
         setTempResults(prev => ({
             ...prev,
             [teamId]: {
@@ -119,7 +122,7 @@ export const GroupsGrid = ({ roundId }: GroupsGridProps) => {
                 [field]: value
             }
         }));
-    };
+    }, []);
 
     // ✅ Submit All Results
     const handleSubmitResults = async () => {
@@ -176,9 +179,9 @@ export const GroupsGrid = ({ roundId }: GroupsGridProps) => {
     }, [selectedGroupId, fetchLeaderboard]);
 
 
-    const handlePageChange = (newPage: number) => {
+    const handlePageChange = useCallback((newPage: number) => {
         fetchGroups(roundId, newPage);
-    };
+    }, [fetchGroups, roundId]);
 
     if (isLoading && groups.length === 0 && !selectedGroupId) {
         return (
@@ -401,70 +404,13 @@ export const GroupsGrid = ({ roundId }: GroupsGridProps) => {
             <div className="rounded-xl border border-white/5 bg-gray-900/40 overflow-hidden">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
                     {groups.map((group) => (
-                        <div
+                        <GroupCard
                             key={group._id}
-                            onClick={() => setSelectedGroupId(group._id)}
-                            className="bg-black/40 border border-white/5 p-4 rounded-lg hover:border-purple-500/30 transition-colors group cursor-pointer"
-                        >
-                            <div className="flex justify-between items-center mb-3">
-                                <div className="flex items-center gap-2">
-                                    <h4 className="font-bold text-gray-200">{group.groupName}</h4>
-                                    {group.status === 'completed' && (
-                                        <Badge className="text-[10px] h-5 px-1.5 bg-green-500/20 text-green-400 border-green-500/30">
-                                            Done
-                                        </Badge>
-                                    )}
-                                    {group.status === 'ongoing' && (
-                                        <Badge className="text-[10px] h-5 px-1.5 bg-yellow-500/20 text-yellow-400 border-yellow-500/30 animate-pulse">
-                                            Live
-                                        </Badge>
-                                    )}
-                                    {(!group.status || group.status === 'pending') && (
-                                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 text-gray-500 border-gray-700">
-                                            Pending
-                                        </Badge>
-                                    )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-6 w-6 text-gray-400 hover:text-white"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            openEditModal(group);
-                                        }}
-                                    >
-                                        <Edit2 className="w-3 h-3" />
-                                    </Button>
-                                    <Badge variant="secondary" className="text-[10px] bg-white/5 text-gray-400 group-hover:bg-purple-500/10 group-hover:text-purple-300">
-                                        {(group.teams || []).length} Teams
-                                    </Badge>
-                                    <Badge variant="outline" className="text-[10px] border-white/5 text-gray-500">
-                                        {group.matchesPlayed || 0} / {roundMatches || group.totalMatch} Matches
-                                    </Badge>
-                                </div>
-                            </div>
-
-                            <div className="space-y-1 mb-4">
-                                {group.teams?.slice(0, 3).map((team) => (
-                                    <div key={team._id} className="text-xs text-gray-500 flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-gray-700" />
-                                        {team.teamName}
-                                    </div>
-                                ))}
-                                {(group.teams?.length || 0) > 3 && (
-                                    <div className="text-xs text-gray-600 pl-3.5">
-                                        + {(group.teams?.length || 0) - 3} more
-                                    </div>
-                                )}
-                            </div>
-
-                            <Button size="sm" className="w-full h-8 text-xs bg-white/5 hover:bg-white/10 text-gray-300">
-                                <Eye className="w-3 h-3 mr-2" />
-                                View Details
-                            </Button>
-                        </div>
+                            group={group}
+                            roundMatches={roundMatches}
+                            onSelect={setSelectedGroupId}
+                            onEdit={openEditModal}
+                        />
                     ))}
                 </div>
             </div>
@@ -552,3 +498,77 @@ export const GroupsGrid = ({ roundId }: GroupsGridProps) => {
         </div>
     );
 };
+
+const GroupCard = memo(({ group, roundMatches, onSelect, onEdit }: {
+    group: Group,
+    roundMatches?: number,
+    onSelect: (id: string) => void,
+    onEdit: (group: Group) => void
+}) => {
+    return (
+        <div
+            onClick={() => onSelect(group._id)}
+            className="bg-black/40 border border-white/5 p-4 rounded-lg hover:border-purple-500/30 transition-colors group cursor-pointer"
+        >
+            <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-gray-200">{group.groupName}</h4>
+                    {group.status === 'completed' && (
+                        <Badge className="text-[10px] h-5 px-1.5 bg-green-500/20 text-green-400 border-green-500/30">
+                            Done
+                        </Badge>
+                    )}
+                    {group.status === 'ongoing' && (
+                        <Badge className="text-[10px] h-5 px-1.5 bg-yellow-500/20 text-yellow-400 border-yellow-500/30 animate-pulse">
+                            Live
+                        </Badge>
+                    )}
+                    {(!group.status || group.status === 'pending') && (
+                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 text-gray-500 border-gray-700">
+                            Pending
+                        </Badge>
+                    )}
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 text-gray-400 hover:text-white"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(group);
+                        }}
+                    >
+                        <Edit2 className="w-3 h-3" />
+                    </Button>
+                    <Badge variant="secondary" className="text-[10px] bg-white/5 text-gray-400 group-hover:bg-purple-500/10 group-hover:text-purple-300">
+                        {(group.teams || []).length} Teams
+                    </Badge>
+                    <Badge variant="outline" className="text-[10px] border-white/5 text-gray-500">
+                        {group.matchesPlayed || 0} / {roundMatches || group.totalMatch} Matches
+                    </Badge>
+                </div>
+            </div>
+
+            <div className="space-y-1 mb-4">
+                {group.teams?.slice(0, 3).map((team) => (
+                    <div key={team._id} className="text-xs text-gray-500 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-gray-700" />
+                        {team.teamName}
+                    </div>
+                ))}
+                {(group.teams?.length || 0) > 3 && (
+                    <div className="text-xs text-gray-600 pl-3.5">
+                        + {(group.teams?.length || 0) - 3} more
+                    </div>
+                )}
+            </div>
+
+            <Button size="sm" className="w-full h-8 text-xs bg-white/5 hover:bg-white/10 text-gray-300">
+                View Details
+            </Button>
+        </div>
+    );
+});
+
+GroupCard.displayName = 'GroupCard';

@@ -47,7 +47,7 @@ const FindTeams: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 bg-[#0a0514] relative overflow-hidden">
+        <div className="relative overflow-hidden">
             {/* Background Ambient Orbs */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <motion.div
@@ -90,13 +90,13 @@ const FindTeams: React.FC = () => {
                 />
             </div>
 
-            <div className="max-w-7xl mx-auto relative z-10">
+            <div className="w-full relative z-10">
                 {/* Header */}
                 <div className="mb-12 text-center">
                     <motion.h1
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-purple-200 to-purple-400 mb-4 tracking-tight"
+                        className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-purple-200 to-purple-400 mb-4 tracking-tighter"
                     >
                         Find Your Squad
                     </motion.h1>
@@ -111,7 +111,7 @@ const FindTeams: React.FC = () => {
                 </div>
 
                 {/* Search & Filters */}
-                <div className="max-w-4xl mx-auto mb-12 space-y-4">
+                <div className="w-full max-w-6xl mx-auto mb-12 space-y-4">
                     <div className="flex flex-col lg:flex-row gap-4">
                         <div className="relative flex-1 group">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-400/50 group-focus-within:text-purple-400 transition-colors" />

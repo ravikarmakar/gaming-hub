@@ -1,18 +1,9 @@
 import Invitation from "../models/invitation.model.js";
 import Team from "../models/team.model.js";
-import { Notification } from "../models/notification.model.js";
 import User from "../models/user.model.js";
 import Organizer from "../models/organizer.model.js";
-import Event from "../models/event.model.js";
-import EventRegistration from "../models/event-model/event-registration.model.js";
 import { Roles, Scopes } from "../constants/roles.js";
-import mongoose from "mongoose";
-
-// Mock notification delivery for now
-const deliverNotification = async ({ recipient, sender, type, content, relatedData }) => {
-  // console.log(`[Notification] To: ${recipient}, Type: ${type}`);
-  await Notification.create({ recipient, sender, type, content, relatedData });
-};
+import { createNotificationWithActions } from "../services/notification.service.js";
 
 /**
  * @desc Get all invitations for the logged-in user
@@ -39,7 +30,7 @@ export const getAllInvitations = async (req, res) => {
  */
 export const inviteMember = async (req, res) => {
   try {
-    const { email, role, targetId, targetModel } = req.body;
+    const { email, role, targetId, targetModel, playerId, userId: inputUserId } = req.body;
     const { userId } = req.user;
 
     // 1. Identify Target
@@ -50,11 +41,19 @@ export const inviteMember = async (req, res) => {
       target = await Organizer.findById(targetId);
     }
 
-    if (!target) return res.status(404).json({ message: `${targetModel} not found` });
+    if (!target) return res.status(404).json({ message: `${targetModel} not found or undefined` });
 
-    // 2. Find Invitee
-    const invitee = await User.findOne({ email: email.toLowerCase() });
-    if (!invitee) return res.status(404).json({ message: "User not found with this email" });
+    // 2. Find Invitee (Support both Email and ID)
+    let invitee = null;
+    const lookupId = playerId || inputUserId;
+
+    if (lookupId) {
+      invitee = await User.findById(lookupId);
+    } else if (email) {
+      invitee = await User.findOne({ email: email.toLowerCase() });
+    }
+
+    if (!invitee) return res.status(404).json({ message: "User not found to invite" });
 
     // 3. Check for existing membership
     if (targetModel === "Team" && invitee.teamId?.toString() === targetId.toString()) {
@@ -73,25 +72,29 @@ export const inviteMember = async (req, res) => {
     if (existingInvite) return res.status(400).json({ message: "Invitation already sent to this user" });
 
     // 5. Create Invitation
+    const invitedRole = role || (targetModel === "Team" ? Roles.TEAM.MEMBER : Roles.ORG.STAFF);
+
     const invitation = await Invitation.create({
       sender: userId,
       receiver: invitee._id,
       receiverModel: "User",
       entityId: targetId,
       entityModel: targetModel,
-      role: role || (targetModel === "Team" ? Roles.TEAM.MEMBER : Roles.ORG.STAFF),
+      role: invitedRole,
     });
 
     // 6. Notify Invitee
-    await deliverNotification({
+    await createNotificationWithActions({
       recipient: invitee._id,
       sender: userId,
-      type: `${targetModel.toUpperCase()}_INVITATION`,
-      content: {
-        title: `New Invitation`,
-        message: `You have been invited to join ${target.name || target.teamName} as ${role}.`,
-      },
-      relatedData: { invitationId: invitation._id, targetId },
+      type: targetModel === "Team" ? "TEAM_INVITE" : "ORG_INVITE",
+      title: `New Invitation`,
+      message: `You have been invited to join ${target.name || target.teamName} as ${invitedRole}.`,
+      relatedData: { inviteId: invitation._id, targetId },
+      actions: [
+        { label: "Accept", actionType: "ACCEPT", payload: { inviteId: invitation._id } },
+        { label: "Reject", actionType: "REJECT", payload: { inviteId: invitation._id } }
+      ]
     });
 
     res.status(201).json({

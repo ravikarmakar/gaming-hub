@@ -17,8 +17,8 @@ const buttonVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground hover:bg-purple-500/5",
-        link: "text-primary underline-offset-4 hover:underline hover:text-purple-400 transition-colors",
-        gradient: "bg-gradient-to-r from-purple-950 via-purple-900 to-purple-950 text-white hover:from-purple-900 hover:via-purple-800 hover:to-purple-900 hover:text-white shadow-[0_0_15px_-5px_rgba(88,28,135,0.6)] hover:shadow-[0_0_20px_-3px_rgba(168,85,247,0.4)] border border-purple-800/20 hover:border-purple-600/40 transition-all duration-300",
+        link: "text-primary underline-offset-4 hover:underline hover:text-brand-400 transition-colors",
+        gradient: "bg-gradient-to-r from-brand-950 via-brand-900 to-brand-950 text-white hover:from-brand-900 hover:via-brand-800 hover:to-brand-900 hover:text-white shadow-[0_0_15px_-5px_rgba(88,28,135,0.6)] hover:shadow-[0_0_20px_-3px_rgba(168,85,247,0.4)] border border-brand-800/20 hover:border-brand-600/40 transition-all duration-300",
       },
       size: {
         default: "h-10 px-4 py-2",

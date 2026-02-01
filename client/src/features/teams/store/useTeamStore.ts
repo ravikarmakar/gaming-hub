@@ -1,76 +1,12 @@
-import axios from "axios";
 import { create } from "zustand";
 
 import { axiosInstance } from "@/lib/axios";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { TEAM_ENDPOINTS } from "../api/endpoints";
+import { TEAM_ENDPOINTS } from "../lib/endpoints";
+import { EVENT_ENDPOINTS } from "@/features/events/lib/endpoints";
+import { getErrorMessage } from "@/lib/utils";
+import { Team } from "../lib/types";
 
-export const roleInTeam = [
-  "igl",
-  "rusher",
-  "sniper",
-  "support",
-  "player",
-  "coach",
-  "analyst",
-  "substitute",
-];
-
-export const systemRole = ["player", "owner", "manager"];
-
-export interface TeamMembersTypes {
-  _id: string;
-  username: string;
-  avatar: string;
-  user: string;
-  roleInTeam: typeof roleInTeam[number];
-  systemRole: typeof systemRole[number];
-  joinedAt: string;
-  isActive: boolean;
-}
-
-export interface Team {
-  _id: string;
-  teamName: string;
-  slug: string;
-  tag: string;
-  captain: string;
-  teamMembers: TeamMembersTypes[];
-  imageUrl: string | null;
-  bannerUrl: string | null;
-  bio: string;
-  socialLinks?: {
-    twitter?: string;
-    discord?: string;
-    youtube?: string;
-    instagram?: string;
-  };
-  playedTournaments: {
-    event: string;
-    placement?: number;
-    prizeWon: number;
-    playedAt: string;
-    status: "upcoming" | "ongoing" | "completed" | "eliminated";
-  }[];
-  stats: {
-    totalMatches: number;
-    wins: number;
-    losses: number;
-    draws: number;
-    tournamentWins: number;
-    totalPrizeWon: number;
-    winRate: number;
-  };
-  isVerified: boolean;
-  isRecruiting: boolean;
-  region: "NA" | "EU" | "ASIA" | "SEA" | "SA" | "OCE" | "MENA" | "INDIA" | null;
-  game?: string;
-  isDeleted: boolean;
-  hasPendingRequest?: boolean;
-  pendingRequestsCount?: number;
-  createdAt: string;
-  updatedAt: string;
-}
 
 interface TeamStateTypes {
   teams: Team[];
@@ -86,6 +22,7 @@ interface TeamStateTypes {
   error: null | string;
   currentTeam: Team | null;
   joinRequests: any[];
+  teamTournaments: any[];
   isCreateTeamOpen: boolean; // Added state
   setIsCreateTeamOpen: (isOpen: boolean) => void; // Added action
 
@@ -116,15 +53,10 @@ interface TeamStateTypes {
   sendJoinRequest: (teamId: string, message?: string) => Promise<{ success: boolean; message: string }>;
   fetchJoinRequests: () => Promise<void>;
   handleJoinRequest: (requestId: string, action: 'accepted' | 'rejected') => Promise<{ success: boolean; message: string }>;
+  fetchTeamTournaments: (teamId: string) => Promise<void>;
   clearError: () => void;
 }
 
-const getErrorMessage = (error: unknown, defaultMsg: string) => {
-  if (axios.isAxiosError(error)) {
-    return error.response?.data?.message || defaultMsg;
-  }
-  return (error as Error).message || defaultMsg;
-};
 
 export const useTeamStore = create<TeamStateTypes>((set, get) => ({
   teams: [],
@@ -140,6 +72,7 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
   error: null,
   currentTeam: null,
   joinRequests: [],
+  teamTournaments: [],
   isCreateTeamOpen: false,
 
   setIsCreateTeamOpen: (isOpen) => set({ isCreateTeamOpen: isOpen }),
@@ -418,10 +351,22 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
 
   inviteMember: async (playerId: string, message?: string) => {
     set({ isLoading: true, error: null });
+    const currentTeam = get().currentTeam;
+
+    if (!currentTeam) {
+      set({ error: "No active team found to invite to", isLoading: false });
+      return { success: false, message: "No active team found" };
+    }
+
     try {
       const response = await axiosInstance.post(
         TEAM_ENDPOINTS.INVITE_MEMBER,
-        { playerId, message }
+        {
+          playerId,
+          message,
+          targetId: currentTeam._id,
+          targetModel: "Team"
+        }
       );
       set({ isLoading: false });
       return { success: true, message: response.data.message };
@@ -449,7 +394,7 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
     set({ isLoading: true });
     try {
       const response = await axiosInstance.get(TEAM_ENDPOINTS.FETCH_JOIN_REQUESTS);
-      set({ joinRequests: response.data.requests, isLoading: false });
+      set({ joinRequests: response.data.data || [], isLoading: false });
     } catch (error) {
       console.error("Failed to fetch join requests:", error);
       set({ isLoading: false });
@@ -479,6 +424,17 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
       const errMsg = getErrorMessage(error, "Failed to handle join request");
       set({ error: errMsg, isLoading: false });
       return { success: false, message: errMsg };
+    }
+  },
+
+  fetchTeamTournaments: async (teamId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await axiosInstance.get(EVENT_ENDPOINTS.TEAM_EVENTS(teamId));
+      set({ teamTournaments: response.data.data || [], isLoading: false });
+    } catch (error) {
+      const errMsg = getErrorMessage(error, "Failed to fetch team tournaments");
+      set({ error: errMsg, isLoading: false });
     }
   },
 }));

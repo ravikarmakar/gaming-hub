@@ -116,35 +116,59 @@ export const getOrgDetails = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Organization not found", 404));
   }
 
-  const members = await User.aggregate([
+  // Search & Pagination for members
+  const search = req.query.search || "";
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+
+  const matchStage = {
+    orgId: organization._id,
+  };
+
+  if (search) {
+    matchStage.username = { $regex: search, $options: "i" };
+  }
+
+  const membersResult = await User.aggregate([
     {
-      $match: {
-        orgId: organization._id,
-      },
+      $match: matchStage,
     },
     {
-      $addFields: {
-        orgRole: {
-          $first: {
-            $filter: {
-              input: "$roles",
-              as: "r",
-              cond: { $eq: ["$$r.scope", "org"] },
+      $facet: {
+        metadata: [{ $count: "total" }],
+        data: [
+          {
+            $addFields: {
+              orgRole: {
+                $first: {
+                  $filter: {
+                    input: "$roles",
+                    as: "r",
+                    cond: { $eq: ["$$r.scope", "org"] },
+                  },
+                },
+              },
             },
           },
-        },
-      },
-    },
-    {
-      $project: {
-        _id: 1,
-        username: 1,
-        email: 1,
-        avatar: 1,
-        role: "$orgRole.role", // only the role string
+          {
+            $project: {
+              _id: 1,
+              username: 1,
+              email: 1,
+              avatar: 1,
+              role: "$orgRole.role",
+            },
+          },
+          { $skip: skip },
+          { $limit: limit },
+        ],
       },
     },
   ]);
+
+  const members = membersResult[0].data;
+  const totalMembers = membersResult[0].metadata[0]?.total || 0;
 
   const orgWithMembers = organization.toObject();
   orgWithMembers.members = members;
@@ -153,6 +177,12 @@ export const getOrgDetails = TryCatchHandler(async (req, res, next) => {
     success: true,
     message: "Organization details fetched successfully",
     data: orgWithMembers,
+    pagination: {
+      total: totalMembers,
+      page,
+      limit,
+      pages: Math.ceil(totalMembers / limit),
+    },
   });
 });
 
@@ -747,17 +777,35 @@ export const getOrgJoinRequests = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Organization ID is required", 400));
   }
 
-  const requests = await JoinRequest.find({
-    target: orgId,
-    status: "pending",
-  })
-    .populate("requester", "username avatar _id email")
-    .sort("-createdAt");
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+
+  const [requests, total] = await Promise.all([
+    JoinRequest.find({
+      target: orgId,
+      status: "pending",
+    })
+      .populate("requester", "username avatar _id email")
+      .sort("-createdAt")
+      .skip(skip)
+      .limit(limit),
+    JoinRequest.countDocuments({
+      target: orgId,
+      status: "pending",
+    }),
+  ]);
 
   res.status(200).json({
     success: true,
     message: "Fetched join requests successfully",
     data: requests,
+    pagination: {
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit),
+    },
   });
 });
 

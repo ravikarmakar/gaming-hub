@@ -6,23 +6,24 @@ import {
     Trophy,
 } from "lucide-react";
 
-import { Team } from "@/features/teams/store/useTeamStore";
+import { Team } from "../../lib/types";
+
 
 interface Props {
     team: Team;
     isDashboard?: boolean;
 }
 
-export const TeamHeader = ({ team }: Props) => {
+export const TeamHeader = ({ team, isDashboard }: Props) => {
     return (
-        <div className="relative z-0 px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
+        <div className={isDashboard ? "" : "relative z-0 px-4 mx-auto max-w-7xl sm:px-6 lg:px-8"}>
             <div className="flex flex-col items-center gap-8 mb-8 lg:flex-row lg:items-start lg:gap-12">
                 {/* Team Logo */}
                 <div className="relative">
                     <img
                         src={team.imageUrl || "/default-team-logo.png"}
                         alt={team.teamName}
-                        className="w-28 h-28 sm:w-32 sm:h-32 bg-white/5 border border-white/10 rounded-2xl object-cover"
+                        className="w-28 h-28 sm:w-32 sm:h-32 bg-[#0F111A]/60 border border-white/10 rounded-2xl object-cover shadow-2xl shadow-purple-500/5 backdrop-blur-xl"
                     />
 
                     {/* Verified Badge */}
@@ -46,7 +47,7 @@ export const TeamHeader = ({ team }: Props) => {
                 <div className="w-full space-y-4 text-center lg:text-left lg:flex-1">
                     <div className="space-y-3">
                         <div className="flex flex-col items-center gap-2 lg:flex-row lg:items-center lg:gap-3">
-                            <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
+                            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter">
                                 {team.teamName}
                             </h1>
                             {team.tag && (
@@ -58,14 +59,14 @@ export const TeamHeader = ({ team }: Props) => {
 
                         <div className="flex flex-wrap justify-center gap-2 lg:justify-start">
                             {/* Team Members Count */}
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-gray-300 bg-white/5 border border-white/10 rounded-md">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-gray-300 bg-[#0F111A]/40 border border-white/10 rounded-md backdrop-blur-md">
                                 <Users className="w-3.5 h-3.5" />
                                 {team.teamMembers?.length || 0} Members
                             </div>
 
                             {/* Region */}
                             {team.region && (
-                                <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-gray-300 bg-white/5 border border-white/10 rounded-md">
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-gray-300 bg-[#0F111A]/40 border border-white/10 rounded-md backdrop-blur-md">
                                     <MapPin className="w-3.5 h-3.5" />
                                     {team.region}
                                 </div>
@@ -81,7 +82,7 @@ export const TeamHeader = ({ team }: Props) => {
 
                             {/* Tournament Wins */}
                             {team.stats?.tournamentWins > 0 && (
-                                <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-gray-300 bg-white/5 border border-white/10 rounded-md">
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-gray-300 bg-[#0F111A]/40 border border-white/10 rounded-md backdrop-blur-md">
                                     <Trophy className="w-3.5 h-3.5" />
                                     {team.stats.tournamentWins} {team.stats.tournamentWins === 1 ? 'Win' : 'Wins'}
                                 </div>

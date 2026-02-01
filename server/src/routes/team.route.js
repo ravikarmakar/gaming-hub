@@ -54,7 +54,7 @@ router.put(
 
 router.put("/add-members", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), validateRequest(addMembersValidation), addMembers);
 router.put("/remove-member/:id", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), removeMember);
-router.put("/leave-member", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.PLAYER, Roles.TEAM.MANAGER], { attachDoc: true }), leaveMember);
+router.put("/leave-member", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.PLAYER, Roles.TEAM.MANAGER], { attachDoc: true }), leaveMember);
 router.put("/transfer-owner", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER], { attachDoc: true }), validateRequest(transferOwnerValidation), transferTeamOwnerShip);
 router.put("/manage-member-role", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), validateRequest(manageMemberRoleValidation), manageMemberRole);
 router.put("/manage-staff-role", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER], { attachDoc: true }), validateRequest(manageStaffRoleValidation), manageStaffRole);

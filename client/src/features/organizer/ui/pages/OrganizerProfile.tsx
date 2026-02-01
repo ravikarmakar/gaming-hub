@@ -61,18 +61,18 @@ const OrganizerProfile = () => {
 
   if (isOrgLoading || isEventsLoading || !currentOrg) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-950">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pt-8 pb-16 text-white bg-gray-950 sm:pt-16">
+    <div className="pt-8 pb-16 text-white sm:pt-16">
       <OrganizerProfileHeader organizer={currentOrg} stats={stats} />
 
       {/* Navigation Tabs */}
-      <div className="relative z-10 max-w-6xl px-4 mx-auto mb-6 sm:mb-8">
+      <div className="relative z-10 mb-6 sm:mb-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="px-2 overflow-x-auto border-b border-white/10">
             <TabsList className="h-auto p-0 bg-transparent gap-6">

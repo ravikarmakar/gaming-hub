@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { format } from "date-fns";
 import {
     MoreVertical,
@@ -61,7 +61,7 @@ const roles = [
     { label: "Staff", value: ORG_ROLE.STAFF },
 ];
 
-export const OrganizerMemberCard = ({
+export const OrganizerMemberCard = memo(({
     member,
     onRemove,
     onUpdateRole,
@@ -273,4 +273,6 @@ export const OrganizerMemberCard = ({
             </CardContent>
         </Card>
     );
-};
+});
+
+OrganizerMemberCard.displayName = "OrganizerMemberCard";

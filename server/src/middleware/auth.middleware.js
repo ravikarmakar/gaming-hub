@@ -97,13 +97,14 @@ export const isVerified = TryCatchHandler(async (req, res, next) => {
     }
   } catch (redisError) {
     console.error("Redis isVerified error:", redisError);
+    user = null; // Ensure fallback
   }
 
   if (!user) {
     user = await User.findById(userId);
     if (user) {
       try {
-        await redis.setex(cacheKey, 60, JSON.stringify(user));
+        await redis.set(cacheKey, JSON.stringify(user), { ex: 60 });
       } catch (saveCacheError) {
         console.error("Redis setex error in isVerified:", saveCacheError);
       }

@@ -1,16 +1,16 @@
 import { useMemo } from "react";
-import { Users, UserCheck, UserX } from "lucide-react";
+import { Users } from "lucide-react";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 
-import { TeamMembersTypes, useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamStore } from "@/features/teams/store/useTeamStore";
 import { MemberCard } from "./MemberCard";
+import { TeamMembersTypes } from "../../lib/types";
 
 interface TeamMembersProps {
   members: TeamMembersTypes[];
   owner: boolean;
+  isCaptain: boolean;
   currentUserId: string;
   onRemove: (id: string) => void;
   onEditRole: (role: string, id: string) => void;
@@ -21,6 +21,7 @@ interface TeamMembersProps {
 export const TeamMembers = ({
   members,
   owner,
+  isCaptain,
   currentUserId,
   onRemove,
   onEditRole,
@@ -47,12 +48,12 @@ export const TeamMembers = ({
 
   if (isLoading && members.length === 0) {
     return (
-      <div className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      <div className="space-y-4 animate-pulse">
+        <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Skeleton
               key={i}
-              className="h-[240px] bg-white/5 border border-white/10 rounded-lg"
+              className="h-[200px] bg-[#0F111A]/60 border border-white/10 rounded-xl"
             />
           ))}
         </div>
@@ -63,20 +64,24 @@ export const TeamMembers = ({
   const renderMemberGrid = (memberList: TeamMembersTypes[]) => {
     if (memberList.length === 0) {
       return (
-        <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
-          <Users className="w-12 h-12 text-gray-600 mb-3" />
-          <p className="text-gray-400 text-sm">No members found</p>
+        <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed border-white/10 rounded-2xl bg-[#0F111A]/40 backdrop-blur-xl">
+          <div className="p-4 rounded-full bg-white/[0.03] mb-4">
+            <Users className="w-8 h-8 text-gray-600" />
+          </div>
+          <h3 className="text-gray-300 font-medium mb-1">No members found</h3>
+          <p className="text-gray-500 text-sm">There are no members in this category.</p>
         </div>
       );
     }
 
     return (
-      <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
         {memberList.map((member) => (
           <MemberCard
             key={member.user}
             member={member}
             isOwner={owner}
+            isCaptain={isCaptain}
             currentUserId={currentUserId}
             onRemove={onRemove}
             onEditRole={onEditRole}
@@ -90,70 +95,9 @@ export const TeamMembers = ({
 
   return (
     <div className="space-y-6">
-      {/* Stats Summary */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <Badge
-          variant="outline"
-          className="bg-white/5 border-white/10 text-gray-300 px-3 py-1.5"
-        >
-          <Users className="w-3.5 h-3.5 mr-1.5" />
-          {members.length} Total
-        </Badge>
-        <Badge
-          variant="outline"
-          className="bg-emerald-500/10 border-emerald-500/20 text-emerald-400 px-3 py-1.5"
-        >
-          <UserCheck className="w-3.5 h-3.5 mr-1.5" />
-          {activeMembers.length} Active
-        </Badge>
-        {inactiveMembers.length > 0 && (
-          <Badge
-            variant="outline"
-            className="bg-gray-500/10 border-gray-500/20 text-gray-400 px-3 py-1.5"
-          >
-            <UserX className="w-3.5 h-3.5 mr-1.5" />
-            {inactiveMembers.length} Inactive
-          </Badge>
-        )}
+      <div className="mt-0">
+        {renderMemberGrid([...activeMembers, ...inactiveMembers])}
       </div>
-
-      {/* Tabs */}
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList className="bg-white/5 border border-white/10">
-          <TabsTrigger
-            value="all"
-            className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400"
-          >
-            All Members
-          </TabsTrigger>
-          <TabsTrigger
-            value="active"
-            className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400"
-          >
-            Active
-          </TabsTrigger>
-          {inactiveMembers.length > 0 && (
-            <TabsTrigger
-              value="inactive"
-              className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400"
-            >
-              Inactive
-            </TabsTrigger>
-          )}
-        </TabsList>
-
-        <TabsContent value="all" className="mt-6">
-          {renderMemberGrid(members)}
-        </TabsContent>
-
-        <TabsContent value="active" className="mt-6">
-          {renderMemberGrid(activeMembers)}
-        </TabsContent>
-
-        <TabsContent value="inactive" className="mt-6">
-          {renderMemberGrid(inactiveMembers)}
-        </TabsContent>
-      </Tabs>
     </div>
   );
 };

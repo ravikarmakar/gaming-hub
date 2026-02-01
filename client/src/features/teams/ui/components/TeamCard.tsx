@@ -1,16 +1,17 @@
 import React from "react";
-import { Team } from "../../store/useTeamStore";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Users, Trophy, ShieldCheck, Gamepad2, Globe } from "lucide-react";
+
 import { TEAM_ROUTES } from "../../lib/routes";
+import { Team } from "../../lib/types";
 
 interface TeamCardProps {
     team: Team;
     index: number;
 }
 
-const TeamCard: React.FC<TeamCardProps> = ({ team, index }) => {
+const TeamCard: React.FC<TeamCardProps> = React.memo(({ team, index }) => {
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -21,7 +22,7 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, index }) => {
         >
             <Link
                 to={TEAM_ROUTES.PROFILE.replace(":id", team._id)}
-                className="block relative h-full bg-white/[0.03] backdrop-blur-md border border-white/10 rounded-3xl p-6 hover:bg-white/[0.05] hover:border-purple-500/40 transition-all duration-500 overflow-hidden"
+                className="block relative h-full bg-[#0F111A]/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 hover:bg-[#121421]/80 hover:border-purple-500/50 transition-all duration-500 overflow-hidden shadow-2xl shadow-purple-500/5"
             >
                 {/* Glow Effect */}
                 <div className="absolute -inset-0.5 bg-gradient-to-br from-purple-600/30 to-indigo-600/30 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition duration-500" />
@@ -99,6 +100,6 @@ const TeamCard: React.FC<TeamCardProps> = ({ team, index }) => {
             </Link>
         </motion.div>
     );
-};
+});
 
 export default TeamCard;

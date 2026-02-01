@@ -7,11 +7,12 @@ import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
 import { findUserById } from "../services/user.service.js";
 import { Roles, Scopes } from "../constants/roles.js";
-import { checkTeamNameUnique } from "../services/team.service.js";
+import { checkTeamNameUnique, getTransformedTeam, batchAddMembersToTeam, removeMemberFromTeam } from "../services/team.service.js";
 import { uploadOnImageKit, deleteFromImageKit } from "../services/imagekit.service.js";
 import { createNotification } from "./notification.controller.js";
 import JoinRequest from "../models/join-request.model.js";
 import { redis } from "../config/redis.js";
+
 
 export const createTeam = TryCatchHandler(async (req, res, next) => {
   const { teamName, bio, tag, region } = req.body;
@@ -22,9 +23,10 @@ export const createTeam = TryCatchHandler(async (req, res, next) => {
 
     const user = await findUserById(userId);
     if (user.teamId) throw new CustomError("You are already in a team", 400);
-    if (!user.isAccountVerified) throw new CustomError("Account is not verified yet", 401);
+    if (!user.isAccountVerified)
+      throw new CustomError("Account is not verified yet", 401);
 
-    // 1. Image handling with ImageKit
+    // 1. Image handling
     let imageUrl;
     let imageFileId = null;
     if (req.file) {
@@ -47,27 +49,37 @@ export const createTeam = TryCatchHandler(async (req, res, next) => {
       imageUrl,
       imageFileId,
       bio,
-      teamMembers: [{ user: user._id, roleInTeam: "igl" }],
+      teamMembers: [
+        {
+          user: user._id,
+          username: user.username,
+          avatar: user.avatar,
+          roleInTeam: "igl",
+        },
+      ],
     };
 
-    // 2. Create Team (Atomic)
+    // 2. Create Team
     const newTeam = new Team(teamData);
     await newTeam.save();
 
-    // 3. Update User (Atomic)
-    await User.findByIdAndUpdate(userId, {
-      $set: { teamId: newTeam._id },
-      $push: {
-        roles: {
-          scope: Scopes.TEAM,
-          role: Roles.TEAM.OWNER,
-          scopeId: newTeam._id,
-          scopeModel: "Team",
+    // 3. Update User
+    await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: { teamId: newTeam._id },
+        $push: {
+          roles: {
+            scope: Scopes.TEAM,
+            role: Roles.TEAM.OWNER,
+            scopeId: newTeam._id,
+            scopeModel: "Team",
+          },
         },
-      },
-    });
+      }
+    );
 
-    // 4. Invalidate user profile cache so checkAuth gets fresh data
+    // 4. Invalidate user profile cache
     await redis.del(`user_profile:${userId}`);
 
     res.status(201).json({
@@ -167,6 +179,9 @@ export const updateTeam = TryCatchHandler(async (req, res, next) => {
 
   await team.save();
 
+  // Invalidate Team Cache
+  await redis.del(`team_details:${team._id}`);
+
   res.status(200).json({
     success: true,
     message: "Team updated successfully",
@@ -177,21 +192,39 @@ export const updateTeam = TryCatchHandler(async (req, res, next) => {
 export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
   const { teamId } = req.params;
 
-  // Validate ObjectId format early to prevent invalid queries
   if (!mongoose.Types.ObjectId.isValid(teamId)) {
     return next(new CustomError("Invalid team ID format", 400));
   }
 
-  const team = await Team.findOne({
-    _id: teamId,
-    isDeleted: false
-  })
-    .select('-__v') // Exclude version key
-    .populate({
-      path: 'teamMembers.user',
-      select: 'username avatar roles _id esportsRole', // Include roles to display system team roles
-    })
-    .lean(); // Return plain JS object for better performance
+  // 1. Check Redis Cache
+  // 1. Check Redis Cache
+  const cachedTeam = await redis.get(`team_details:${teamId}`);
+
+  if (cachedTeam) {
+    try {
+      const parsedTeam = typeof cachedTeam === "string" ? JSON.parse(cachedTeam) : cachedTeam;
+
+      // Even if cached, we need to check personal join request status if user logged in
+      if (req.user) {
+        const existingRequest = await JoinRequest.findOne({
+          requester: req.user._id,
+          target: teamId,
+          status: "pending",
+        });
+        parsedTeam.hasPendingRequest = !!existingRequest;
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Team details fetched successfully (cached)",
+        data: parsedTeam,
+      });
+    } catch (err) {
+      console.error("Redis parse error team details:", err);
+    }
+  }
+
+  const team = await getTransformedTeam(teamId);
 
   if (!team) {
     return next(new CustomError("Team not found", 404));
@@ -205,45 +238,48 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
     const existingRequest = await JoinRequest.findOne({
       requester: req.user._id,
       target: teamId,
-      status: "pending"
+      status: "pending",
     });
     hasPendingRequest = !!existingRequest;
 
-    // If user is a member, fetch the count of ALL pending requests for the team
-    const isMember = team.teamMembers.some(m => m.user._id.toString() === req.user._id.toString());
+    const isMember = team.teamMembers.some(
+      (m) => m.user.toString() === req.user._id.toString()
+    );
     if (isMember) {
       pendingRequestsCount = await JoinRequest.countDocuments({
         target: teamId,
-        status: "pending"
+        status: "pending",
       });
     }
   }
 
-  // Transform populated data to match expected client format
-  const transformedTeam = {
+  const responseData = {
     ...team,
-    teamMembers: team.teamMembers.map(member => ({
-      user: member.user._id,
-      roleInTeam: member.roleInTeam,
-      username: member.user.username,
-      avatar: member.user.avatar,
-      systemRole: member.user.roles.find(role => role.scope === Scopes.TEAM)?.role || 'player',
-      joinedAt: member.joinedAt,
-      isActive: member.isActive,
-    })),
     hasPendingRequest,
-    pendingRequestsCount
+    pendingRequestsCount,
   };
+
+  // 2. Set Redis Cache (Post-transformation)
+  await redis.set(`team_details:${teamId}`, JSON.stringify(responseData), { ex: 3600 }); // 1 hour
+
+  console.log("FINAL RESPONSE (FetchDetails):", JSON.stringify(responseData.teamMembers, null, 2));
 
   res.status(200).json({
     success: true,
     message: "Team details fetched successfully",
-    data: transformedTeam,
+    data: responseData,
   });
 });
 
 export const fetchAllTeams = TryCatchHandler(async (req, res) => {
-  const { page = 1, limit = 10, search = "", region, isRecruiting, isVerified } = req.query;
+  const {
+    page = 1,
+    limit = 10,
+    search = "",
+    region,
+    isRecruiting,
+    isVerified,
+  } = req.query;
   const skip = (page - 1) * limit;
 
   // Build query filter
@@ -258,106 +294,34 @@ export const fetchAllTeams = TryCatchHandler(async (req, res) => {
   if (isRecruiting !== undefined) query.isRecruiting = isRecruiting === "true";
   if (isVerified !== undefined) query.isVerified = isVerified === "true";
 
+  // SCALABLE AGGREGATION: No $lookup needed for username/avatar anymore
   const aggregateQuery = [
     { $match: query },
     { $sort: { createdAt: -1 } },
     { $skip: parseInt(skip) },
     { $limit: parseInt(limit) },
-    // 1. Lookup teamMembers.user => users
-    {
-      $lookup: {
-        from: "users",
-        localField: "teamMembers.user",
-        foreignField: "_id",
-        as: "membersData",
-      },
-    },
-    // 2. Lookup captain => users
-    {
-      $lookup: {
-        from: "users",
-        localField: "captain",
-        foreignField: "_id",
-        as: "captainData",
-      },
-    },
-    // 3. Embed members data separately
-    {
-      $addFields: {
-        teamMembers: {
-          $map: {
-            input: "$teamMembers",
-            as: "member",
-            in: {
-              user: "$$member.user",
-              roleInTeam: "$$member.roleInTeam",
-              username: {
-                $let: {
-                  vars: {
-                    userObj: {
-                      $arrayElemAt: [
-                        {
-                          $filter: {
-                            input: "$membersData",
-                            as: "u",
-                            cond: { $eq: ["$$u._id", "$$member.user"] },
-                          },
-                        },
-                        0,
-                      ],
-                    },
-                  },
-                  in: "$$userObj.username",
-                },
-              },
-              avatar: {
-                $let: {
-                  vars: {
-                    userObj: {
-                      $arrayElemAt: [
-                        {
-                          $filter: {
-                            input: "$membersData",
-                            as: "u",
-                            cond: { $eq: ["$$u._id", "$$member.user"] },
-                          },
-                        },
-                        0,
-                      ],
-                    },
-                  },
-                  in: "$$userObj.avatar",
-                },
-              },
-            },
-          },
-        },
-        captain: {
-          $let: {
-            vars: {
-              c: { $arrayElemAt: ["$captainData", 0] },
-            },
-            in: {
-              _id: "$$c._id",
-              username: "$$c.username",
-              avatar: "$$c.avatar",
-            },
-          },
-        },
-      },
-    },
-    // 4. Remove extra lookup arrays
     {
       $project: {
-        membersData: 0,
-        captainData: 0,
+        teamName: 1,
+        slug: 1,
+        tag: 1,
+        imageUrl: 1,
+        isVerified: 1,
+        isRecruiting: 1,
+        region: 1,
+        "stats.winRate": 1,
+        "teamMembers.username": 1,
+        "teamMembers.avatar": 1,
+        "teamMembers.user": 1,
+        "teamMembers.roleInTeam": 1,
+        createdAt: 1,
       },
     },
   ];
 
   const [teams, totalCount] = await Promise.all([
     Team.aggregate(aggregateQuery),
-    Team.countDocuments(query)
+    Team.countDocuments(query),
   ]);
 
   res.status(200).json({
@@ -368,112 +332,37 @@ export const fetchAllTeams = TryCatchHandler(async (req, res) => {
       totalCount,
       currentPage: parseInt(page),
       limit: parseInt(limit),
-      hasMore: totalCount > skip + teams.length
-    }
+      hasMore: totalCount > skip + teams.length,
+    },
   });
 });
 
 export const addMembers = TryCatchHandler(async (req, res, next) => {
   const { members } = req.body;
+  const team = req.teamDoc;
 
   if (!Array.isArray(members) || members.length < 1)
     throw new CustomError("Please provide at least one team member.", 400);
 
-  const team = req.teamDoc;
-
-  // Optimize: Fetch all users in one query instead of parallel findById
-  const usersData = await User.find({ _id: { $in: members } }).lean();
-
-  if (usersData.length !== members.length) {
-    throw new CustomError("One or more users not found", 404);
+  // Check Team Limit (Basic check before service call)
+  if (team.teamMembers.length + members.length > 20) {
+    throw new CustomError(`Team limit exceeded. Max 20 members allowed.`, 400);
   }
 
-  const issues = usersData.reduce(
-    (acc, user) => {
-      if (user.teamId) acc.withTeam.push(user.username);
-      if (!user.isAccountVerified) acc.unverified.push(user.username);
-      return acc;
-    },
-    { withTeam: [], unverified: [] }
-  );
+  // Use Service Layer for the heavy lifting
+  await batchAddMembersToTeam({
+    teamId: team._id,
+    memberIds: members,
+  });
 
-  if (issues.withTeam.length)
-    throw new CustomError(
-      `Users already belong to a team: ${issues.withTeam.join(", ")}`,
-      400
-    );
-
-  if (issues.unverified.length)
-    throw new CustomError(
-      `Users have not verified their email: ${issues.unverified.join(", ")}`,
-      400
-    );
-
-  // Check Team Limit
-  const currentMembersCount = team.teamMembers.length;
-  // Filter out members who are already in the team to get true addition count
-  const distinctNewMembers = members.filter(mid =>
-    !team.teamMembers.some(m => m.user.toString() === mid.toString())
-  );
-
-  if (distinctNewMembers.length === 0) {
-    return res.status(200).json({ success: true, message: "All users are already members of this team." });
-  }
-
-  if (currentMembersCount + distinctNewMembers.length > 20) { // Increased limit or keep 10
-    throw new CustomError(`Cannot add more members. Team limit is 20. You have ${currentMembersCount} members.`, 400);
-  }
-
-  try {
-    const bulkOps = [];
-    const updatedMembers = [...team.teamMembers];
-
-    distinctNewMembers.forEach((memberId) => {
-      // 1. Prepare Bulk Update for Users
-      bulkOps.push({
-        updateOne: {
-          filter: { _id: memberId },
-          update: {
-            $set: { teamId: team._id },
-            $push: {
-              roles: {
-                scope: Scopes.TEAM,
-                role: Roles.TEAM.PLAYER,
-                scopeId: team._id,
-                scopeModel: "Team",
-              },
-            },
-          }
-        }
-      });
-
-      // 2. Prepare Roster update (in memory)
-      updatedMembers.push({ user: memberId, roleInTeam: "player" });
-    });
-
-    // Execute Bulk Write
-    if (bulkOps.length > 0) {
-      await User.bulkWrite(bulkOps);
-    }
-
-    // 3. Update Team Roster (Atomic)
-    await Team.findByIdAndUpdate(team._id, { $set: { teamMembers: updatedMembers } });
-
-    // Invalidate cache for all new members
-    const pipeline = redis.pipeline();
-    distinctNewMembers.forEach(mid => pipeline.del(`user_profile:${mid}`));
-    await pipeline.exec();
-
-    res.status(200).json({
-      success: true,
-      message: "Members added successfully to the team.",
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(200).json({
+    success: true,
+    message: "Members added successfully to the team.",
+  });
 });
 
 export const removeMember = TryCatchHandler(async (req, res, next) => {
+  console.log("REMOVE MEMBER REQUEST:", req.params.id);
   const memberId = req.params.id;
   const { userId } = req.user;
   const team = req.teamDoc;
@@ -488,25 +377,11 @@ export const removeMember = TryCatchHandler(async (req, res, next) => {
     throw new CustomError("User is not a member of this team.", 404);
   }
 
-  // 1. Remove user from team roster
-  await Team.findByIdAndUpdate(
-    team._id,
-    { $pull: { teamMembers: { user: memberId } } }
-  );
-
-  // 2. Clear user team data and roles
-  await User.findByIdAndUpdate(
-    memberId,
-    {
-      $set: { teamId: null },
-      $pull: {
-        roles: {
-          scope: "team",
-          scopeId: team._id,
-        },
-      },
-    }
-  );
+  // Use Service Layer
+  await removeMemberFromTeam({
+    teamId: team._id,
+    userId: memberId,
+  });
 
   // 3. Invalidate Redis cache for both users
   const pipeline = redis.pipeline();
@@ -528,23 +403,10 @@ export const removeMember = TryCatchHandler(async (req, res, next) => {
     },
   });
 
-  // Fetch updated team roster
-  const updatedTeam = await Team.findById(team._id).populate({
-    path: "teamMembers.user",
-    select: "username avatar _id",
-  }).lean();
+  // Fetch updated team roster using helper
+  const transformedTeam = await getTransformedTeam(team._id);
 
-  const transformedTeam = {
-    ...updatedTeam,
-    teamMembers: updatedTeam.teamMembers.map((m) => ({
-      user: m.user._id,
-      roleInTeam: m.roleInTeam,
-      username: m.user.username,
-      avatar: m.user.avatar,
-      joinedAt: m.joinedAt,
-      isActive: m.isActive,
-    })),
-  };
+  console.log("REMOVE MEMBER SUCCESS, Sending response.");
 
   res.status(200).json({
     success: true,
@@ -577,25 +439,11 @@ export const leaveMember = TryCatchHandler(async (req, res, next) => {
     );
   }
 
-  // 1. Atomic removal from team roster
-  await Team.findByIdAndUpdate(
-    team._id,
-    { $pull: { teamMembers: { user: userId } } }
-  );
-
-  // 2. Atomic removal of team info from user
-  await User.findByIdAndUpdate(
-    userId,
-    {
-      $set: { teamId: null },
-      $pull: {
-        roles: {
-          scope: "team",
-          scopeId: team._id,
-        },
-      },
-    }
-  );
+  // Use Service Layer
+  await removeMemberFromTeam({
+    teamId: team._id,
+    userId: userId,
+  });
 
   // 3. Notify the captain
   try {
@@ -625,10 +473,8 @@ export const leaveMember = TryCatchHandler(async (req, res, next) => {
 export const transferTeamOwnerShip = TryCatchHandler(async (req, res, next) => {
   const { memberId } = req.body;
 
-
-
-  const team = req.teamDoc;   // current team
-  const user = req.userDoc;   // old owner (request sender)
+  const team = req.teamDoc; // current team (from authorize middleware)
+  const user = req.user; // old owner (from isAuthenticated/isVerified)
 
   // 1 Check: member team ka hissa hai ya nahi
   const isMember = team.teamMembers.some(
@@ -636,11 +482,11 @@ export const transferTeamOwnerShip = TryCatchHandler(async (req, res, next) => {
   );
 
   if (!isMember) {
-    throw new CustomError(
-      "The selected member is not part of your team.",
-      400
-    );
+    throw new CustomError("The selected member is not part of your team.", 400);
   }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
     // 2 Update Team document (captain + teamMembers)
@@ -658,81 +504,81 @@ export const transferTeamOwnerShip = TryCatchHandler(async (req, res, next) => {
       return member.toObject();
     });
 
-    await Team.findByIdAndUpdate(team._id, {
-      $set: {
-        captain: memberId,
-        teamMembers: updatedMembers,
-      },
-    });
+    await Team.findByIdAndUpdate(
+      team._id,
+      {
+        $set: {
+          captain: memberId,
+          teamMembers: updatedMembers,
+        },
+      }
+    );
 
-    // 3 Update User document (roles)
-    await User.findByIdAndUpdate(user._id, {
-      $set: {
-        roles: [
-          // keep all roles EXCEPT the one for this team
-          ...user.roles.filter((r) => !(r.scope === "team" && r.scopeId?.toString() === team._id.toString())),
+    // 3. Update User document (roles)
+    await User.findByIdAndUpdate(
+      user._id,
+      {
+        $set: {
+          roles: [
+            // keep all roles EXCEPT the one for this team
+            ...user.roles.filter(
+              (r) =>
+                !(
+                  r.scope === "team" &&
+                  r.scopeId?.toString() === team._id.toString()
+                )
+            ),
 
-          // Add new role for this team as PLAYER
-          {
-            scope: "team",
-            role: Roles.TEAM.PLAYER, // "team:player"
-            scopeId: team._id,
-            scopeModel: "Team",
-          },
-        ],
-      },
-    });
+            // Add new role for this team as PLAYER
+            {
+              scope: "team",
+              role: Roles.TEAM.PLAYER, // "team:player"
+              scopeId: team._id,
+              scopeModel: "Team",
+            },
+          ],
+        },
+      }
+    );
 
-    // 4 Update New Captain document (roles)  
+    // 4. Update New Captain document (roles)
     const newCaptainUser = await findUserById(memberId);
 
-    await User.findByIdAndUpdate(memberId, {
-      $set: {
-        roles: [
-          // keep all roles EXCEPT the one for this team (they likely have a player role here)
-          ...newCaptainUser.roles.filter((r) => !(r.scope === "team" && r.scopeId?.toString() === team._id.toString())),
+    await User.findByIdAndUpdate(
+      memberId,
+      {
+        $set: {
+          roles: [
+            // keep all roles EXCEPT the one for this team
+            ...newCaptainUser.roles.filter(
+              (r) =>
+                !(
+                  r.scope === "team" &&
+                  r.scopeId?.toString() === team._id.toString()
+                )
+            ),
 
-          {
-            scope: "team",
-            role: Roles.TEAM.OWNER, // "team:owner"
-            scopeId: team._id,
-            scopeModel: "Team",
-          },
-        ],
-      },
-    });
+            {
+              scope: "team",
+              role: Roles.TEAM.OWNER, // "team:owner"
+              scopeId: team._id,
+              scopeModel: "Team",
+            },
+          ],
+        },
+      }
+    );
 
-    // 5 Clear Redis cache
+    // 5. Clear Redis cache
     const pipeline = redis.pipeline();
     pipeline.del(`user_profile:${user._id}`);
     pipeline.del(`user_profile:${memberId}`);
     await pipeline.exec();
 
-    // 6 Fetch updated team
-    const updatedTeam = await Team.findOne({
-      _id: team._id,
-      isDeleted: false,
-    })
-      .select("-__v")
-      .populate({
-        path: "teamMembers.user",
-        select: "username avatar _id",
-      })
-      .lean();
+    // 6. Fetch updated team using helper
+    const transformedTeam = await getTransformedTeam(team._id);
 
-    const transformedTeam = {
-      ...updatedTeam,
-      teamMembers: updatedTeam.teamMembers.map((m) => ({
-        user: m.user._id,
-        roleInTeam: m.roleInTeam,
-        username: m.user.username,
-        avatar: m.user.avatar,
-        joinedAt: m.joinedAt,
-        isActive: m.isActive,
-      })),
-    };
-
-    // 7 Response
+    // 7. Response
     res.status(200).json({
       success: true,
       message: "Team ownership transferred successfully.",
@@ -759,16 +605,34 @@ export const manageMemberRole = TryCatchHandler(async (req, res, next) => {
     throw new CustomError("The specified user is not a member of the team.", 404);
   }
 
+  // Backfill missing denormalized fields if any
+  const memberUserIds = team.teamMembers.map(m => m.user);
+  const users = await User.find({ _id: { $in: memberUserIds } }).select("username avatar");
+
+  team.teamMembers.forEach(m => {
+    const user = users.find(u => u._id.toString() === m.user.toString());
+    if (user) {
+      if (!m.username) m.username = user.username;
+      if (!m.avatar) m.avatar = user.avatar;
+    }
+  });
+
   member.roleInTeam = role;
   await team.save();
 
-  // Invalidate Redis cache for the member (Stale roles/profile)
+  // Update Cache
+  await redis.del(`team_details:${team._id}`);
+
+  // Invalidate Redis cache for the member
   await redis.del(`user_profile:${memberId}`);
+
+  // Fetch updated team roster using helper
+  const transformedTeam = await getTransformedTeam(team._id);
 
   res.status(200).json({
     success: true,
     message: `The member's role has been updated to '${role}'.`,
-    data: team,
+    data: transformedTeam,
   });
 });
 
@@ -888,30 +752,8 @@ export const manageStaffRole = TryCatchHandler(async (req, res, next) => {
   // Invalidate Redis cache
   await redis.del(`user_profile:${memberId}`);
 
-  // Fetch updated team to return to client
-  const updatedTeam = await Team.findOne({
-    _id: team._id,
-    isDeleted: false
-  })
-    .select('-__v')
-    .populate({
-      path: 'teamMembers.user',
-      select: 'username avatar roles _id esportsRole',
-    })
-    .lean();
-
-  const transformedTeam = {
-    ...updatedTeam,
-    teamMembers: updatedTeam.teamMembers.map(member => ({
-      user: member.user._id,
-      roleInTeam: member.roleInTeam,
-      username: member.user.username,
-      avatar: member.user.avatar,
-      systemRole: member.user.roles.find(role => role.scope === Scopes.TEAM && role.scopeId.toString() === team._id.toString())?.role,
-      joinedAt: member.joinedAt,
-      isActive: member.isActive,
-    })),
-  };
+  // Fetch updated team roster using helper
+  const transformedTeam = await getTransformedTeam(team._id);
 
   res.status(200).json({
     success: true,
@@ -919,7 +761,3 @@ export const manageStaffRole = TryCatchHandler(async (req, res, next) => {
     data: transformedTeam
   });
 });
-
-// TODO: using socket.io emit real time events to users
-// TODO: invalidate the user cache in redis when someting change in database
-// TODO: ImageKit is not working; handle the team creation error later.

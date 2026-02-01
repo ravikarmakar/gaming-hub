@@ -1,11 +1,12 @@
-import React, { useEffect } from "react";
-import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
-import { Bell, Check, Clock, ShieldAlert, Users, Trophy } from "lucide-react";
+import { useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
+
+import { Bell, Check, Clock, ShieldAlert, Users, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { motion, AnimatePresence } from "framer-motion";
+
+import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
 
 const OrganizerNotificationsPage: React.FC = () => {
     const { currentOrg, notifications, fetchNotifications, markNotificationAsRead, isLoading } = useOrganizerStore();
@@ -38,15 +39,12 @@ const OrganizerNotificationsPage: React.FC = () => {
     }
 
     return (
-        <div className="space-y-8 p-6 max-w-5xl mx-auto">
+        <div className="space-y-8">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-black italic tracking-tighter uppercase text-white">
-                        Tactical <span className="text-violet-500">Alerts</span>
+                    <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter">
+                        Organizer <span className="text-violet-500">Notifications</span>
                     </h1>
-                    <p className="text-white/40 text-xs font-black uppercase tracking-[0.2em] mt-1">
-                        System & organization notifications
-                    </p>
                 </div>
                 <Badge variant="outline" className="bg-violet-500/10 text-violet-400 border-violet-500/20 px-4 py-1">
                     <span className="text-[10px] font-black tracking-widest uppercase">
@@ -55,7 +53,8 @@ const OrganizerNotificationsPage: React.FC = () => {
                 </Badge>
             </div>
 
-            <ScrollArea className="h-[calc(100vh-250px)] rounded-[2.5rem] bg-[#0d091a]/40 backdrop-blur-3xl border border-white/5 p-6">
+            {/* Notifications List */}
+            <div className="space-y-4">
                 {!notifications || notifications.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-64 text-center space-y-4">
                         <div className="p-4 rounded-full bg-white/5 border border-white/5">
@@ -123,7 +122,7 @@ const OrganizerNotificationsPage: React.FC = () => {
                         </AnimatePresence>
                     </div>
                 )}
-            </ScrollArea>
+            </div>
         </div>
     );
 };

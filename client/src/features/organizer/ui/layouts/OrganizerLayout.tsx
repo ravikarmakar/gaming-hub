@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { Navigate, Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import { Outlet } from "react-router-dom";
 import {
   Users,
   Trophy,
@@ -16,8 +16,11 @@ import { DashboardNavbar } from "@/features/dashboard/ui/components/DashboardNav
 import { DashboardSidebar } from "@/features/dashboard/ui/components/DashboardSidebar";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { ORG_ACCESS } from "@/features/organizer/lib/access";
-import { useAccess } from "@/features/auth/hooks/useAccess";
+import { useFilteredNavigation } from "@/hooks/useFilteredNavigation";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
+import { OrganizerLoading } from "../components/OrganizerLoading";
+import { OrganizerError } from "../components/OrganizerError";
 
 const organizerSidebarLinks = [
   {
@@ -25,18 +28,6 @@ const organizerSidebarLinks = [
     icon: LayoutDashboard,
     href: ORGANIZER_ROUTES.DASHBOARD,
     access: ORG_ACCESS.dashboard,
-  },
-  {
-    label: "Members",
-    icon: Users,
-    href: ORGANIZER_ROUTES.MEMBERS,
-    access: ORG_ACCESS.members,
-  },
-  {
-    label: "Join Requests",
-    icon: UserPlus,
-    href: ORGANIZER_ROUTES.JOIN_REQUESTS,
-    access: ORG_ACCESS.joinRequests,
   },
   {
     label: "Tournaments",
@@ -53,6 +44,18 @@ const organizerSidebarLinks = [
     icon: PlusCircle,
     href: ORGANIZER_ROUTES.ADD_TOURNAMENTS,
     access: ORG_ACCESS.createTournament,
+  },
+  {
+    label: "Members",
+    icon: Users,
+    href: ORGANIZER_ROUTES.MEMBERS,
+    access: ORG_ACCESS.members,
+  },
+  {
+    label: "Join Requests",
+    icon: UserPlus,
+    href: ORGANIZER_ROUTES.JOIN_REQUESTS,
+    access: ORG_ACCESS.joinRequests,
   },
   {
     label: "Analytics",
@@ -75,39 +78,44 @@ const organizerSidebarLinks = [
 ];
 
 const OrganizerLayout = () => {
-  const { can } = useAccess();
-  const { user, checkingAuth } = useAuthStore();
+  const filteredLinks = useFilteredNavigation(organizerSidebarLinks);
 
-  const filteredLinks = useMemo(() => {
-    return organizerSidebarLinks.filter((link) => {
-      if (!link.access) return true;
-      return can(link.access);
-    });
-  }, [can, user]);  // Include user to recalculate when auth state changes
+  // Note: Initial auth check and org-dashboard access are now handled by 
+  // RoleGuard in App.tsx and ProtectedRoute, so we can simplify this.
+  const { user } = useAuthStore();
+  const { getOrgById, isLoading, error, currentOrg, clearError } = useOrganizerStore();
 
-  if (checkingAuth) {
-    return (
-      <div className="w-screen h-screen bg-[#0a0514] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!user?.orgId) {
-    return <Navigate to="/" replace />;
-  }
-
-  if (!can(ORG_ACCESS.dashboard)) {
-    return <Navigate to="/" replace />;
-  }
+  useEffect(() => {
+    if (user?.orgId) {
+      getOrgById(user.orgId);
+    }
+    return () => {
+      clearError();
+    }
+  }, [user?.orgId, getOrgById, clearError]);
 
   return (
     <SidebarProvider>
       <DashboardSidebar sidebarItems={filteredLinks} />
-      <main className="flex flex-col w-screen h-screen bg-[#0a0514] overflow-hidden">
-        <DashboardNavbar />
-        <div className="flex-1 overflow-y-auto p-4 md:p-6">
-          <Outlet />
+      <main className="flex flex-col w-screen h-screen bg-[#06070D] overflow-hidden relative text-white">
+        {/* Universal Background FX */}
+        <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-purple-600/10 to-transparent pointer-events-none z-0" />
+        <div className="absolute top-40 right-10 w-96 h-96 bg-blue-600/5 rounded-full blur-[120px] pointer-events-none z-0" />
+
+        <div className="relative z-10 flex flex-col h-full">
+          <DashboardNavbar />
+          <div className="flex-1 overflow-y-auto p-6 md:p-8">
+            {isLoading && !currentOrg ? (
+              <OrganizerLoading />
+            ) : error && !currentOrg ? (
+              <OrganizerError
+                message={error}
+                onRetry={() => user?.orgId && getOrgById(user.orgId)}
+              />
+            ) : (
+              <Outlet />
+            )}
+          </div>
         </div>
       </main>
     </SidebarProvider>

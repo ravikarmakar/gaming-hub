@@ -22,7 +22,7 @@ export const TeamRecentMatch = ({ opponent, result, score, date, map }: TeamRece
     };
 
     return (
-        <div className="flex items-center justify-between p-4 border bg-white/5 border-white/10 rounded-lg hover:bg-white/[0.07] transition-colors duration-200">
+        <div className="flex items-center justify-between p-4 border bg-[#0F111A]/60 border-white/10 rounded-xl hover:border-purple-500/50 hover:bg-[#121421]/80 transition-all duration-500 backdrop-blur-xl shadow-2xl shadow-purple-500/5">
             <div className="flex items-center space-x-4">
                 <div className={cn(
                     "w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold uppercase",

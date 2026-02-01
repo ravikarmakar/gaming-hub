@@ -16,7 +16,10 @@ import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import AuthLayout from "@/features/auth/ui/components/auth-layout";
 import MainLayout from "@/components/layouts/MainLayout";
 import ProtectedRoute from "@/guards/ProtectedRoute";
+import RoleGuard from "@/guards/RoleGuard";
 import PublicRoute from "@/guards/PublicRoute";
+import { ORG_ACCESS } from "@/features/organizer/lib/access";
+import { TEAM_ACCESS } from "@/features/teams/lib/access";
 
 import { useCheckingAuth } from "@/features/auth/store/authSelectors";
 
@@ -60,6 +63,7 @@ const TeamMembersPage = lazy(() => import("@/features/teams/ui/pages/TeamMembers
 const TeamStaffPage = lazy(() => import("@/features/teams/ui/pages/TeamStaffPage"));
 const TeamNotificationsPage = lazy(() => import("@/features/teams/ui/pages/TeamNotificationsPage"));
 const TeamSettings = lazy(() => import("@/features/teams/ui/pages/TeamSettings"));
+const TeamTournamentsPage = lazy(() => import("@/features/teams/ui/pages/TeamTournamentsPage"));
 const Teams = lazy(() => import("@/features/teams/ui/pages/FindTeams"));
 
 // Event/Tournament Features
@@ -116,30 +120,34 @@ const App = () => {
 
             {/* Team Routes */}
             <Route element={<ProtectedRoute />}>
-              <Route path={TEAM_ROUTES.DASHBOARD} element={<TeamDashboardLayout />}>
-                <Route index element={<TeamDashboard />} />
-                <Route path={TEAM_ROUTES.MEMBERS} element={<TeamMembersPage />} />
-                <Route path={TEAM_ROUTES.PERFORMANCE} element={<div>performance</div>} />
-                <Route path={TEAM_ROUTES.TOURNAMENTS} element={<div>tournaments</div>} />
-                <Route path={TEAM_ROUTES.NOTIFICATIONS} element={<TeamNotificationsPage />} />
-                <Route path={TEAM_ROUTES.STAFF} element={<TeamStaffPage />} />
-                <Route path={TEAM_ROUTES.SETTINGS} element={<TeamSettings />} />
+              <Route element={<RoleGuard access={TEAM_ACCESS.dashboard} />}>
+                <Route path={TEAM_ROUTES.DASHBOARD} element={<TeamDashboardLayout />}>
+                  <Route index element={<TeamDashboard />} />
+                  <Route path={TEAM_ROUTES.MEMBERS} element={<TeamMembersPage />} />
+                  <Route path={TEAM_ROUTES.PERFORMANCE} element={<div>performance</div>} />
+                  <Route path={TEAM_ROUTES.TOURNAMENTS} element={<TeamTournamentsPage />} />
+                  <Route path={TEAM_ROUTES.NOTIFICATIONS} element={<TeamNotificationsPage />} />
+                  <Route path={TEAM_ROUTES.STAFF} element={<TeamStaffPage />} />
+                  <Route path={TEAM_ROUTES.SETTINGS} element={<TeamSettings />} />
+                </Route>
               </Route>
             </Route>
 
             {/* Organizer Routes */}
             <Route element={<ProtectedRoute />}>
-              <Route path={ORGANIZER_ROUTES.DASHBOARD} element={<OrganizerLayout />}>
-                <Route index element={<OrganizerDashboard />} />
-                <Route path={ORGANIZER_ROUTES.MEMBERS} element={<OrganizerMemberPage />} />
-                <Route path={ORGANIZER_ROUTES.TOURNAMENTS} element={<OrganizerTournaments />} />
-                <Route path={ORGANIZER_ROUTES.TOURNAMENT_DASHBOARD} element={<OrganizerTournamentDashboard />} />
-                <Route path={ORGANIZER_ROUTES.ADD_TOURNAMENTS} element={<CreateTournament />} />
-                <Route path={ORGANIZER_ROUTES.EDIT_TOURNAMENT} element={<CreateTournament />} />
-                <Route path={ORGANIZER_ROUTES.ANALYTICS} element={<div>Analytics</div>} />
-                <Route path={ORGANIZER_ROUTES.NOTIFICATIONS} element={<OrganizerNotificationsPage />} />
-                <Route path={ORGANIZER_ROUTES.JOIN_REQUESTS} element={<OrganizerJoinRequestsPage />} />
-                <Route path={ORGANIZER_ROUTES.SETTINGS} element={<OrganizerSettingsPage />} />
+              <Route element={<RoleGuard access={ORG_ACCESS.dashboard} />}>
+                <Route path={ORGANIZER_ROUTES.DASHBOARD} element={<OrganizerLayout />}>
+                  <Route index element={<OrganizerDashboard />} />
+                  <Route path={ORGANIZER_ROUTES.MEMBERS} element={<OrganizerMemberPage />} />
+                  <Route path={ORGANIZER_ROUTES.TOURNAMENTS} element={<OrganizerTournaments />} />
+                  <Route path={ORGANIZER_ROUTES.TOURNAMENT_DASHBOARD} element={<OrganizerTournamentDashboard />} />
+                  <Route path={ORGANIZER_ROUTES.ADD_TOURNAMENTS} element={<CreateTournament />} />
+                  <Route path={ORGANIZER_ROUTES.EDIT_TOURNAMENT} element={<CreateTournament />} />
+                  <Route path={ORGANIZER_ROUTES.ANALYTICS} element={<div>Analytics</div>} />
+                  <Route path={ORGANIZER_ROUTES.NOTIFICATIONS} element={<OrganizerNotificationsPage />} />
+                  <Route path={ORGANIZER_ROUTES.JOIN_REQUESTS} element={<OrganizerJoinRequestsPage />} />
+                  <Route path={ORGANIZER_ROUTES.SETTINGS} element={<OrganizerSettingsPage />} />
+                </Route>
               </Route>
 
               {/* <Route path={ROUTES.SUPER_ADMIN} element={<SuperAdminLayout />}>

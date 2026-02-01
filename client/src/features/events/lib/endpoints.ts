@@ -12,4 +12,5 @@ export const EVENT_ENDPOINTS = {
     REGISTERED_TEAMS: (id: string) => `${EVENT_BASE}/registered-teams/${id}`,
     UNREGISTER: (id: string) => `${EVENT_BASE}/unregister/${id}`,
     CLOSE_REGISTRATION: (id: string) => `${EVENT_BASE}/close-registration/${id}`,
+    TEAM_EVENTS: (teamId: string) => `${EVENT_BASE}/team-events/${teamId}`,
 }

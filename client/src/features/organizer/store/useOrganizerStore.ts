@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { User } from "@/features/auth/lib/types";
 import { ORGANIZER_ENDPOINTS, PLAYER_ENDPOINTS } from "../lib/endpoints";
 import { Notification } from "@/features/notifications/store/useNotificationStore";
+import { Organizer } from "../lib/types";
 
 export interface JoinRequest {
   _id: string;
@@ -20,37 +21,6 @@ export interface JoinRequest {
   createdAt: string;
 }
 
-export interface Member {
-  _id: string;
-  username: string;
-  email: string;
-  role: string;
-  avatar: string;
-}
-
-export interface Organizer {
-  _id?: string;
-  ownerId: string;
-  name: string;
-  imageUrl: string;
-  bannerUrl: string;
-  description: string;
-  email: string;
-  members: Member[];
-  isVerified: boolean;
-  isHiring: boolean;
-  tag: string;
-  socialLinks?: {
-    discord?: string;
-    twitter?: string;
-    website?: string;
-    instagram?: string;
-    youtube?: string;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface OrganizerStateType {
   organizers: Organizer[] | null;
   currentOrg: Organizer | null;
@@ -62,13 +32,18 @@ export interface OrganizerStateType {
   joinRequests: JoinRequest[] | null;
   notifications: Notification[] | null;
 
+  // Pagination State
+  memberPagination: { total: number; page: number; limit: number; pages: number } | null;
+  joinRequestPagination: { total: number; page: number; limit: number; pages: number } | null;
+
   // Actions
   setIsCreateOrgOpen: (open: boolean) => void;
   clearAvailableUsers: () => void;
+  clearError: () => void;
 
   // API Calls
   createOrg: (orgData: FormData) => Promise<boolean>;
-  getOrgById: (orgId: string) => Promise<Organizer | null>;
+  getOrgById: (orgId: string, page?: number, limit?: number, search?: string) => Promise<Organizer | null>;
   updateOrg: (data: any) => Promise<boolean>;
   deleteOrg: () => Promise<boolean>;
 
@@ -84,7 +59,7 @@ export interface OrganizerStateType {
 
   // Join Requests
   joinOrg: (orgId: string, message?: string) => Promise<boolean>;
-  fetchJoinRequests: (orgId: string) => Promise<void>;
+  fetchJoinRequests: (orgId: string, page?: number, limit?: number) => Promise<void>;
   manageJoinRequest: (orgId: string, requestId: string, action: "accepted" | "rejected") => Promise<boolean>;
 
   // Invites
@@ -115,9 +90,12 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
   joinRequests: null,
   pendingInvites: [],
   notifications: [],
+  memberPagination: null,
+  joinRequestPagination: null,
 
   setIsCreateOrgOpen: (open) => set({ isCreateOrgOpen: open }),
   clearAvailableUsers: () => set({ availableUsers: [] }),
+  clearError: () => set({ error: null }),
 
   createOrg: async (orgData) => {
     set({ isLoading: true, error: null });
@@ -131,11 +109,17 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
     }
   },
 
-  getOrgById: async (orgId: string) => {
+  getOrgById: async (orgId: string, page = 1, limit = 20, search = "") => {
     set({ isLoading: true, error: null });
     try {
-      const { data } = await axiosInstance.get(ORGANIZER_ENDPOINTS.GET_ORG_DETAILS(orgId));
-      set({ currentOrg: data.data, isLoading: false });
+      const { data } = await axiosInstance.get(ORGANIZER_ENDPOINTS.GET_ORG_DETAILS(orgId), {
+        params: { page, limit, search }
+      });
+      set({
+        currentOrg: data.data,
+        memberPagination: data.pagination,
+        isLoading: false
+      });
       return data.data;
     } catch (error) {
       set({ error: getErrorMessage(error, "Error fetching organizer"), isLoading: false });
@@ -320,11 +304,17 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
     }
   },
 
-  fetchJoinRequests: async (orgId) => {
+  fetchJoinRequests: async (orgId, page = 1, limit = 20) => {
     set({ isLoading: true, error: null });
     try {
-      const { data } = await axiosInstance.get(ORGANIZER_ENDPOINTS.GET_JOIN_REQUESTS(orgId));
-      set({ joinRequests: data.data, isLoading: false });
+      const { data } = await axiosInstance.get(ORGANIZER_ENDPOINTS.GET_JOIN_REQUESTS(orgId), {
+        params: { page, limit }
+      });
+      set({
+        joinRequests: data.data,
+        joinRequestPagination: data.pagination,
+        isLoading: false
+      });
     } catch (error) {
       set({ error: getErrorMessage(error, "Error fetching join requests"), isLoading: false });
     }
@@ -357,7 +347,13 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
   inviteStaff: async (orgId, userId, role, message) => {
     set({ isLoading: true, error: null });
     try {
-      const { data } = await axiosInstance.post(`${ORGANIZER_ENDPOINTS.GET_CURRENT_ORG}/${orgId}/invite`, { userId, role, message });
+      const { data } = await axiosInstance.post(`/invitations/invite-member`, {
+        playerId: userId,
+        role,
+        message,
+        targetId: orgId,
+        targetModel: "Organizer"
+      });
       set({ isLoading: false });
       return data.success;
     } catch (error) {

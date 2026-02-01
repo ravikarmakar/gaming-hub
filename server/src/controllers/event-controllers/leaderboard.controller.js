@@ -297,10 +297,7 @@ export const updateGroupResults = async (req, res) => {
       }
     });
 
-    // Save to trigger pre-save calculations
-    await leaderboard.save();
-
-    // Sort leaderboard by Total Points
+    // Sort leaderboard by Total Points BEFORE saving for cleaner pre-save hook data
     leaderboard.teamScore.sort((a, b) => b.totalPoints - a.totalPoints);
 
     // Increment Group matches played
@@ -321,12 +318,15 @@ export const updateGroupResults = async (req, res) => {
           entry.isQualified = false;
         }
       });
-      await leaderboard.save();
     } else {
       group.status = "ongoing";
     }
 
-    await group.save();
+    // Consolidated Saves
+    await Promise.all([
+      leaderboard.save(),
+      group.save()
+    ]);
 
     // ✅ Check if all groups in the round are completed
     const allGroupsInRound = await Group.find({ roundId: group.roundId._id });

@@ -1,12 +1,8 @@
-import { useEffect, useCallback } from "react";
+import { useCallback, useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { Loader2, AlertCircle, Info, Users } from "lucide-react";
-
-import { ROUTES } from "@/lib/routes";
-
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Info, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 
 import { TeamMembers } from "../components/TeamMembers";
 import { MemberHeader } from "../components/MemberHeader";
@@ -15,14 +11,15 @@ import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { JoinRequestsList } from "../components/JoinRequestsList";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { TEAM_ACTIONS, TEAM_ACTIONS_ACCESS } from "../../lib/access";
+import { PLAYER_ROUTES } from "@/features/player/lib/routes";
 
 const TeamMembersPage = () => {
   const navigate = useNavigate();
+  const [showPolicy, setShowPolicy] = useState(true);
   const {
     currentTeam,
     getTeamById,
     isLoading,
-    error,
     removeMember,
     updateMemberRole,
   } = useTeamStore();
@@ -37,19 +34,10 @@ const TeamMembersPage = () => {
     TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.manageRoster]
   );
 
-  useEffect(() => {
-    if (user?.teamId) {
-      getTeamById(user.teamId);
-    }
-  }, [user?.teamId, getTeamById]);
-
   const handleRemove = useCallback(
     async (memberId: string) => {
       const result = await removeMember(memberId);
       if (result && result.success) {
-        if (user?.teamId) {
-          await getTeamById(user.teamId);
-        }
         toast.success(result.message || "Member removed successfully");
       } else {
         toast.error(result?.message || "Failed to remove member");
@@ -74,90 +62,77 @@ const TeamMembersPage = () => {
   );
 
   const handleViewProfile = useCallback((id: string) => {
-    navigate(ROUTES.PLAYER_PROFILE.replace(":id", id));
+    navigate(PLAYER_ROUTES.PLAYER_DETAILS.replace(":id", id));
   }, [navigate]);
-
-  if (isLoading && !currentTeam) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[#0B0C1A]">
-        <div className="text-center space-y-3">
-          <Loader2 className="w-10 h-10 mx-auto text-purple-400 animate-spin" />
-          <p className="text-sm text-gray-400">Loading team members...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0B0C1A] text-center p-6">
-        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-        <h2 className="text-xl font-bold text-white mb-2">
-          Failed to Load Members
-        </h2>
-        <p className="text-gray-400 max-w-md mb-6">{error}</p>
-        <Button
-          variant="outline"
-          onClick={() => user?.teamId && getTeamById(user.teamId)}
-          className="border-white/10 hover:bg-white/5 text-white"
-        >
-          Try Again
-        </Button>
-      </div>
-    );
-  }
 
   if (!currentTeam) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-[#0B0C1A]">
+    <div className="min-h-screen">
       <MemberHeader
         currentUserId={user?._id ?? ""}
         teamId={currentTeam._id}
         members={currentTeam.teamMembers ?? []}
+        showInfo={showPolicy}
+        onInfoToggle={() => setShowPolicy(!showPolicy)}
       />
 
-      <ScrollArea className="h-[calc(100vh-140px)]">
-        <main className="px-4 md:px-8 py-8 mx-auto max-w-7xl space-y-12">
-
-
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-start gap-3">
-            <Info className="w-5 h-5 text-blue-400 mt-0.5 shrink-0" />
-            <div className="space-y-1">
-              <h4 className="text-sm font-bold text-blue-300">Tournament Registration Note</h4>
-              <p className="text-sm text-blue-200/80 leading-relaxed">
-                Only members with <span className="text-blue-100 font-medium">IGL, Rusher, Sniper, and Support</span> roles will be automatically registered for tournaments.
-                Any other roles will be listed as substitutes.
-              </p>
-            </div>
-          </div>
-
-          <section className="space-y-6">
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-400" />
-              <h2 className="text-xl font-bold text-white uppercase tracking-tight">Active Roster</h2>
-            </div>
-            <TeamMembers
-              members={currentTeam.teamMembers ?? []}
-              owner={canManageRoster}
-              currentUserId={user?._id ?? ""}
-              onRemove={handleRemove}
-              onEditRole={handleEditRole}
-              onViewProfile={handleViewProfile}
-              isLoading={isLoading}
-            />
-          </section>
-
-          {accessJoinRequestList && (
-            <section className="animate-in fade-in slide-in-from-top-4 duration-500">
-              <JoinRequestsList />
-            </section>
+      <main className="w-full space-y-8">
+        {/* Registration Info Alert - Retractable */}
+        <AnimatePresence>
+          {showPolicy && (
+            <motion.div
+              initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+              animate={{ height: "auto", opacity: 1, marginBottom: 32 }}
+              exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="overflow-hidden"
+            >
+              <div className="relative group overflow-hidden rounded-xl border border-blue-500/30 bg-[#0F111A]/40 px-4 py-3.5 backdrop-blur-xl flex items-center justify-between gap-4 shadow-xl shadow-blue-500/5">
+                <div className="flex items-center gap-3 text-sm text-blue-200/90 w-full">
+                  <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400 shrink-0">
+                    <Info className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="line-clamp-1 sm:line-clamp-none leading-relaxed">
+                      <span className="font-bold text-blue-100 mr-1.5 underline decoration-blue-500/30 underline-offset-4">Tournament Policy:</span>
+                      Only <span className="text-white font-bold bg-white/5 px-1.5 py-0.5 rounded">IGL, Rusher, Sniper, Support</span> roles are auto-registered.
+                      <span className="ml-1 text-blue-300/80 italic">Others are listed as substitutes.</span>
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowPolicy(false)}
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-blue-400 hover:text-white transition-all shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
           )}
-        </main>
-      </ScrollArea>
-    </div>
+        </AnimatePresence>
+
+
+        <TeamMembers
+          members={currentTeam.teamMembers ?? []}
+          owner={canManageRoster}
+          isCaptain={currentTeam.captain === user?._id}
+          currentUserId={user?._id ?? ""}
+          onRemove={handleRemove}
+          onEditRole={handleEditRole}
+          onViewProfile={handleViewProfile}
+          isLoading={isLoading}
+        />
+
+        {accessJoinRequestList && (
+          <section className="pt-4">
+            <JoinRequestsList />
+          </section>
+        )}
+      </main>
+    </div >
   );
 };
 

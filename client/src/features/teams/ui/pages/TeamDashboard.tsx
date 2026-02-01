@@ -1,10 +1,10 @@
 import { useEffect } from "react";
-import { Users, Trophy, Crown, Target, Loader2, AlertCircle, UserPlus, Settings } from "lucide-react";
+import { Users, Trophy, Crown, Target, UserPlus, Settings, ArrowRight, Activity, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useTeamStore } from "@/features/teams/store/useTeamStore";
 import { TeamHeader } from "../components/TeamHeader";
 import { TeamStatCard } from "../components/TeamStatCard";
@@ -17,8 +17,7 @@ import { TEAM_ROUTES } from "../../lib/routes";
 const TeamDashboard = () => {
   const navigate = useNavigate();
   const { can } = useAccess();
-  const { user } = useAuthStore();
-  const { currentTeam, getTeamById, isLoading, error, clearError } = useTeamStore();
+  const { currentTeam, clearError } = useTeamStore();
 
   const canManageSettings = can(TEAM_ACCESS.settings);
   const canManageRoster = can(TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.manageRoster]);
@@ -26,40 +25,8 @@ const TeamDashboard = () => {
   useEffect(() => {
     // Clear any previous errors (e.g., from failed member adding) when visiting dashboard
     clearError();
-
-    if (user?.teamId) {
-      getTeamById(user.teamId);
-    }
-  }, [user?.teamId, getTeamById, clearError]);
-
-  if (isLoading && !currentTeam) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-3">
-          <Loader2 className="w-10 h-10 mx-auto text-purple-400 animate-spin" />
-          <p className="text-sm text-gray-400">Loading your team dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Only show full error screen if we don't have currentTeam data
-  if (error && !currentTeam) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
-        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-        <h2 className="text-xl font-bold text-white mb-2">Failed to Load Dashboard</h2>
-        <p className="text-gray-400 max-w-md mb-6">{error}</p>
-        <Button
-          variant="outline"
-          onClick={() => user?.teamId && getTeamById(user.teamId)}
-          className="border-white/10 hover:bg-white/5"
-        >
-          Try Again
-        </Button>
-      </div>
-    );
-  }
+    // Layout handles fetching now
+  }, [clearError]);
 
   if (!currentTeam) return null;
 
@@ -90,160 +57,201 @@ const TeamDashboard = () => {
     },
   ];
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
-    <div className="min-h-screen bg-[#0B0C1A] pb-12">
-      <main className="relative z-10 px-4 py-6 mx-auto max-w-7xl">
-        {/* Team Header */}
-        <div className="mb-10">
-          {currentTeam && <TeamHeader team={currentTeam} isDashboard={true} />}
-        </div>
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="pb-12 space-y-8"
+    >
+      {/* Team Header */}
+      <motion.div variants={itemVariants}>
+        {currentTeam && <TeamHeader team={currentTeam} isDashboard={true} />}
+      </motion.div>
 
-        {/* Quick Actions */}
-        <div className="mb-10">
-          <h2 className="text-lg font-bold text-white mb-4">
-            Quick Actions
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* Stats Section - Moved to top for immediate impact */}
+      <motion.div variants={itemVariants}>
+        <div className="flex items-center gap-2 mb-6">
+          <Activity className="w-5 h-5 text-purple-400" />
+          <h2 className="text-xl font-bold text-white tracking-tight">Performance Overview</h2>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {statsData.map((stat, index) => (
+            <TeamStatCard key={index} {...stat} />
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Quick Actions - Enhanced Visuals */}
+      <motion.div variants={itemVariants}>
+        <div className="flex items-center gap-2 mb-6">
+          <Zap className="w-5 h-5 text-amber-400" />
+          <h2 className="text-xl font-bold text-white tracking-tight">Quick Actions</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(TEAM_ROUTES.MEMBERS)}
+            className="h-auto p-4 flex flex-col items-start gap-4 border border-white/10 hover:border-purple-500/50 bg-[#0F111A]/40 hover:bg-[#121421]/60 rounded-2xl transition-all duration-500 group backdrop-blur-md"
+          >
+            <div className="p-3 bg-blue-500/10 rounded-xl group-hover:bg-blue-500/20 transition-colors">
+              <Users className="w-6 h-6 text-blue-400" />
+            </div>
+            <div className="text-left space-y-1">
+              <span className="text-sm font-bold text-white block">View Roster</span>
+              <span className="text-xs text-gray-400">Manage team lineup</span>
+            </div>
+          </Button>
+
+          {canManageRoster && (
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => navigate(TEAM_ROUTES.MEMBERS)}
-              className="h-auto py-3 flex-col gap-2 border-white/10 hover:bg-white/5 bg-white/5"
+              className="h-auto p-4 flex flex-col items-start gap-4 border border-white/10 hover:border-emerald-500/50 bg-[#0F111A]/40 hover:bg-[#121421]/60 rounded-2xl transition-all duration-500 group backdrop-blur-md"
             >
-              <Users className="w-5 h-5 text-gray-400" />
-              <span className="text-xs font-medium text-gray-300">View Roster</span>
+              <div className="p-3 bg-emerald-500/10 rounded-xl group-hover:bg-emerald-500/20 transition-colors">
+                <UserPlus className="w-6 h-6 text-emerald-400" />
+              </div>
+              <div className="text-left space-y-1">
+                <span className="text-sm font-bold text-white block">Invite Players</span>
+                <span className="text-xs text-gray-400">Expand your squad</span>
+              </div>
             </Button>
+          )}
 
-            {canManageRoster && (
-              <Button
-                variant="outline"
-                onClick={() => navigate(TEAM_ROUTES.MEMBERS)} // Roster management is on members page
-                className="h-auto py-3 flex-col gap-2 border-white/10 hover:bg-white/5 bg-white/5"
-              >
-                <UserPlus className="w-5 h-5 text-purple-400" />
-                <span className="text-xs font-medium text-gray-300">Invite Players</span>
-              </Button>
-            )}
+          <Button
+            variant="ghost"
+            onClick={() => navigate(TEAM_ROUTES.TOURNAMENTS)}
+            className="h-auto p-4 flex flex-col items-start gap-4 border border-white/10 hover:border-amber-500/50 bg-[#0F111A]/40 hover:bg-[#121421]/60 rounded-2xl transition-all duration-500 group backdrop-blur-md"
+          >
+            <div className="p-3 bg-amber-500/10 rounded-xl group-hover:bg-amber-500/20 transition-colors">
+              <Trophy className="w-6 h-6 text-amber-400" />
+            </div>
+            <div className="text-left space-y-1">
+              <span className="text-sm font-bold text-white block">Find Tournaments</span>
+              <span className="text-xs text-gray-400">Join competitive events</span>
+            </div>
+          </Button>
 
+          {canManageSettings && (
             <Button
-              variant="outline"
-              onClick={() => navigate(TEAM_ROUTES.TOURNAMENTS)}
-              className="h-auto py-3 flex-col gap-2 border-white/10 hover:bg-white/5 bg-white/5"
+              variant="ghost"
+              onClick={() => navigate(TEAM_ROUTES.SETTINGS)}
+              className="h-auto p-4 flex flex-col items-start gap-4 border border-white/10 hover:border-rose-500/50 bg-[#0F111A]/40 hover:bg-[#121421]/60 rounded-2xl transition-all duration-500 group backdrop-blur-md"
             >
-              <Trophy className="w-5 h-5 text-gray-400" />
-              <span className="text-xs font-medium text-gray-300">Find Tournaments</span>
+              <div className="p-3 bg-rose-500/10 rounded-xl group-hover:bg-rose-500/20 transition-colors">
+                <Settings className="w-6 h-6 text-rose-400" />
+              </div>
+              <div className="text-left space-y-1">
+                <span className="text-sm font-bold text-white block">Team Settings</span>
+                <span className="text-xs text-gray-400">Configure team profile</span>
+              </div>
             </Button>
+          )}
+        </div>
+      </motion.div>
 
-            {canManageSettings && (
-              <Button
-                variant="outline"
-                onClick={() => navigate(TEAM_ROUTES.SETTINGS)}
-                className="h-auto py-3 flex-col gap-2 border-white/10 hover:bg-white/5 bg-white/5"
-              >
-                <Settings className="w-5 h-5 text-gray-400" />
-                <span className="text-xs font-medium text-gray-300">Settings</span>
-              </Button>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Recent Matches */}
+        <motion.div variants={itemVariants} className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white tracking-tight">
+              Recent Matches
+            </h2>
+            <Button
+              variant="link"
+              onClick={() => navigate(TEAM_ROUTES.PERFORMANCE)}
+              className="text-purple-400 text-sm font-medium hover:text-purple-300 p-0 flex items-center gap-1 group"
+            >
+              View All <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </Button>
+          </div>
+          <div className="space-y-4">
+            <TeamRecentMatch
+              opponent="Nexus Gaming"
+              result="win"
+              score="16 - 12"
+              date="2 hours ago"
+              map="Dust II"
+            />
+            <TeamRecentMatch
+              opponent="Cyber Wolves"
+              result="win"
+              score="16 - 8"
+              date="1 day ago"
+              map="Mirage"
+            />
+            <TeamRecentMatch
+              opponent="Dark Phoenix"
+              result="loss"
+              score="14 - 16"
+              date="2 days ago"
+              map="Inferno"
+            />
+          </div>
+        </motion.div>
+
+        {/* Tournaments */}
+        <motion.div variants={itemVariants} className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white tracking-tight">
+              Active Tournaments
+            </h2>
+            <Button
+              variant="link"
+              onClick={() => navigate(TEAM_ROUTES.TOURNAMENTS)}
+              className="text-purple-400 text-sm font-medium hover:text-purple-300 p-0 flex items-center gap-1 group"
+            >
+              Manage <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </Button>
+          </div>
+          <div className="space-y-4">
+            {currentTeam.playedTournaments?.length > 0 ? (
+              currentTeam.playedTournaments.slice(0, 3).map((t, idx) => (
+                <TournamentItem
+                  key={idx}
+                  id={t.event}
+                  name={`Tournament ${idx + 1}`}
+                  date={new Date(t.playedAt).toLocaleDateString()}
+                  prize={t.prizeWon}
+                  status={t.status}
+                  placement={t.placement}
+                />
+              ))
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center p-8 text-center border border-white/10 rounded-2xl bg-[#0F111A]/40 backdrop-blur-xl shadow-2xl shadow-purple-500/5">
+                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                  <Trophy className="w-8 h-8 text-gray-600" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">No Active Tournaments</h3>
+                <p className="text-gray-400 text-sm mb-6 max-w-[200px]">Ready to compete? Find your next challenge now.</p>
+                <Button
+                  onClick={() => navigate(TEAM_ROUTES.TOURNAMENTS)}
+                  className="bg-purple-600/90 hover:bg-purple-500 text-white font-bold rounded-xl shadow-lg shadow-purple-900/20"
+                >
+                  Find Tournaments
+                </Button>
+              </div>
             )}
           </div>
-        </div>
-
-        <div className="space-y-10">
-          {/* Stats Section */}
-          <div>
-            <h2 className="text-lg font-bold text-white mb-4">
-              Team Performance
-            </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {statsData.map((stat, index) => (
-                <TeamStatCard key={index} {...stat} />
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-            {/* Recent Matches */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white">
-                  Recent Matches
-                </h2>
-                <Button
-                  variant="link"
-                  onClick={() => navigate(TEAM_ROUTES.PERFORMANCE)}
-                  className="text-gray-400 text-xs hover:text-white p-0"
-                >
-                  View All →
-                </Button>
-              </div>
-              <div className="space-y-3">
-                <TeamRecentMatch
-                  opponent="Nexus Gaming"
-                  result="win"
-                  score="16 - 12"
-                  date="2 hours ago"
-                  map="Dust II"
-                />
-                <TeamRecentMatch
-                  opponent="Cyber Wolves"
-                  result="win"
-                  score="16 - 8"
-                  date="1 day ago"
-                  map="Mirage"
-                />
-                <TeamRecentMatch
-                  opponent="Dark Phoenix"
-                  result="loss"
-                  score="14 - 16"
-                  date="2 days ago"
-                  map="Inferno"
-                />
-              </div>
-            </div>
-
-            {/* Tournaments */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white">
-                  Tournaments
-                </h2>
-                <Button
-                  variant="link"
-                  onClick={() => navigate(TEAM_ROUTES.TOURNAMENTS)}
-                  className="text-gray-400 text-xs hover:text-white p-0"
-                >
-                  Manage →
-                </Button>
-              </div>
-              <div className="space-y-3">
-                {currentTeam.playedTournaments?.length > 0 ? (
-                  currentTeam.playedTournaments.slice(0, 3).map((t, idx) => (
-                    <TournamentItem
-                      key={idx}
-                      name={`Tournament ${idx + 1}`}
-                      date={new Date(t.playedAt).toLocaleDateString()}
-                      prize={t.prizeWon}
-                      status={t.status}
-                      placement={t.placement}
-                    />
-                  ))
-                ) : (
-                  <div className="p-8 text-center border border-white/10 rounded-lg bg-white/5">
-                    <Trophy className="w-10 h-10 mx-auto mb-3 text-gray-600" />
-                    <p className="text-gray-400 text-sm mb-4">No tournament history found</p>
-                    <Button
-                      variant="outline"
-                      onClick={() => navigate(TEAM_ROUTES.TOURNAMENTS)}
-                      className="border-white/10 hover:bg-white/5 text-sm"
-                    >
-                      Find Tournaments
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+        </motion.div>
+      </div>
+    </motion.div>
   );
 };
 

@@ -33,5 +33,5 @@ export const TEAM_ENDPOINTS = {
         `${TEAMS_BASE}/${teamId}/join-request`,
     FETCH_JOIN_REQUESTS: `${TEAMS_BASE}/join-requests/all`,
     HANDLE_JOIN_REQUEST: (requestId: string) =>
-        `${TEAMS_BASE}/join-requests/${requestId}/handle`,
+        `${TEAMS_BASE}/join-requests/${requestId}`,
 } as const;

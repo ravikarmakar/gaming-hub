@@ -46,20 +46,20 @@ export const manageMemberRoleValidation = {
         role: Joi.string().required().valid("igl", "player", "sniper", "rusher", "support", "coach", "manager", "substitute", "content_creator").messages({
             "any.only": "Invalid role specified",
         }),
-    }),
+    }).unknown(true),
 };
 
 export const manageStaffRoleValidation = {
     body: Joi.object({
         memberId: objectId.required(),
         action: Joi.string().valid("promote", "demote").required(),
-    }),
+    }).unknown(true),
 };
 
 export const transferOwnerValidation = {
     body: Joi.object({
         memberId: objectId.required(),
-    }),
+    }).unknown(true),
 };
 
 export const manageJoinRequestValidation = {
@@ -68,5 +68,5 @@ export const manageJoinRequestValidation = {
     }),
     body: Joi.object({
         action: Joi.string().valid("accepted", "rejected").required(),
-    }),
+    }).unknown(true),
 };

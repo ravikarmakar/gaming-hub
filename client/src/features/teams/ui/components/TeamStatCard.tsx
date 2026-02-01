@@ -1,3 +1,4 @@
+import React from "react";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,9 +17,9 @@ const colorMap = {
     purple: "text-purple-400",
 };
 
-export const TeamStatCard = ({ title, value, change, icon: Icon, color }: TeamStatCardProps) => {
+export const TeamStatCard = React.memo(({ title, value, change, icon: Icon, color }: TeamStatCardProps) => {
     return (
-        <div className="p-5 border bg-white/5 border-white/10 rounded-lg hover:bg-white/[0.07] transition-colors duration-200">
+        <div className="p-5 border bg-[#0F111A]/60 border-white/10 rounded-xl hover:border-purple-500/50 hover:bg-[#121421]/80 transition-all duration-300 backdrop-blur-xl shadow-2xl shadow-purple-500/5">
             <div className="flex items-center justify-between">
                 <div className="space-y-2">
                     <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
@@ -42,4 +43,4 @@ export const TeamStatCard = ({ title, value, change, icon: Icon, color }: TeamSt
             </div>
         </div>
     );
-};
+});

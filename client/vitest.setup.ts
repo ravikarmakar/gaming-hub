@@ -20,11 +20,12 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Mock ResizeObserver
-window.ResizeObserver = vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn(),
-}));
+class ResizeObserver {
+    observe() { }
+    unobserve() { }
+    disconnect() { }
+}
+window.ResizeObserver = ResizeObserver;
 
 // Mock IntersectionObserver
 window.IntersectionObserver = vi.fn().mockImplementation(() => ({

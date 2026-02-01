@@ -50,7 +50,7 @@ export const DashboardSidebar = ({ sidebarItems }: Props) => {
       style={{ borderRight: "none" }}
       side="left"
       collapsible="icon"
-      className="group-data-[side=left]:border-r-0 bg-[#0F0720] border-r border-purple-500/10"
+      className="group-data-[side=left]:border-r-0 border-r bg-[#0F0720] border-purple-500/10"
     >
       {/* Header with Logo */}
       <SidebarHeader className="text-white bg-transparent py-4 px-4 flex-row items-center justify-between group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:pt-4 group-data-[collapsible=icon]:gap-6">
@@ -69,7 +69,7 @@ export const DashboardSidebar = ({ sidebarItems }: Props) => {
             <span className="text-lg font-bold text-white tracking-tight leading-none">
               Gaming
             </span>
-            <span className="text-lg font-bold text-purple-400 tracking-tight leading-none">
+            <span className="text-lg font-bold tracking-tight leading-none text-purple-400">
               Hub
             </span>
           </div>
@@ -124,7 +124,7 @@ export const DashboardSidebar = ({ sidebarItems }: Props) => {
                     asChild
                     tooltip={item.label}
                     className={cn(
-                      "h-10 px-3 flex items-center gap-3 rounded-lg transition-all duration-200 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0",
+                      "h-12 px-4 flex items-center gap-4 rounded-xl transition-all duration-200 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:w-12 group-data-[collapsible=icon]:mx-auto",
                       isActive
                         ? "bg-purple-500/15 text-purple-300 font-medium shadow-sm"
                         : "text-gray-400 hover:text-white hover:bg-white/5"
@@ -134,11 +134,11 @@ export const DashboardSidebar = ({ sidebarItems }: Props) => {
                     <Link
                       to={item.href}
                       onClick={handleLinkClick}
-                      className="flex items-center gap-3 w-full group-data-[collapsible=icon]:justify-center"
+                      className="flex items-center gap-4 w-full group-data-[collapsible=icon]:justify-center"
                     >
                       <item.icon
                         className={cn(
-                          "size-[18px] shrink-0 transition-colors",
+                          "size-6 shrink-0 transition-colors",
                           isActive ? "text-purple-400" : "text-gray-400 group-hover:text-gray-300"
                         )}
                       />

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import {
     Plus,
     RefreshCw,
@@ -33,6 +33,58 @@ interface RoundsManagerProps {
     eventId: string;
 }
 
+const RoundItem = memo(({ round, isSelected, isSidebarCollapsed, onSelect }: {
+    round: any,
+    isSelected: boolean,
+    isSidebarCollapsed: boolean,
+    onSelect: (id: string) => void
+}) => {
+    return (
+        <div
+            onClick={() => onSelect(round._id)}
+            className={`
+                rounded-xl cursor-pointer transition-all border 
+                ${isSidebarCollapsed ? "p-2 flex justify-center" : "p-4"}
+                ${isSelected
+                    ? 'bg-purple-500/10 border-purple-500/30 shadow-lg shadow-purple-900/20'
+                    : 'bg-white/5 border-transparent hover:bg-white/10'
+                }
+            `}
+            title={isSidebarCollapsed ? round.roundName : ""}
+        >
+            {isSidebarCollapsed ? (
+                <div className="relative">
+                    <span className={`font-bold text-sm ${isSelected ? 'text-purple-300' : 'text-gray-400'}`}>
+                        R{round.roundNumber || "?"}
+                    </span>
+                    {round.status === 'ongoing' && (
+                        <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-green-500 animate-pulse border border-black" />
+                    )}
+                </div>
+            ) : (
+                <>
+                    <div className="flex justify-between items-start mb-2">
+                        <span className={`font-bold ${isSelected ? 'text-purple-300' : 'text-gray-300'}`}>
+                            {round.roundName}
+                        </span>
+                        {round.status === 'ongoing' && (
+                            <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                        )}
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                            <Trophy className="w-3 h-3" /> {round.groups?.length || 0} Groups
+                        </span>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+});
+
+RoundItem.displayName = 'RoundItem';
+
+
 export const RoundsManager = ({ eventId }: RoundsManagerProps) => {
     const {
         rounds,
@@ -61,33 +113,30 @@ export const RoundsManager = ({ eventId }: RoundsManagerProps) => {
     const [isEditRoundOpen, setIsEditRoundOpen] = useState(false);
     const [editRoundName, setEditRoundName] = useState("");
 
-    // Derive selected round from store to ensure reactivity
-    const selectedRound = rounds.find(r => r._id === selectedRoundId) || null;
+    // ✅ Memoized derived state
+    const { isGrandFinale, canCreateRound } = useMemo(() => {
+        const latest = rounds.length > 0 ? rounds[rounds.length - 1] : null;
+        const reflectsGrandFinale = latest?.groups && latest.groups.length === 1;
+        const allGroupsDone = latest?.groups?.every(g => g.status === 'completed') ?? true;
 
-    // Check if there is an ongoing round
-    // Check if there is an ongoing or pending round, but allow if previous is completed
-    // Logic: Disable if ANY round is "ongoing". Or if the *latest* round is not completed?
-    // User requested: "disable round create button after complete the round one then if completed then enable"
-    // Also user requested: "if in any round if we will only one grop means in this round is a grond file round sso need to dsiable to create round"
-    const latestRound = rounds.length > 0 ? rounds[rounds.length - 1] : null;
+        const canCreate = !latest || (
+            !reflectsGrandFinale && (
+                latest.status === 'completed' ||
+                (latest.status === 'ongoing' && allGroupsDone)
+            )
+        );
 
-    // Check if the latest round is a "Grand Finale" (only 1 group)
-    const isGrandFinale = latestRound?.groups && latestRound.groups.length === 1;
+        return {
+            isGrandFinale: reflectsGrandFinale,
+            canCreateRound: canCreate
+        };
+    }, [rounds]);
 
-    // Check if all groups in the latest round are completed
-    const areAllGroupsCompleted = latestRound?.groups?.every(g => g.status === 'completed') ?? true;
-
-    // Allow creation if:
-    // 1. No rounds exist
-    // 2. Latest round is NOT a grand finale AND (is explicitly marked 'completed' OR (is 'ongoing' AND all its groups are completed))
-    const canCreateRound = !latestRound || (
-        !isGrandFinale && (
-            latestRound.status === 'completed' ||
-            (latestRound.status === 'ongoing' && areAllGroupsCompleted)
-        )
-    );
 
     const isCreateDisabled = isCreating || !canCreateRound;
+
+    // Derive selected round from store to ensure reactivity
+    const selectedRound = useMemo(() => rounds.find(r => r._id === selectedRoundId) || null, [rounds, selectedRoundId]);
 
     useEffect(() => {
         if (eventId) {
@@ -103,7 +152,7 @@ export const RoundsManager = ({ eventId }: RoundsManagerProps) => {
         }
     }, [rounds, selectedRoundId]);
 
-    const handleCreateRound = async () => {
+    const handleCreateRound = useCallback(async () => {
         if (!eventId) return;
         if (!newRoundName.trim()) {
             toast.error("Please enter a round name");
@@ -125,17 +174,17 @@ export const RoundsManager = ({ eventId }: RoundsManagerProps) => {
             setNewStartTime("");
             setNewGapMinutes(30);
         }
-    };
+    }, [eventId, newRoundName, newStartTime, newGapMinutes, newMatches, newQualify, createRound, fetchRounds]);
 
-    const handleCreateGroups = async () => {
+    const handleCreateGroups = useCallback(async () => {
         if (!selectedRound) return;
         const success = await createGroups(selectedRound._id);
         if (success) {
             toast.success("Groups generation started!");
         }
-    };
+    }, [selectedRound, createGroups]);
 
-    const handleCompleteRound = async () => {
+    const handleCompleteRound = useCallback(async () => {
         if (!selectedRound) return;
         setIsSavingStatus(true);
         const success = await updateRoundStatus(selectedRound._id, 'completed');
@@ -147,7 +196,7 @@ export const RoundsManager = ({ eventId }: RoundsManagerProps) => {
                 toast.success("Grand Finale completed! You can now finish the tournament.");
             }
         }
-    };
+    }, [selectedRound, updateRoundStatus, isGrandFinale]);
 
 
     // Sidebar State
@@ -297,46 +346,13 @@ export const RoundsManager = ({ eventId }: RoundsManagerProps) => {
                             {isSidebarCollapsed ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Loading..."}
                         </div>
                     ) : rounds.map((round) => (
-                        <div
+                        <RoundItem
                             key={round._id}
-                            onClick={() => setSelectedRoundId(round._id)}
-                            className={`
-                                rounded-xl cursor-pointer transition-all border 
-                                ${isSidebarCollapsed ? "p-2 flex justify-center" : "p-4"}
-                                ${selectedRoundId === round._id
-                                    ? 'bg-purple-500/10 border-purple-500/30 shadow-lg shadow-purple-900/20'
-                                    : 'bg-white/5 border-transparent hover:bg-white/10'
-                                }
-                            `}
-                            title={isSidebarCollapsed ? round.roundName : ""}
-                        >
-                            {isSidebarCollapsed ? (
-                                <div className="relative">
-                                    <span className={`font-bold text-sm ${selectedRoundId === round._id ? 'text-purple-300' : 'text-gray-400'}`}>
-                                        R{round.roundNumber || "?"}
-                                    </span>
-                                    {round.status === 'ongoing' && (
-                                        <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-green-500 animate-pulse border border-black" />
-                                    )}
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="flex justify-between items-start mb-2">
-                                        <span className={`font-bold ${selectedRoundId === round._id ? 'text-purple-300' : 'text-gray-300'}`}>
-                                            {round.roundName}
-                                        </span>
-                                        {round.status === 'ongoing' && (
-                                            <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                                        <span className="flex items-center gap-1">
-                                            <Trophy className="w-3 h-3" /> {round.groups?.length || 0} Groups
-                                        </span>
-                                    </div>
-                                </>
-                            )}
-                        </div>
+                            round={round}
+                            isSelected={selectedRoundId === round._id}
+                            isSidebarCollapsed={isSidebarCollapsed}
+                            onSelect={setSelectedRoundId}
+                        />
                     ))}
                     {!isLoading && rounds.length === 0 && (
                         <div className="text-sm text-gray-500 text-center">

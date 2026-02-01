@@ -7,8 +7,6 @@ import {
     Trash,
     Edit,
     MoreVertical,
-    Calendar,
-    CheckCircle2,
     XCircle,
     User2,
 } from "lucide-react";
@@ -33,13 +31,15 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
-import { TeamMembersTypes } from "@/features/teams/store/useTeamStore";
-import { TEAM_ROLES, TEAM_ACTIONS, TEAM_ACTIONS_ACCESS } from "@/features/teams/lib/access";
-import { useAccess } from "@/features/auth/hooks/useAccess";
+import { TEAM_ROLES } from "../../lib/access";
+import { TeamMembersTypes } from "../../lib/types";
+import { roleColors, roles } from "../../lib/constants";
+
 
 interface MemberCardProps {
     member: TeamMembersTypes;
     isOwner: boolean;
+    isCaptain: boolean;
     currentUserId: string;
     onRemove: (id: string) => void;
     onEditRole: (role: string, id: string) => void;
@@ -59,31 +59,10 @@ const roleIcons: Record<string, typeof Crown> = {
     substitute: User,
 };
 
-const roleColors: Record<string, string> = {
-    igl: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    rusher: "bg-red-500/10 text-red-400 border-red-500/20",
-    sniper: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    support: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-    player: "bg-gray-500/10 text-gray-400 border-gray-500/20",
-    coach: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-    analyst: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-    substitute: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-};
-
-const roles = [
-    { label: "IGL", value: "igl" },
-    { label: "Rusher", value: "rusher" },
-    { label: "Sniper", value: "sniper" },
-    { label: "Support", value: "support" },
-    { label: "Player", value: "player" },
-    { label: "Coach", value: "coach" },
-    { label: "Analyst", value: "analyst" },
-    { label: "Substitute", value: "substitute" },
-];
-
 export const MemberCard = ({
     member,
     isOwner,
+    isCaptain,
     currentUserId,
     onRemove,
     onEditRole,
@@ -92,13 +71,6 @@ export const MemberCard = ({
 }: MemberCardProps) => {
     const [isEditingRole, setIsEditingRole] = useState(false);
     const [selectedRole, setSelectedRole] = useState<string>(member.roleInTeam);
-
-    const { can } = useAccess()
-
-    // RBAC
-    const canRemoveRoster = can(
-        TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.removeRoster]
-    );
 
     const isMemberOwner = member.systemRole === TEAM_ROLES.OWNER;
     const isCurrentUser = member.user === currentUserId;
@@ -121,75 +93,88 @@ export const MemberCard = ({
     };
 
     return (
-        <Card className="border-white/10 bg-white/5 hover:bg-white/[0.07] transition-colors duration-200">
-            <CardContent className="p-5">
-                <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
+        <Card className="group relative border-white/10 bg-[#0F111A]/60 backdrop-blur-xl hover:bg-[#121421]/80 hover:border-purple-500/50 transition-all duration-500 overflow-hidden shadow-2xl shadow-purple-500/5">
+            {/* Gradient overlay on hover */}
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+            <CardContent className="p-5 relative z-10">
+                <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-center gap-4">
                         <div className="relative">
-                            <Avatar className="w-12 h-12 border-2 border-white/10">
-                                <AvatarImage src={member.avatar} alt={member.username} />
-                                <AvatarFallback className="bg-white/10 text-white">
-                                    {member.username?.[0]?.toUpperCase() || "?"}
-                                </AvatarFallback>
-                            </Avatar>
+                            <div className="w-14 h-14 rounded-xl bg-zinc-800 border-2 border-white/5 overflow-hidden shadow-lg group-hover:shadow-purple-500/20 transition-all duration-300">
+                                <Avatar className="w-full h-full">
+                                    <AvatarImage src={member.avatar} alt={member.username} className="object-cover" />
+                                    <AvatarFallback className="bg-zinc-800 text-gray-400">
+                                        {member.username?.[0]?.toUpperCase() || "?"}
+                                    </AvatarFallback>
+                                </Avatar>
+                            </div>
                             {member.isActive && (
-                                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-[#0B0C1A] rounded-full" />
+                                <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500/20 border border-emerald-500 rounded-full flex items-center justify-center">
+                                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                                </div>
                             )}
                         </div>
-                        <div>
-                            <p className="font-semibold text-white">
-                                {member.username}
+
+                        <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-lg text-white group-hover:text-purple-400 transition-colors">
+                                    {member.username}
+                                </span>
                                 {isCurrentUser && (
-                                    <span className="ml-2 text-xs text-gray-400">(You)</span>
+                                    <Badge variant="secondary" className="bg-white/10 text-xs py-0 h-5 border-none text-gray-300">You</Badge>
                                 )}
-                            </p>
-                            {isMemberOwner && (
-                                <p className="text-xs text-amber-400 flex items-center gap-1">
-                                    <Crown className="w-3 h-3" />
+                            </div>
+
+                            {isMemberOwner ? (
+                                <div className="flex items-center gap-1.5 text-xs font-medium text-amber-400">
+                                    <Crown className="w-3.5 h-3.5 fill-amber-400/20" />
                                     Team Captain
-                                </p>
+                                </div>
+                            ) : (
+                                <div className="text-xs text-gray-500">
+                                    {formatJoinedDate(member.joinedAt)}
+                                </div>
                             )}
                         </div>
                     </div>
 
-                    <div className="flex gap-2">
-                        {/* Always visible View Profile button (except for self) */}
-                        {!isCurrentUser && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => onViewProfile(member.user)}
-                                className="h-8 w-8 p-0 hover:bg-white/10 text-gray-400 hover:text-blue-400"
-                                title="View Profile"
-                            >
-                                <User2 className="w-4 h-4" />
-                            </Button>
-                        )}
+                    <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+                        {/* View Profile */}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onViewProfile(member.user)}
+                            className="h-8 w-8 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
+                            title="View Profile"
+                        >
+                            <User2 className="w-4 h-4" />
+                        </Button>
 
                         {isOwner && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button
                                         variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-0 hover:bg-white/10"
+                                        size="icon"
+                                        className="h-8 w-8 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
                                     >
-                                        <MoreVertical className="w-4 h-4 text-gray-400" />
+                                        <MoreVertical className="w-4 h-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent
                                     align="end"
-                                    className="bg-[#1A1C2E] border-white/10 shadow-2xl min-w-[180px]"
+                                    className="bg-zinc-950 border-white/10 shadow-xl min-w-[160px]"
                                 >
                                     <DropdownMenuItem
                                         onClick={() => setIsEditingRole(true)}
-                                        className="text-gray-200 focus:bg-white/10 focus:text-white cursor-pointer"
+                                        className="text-gray-300 focus:bg-white/10 focus:text-white cursor-pointer"
                                     >
                                         <Edit className="w-4 h-4 mr-2 text-purple-400" />
                                         Edit Role
                                     </DropdownMenuItem>
-                                    {/* Only allow removing if it's not the owner themselves */}
-                                    {canRemoveRoster && !isMemberOwner && !isCurrentUser && (
+
+                                    {isCaptain && !isMemberOwner && !isCurrentUser && (
                                         <>
                                             <DropdownMenuSeparator className="bg-white/10" />
                                             <DropdownMenuItem
@@ -198,7 +183,7 @@ export const MemberCard = ({
                                                 className="text-red-400 focus:bg-red-500/10 focus:text-red-300 cursor-pointer"
                                             >
                                                 <Trash className="w-4 h-4 mr-2" />
-                                                {isLoading ? "Removing..." : "Remove Member"}
+                                                Remove Member
                                             </DropdownMenuItem>
                                         </>
                                     )}
@@ -208,100 +193,63 @@ export const MemberCard = ({
                     </div>
                 </div>
 
-                <div className="space-y-3">
-                    {/* Role */}
-                    <div>
-                        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1.5">
-                            Role
-                        </p>
-                        {isEditingRole ? (
-                            <div className="flex gap-2">
-                                <Select value={selectedRole} onValueChange={setSelectedRole}>
-                                    <SelectTrigger className="h-8 bg-white/5 border-white/10 text-white hover:bg-white/10 transition-all">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-[#1A1C2E] border-white/10 shadow-2xl">
-                                        {roles.map((role) => (
-                                            <SelectItem
-                                                key={role.value}
-                                                value={role.value}
-                                                className="text-gray-200 focus:bg-white/10 focus:text-white cursor-pointer"
-                                            >
-                                                {role.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <Button
-                                    size="sm"
-                                    onClick={handleSaveRole}
-                                    disabled={isLoading}
-                                    className="h-8 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border-emerald-500/20"
-                                >
-                                    {isLoading ? "..." : "Save"}
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => {
-                                        setIsEditingRole(false);
-                                        setSelectedRole(member.roleInTeam);
-                                    }}
-                                    className="h-8 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10"
-                                >
-                                    Cancel
-                                </Button>
-                            </div>
-                        ) : (
-                            <Badge
-                                variant="outline"
-                                className={`${roleColors[member.roleInTeam]}`}
-                            >
-                                <RoleIcon className="w-3 h-3 mr-1" />
-                                {member.roleInTeam.charAt(0).toUpperCase() +
-                                    member.roleInTeam.slice(1)}
-                            </Badge>
-                        )}
+                {isEditingRole ? (
+                    <div className="bg-zinc-950/50 p-3 rounded-lg border border-white/5 space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-gray-400">Select Role</span>
+                            <XCircle
+                                className="w-4 h-4 text-gray-500 cursor-pointer hover:text-white transition-colors"
+                                onClick={() => setIsEditingRole(false)}
+                            />
+                        </div>
+                        <Select value={selectedRole} onValueChange={setSelectedRole}>
+                            <SelectTrigger className="h-9 w-full bg-black/20 border-white/10 text-white hover:bg-black/40 text-sm">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-zinc-900 border-white/10">
+                                {roles.map((role) => (
+                                    <SelectItem key={role.value} value={role.value} className="text-gray-300 focus:text-white focus:bg-white/10 cursor-pointer">
+                                        {role.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button
+                            size="sm"
+                            onClick={handleSaveRole}
+                            disabled={isLoading}
+                            className="w-full h-8 bg-purple-600 hover:bg-purple-500 text-white border-0"
+                        >
+                            Save Changes
+                        </Button>
                     </div>
+                ) : (
+                    <div className="grid grid-cols-2 gap-3 mt-2">
+                        <div className="bg-white/[0.03] rounded-lg p-2.5 border border-white/5">
+                            <span className="text-[10px] uppercase font-bold text-gray-500 block mb-1">Role</span>
+                            <div className="flex items-center gap-1.5">
+                                <RoleIcon className={`w-3.5 h-3.5 ${roleColors[member.roleInTeam]?.split(' ')[1] || 'text-gray-400'}`} />
+                                <span className={`text-sm font-medium ${roleColors[member.roleInTeam]?.split(' ')[1] || 'text-gray-200'}`}>
+                                    {member.roleInTeam.charAt(0).toUpperCase() + member.roleInTeam.slice(1)}
+                                </span>
+                            </div>
+                        </div>
 
-                    {/* Joined Date */}
-                    <div>
-                        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1.5">
-                            Joined
-                        </p>
-                        <div className="flex items-center gap-1.5 text-sm text-gray-300">
-                            <Calendar className="w-3.5 h-3.5 text-gray-500" />
-                            {formatJoinedDate(member.joinedAt)}
+                        <div className="bg-white/[0.03] rounded-lg p-2.5 border border-white/5">
+                            <span className="text-[10px] uppercase font-bold text-gray-500 block mb-1">Status</span>
+                            <div className="flex items-center gap-1.5">
+                                {member.isActive ? (
+                                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                ) : (
+                                    <div className="w-1.5 h-1.5 bg-gray-600 rounded-full" />
+                                )}
+                                <span className={`text-sm font-medium ${member.isActive ? "text-emerald-400" : "text-gray-400"}`}>
+                                    {member.isActive ? "Active" : "Inactive"}
+                                </span>
+                            </div>
                         </div>
                     </div>
-
-                    {/* Status */}
-                    <div>
-                        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1.5">
-                            Status
-                        </p>
-                        <Badge
-                            variant="outline"
-                            className={
-                                member.isActive
-                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                                    : "bg-gray-500/10 text-gray-400 border-gray-500/20"
-                            }
-                        >
-                            {member.isActive ? (
-                                <>
-                                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                                    Active
-                                </>
-                            ) : (
-                                <>
-                                    <XCircle className="w-3 h-3 mr-1" />
-                                    Inactive
-                                </>
-                            )}
-                        </Badge>
-                    </div>
-                </div>
+                )}
             </CardContent>
         </Card>
     );

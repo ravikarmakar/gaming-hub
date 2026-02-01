@@ -11,7 +11,6 @@ import {
   Eye,
   Gamepad2,
   ListOrdered,
-  Loader2,
   BarChart,
   Settings,
   Mail,
@@ -21,6 +20,7 @@ import {
 import { Link } from "react-router-dom";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
+import { EVENT_ROUTES } from "@/features/events/lib/routes";
 import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils";
 
 const OrganizerDashboard = () => {
   const { user } = useAuthStore();
-  const { getDashboardStats, dashboardData, isLoading } = useOrganizerStore();
+  const { getDashboardStats, dashboardData } = useOrganizerStore();
 
   useEffect(() => {
     getDashboardStats();
@@ -57,17 +57,10 @@ const OrganizerDashboard = () => {
     { label: "Settings", icon: Settings, link: ORGANIZER_ROUTES.SETTINGS, color: "text-gray-400" },
   ];
 
-  if (isLoading && !dashboardData) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
-        <Loader2 className="w-12 h-12 text-purple-600 animate-spin" />
-        <p className="text-gray-400 font-medium animate-pulse">Synchronizing dashboard...</p>
-      </div>
-    );
-  }
+
 
   return (
-    <div className="space-y-8 pb-12 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500">
       {/* Top Section: Welcome & Org Profile */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Welcome Card */}
@@ -80,7 +73,7 @@ const OrganizerDashboard = () => {
             <div className="mb-6">
               <NeonBadge variant="purple">Organizer Dashboard</NeonBadge>
             </div>
-            <h1 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">
+            <h1 className="text-3xl md:text-4xl font-black text-white mb-6 tracking-tighter">
               Hello, <span className="text-transparent bg-gradient-to-r from-purple-400 via-indigo-400 to-blue-400 bg-clip-text drop-shadow-sm">{user?.username}</span>
             </h1>
             <p className="text-lg text-gray-400 max-w-lg leading-relaxed font-medium">
@@ -220,7 +213,7 @@ const OrganizerDashboard = () => {
                         </div>
                       </div>
 
-                      <Link to={`/events/${event._id}`} className="w-full sm:w-auto p-3 rounded-xl bg-white/5 hover:bg-purple-500/20 text-purple-400 transition-all flex items-center justify-center group/view">
+                      <Link to={EVENT_ROUTES.TOURNAMENT_DETAILS.replace(':id', event._id)} className="w-full sm:w-auto p-3 rounded-xl bg-white/5 hover:bg-purple-500/20 text-purple-400 transition-all flex items-center justify-center group/view">
                         <Eye size={18} className="transition-transform group-hover/view:scale-110 shadow-glow" />
                       </Link>
                     </div>
@@ -253,7 +246,7 @@ const OrganizerDashboard = () => {
                     <div className={cn("p-4 rounded-2xl bg-white/5 group-hover:bg-purple-500/10 mb-4 transition-all duration-300 group-hover:scale-110", action.color)}>
                       <action.icon size={28} />
                     </div>
-                    <span className="text-[10px] font-black text-gray-400 group-hover:text-white uppercase tracking-widest transition-colors">{action.label}</span>
+                    <span className="hidden sm:block text-[10px] font-black text-gray-400 group-hover:text-white uppercase tracking-widest transition-colors">{action.label}</span>
                   </GlassCard>
                 </Link>
               </motion.div>

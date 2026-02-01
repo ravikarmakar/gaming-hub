@@ -1,5 +1,6 @@
-import { Organizer } from "@/features/organizer/store/useOrganizerStore";
 import { Award, MapPin, Calendar, Star, Share2, MessageCircle } from "lucide-react";
+
+import { Organizer } from "@/features/organizer/lib/types";
 
 interface OrganizerProfileHeaderProps {
     organizer: Organizer;
@@ -38,7 +39,7 @@ export const OrganizerProfileHeader = ({ organizer, stats = mockStats }: Organiz
             </div>
 
             {/* Profile Header */}
-            <div className="relative z-10 max-w-6xl px-4 mx-auto -mt-12 sm:-mt-16">
+            <div className="relative z-10 -mt-12 sm:-mt-16">
                 <div className="flex flex-col items-center gap-4 mb-6 text-center md:flex-row md:items-start md:text-left md:gap-6 md:mb-8">
                     <div className="relative flex-shrink-0">
                         <img
@@ -59,7 +60,7 @@ export const OrganizerProfileHeader = ({ organizer, stats = mockStats }: Organiz
 
                     <div className="flex-1 space-y-2 md:space-y-4">
                         <div>
-                            <h1 className="text-2xl font-bold text-transparent sm:text-3xl md:text-4xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text">
+                            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter bg-clip-text">
                                 {organizer.name}
                             </h1>
                             <p className="text-base text-gray-400 sm:text-lg">

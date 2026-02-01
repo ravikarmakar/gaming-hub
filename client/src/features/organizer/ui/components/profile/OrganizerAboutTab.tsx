@@ -1,5 +1,6 @@
-import { Organizer } from "@/features/organizer/store/useOrganizerStore";
 import { Star, Trophy, Users, Award, MapPin, Calendar, TrendingUp } from "lucide-react";
+
+import { Organizer } from "@/features/organizer/lib/types";
 
 interface OrganizerAboutTabProps {
     organizer: Organizer;

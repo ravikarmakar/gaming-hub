@@ -14,7 +14,7 @@ interface TeamStatsGridProps {
     };
 }
 
-export const TeamStatsGrid: React.FC<TeamStatsGridProps> = ({ stats }) => {
+export const TeamStatsGrid: React.FC<TeamStatsGridProps> = React.memo(({ stats }) => {
     const statItems = [
         {
             label: 'Win Rate',
@@ -57,7 +57,7 @@ export const TeamStatsGrid: React.FC<TeamStatsGridProps> = ({ stats }) => {
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {statItems.map((item, index) => (
-                <Card key={index} className="bg-white/5 border-white/10 hover:border-white/20 transition-all duration-300 group overflow-hidden relative">
+                <Card key={index} className="bg-[#0F111A]/60 border-white/10 hover:border-purple-500/50 hover:bg-[#121421]/80 transition-all duration-500 backdrop-blur-xl shadow-2xl shadow-purple-500/5 group overflow-hidden relative">
                     <div className="p-5 flex flex-col gap-3 relative z-10">
                         <div className={`w-10 h-10 rounded-lg ${item.bg} border ${item.border} flex items-center justify-center`}>
                             <item.icon className={`w-5 h-5 ${item.color}`} />
@@ -76,4 +76,4 @@ export const TeamStatsGrid: React.FC<TeamStatsGridProps> = ({ stats }) => {
             ))}
         </div>
     );
-};
+});
