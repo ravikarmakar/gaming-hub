@@ -1,15 +1,21 @@
 import { Router } from "express";
-import { isAuthenticated } from "../middleware/auth.middleware.js";
 import {
   getAllInvitations,
-  inviteMemberInTeam,
+  inviteMember,
   respondToInvitation,
 } from "../controllers/invitation.controller.js";
+import { authorize } from "../middleware/rbac.middleware.js";
+import { Scopes, Roles } from "../constants/roles.js";
+import { isAuthenticated, isVerified } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
-router.get("/", isAuthenticated, getAllInvitations);
-router.post("/invite-member", isAuthenticated, inviteMemberInTeam);
-router.put("/:inviteId/respond", isAuthenticated, respondToInvitation);
+router.use(isAuthenticated, isVerified);
+
+router.get("/", getAllInvitations);
+
+// Generic Invitation Handling
+router.post("/invite", authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), inviteMember);
+router.put("/:invitationId/respond", respondToInvitation);
 
 export default router;

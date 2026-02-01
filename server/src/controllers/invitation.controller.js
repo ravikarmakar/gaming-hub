@@ -8,275 +8,170 @@ import EventRegistration from "../models/event-model/event-registration.model.js
 import { Roles, Scopes } from "../constants/roles.js";
 import mongoose from "mongoose";
 
+// Mock notification delivery for now
+const deliverNotification = async ({ recipient, sender, type, content, relatedData }) => {
+  // console.log(`[Notification] To: ${recipient}, Type: ${type}`);
+  await Notification.create({ recipient, sender, type, content, relatedData });
+};
+
+/**
+ * @desc Get all invitations for the logged-in user
+ */
 export const getAllInvitations = async (req, res) => {
   try {
-    const loggedInUser = req.user; // Current logged-in user
-
-    // Find all invitations where user is either sender or receiver
+    const { userId } = req.user;
     const invitations = await Invitation.find({
-      $or: [{ sender: loggedInUser._id }, { receiver: loggedInUser._id }],
-    })
-      .populate("entityId") // Get entity details (polymorphic)
-      .populate("sender", "username email") // Get sender details
-      .populate("receiver") // Get receiver details (polymorphic)
-      .sort({ createdAt: -1 }); // Sort by latest invitations
+      receiver: userId,
+      status: "pending",
+    }).populate("entityId", "name teamName imageUrl avatar").sort("-createdAt");
 
     res.status(200).json({
       success: true,
-      invitations,
+      data: invitations,
     });
   } catch (error) {
-    console.error("Error fetching invitations:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc Generic Invite logic for Teams and Organizations
+ */
+export const inviteMember = async (req, res) => {
+  try {
+    const { email, role, targetId, targetModel } = req.body;
+    const { userId } = req.user;
+
+    // 1. Identify Target
+    let target = null;
+    if (targetModel === "Team") {
+      target = await Team.findById(targetId);
+    } else if (targetModel === "Organizer") {
+      target = await Organizer.findById(targetId);
+    }
+
+    if (!target) return res.status(404).json({ message: `${targetModel} not found` });
+
+    // 2. Find Invitee
+    const invitee = await User.findOne({ email: email.toLowerCase() });
+    if (!invitee) return res.status(404).json({ message: "User not found with this email" });
+
+    // 3. Check for existing membership
+    if (targetModel === "Team" && invitee.teamId?.toString() === targetId.toString()) {
+      return res.status(400).json({ message: "User is already a member of this team" });
+    }
+    if (targetModel === "Organizer" && invitee.orgId?.toString() === targetId.toString()) {
+      return res.status(400).json({ message: "User is already a member of this organization" });
+    }
+
+    // 4. Check for duplicate invitation
+    const existingInvite = await Invitation.findOne({
+      entityId: targetId,
+      receiver: invitee._id,
+      status: "pending"
+    });
+    if (existingInvite) return res.status(400).json({ message: "Invitation already sent to this user" });
+
+    // 5. Create Invitation
+    const invitation = await Invitation.create({
+      sender: userId,
+      receiver: invitee._id,
+      receiverModel: "User",
+      entityId: targetId,
+      entityModel: targetModel,
+      role: role || (targetModel === "Team" ? Roles.TEAM.MEMBER : Roles.ORG.STAFF),
+    });
+
+    // 6. Notify Invitee
+    await deliverNotification({
+      recipient: invitee._id,
+      sender: userId,
+      type: `${targetModel.toUpperCase()}_INVITATION`,
+      content: {
+        title: `New Invitation`,
+        message: `You have been invited to join ${target.name || target.teamName} as ${role}.`,
+      },
+      relatedData: { invitationId: invitation._id, targetId },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Invitation sent successfully",
+      data: invitation,
+    });
+  } catch (error) {
+    console.error("[Invite Error]:", error);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
 
-// Owner and Captain can invite only
-export const inviteMemberInTeam = async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const { playerId } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(playerId)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid Player ID" });
-    }
-
-    // Validate that the user to be invited exists
-    const userToInvite = await User.findById(playerId);
-    if (!userToInvite) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User to Invite not found" });
-    }
-
-    // Ensure the team exists
-    const userCaller = await User.findById(userId);
-    if (!userCaller || !userCaller.teamId) {
-      return res.status(404).json({ success: false, message: "You are not in a team" });
-    }
-    const teamToInviteFrom = await Team.findById(userCaller.teamId);
-    if (!teamToInviteFrom) {
-      return res.status(404).json({ success: false, message: "Team not found" });
-    }
-
-    // Check if team has reached max capacity
-    const MAX_TEAM_SIZE = 6;
-    if (teamToInviteFrom.teamMembers.length >= MAX_TEAM_SIZE) {
-      return res.status(400).json({
-        success: false,
-        message: "This team is already full.",
-      });
-    }
-
-    // Only Manager or Owner can send invites
-    const isAuthorized =
-      teamToInviteFrom.owner?.equals(userId) ||
-      teamToInviteFrom.captain?.equals(userId) ||
-      teamToInviteFrom.teamMembers.some(m => m.user?.equals(userId) && m.roleInTeam === "manager");
-
-    if (!isAuthorized) {
-      return res.status(403).json({
-        success: false,
-        message: "Only the Team Manager or Owner can invite players.",
-      });
-    }
-
-    // Captain & Owner can't send request to themselves
-    if (userToInvite._id.equals(userId)) {
-      return res.status(403).json({
-        success: false,
-        message: "You can't send a request to yourself.",
-      });
-    }
-
-    // Check if Player is already in another team
-    if (userToInvite.teamId) {
-      return res.status(409).json({
-        success: false,
-        message: "Player is already in another team.",
-      });
-    }
-
-    // Check if the player is already in the team
-    const isMember = teamToInviteFrom.teamMembers.some(
-      (member) => member.user && member.user.equals(userToInvite._id)
-    );
-    if (isMember) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Player is already in the team." });
-    }
-
-    // Check if an invite is already pending
-    const existingInvite = await Invitation.findOne({
-      entityId: teamToInviteFrom._id,
-      entityModel: "Team",
-      receiver: userToInvite._id,
-      receiverModel: "User",
-      status: "pending",
-    });
-    if (existingInvite) {
-      return res.status(409).json({
-        success: false,
-        message: "Invite already pending for this user.",
-      });
-    }
-
-    // Create new invitation
-    const { message } = req.body;
-    const newInvitation = new Invitation({
-      entityId: teamToInviteFrom._id,
-      entityModel: "Team",
-      receiver: userToInvite._id,
-      receiverModel: "User",
-      sender: userId,
-      status: "pending",
-      message: message || "",
-      role: Roles.TEAM.PLAYER, // Default role for team invites
-    });
-    await newInvitation.save();
-
-    // Create Notification for the invited player using the new system
-    await Notification.create({
-      recipient: userToInvite._id,
-      sender: userCaller._id,
-      type: "TEAM_INVITE",
-      content: {
-        title: "Team Invitation",
-        message: `You have been invited to join team "${teamToInviteFrom.teamName}" by ${userCaller.username}.`,
-      },
-      status: "unread",
-      relatedData: {
-        teamId: teamToInviteFrom._id,
-        inviteId: newInvitation._id,
-      },
-      actions: [
-        { label: "Accept", actionType: "ACCEPT", payload: { teamId: teamToInviteFrom._id, inviteId: newInvitation._id, role: "player" } },
-        { label: "Reject", actionType: "REJECT", payload: { teamId: teamToInviteFrom._id, inviteId: newInvitation._id } },
-      ]
-    });
-
-    await User.findByIdAndUpdate(userToInvite._id, {
-      $inc: { notificationCount: 1 },
-    });
-
-    // Emit WebSocket Event for real-time notification (if using sockets)
-    // io.to(playerId).emit("newNotification", notification);
-
-    res.status(201).json({
-      success: true,
-      message: "Invitation sent successfully.",
-      newInvitation,
-    });
-  } catch (error) {
-    console.error("Error inviting player:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
-};
-
+/**
+ * @desc Respond to Invitation (Accept/Reject)
+ */
 export const respondToInvitation = async (req, res) => {
   try {
-    const { inviteId } = req.params;
-    const { action } = req.body; // "accepted" | "rejected"
-    const userId = req.user._id;
+    const { invitationId } = req.params;
+    const { action } = req.body; // 'accepted' or 'rejected'
+    const { userId } = req.user;
 
-    if (!["accepted", "rejected"].includes(action)) {
-      return res.status(400).json({ success: false, message: "Invalid action" });
+    const invite = await Invitation.findById(invitationId).populate("entityId");
+    if (!invite) return res.status(404).json({ message: "Invitation not found" });
+
+    if (invite.receiver.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "Access Denied" });
     }
 
-    const invite = await Invitation.findById(inviteId).populate("entityId");
-    if (!invite) return res.status(404).json({ success: false, message: "Invitation not found" });
-
-    if (invite.status !== "pending") return res.status(400).json({ success: false, message: "Invitation is not pending" });
-
-    // Authorization: Receiver checks
-    if (!invite.receiver.equals(userId)) return res.status(403).json({ success: false, message: "Not authorized to respond to this invitation" });
-
-    if (action === "rejected") {
-      // Delete or update status
-      await Invitation.findByIdAndDelete(inviteId);
-      return res.status(200).json({ success: true, message: "Invitation rejected" });
+    if (invite.status !== "pending") {
+      return res.status(400).json({ message: `Invitation already ${invite.status}` });
     }
 
     if (action === "accepted") {
-      // Handle based on Entity Model
-      if (invite.entityModel === "Organizer") {
-        const org = invite.entityId;
-        const user = await User.findById(userId);
+      const user = await User.findById(userId);
 
-        if (user.orgId) {
-          return res.status(400).json({ success: false, message: "You are already in an organization" });
-        }
+      if (invite.entityModel === "Team") {
+        if (user.teamId) return res.status(400).json({ message: "You are already in a team" });
 
         // Update User
-        await User.findByIdAndUpdate(userId, {
-          $set: { orgId: org._id },
+        user.teamId = invite.entityId._id;
+        user.roles.push({
+          scope: Scopes.TEAM,
+          role: invite.role,
+          scopeId: invite.entityId._id,
+          scopeModel: "Team"
+        });
+
+        // Update Team Roster (Fix: actually add them to the team document)
+        await Team.findByIdAndUpdate(invite.entityId._id, {
           $push: {
-            roles: {
-              scope: Scopes.ORG,
-              role: invite.role || Roles.ORG.STAFF, // Use role from invite or default
-              scopeId: org._id,
-              scopeModel: "Organizer"
+            teamMembers: {
+              user: user._id,
+              roleInTeam: invite.role === "team:captain" ? "igl" : "player"
             }
           }
         });
+      } else if (invite.entityModel === "Organizer") {
+        if (user.orgId) return res.status(400).json({ message: "You are already in an organization" });
 
-      } else if (invite.entityModel === "Team") {
-        const team = invite.entityId;
-        const user = await User.findById(userId);
-
-        if (user.teamId) {
-          return res.status(400).json({ success: false, message: "You are already in a team" });
-        }
-
-        // Update User
-        await User.findByIdAndUpdate(userId, {
-          $set: { teamId: team._id },
-          $push: {
-            roles: {
-              scope: Scopes.TEAM,
-              role: invite.role === Roles.TEAM.MANAGER ? Roles.TEAM.MANAGER : Roles.TEAM.PLAYER,
-              scopeId: team._id,
-              scopeModel: "Team"
-            }
-          }
+        user.orgId = invite.entityId._id;
+        user.roles.push({
+          scope: Scopes.ORG,
+          role: invite.role,
+          scopeId: invite.entityId._id,
+          scopeModel: "Organizer"
         });
-
-        // Update Team Document
-        await Team.findByIdAndUpdate(team._id, {
-          $push: { teamMembers: { user: userId, roleInTeam: invite.role === Roles.TEAM.MANAGER ? "manager" : "player" } }
-        });
-      } else if (invite.entityModel === "Event") {
-        const event = invite.entityId;
-        const requester = await User.findById(userId);
-
-        if (!requester.teamId) {
-          return res.status(400).json({ success: false, message: "Requester must have a team to join an event" });
-        }
-
-        // Create EventRegistration
-        await EventRegistration.create({
-          eventId: event._id,
-          teamId: requester.teamId,
-          status: "approved",
-        });
-
-        // Increment joinedSlots
-        await Event.findByIdAndUpdate(event._id, { $inc: { joinedSlots: 1 } });
       }
 
-      // Finalize Invite
-      // await Invitation.findByIdAndDelete(inviteId); // Or mark accepted
-      invite.status = "accepted";
-      await invite.save();
-
-      return res.status(200).json({ success: true, message: "Invitation accepted" });
+      await user.save();
     }
 
+    invite.status = action === "accepted" ? "accepted" : "rejected";
+    await invite.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Invitation ${action} successfully`,
+    });
   } catch (error) {
-    console.error("Error responding to invitation:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    res.status(500).json({ success: false, message: error.message });
   }
 };

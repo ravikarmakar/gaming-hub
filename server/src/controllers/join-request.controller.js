@@ -4,64 +4,90 @@ import Team from "../models/team.model.js";
 import User from "../models/user.model.js";
 import Event from "../models/event.model.js";
 import EventRegistration from "../models/event-model/event-registration.model.js";
+import Organizer from "../models/organizer.model.js";
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
 import { createNotification } from "./notification.controller.js";
 import { Roles, Scopes } from "../constants/roles.js";
 import { redis } from "../config/redis.js";
 
-// @desc    Send a request to join a team
+// @desc    Send a request to join a Team, Organization, or Event
 // @route   POST /api/v1/teams/:teamId/join-request
+// @route   POST /api/v1/organizers/:orgId/join
 export const sendJoinRequest = TryCatchHandler(async (req, res, next) => {
-    const { teamId } = req.params;
+    const { teamId, orgId, eventId } = req.params;
     const { userId } = req.user;
     const { message } = req.body;
 
+    const targetId = teamId || orgId || eventId;
+    const targetModel = teamId ? "Team" : (orgId ? "Organizer" : "Event");
+
+    if (!targetId) {
+        throw new CustomError("Target ID is required", 400);
+    }
+
     const user = await User.findById(userId);
-    if (user.teamId) {
-        throw new CustomError("You are already in a team", 400);
+    if (!user) throw new CustomError("User not found", 404);
+
+    // 1. Target Model Specific Checks
+    if (targetModel === "Team") {
+        if (user.teamId) throw new CustomError("You are already in a team", 400);
+    } else if (targetModel === "Organizer") {
+        if (user.orgId) throw new CustomError("You are already in an organization", 400);
     }
 
-    const team = await Team.findById(teamId);
-    if (!team) {
-        throw new CustomError("Team not found", 404);
+    // 2. Resource Existence and Status Checks
+    let resource;
+    if (targetModel === "Team") {
+        resource = await Team.findById(targetId);
+        if (!resource || resource.isDeleted) throw new CustomError("Team not found", 404);
+        if (!resource.isRecruiting) throw new CustomError("This team is not currently recruiting", 400);
+    } else if (targetModel === "Organizer") {
+        resource = await Organizer.findById(targetId);
+        if (!resource || resource.isDeleted) throw new CustomError("Organization not found", 404);
+        if (!resource.isHiring) throw new CustomError("This organization is not currently recruiting", 400);
+    } else if (targetModel === "Event") {
+        resource = await Event.findById(targetId);
+        if (!resource || resource.isDeleted) throw new CustomError("Event not found", 404);
     }
 
-    if (!team.isRecruiting) {
-        throw new CustomError("This team is not currently recruiting", 400);
-    }
-
+    // 3. Duplicate Request Check
     const existingRequest = await JoinRequest.findOne({
         requester: userId,
-        target: teamId,
+        target: targetId,
         status: "pending",
     });
 
     if (existingRequest) {
-        throw new CustomError("You already have a pending request for this team", 400);
+        throw new CustomError(`You already have a pending request for this ${targetModel.toLowerCase()}`, 400);
     }
 
+    // 4. Create Request
     const joinRequest = await JoinRequest.create({
         requester: userId,
-        target: teamId,
-        targetModel: "Team",
-        message: message || `Player ${user.username} wants to join your team.`,
+        target: targetId,
+        targetModel: targetModel,
+        message: message || `${targetModel} join request from ${user.username}`,
     });
 
-    // Notify Team Captain
-    await createNotification({
-        recipient: team.captain,
-        sender: userId,
-        type: "TEAM_JOIN_REQUEST",
-        content: {
-            title: "New Join Request",
-            message: `${user.username} has requested to join your team.`,
-        },
-        relatedData: {
-            teamId: team._id,
-            requestId: joinRequest._id,
-        },
-    });
+    // 5. Notify Responsible Party
+    const recipientId = targetModel === "Team" ? resource.captain : resource.ownerId; // Or specific event manager if applicable
+
+    if (recipientId) {
+        await createNotification({
+            recipient: recipientId,
+            sender: userId,
+            type: `${targetModel.toUpperCase()}_JOIN_REQUEST`,
+            content: {
+                title: "New Join Request",
+                message: `${user.username} has requested to join your ${targetModel.toLowerCase()}.`,
+            },
+            relatedData: {
+                targetId: resource._id,
+                requestId: joinRequest._id,
+            },
+        });
+    }
 
     res.status(201).json({
         success: true,
@@ -70,23 +96,24 @@ export const sendJoinRequest = TryCatchHandler(async (req, res, next) => {
     });
 });
 
-// @desc    Get all join requests for a team (Captain only)
-// @route   GET /api/v1/teams/join-requests
-export const getTeamJoinRequests = TryCatchHandler(async (req, res, next) => {
-    const teamId = req.teamDoc._id; // From ensurePartOfTeam middleware
-
-    // Access controlled by verifyTeamPermission(TEAM_ACTIONS.manageRoster) middleware
+// @desc    Get all pending join requests for a resource (Team or Org)
+// @route   GET /api/v1/teams/join-requests/all
+// @route   GET /api/v1/:orgId/join-requests
+export const getJoinRequests = TryCatchHandler(async (req, res, next) => {
+    // rbacContext is attached by authorize middleware
+    const { scopeId, scope } = req.rbacContext;
 
     const requests = await JoinRequest.find({
-        target: teamId,
+        target: scopeId,
         status: "pending",
     })
-        .populate("requester", "username avatar _id")
+        .populate("requester", "username avatar _id email")
         .sort("-createdAt");
 
     res.status(200).json({
         success: true,
-        requests,
+        message: "Join requests fetched successfully",
+        data: requests,
     });
 });
 
@@ -158,7 +185,7 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                     $push: {
                         roles: {
                             scope: Scopes.ORG,
-                            role: Roles.ORG.STAFF,
+                            role: Roles.ORG.PLAYER,
                             scopeId: org._id,
                             scopeModel: "Organizer",
                         }
@@ -169,7 +196,7 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                     recipient: requester._id,
                     sender: userId,
                     type: "ORG_JOIN_SUCCESS",
-                    content: { title: "Staff Onboarding!", message: `You are now staff at ${org.name}.` },
+                    content: { title: "Request Accepted!", message: `Your request to join ${org.name} has been accepted. Welcome!` },
                     relatedData: { orgId: org._id },
                 });
 
@@ -230,11 +257,11 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                 handledAt: new Date()
             });
 
-            // Handle any side effects like rejecting other team requests if user joined one
-            if (joinRequest.targetModel === "Team") {
+            // Handle any side effects like rejecting other requests if user joined one
+            if (["Team", "Organizer"].includes(joinRequest.targetModel)) {
                 await JoinRequest.updateMany(
-                    { requester: requester._id, targetModel: "Team", status: "pending" },
-                    { status: "rejected", message: "User has joined another team" }
+                    { requester: requester._id, targetModel: joinRequest.targetModel, status: "pending" },
+                    { status: "rejected", message: `User has joined another ${joinRequest.targetModel.toLowerCase()}` }
                 );
                 await redis.del(`user_profile:${requester._id}`);
             }

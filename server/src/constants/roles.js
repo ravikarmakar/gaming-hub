@@ -22,4 +22,5 @@ export const Scopes = {
   PLATFORM: "platform",
   ORG: "org",
   TEAM: "team",
+  EVENT: "event",
 };

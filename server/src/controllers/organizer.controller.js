@@ -7,7 +7,6 @@ import { CustomError } from "../utils/CustomError.js";
 import { Roles, Scopes } from "../constants/roles.js";
 import { redis } from "../config/redis.js";
 import { generateTokens, storeRefreshToken, setCookies } from "../services/auth.service.js";
-import { findUserById } from "../services/user.service.js";
 import JoinRequest from "../models/join-request.model.js";
 import { createNotification } from "./notification.controller.js";
 
@@ -174,36 +173,45 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Organization not found", 404));
   }
 
-  // Handle Profile Image Upload
+  // Handle Image Uploads in Parallel
+  const uploadPromises = [];
+
   if (files?.image?.[0]) {
-    const uploadRes = await uploadOnImageKit(
-      files.image[0].path,
-      `org-logo-${org._id}-${Date.now()}`,
-      "/organizers/logos"
+    uploadPromises.push(
+      (async () => {
+        const uploadRes = await uploadOnImageKit(
+          files.image[0].path,
+          `org-logo-${org._id}-${Date.now()}`,
+          "/organizers/logos"
+        );
+        if (uploadRes) {
+          if (org.imageFileId) await deleteFromImageKit(org.imageFileId);
+          org.imageUrl = uploadRes.url;
+          org.imageFileId = uploadRes.fileId;
+        }
+      })()
     );
-    if (uploadRes) {
-      if (org.imageFileId) {
-        await deleteFromImageKit(org.imageFileId);
-      }
-      org.imageUrl = uploadRes.url;
-      org.imageFileId = uploadRes.fileId;
-    }
   }
 
-  // Handle Banner Image Upload
   if (files?.banner?.[0]) {
-    const uploadRes = await uploadOnImageKit(
-      files.banner[0].path,
-      `org-banner-${org._id}-${Date.now()}`,
-      "/organizers/banners"
+    uploadPromises.push(
+      (async () => {
+        const uploadRes = await uploadOnImageKit(
+          files.banner[0].path,
+          `org-banner-${org._id}-${Date.now()}`,
+          "/organizers/banners"
+        );
+        if (uploadRes) {
+          if (org.bannerFileId) await deleteFromImageKit(org.bannerFileId);
+          org.bannerUrl = uploadRes.url;
+          org.bannerFileId = uploadRes.fileId;
+        }
+      })()
     );
-    if (uploadRes) {
-      if (org.bannerFileId) {
-        await deleteFromImageKit(org.bannerFileId);
-      }
-      org.bannerUrl = uploadRes.url;
-      org.bannerFileId = uploadRes.fileId;
-    }
+  }
+
+  if (uploadPromises.length > 0) {
+    await Promise.all(uploadPromises);
   }
 
   // Update fields if provided
@@ -246,9 +254,7 @@ export const addStaff = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Organization ID is required", 400));
   }
 
-  if (!Array.isArray(staff) || staff.length === 0) {
-    return next(new CustomError("Staff array is required", 400));
-  }
+
 
   // Basic validation that the org exists
   const org = await Organizer.findOne({ _id: orgId, isDeleted: false });
@@ -256,44 +262,73 @@ export const addStaff = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Organization not found", 404));
   }
 
-  let results = await Promise.all(
-    staff.map(async (userId) => {
-      const targetUser = await findUserById(userId);
+  // 1. Fetch all prospective users in one go
+  const users = await User.find({ _id: { $in: staff } });
+  const userMap = new Map(users.map(u => [u._id.toString(), u]));
 
-      if (!targetUser) {
-        return { userId, success: false, message: "User not found" };
-      }
-      if (!targetUser.isAccountVerified || targetUser.orgId) {
-        return {
-          userId,
-          success: false,
-          message: "User not verified or already in an organization",
-        };
-      }
-      const alreadyInOrg = targetUser.roles.some(
-        (r) => r.scope === "org" && r.scopeId?.toString() === orgId.toString()
-      );
-      if (alreadyInOrg) {
-        return {
-          userId,
-          success: false,
-          message: "User already has a role in this organization",
-        };
-      }
+  const results = [];
+  const bulkOps = [];
 
-      targetUser.roles.push({
-        scope: Scopes.ORG,
-        role: Roles.ORG.STAFF,
-        scopeId: orgId,
-        scopeModel: "Organizer",
+  // 2. Process each requested staff member in memory
+  staff.forEach(userId => {
+    const targetUser = userMap.get(userId.toString());
+
+    if (!targetUser) {
+      results.push({ userId, success: false, message: "User not found" });
+      return;
+    }
+
+    if (!targetUser.isAccountVerified || targetUser.orgId) {
+      results.push({
+        userId,
+        success: false,
+        message: "User not verified or already in an organization",
       });
-      targetUser.orgId = orgId;
-      await targetUser.save();
-      await redis.del(`user_profile:${userId}`);
+      return;
+    }
 
-      return { userId, success: true };
-    })
-  );
+    const alreadyInOrg = targetUser.roles.some(
+      (r) => r.scope === "org" && r.scopeId?.toString() === orgId.toString()
+    );
+    if (alreadyInOrg) {
+      results.push({
+        userId,
+        success: false,
+        message: "User already has a role in this organization",
+      });
+      return;
+    }
+
+    // Prepare operation
+    bulkOps.push({
+      updateOne: {
+        filter: { _id: userId },
+        update: {
+          $set: { orgId: orgId },
+          $push: {
+            roles: {
+              scope: Scopes.ORG,
+              role: Roles.ORG.STAFF,
+              scopeId: orgId,
+              scopeModel: "Organizer",
+            },
+          }
+        }
+      }
+    });
+
+    results.push({ userId, success: true });
+  });
+
+  // 3. Execute Bulk Write
+  if (bulkOps.length > 0) {
+    await User.bulkWrite(bulkOps);
+
+    // Invalidate cache for updated users (parallel)
+    const pipeline = redis.pipeline();
+    staff.forEach(uid => pipeline.del(`user_profile:${uid}`));
+    await pipeline.exec();
+  }
 
   res
     .status(200)
@@ -305,12 +340,7 @@ export const updateStaffRole = TryCatchHandler(async (req, res, next) => {
   const orgId = req.params.orgId || req.orgContext?.orgId || req.body.orgId;
 
   if (!orgId) return next(new CustomError("Organization ID is required", 400));
-  if (!userId || !newRole) return next(new CustomError("userId and newRole are required", 400));
 
-  const validRoles = Object.values(Roles.ORG);
-  if (!validRoles.includes(newRole)) {
-    return next(new CustomError("Invalid role specified", 400));
-  }
 
   const user = await User.findById(userId);
   if (!user) return next(new CustomError("User not found", 404));
@@ -352,7 +382,7 @@ export const removeStaff = TryCatchHandler(async (req, res, next) => {
   const orgId = req.params.orgId || req.orgContext?.orgId || req.body.orgId;
 
   if (!orgId) return next(new CustomError("Organization ID is required", 400));
-  if (!userId) return next(new CustomError("userId is required to remove staff", 400));
+
 
   const user = await User.findById(userId);
   if (!user) return next(new CustomError("User not found", 404));
@@ -495,27 +525,36 @@ export const getDashboardStats = TryCatchHandler(async (req, res, next) => {
   }
 
   // Fetch metrics
-  const totalEvents = await Event.countDocuments({ orgId, isDeleted: { $ne: true } });
-  const upcomingEvents = await Event.countDocuments({
-    orgId,
-    status: { $in: ["registration-open", "registration-closed"] },
-    isDeleted: { $ne: true },
-  });
-  const totalParticipantsQuery = await Event.aggregate([
-    { $match: { orgId, isDeleted: { $ne: true } } },
-    { $group: { _id: null, total: { $sum: "$joinedSlots" } } },
+  // Fetch metrics in parallel
+  const [
+    totalEvents,
+    upcomingEvents,
+    totalParticipantsData,
+    totalPrizeMoneyData,
+    recentEvents
+  ] = await Promise.all([
+    Event.countDocuments({ orgId, isDeleted: { $ne: true } }),
+    Event.countDocuments({
+      orgId,
+      status: { $in: ["registration-open", "registration-closed"] },
+      isDeleted: { $ne: true },
+    }),
+    Event.aggregate([
+      { $match: { orgId, isDeleted: { $ne: true } } },
+      { $group: { _id: null, total: { $sum: "$joinedSlots" } } },
+    ]),
+    Event.aggregate([
+      { $match: { orgId, isDeleted: { $ne: true } } },
+      { $group: { _id: null, total: { $sum: "$prizePool" } } },
+    ]),
+    Event.find({ orgId, isDeleted: { $ne: true } })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean()
   ]);
-  const totalParticipants = totalParticipantsQuery[0]?.total || 0;
 
-  const totalPrizeMoneyQuery = await Event.aggregate([
-    { $match: { orgId, isDeleted: { $ne: true } } },
-    { $group: { _id: null, total: { $sum: "$prizePool" } } },
-  ]);
-  const totalPrizeMoney = totalPrizeMoneyQuery[0]?.total || 0;
-
-  const recentEvents = await Event.find({ orgId, isDeleted: { $ne: true } })
-    .sort({ createdAt: -1 })
-    .limit(5);
+  const totalParticipants = totalParticipantsData[0]?.total || 0;
+  const totalPrizeMoney = totalPrizeMoneyData[0]?.total || 0;
 
   const recentActivities = [
     { type: "System", description: `Welcome to ${organization.name} dashboard`, time: "Just now" },
@@ -547,9 +586,7 @@ export const transferOwnership = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Organization ID is required", 400));
   }
 
-  if (!newOwnerId) {
-    return next(new CustomError("New owner ID is required", 400));
-  }
+
 
   const org = await Organizer.findOne({ _id: orgId, isDeleted: false });
   if (!org) {
@@ -729,9 +766,7 @@ export const manageJoinRequest = TryCatchHandler(async (req, res, next) => {
   const { action } = req.body; // 'accepted' or 'rejected'
   const { userId } = req.user;
 
-  if (!["accepted", "rejected"].includes(action)) {
-    throw new CustomError("Invalid action. Use 'accepted' or 'rejected'", 400);
-  }
+
 
   const joinRequest = await JoinRequest.findById(requestId).populate("target");
   if (!joinRequest) {

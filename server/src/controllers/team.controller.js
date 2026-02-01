@@ -104,38 +104,46 @@ export const updateTeam = TryCatchHandler(async (req, res, next) => {
     team.teamName = teamName;
   }
 
-  // Handle branding assets update (logo and banner)
+  // Handle branding assets update (logo and banner) - PARALLEL UPLOAD
   if (req.files) {
+    const uploadPromises = [];
+
     if (req.files.image && req.files.image[0]) {
-      const uploadRes = await uploadOnImageKit(
-        req.files.image[0].path,
-        `team-logo-${team._id}-${Date.now()}`,
-        "/teams/logos"
+      uploadPromises.push(
+        (async () => {
+          const uploadRes = await uploadOnImageKit(
+            req.files.image[0].path,
+            `team-logo-${team._id}-${Date.now()}`,
+            "/teams/logos"
+          );
+          if (uploadRes) {
+            if (team.imageFileId) await deleteFromImageKit(team.imageFileId);
+            team.imageUrl = uploadRes.url;
+            team.imageFileId = uploadRes.fileId;
+          }
+        })()
       );
-      if (uploadRes) {
-        // Delete old logo if it exists
-        if (team.imageFileId) {
-          await deleteFromImageKit(team.imageFileId);
-        }
-        team.imageUrl = uploadRes.url;
-        team.imageFileId = uploadRes.fileId;
-      }
     }
 
     if (req.files.banner && req.files.banner[0]) {
-      const uploadRes = await uploadOnImageKit(
-        req.files.banner[0].path,
-        `team-banner-${team._id}-${Date.now()}`,
-        "/teams/banners"
+      uploadPromises.push(
+        (async () => {
+          const uploadRes = await uploadOnImageKit(
+            req.files.banner[0].path,
+            `team-banner-${team._id}-${Date.now()}`,
+            "/teams/banners"
+          );
+          if (uploadRes) {
+            if (team.bannerFileId) await deleteFromImageKit(team.bannerFileId);
+            team.bannerUrl = uploadRes.url;
+            team.bannerFileId = uploadRes.fileId;
+          }
+        })()
       );
-      if (uploadRes) {
-        // Delete old banner if it exists
-        if (team.bannerFileId) {
-          await deleteFromImageKit(team.bannerFileId);
-        }
-        team.bannerUrl = uploadRes.url;
-        team.bannerFileId = uploadRes.fileId;
-      }
+    }
+
+    if (uploadPromises.length > 0) {
+      await Promise.all(uploadPromises);
     }
   }
 
@@ -373,8 +381,12 @@ export const addMembers = TryCatchHandler(async (req, res, next) => {
 
   const team = req.teamDoc;
 
-  // Fetch all users and check in one go
-  const usersData = await Promise.all(members.map(findUserById));
+  // Optimize: Fetch all users in one query instead of parallel findById
+  const usersData = await User.find({ _id: { $in: members } }).lean();
+
+  if (usersData.length !== members.length) {
+    throw new CustomError("One or more users not found", 404);
+  }
 
   const issues = usersData.reduce(
     (acc, user) => {
@@ -400,24 +412,28 @@ export const addMembers = TryCatchHandler(async (req, res, next) => {
   // Check Team Limit
   const currentMembersCount = team.teamMembers.length;
   // Filter out members who are already in the team to get true addition count
-  const newMembersCount = members.filter(mid =>
+  const distinctNewMembers = members.filter(mid =>
     !team.teamMembers.some(m => m.user.toString() === mid.toString())
-  ).length;
+  );
 
-  if (currentMembersCount + newMembersCount > 10) {
-    throw new CustomError(`Cannot add more members. Team limit is 10. You have ${currentMembersCount} members.`, 400);
+  if (distinctNewMembers.length === 0) {
+    return res.status(200).json({ success: true, message: "All users are already members of this team." });
+  }
+
+  if (currentMembersCount + distinctNewMembers.length > 20) { // Increased limit or keep 10
+    throw new CustomError(`Cannot add more members. Team limit is 20. You have ${currentMembersCount} members.`, 400);
   }
 
   try {
+    const bulkOps = [];
     const updatedMembers = [...team.teamMembers];
 
-    await Promise.all(
-      members.map(async (memberId) => {
-        const isAlreadyMember = team.teamMembers.some((m) => m.user.toString() === memberId.toString());
-
-        if (!isAlreadyMember) {
-          // 1. Update User (Atomic)
-          await User.findByIdAndUpdate(memberId, {
+    distinctNewMembers.forEach((memberId) => {
+      // 1. Prepare Bulk Update for Users
+      bulkOps.push({
+        updateOne: {
+          filter: { _id: memberId },
+          update: {
             $set: { teamId: team._id },
             $push: {
               roles: {
@@ -427,16 +443,26 @@ export const addMembers = TryCatchHandler(async (req, res, next) => {
                 scopeModel: "Team",
               },
             },
-          });
-
-          // 2. Prepare Roster update
-          updatedMembers.push({ user: memberId, roleInTeam: "player" });
+          }
         }
-      })
-    );
+      });
+
+      // 2. Prepare Roster update (in memory)
+      updatedMembers.push({ user: memberId, roleInTeam: "player" });
+    });
+
+    // Execute Bulk Write
+    if (bulkOps.length > 0) {
+      await User.bulkWrite(bulkOps);
+    }
 
     // 3. Update Team Roster (Atomic)
     await Team.findByIdAndUpdate(team._id, { $set: { teamMembers: updatedMembers } });
+
+    // Invalidate cache for all new members
+    const pipeline = redis.pipeline();
+    distinctNewMembers.forEach(mid => pipeline.del(`user_profile:${mid}`));
+    await pipeline.exec();
 
     res.status(200).json({
       success: true,
@@ -599,12 +625,7 @@ export const leaveMember = TryCatchHandler(async (req, res, next) => {
 export const transferTeamOwnerShip = TryCatchHandler(async (req, res, next) => {
   const { memberId } = req.body;
 
-  if (!memberId) {
-    throw new CustomError(
-      "Please provide a member ID to assign as captain.",
-      400
-    );
-  }
+
 
   const team = req.teamDoc;   // current team
   const user = req.userDoc;   // old owner (request sender)
@@ -724,8 +745,7 @@ export const transferTeamOwnerShip = TryCatchHandler(async (req, res, next) => {
 
 export const manageMemberRole = TryCatchHandler(async (req, res, next) => {
   const { memberId, role } = req.body;
-  if (!memberId) throw new CustomError("Member ID is required.", 400);
-  if (!role) throw new CustomError("Role is required.", 400);
+
   // if (role === "igl")
   //   throw new CustomError("You cannot assign the 'igl' role manually.", 400);
 
@@ -811,10 +831,7 @@ export const deleteTeam = TryCatchHandler(async (req, res, next) => {
 export const manageStaffRole = TryCatchHandler(async (req, res, next) => {
   const { memberId, action } = req.body; // action: "promote" | "demote"
 
-  if (!memberId) throw new CustomError("Member ID is required.", 400);
-  if (!["promote", "demote"].includes(action)) {
-    throw new CustomError("Invalid action. Use 'promote' or 'demote'.", 400);
-  }
+
 
   const team = req.teamDoc;
 

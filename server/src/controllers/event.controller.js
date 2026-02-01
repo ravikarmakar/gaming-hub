@@ -459,19 +459,6 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Event not found", 404));
   }
 
-  const user = await findUserById(userId);
-  const hasAuth = roles.some(
-    (r) =>
-      r.scope === "org" &&
-      r.scopeModel === "Organizer" &&
-      (r.role === "org:owner" || r.role === "org:manager") &&
-      r.scopeId.toString() === event.orgId.toString()
-  );
-
-  if (!hasAuth) {
-    return next(new CustomError("Not authorized to update this event", 403));
-  }
-
   // Handle image update if file provided
   let imageUrl = event.image;
   let imageFileId = event.imageFileId;
@@ -602,19 +589,6 @@ export const startEvent = TryCatchHandler(async (req, res, next) => {
   const event = await Event.findById(eventId);
   if (!event) return next(new CustomError("Event not found", 404));
 
-  // 2. Authorization Check (Owner/Manager)
-  const hasAuth = roles.some(
-    (r) =>
-      r.scope === "org" &&
-      r.scopeModel === "Organizer" &&
-      (r.role === "org:owner" || r.role === "org:manager") &&
-      r.scopeId.toString() === event.orgId.toString()
-  );
-
-  if (!hasAuth) {
-    return next(new CustomError("Not authorized to start this event", 403));
-  }
-
   // 3. Status Check
   if (event.eventProgress === "ongoing" || event.eventProgress === "completed") {
     return next(new CustomError("Event is already active or completed", 400));
@@ -645,18 +619,6 @@ export const finishEvent = TryCatchHandler(async (req, res, next) => {
 
   const event = await Event.findById(eventId);
   if (!event) return next(new CustomError("Event not found", 404));
-
-  const hasAuth = roles.some(
-    (r) =>
-      r.scope === "org" &&
-      r.scopeModel === "Organizer" &&
-      (r.role === "org:owner" || r.role === "org:manager") &&
-      r.scopeId.toString() === event.orgId.toString()
-  );
-
-  if (!hasAuth) {
-    return next(new CustomError("Not authorized to finish this event", 403));
-  }
 
   if (event.eventProgress === "completed") {
     return next(new CustomError("Event is already completed", 400));
