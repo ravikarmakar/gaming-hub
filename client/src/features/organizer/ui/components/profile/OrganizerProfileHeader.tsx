@@ -1,6 +1,14 @@
-import { Award, MapPin, Calendar, Star, Share2, MessageCircle } from "lucide-react";
+import { Award, MapPin, Calendar, Star, Share2, MessageCircle, Loader2 } from "lucide-react";
+import { toast } from "react-hot-toast";
+import { useState } from "react";
 
 import { Organizer } from "@/features/organizer/lib/types";
+import { UnifiedProfileHeader } from "@/components/shared/UnifiedProfileHeader";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 interface OrganizerProfileHeaderProps {
     organizer: Organizer;
@@ -23,143 +31,99 @@ const mockStats = {
 
 export const OrganizerProfileHeader = ({ organizer, stats = mockStats }: OrganizerProfileHeaderProps) => {
     return (
-        <>
-            {/* Banner Section */}
-            <div className="relative h-40 overflow-hidden sm:h-48 md:h-64">
-                <img
-                    src={organizer.bannerUrl}
-                    alt="Banner"
-                    className="object-cover w-full h-full"
-                    onError={(e) =>
-                    (e.currentTarget.src =
-                        "https://placehold.co/1200x400/1F2937/4B5563?text=Banner+Not+Found")
-                    }
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/50 to-transparent" />
-            </div>
-
-            {/* Profile Header */}
-            <div className="relative z-10 -mt-12 sm:-mt-16">
-                <div className="flex flex-col items-center gap-4 mb-6 text-center md:flex-row md:items-start md:text-left md:gap-6 md:mb-8">
-                    <div className="relative flex-shrink-0">
-                        <img
-                            src={organizer.imageUrl}
-                            alt={organizer.name}
-                            className="w-24 h-24 bg-gray-900 border-4 border-gray-800 rounded-full sm:w-32 sm:h-32"
-                            onError={(e) =>
-                            (e.currentTarget.src =
-                                "https://placehold.co/150x150/374151/9CA3AF?text=Avatar")
-                            }
-                        />
-                        {organizer.isVerified && (
-                            <div className="absolute p-1 bg-blue-500 rounded-full sm:p-2 -bottom-1 -right-1 sm:-bottom-2 sm:-right-2">
-                                <Award className="w-3 h-3 text-white sm:w-4 sm:h-4" />
-                            </div>
-                        )}
+        <UnifiedProfileHeader
+            avatarImage={organizer.imageUrl}
+            name={organizer.name}
+            tag={organizer.tag || organizer.name.replace(/\s+/g, "").toLowerCase()}
+            isVerified={organizer.isVerified}
+            description={organizer.description || "No biography provided."}
+            badges={
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
+                    <Award className="w-3.5 h-3.5" />
+                    Organizer
+                </div>
+            }
+            metaInfo={
+                <>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
+                        <MapPin className="w-4 h-4 text-purple-400" />
+                        <span className="text-gray-300">Earth</span>
                     </div>
-
-                    <div className="flex-1 space-y-2 md:space-y-4">
-                        <div>
-                            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter bg-clip-text">
-                                {organizer.name}
-                            </h1>
-                            <p className="text-base text-gray-400 sm:text-lg">
-                                @{organizer.tag || organizer.name.replace(/\s+/g, "").toLowerCase()}
-                            </p>
-                            <p className="max-w-2xl mt-1 text-sm text-gray-300 sm:mt-2 sm:text-base line-clamp-2">
-                                {organizer.description || "No biography provided."}
-                            </p>
-                            <div className="flex flex-wrap items-center justify-center mt-2 text-xs text-gray-400 gap-x-3 gap-y-1 sm:text-sm md:justify-start">
-                                <div className="flex items-center gap-1">
-                                    <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
-                                    <span>Earth</span>
-                                    {/* Location placeholder */}
-                                </div>
-                                <span className="hidden mx-1 sm:inline">•</span>
-                                <div className="flex items-center gap-1">
-                                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                                    <span>Joined {new Date(organizer.createdAt).toLocaleDateString()}</span>
-                                </div>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
+                        <Calendar className="w-4 h-4 text-blue-400" />
+                        <span className="text-gray-300">Joined {new Date(organizer.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <div className="px-3 py-1 bg-white/5 rounded-lg border border-white/10 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                        SINCE {new Date(organizer.createdAt).getFullYear()}
+                    </div>
+                </>
+            }
+            stats={
+                <div className="flex flex-wrap justify-center gap-3 md:justify-start sm:gap-4 md:gap-6">
+                    {[
+                        {
+                            label: "Events",
+                            value: stats.totalEvents,
+                            color: "text-blue-400",
+                        },
+                        {
+                            label: "Followers",
+                            value: stats.followers.toLocaleString(),
+                            color: "text-purple-400",
+                        },
+                        {
+                            label: "Participants",
+                            value: stats.totalParticipants.toLocaleString(),
+                            color: "text-emerald-400",
+                        },
+                        {
+                            label: "Rating",
+                            value: stats.rating,
+                            icon: <Star className="w-4 h-4 fill-current" />,
+                            color: "text-yellow-400",
+                        },
+                    ].map((stat) => (
+                        <div key={stat.label} className="text-center">
+                            <div className={`flex items-center justify-center gap-1 text-xl sm:text-2xl font-bold ${stat.color}`}>
+                                {stat.icon}
+                                {stat.value}
+                            </div>
+                            <div className="text-xs text-gray-500 font-bold uppercase tracking-widest">
+                                {stat.label}
                             </div>
                         </div>
-
-                        <div className="flex flex-wrap justify-center gap-3 md:justify-start sm:gap-4 md:gap-6">
-                            {[
-                                {
-                                    label: "Events",
-                                    value: stats.totalEvents,
-                                    color: "text-blue-400",
-                                },
-                                {
-                                    label: "Followers",
-                                    value: stats.followers.toLocaleString(),
-                                    color: "text-purple-400",
-                                },
-                                {
-                                    label: "Participants",
-                                    value: stats.totalParticipants.toLocaleString(),
-                                    color: "text-green-400",
-                                },
-                                {
-                                    label: "Rating",
-                                    value: stats.rating,
-                                    icon: <Star className="w-4 h-4 fill-current sm:w-5 sm:h-5" />,
-                                    reviews: `${stats.reviewsCount} reviews`,
-                                    color: "text-yellow-400",
-                                },
-                            ].map((stat) => (
-                                <div key={stat.label} className="text-center">
-                                    <div
-                                        className={`flex items-center justify-center gap-1 text-xl sm:text-2xl font-bold ${stat.color}`}
-                                    >
-                                        {stat.icon}
-                                        {stat.value}
-                                    </div>
-                                    <div className="text-xs text-gray-400 sm:text-sm">
-                                        {stat.label}
-                                    </div>
-                                    {stat.reviews && (
-                                        <div className="text-xs text-gray-500">{stat.reviews}</div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col w-full gap-2 mt-4 sm:w-auto sm:flex-row sm:mt-0 md:self-start">
-                        {organizer.isHiring && (
-                            <JoinOrgButton orgId={organizer._id!} orgName={organizer.name} />
-                        )}
+                    ))}
+                </div>
+            }
+            actions={
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4">
+                    {organizer.isHiring && (
+                        <JoinOrgButton orgId={organizer._id!} orgName={organizer.name} />
+                    )}
+                    <button className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm sm:text-base font-bold transition-all duration-200 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg active:scale-95">
+                        Follow
+                    </button>
+                    <div className="flex gap-2">
                         <button
-                            // onClick={handleFollow}
-                            className="w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-3 rounded-xl text-sm sm:text-base font-medium transition-all duration-200 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg hover:shadow-xl"
+                            className="p-3 transition-colors bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl active:scale-95"
+                            onClick={() => {
+                                navigator.clipboard.writeText(window.location.href);
+                                toast.success("Organizer link copied!");
+                            }}
                         >
-                            Follow
+                            <Share2 className="w-5 h-5" />
                         </button>
-                        <div className="flex w-full gap-2 sm:w-auto">
-                            <button className="flex-1 p-2 transition-colors bg-gray-800 sm:flex-none sm:p-3 hover:bg-gray-700 rounded-xl">
-                                <Share2 className="w-4 h-4 mx-auto sm:w-5 sm:h-5" />
-                            </button>
-                            <button className="flex-1 p-2 transition-colors bg-gray-800 sm:flex-none sm:p-3 hover:bg-gray-700 rounded-xl">
-                                <MessageCircle className="w-4 h-4 mx-auto sm:w-5 sm:h-5" />
-                            </button>
-                        </div>
+                        <button className="p-3 transition-colors bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl active:scale-95">
+                            <MessageCircle className="w-5 h-5" />
+                        </button>
                     </div>
                 </div>
-            </div>
-            {/* Dialog Component would act better if isolated, but for now defining inline or below if simple */}
-        </>
+            }
+        />
     );
 };
 
-import { useState } from "react";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "react-hot-toast";
-import { Loader2 } from "lucide-react";
+
 
 const JoinOrgButton = ({ orgId, orgName }: { orgId: string, orgName: string }) => {
     const { user } = useAuthStore();

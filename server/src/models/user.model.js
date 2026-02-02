@@ -157,8 +157,13 @@ userSchema.index({ orgId: 1 });
 userSchema.index({ teamId: 1 });
 userSchema.index({ eventHistory: 1 });
 userSchema.index({ isDeleted: 1 });
-// Text index for optimized username search (case-insensitive)
-userSchema.index({ username: "text" });
+// Text index for optimized search (high performance)
+userSchema.index({ username: "text", gameIgn: "text" });
+
+// Compound indexes for common filters
+userSchema.index({ isLookingForTeam: 1, esportsRole: 1, isAccountVerified: 1 });
+userSchema.index({ "settings.notifications.email": 1 }); // For notification jobs
+
 
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {

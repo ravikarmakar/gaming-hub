@@ -46,8 +46,8 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
                 <Input
                     value={searchTerm}
                     onChange={(e) => onSearchChange(e.target.value)}
-                    placeholder="SEARCH PLAYERS..."
-                    className="pl-10 h-10 bg-white/5 border-white/10 text-[10px] font-bold uppercase rounded-xl focus-visible:ring-violet-500/50 placeholder:text-white/20"
+                    placeholder="Search players..."
+                    className="pl-10 h-10 bg-white/5 border-white/10 text-[10px] font-bold rounded-xl focus-visible:ring-violet-500/50 placeholder:text-white/20"
                 />
             </div>
 
@@ -55,18 +55,18 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
 
             {/* Role Select */}
             <div className="flex items-center gap-2">
-                <Label className="text-[10px] font-black text-violet-400/50 uppercase tracking-[0.2em] whitespace-nowrap">Role</Label>
+                <Label className="text-[10px] font-black text-violet-400/50 whitespace-nowrap">Role</Label>
                 <Select
                     value={selectedRole || "all"}
                     onValueChange={(val) => onRoleChange(val === "all" ? undefined : val)}
                 >
-                    <SelectTrigger className="w-[140px] h-10 bg-white/5 border-white/10 text-[10px] font-bold uppercase rounded-xl hover:bg-white/10 transition-colors">
+                    <SelectTrigger className="w-[140px] h-10 bg-white/5 border-white/10 text-[10px] font-bold rounded-xl hover:bg-white/10 transition-colors">
                         <SelectValue placeholder="All Roles" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#0d091a] border-white/10 text-white min-w-[140px]">
-                        <SelectItem value="all" className="text-[10px] font-bold uppercase">All Roles</SelectItem>
+                        <SelectItem value="all" className="text-[10px] font-bold">All Roles</SelectItem>
                         {roles.map((role) => (
-                            <SelectItem key={role} value={role} className="text-[10px] font-bold uppercase">{role}</SelectItem>
+                            <SelectItem key={role} value={role} className="text-[10px] font-bold capitalize">{role}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
@@ -82,7 +82,7 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
                         onCheckedChange={(checked) => onVerifiedChange(checked ? true : undefined)}
                         className="border-blue-500/30 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 rounded-sm w-4 h-4"
                     />
-                    <span className={`text-[10px] font-black uppercase tracking-wider transition-colors ${isVerified ? 'text-blue-400' : 'text-white/40 group-hover:text-white/60'}`}>Account Verified</span>
+                    <span className={`text-[10px] font-black transition-colors ${isVerified ? 'text-blue-400' : 'text-white/40 group-hover:text-white/60'}`}>Account Verified</span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer group px-3 py-2 rounded-xl hover:bg-white/5 transition-colors">
@@ -91,7 +91,7 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
                         onCheckedChange={(checked) => onPlayerVerifiedChange(checked ? true : undefined)}
                         className="border-purple-500/30 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 rounded-sm w-4 h-4"
                     />
-                    <span className={`text-[10px] font-black uppercase tracking-wider transition-colors ${isPlayerVerified ? 'text-purple-400' : 'text-white/40 group-hover:text-white/60'}`}>Player Verified</span>
+                    <span className={`text-[10px] font-black transition-colors ${isPlayerVerified ? 'text-purple-400' : 'text-white/40 group-hover:text-white/60'}`}>Player Verified</span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer group px-3 py-2 rounded-xl hover:bg-white/5 transition-colors">
@@ -100,7 +100,7 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
                         onCheckedChange={(checked) => onHasTeamChange(checked ? true : undefined)}
                         className="border-emerald-500/30 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 rounded-sm w-4 h-4"
                     />
-                    <span className={`text-[10px] font-black uppercase tracking-wider transition-colors ${hasTeam ? 'text-emerald-400' : 'text-white/40 group-hover:text-white/60'}`}>In Team</span>
+                    <span className={`text-[10px] font-black transition-colors ${hasTeam ? 'text-emerald-400' : 'text-white/40 group-hover:text-white/60'}`}>In Team</span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer group px-3 py-2 rounded-xl hover:bg-white/5 transition-colors">
@@ -109,7 +109,7 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
                         onCheckedChange={(checked) => onHasTeamChange(checked ? false : undefined)}
                         className="border-orange-500/30 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600 rounded-sm w-4 h-4"
                     />
-                    <span className={`text-[10px] font-black uppercase tracking-wider transition-colors ${hasTeam === false ? 'text-orange-400' : 'text-white/40 group-hover:text-white/60'}`}>Free Agent</span>
+                    <span className={`text-[10px] font-black transition-colors ${hasTeam === false ? 'text-orange-400' : 'text-white/40 group-hover:text-white/60'}`}>Free Agent</span>
                 </label>
             </div>
         </div>

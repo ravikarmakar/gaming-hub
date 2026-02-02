@@ -11,9 +11,13 @@ interface OrganizerCardProps {
     index: number;
 }
 
-const OrganizerCard = ({ org, index }: OrganizerCardProps) => {
+import React from "react";
+// ... (imports remain)
+
+const OrganizerCard = React.memo(React.forwardRef<HTMLDivElement, OrganizerCardProps>(({ org, index }, ref) => {
     return (
         <motion.div
+            ref={ref}
             layout
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -38,7 +42,7 @@ const OrganizerCard = ({ org, index }: OrganizerCardProps) => {
 
                 {/* Info */}
                 <div className="flex-grow">
-                    <h3 className="text-2xl font-bold mb-2 group-hover:text-purple-400 transition-colors uppercase tracking-tight">
+                    <h3 className="text-2xl font-bold mb-2 group-hover:text-purple-400 transition-colors">
                         {org.name}
                     </h3>
                     <p className="text-gray-400 text-sm line-clamp-2 mb-6 h-10">
@@ -69,6 +73,6 @@ const OrganizerCard = ({ org, index }: OrganizerCardProps) => {
             </div>
         </motion.div>
     );
-};
+}));
 
 export default OrganizerCard;

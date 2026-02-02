@@ -28,7 +28,12 @@ export const getPlayers = TryCatchHandler(async (req, res, next) => {
     };
 
     if (username) {
-        query.username = { $regex: username, $options: "i" };
+        // Use text search for performance if > 2 chars, else anchored regex
+        if (username.length > 2) {
+            query.$text = { $search: username };
+        } else {
+            query.username = { $regex: `^${username}`, $options: "i" };
+        }
     }
 
     if (esportsRole) {

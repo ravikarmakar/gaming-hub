@@ -64,7 +64,7 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
   pagination: {
     totalCount: 0,
     currentPage: 1,
-    limit: 10,
+    limit: 20,
     hasMore: false,
   },
   isLoading: false,
@@ -308,7 +308,7 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
   },
 
   fetchTeams: async (params = {}) => {
-    const { page = 1, limit = 10, search, region, isRecruiting, isVerified, append = false } = params;
+    const { page = 1, limit = 20, search, region, isRecruiting, isVerified, append = false } = params;
     set({ isLoading: true, error: null });
     try {
       const queryParams = new URLSearchParams({

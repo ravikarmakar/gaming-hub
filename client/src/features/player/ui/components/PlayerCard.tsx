@@ -11,7 +11,7 @@ interface PlayerCardProps {
     index: number;
 }
 
-const PlayerCard: React.FC<PlayerCardProps> = ({ player, index }) => {
+const PlayerCard = React.forwardRef<HTMLDivElement, PlayerCardProps>(({ player, index }, ref) => {
     const [isLoaded, setIsLoaded] = useState(false);
     const avatarUrl = player.avatar?.includes("default-avatar-url.com")
         ? `https://ui-avatars.com/api/?name=${player.username}&background=random`
@@ -19,11 +19,13 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, index }) => {
 
     return (
         <motion.div
+            ref={ref}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
             whileHover={{ y: -5 }}
             className="group"
+            layout
         >
             <Link
                 to={`/player/${player._id}`}
@@ -72,10 +74,10 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, index }) => {
                         </div>
                     </div>
                     <div className="text-center">
-                        <h3 className="text-xl font-black text-white group-hover:text-violet-300 transition-colors uppercase tracking-tight leading-none mb-1">
+                        <h3 className="text-xl font-black text-white group-hover:text-violet-300 transition-colors leading-none mb-1">
                             {player.username}
                         </h3>
-                        <span className="text-[10px] font-bold text-violet-400/50 tracking-[0.2em] uppercase">
+                        <span className="text-[10px] font-bold text-violet-400/50">
                             {player.esportsRole || "Warrior"}
                         </span>
                     </div>
@@ -85,7 +87,7 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, index }) => {
                 <div className="flex flex-col items-center gap-2 mb-8 p-3 rounded-2xl bg-white/[0.02] border border-white/5 group-hover:border-violet-500/20 transition-all duration-500">
                     <div className="flex items-center gap-2">
                         <Users className="w-4 h-4 text-violet-400/70" />
-                        <span className="text-[10px] text-white/40 uppercase font-black tracking-widest">Team</span>
+                        <span className="text-[10px] text-white/40 font-black">Team</span>
                     </div>
                     <span className="text-sm text-white font-bold">
                         {(player as any).teamId ? (player as any).teamId.teamName : "Free Agent"}
@@ -99,25 +101,25 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, index }) => {
                 <div className="grid grid-cols-2 gap-4 mb-8">
                     <div className="flex flex-col items-center gap-1">
                         <Star className="w-4 h-4 text-yellow-400/70" />
-                        <span className="text-[10px] text-white/40 uppercase font-black">Rating</span>
+                        <span className="text-[10px] text-white/40 font-black">Rating</span>
                         <span className="text-sm text-white font-bold">4.8</span>
                     </div>
                     <div className="flex flex-col items-center gap-1">
                         <Activity className="w-4 h-4 text-cyan-400/70" />
-                        <span className="text-[10px] text-white/40 uppercase font-black">MVP</span>
+                        <span className="text-[10px] text-white/40 font-black">MVP</span>
                         <span className="text-sm text-white font-bold">12</span>
                     </div>
                 </div>
 
                 {/* Footer */}
                 <div className="flex items-center justify-center pt-5 border-t border-white/5 relative">
-                    <div className="flex items-center gap-1 text-[10px] font-black text-white/40 group-hover:text-violet-400 transition-all duration-500 uppercase tracking-tighter">
+                    <div className="flex items-center gap-1 text-[10px] font-black text-white/40 group-hover:text-violet-400 transition-all duration-500">
                         View Profile <span className="text-violet-500">→</span>
                     </div>
                 </div>
             </Link>
         </motion.div>
     );
-};
+});
 
 export default PlayerCard;

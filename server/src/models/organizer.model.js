@@ -67,10 +67,14 @@ organizerSchema.index({ isVerified: 1 });
 organizerSchema.index({ isDeleted: 1 });
 organizerSchema.index({ "stats.totalEvents": -1 });
 
+// Text index
+organizerSchema.index({ name: "text", tag: "text" });
+
 // Partial Indexes for uniqueness (allows reusing names/tags of deleted orgs)
 organizerSchema.index({ name: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });
 organizerSchema.index({ tag: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });
 organizerSchema.index({ slug: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });
+
 
 // Auto-generate slug from name before saving
 organizerSchema.pre("save", function (next) {

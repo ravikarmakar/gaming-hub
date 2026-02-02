@@ -112,9 +112,13 @@ teamSchema.index({ isVerified: 1 });
 teamSchema.index({ isDeleted: 1 });
 teamSchema.index({ "teamMembers.user": 1 });
 teamSchema.index({ "playedTournaments.event": 1 });
+// Text index for optimized search
+teamSchema.index({ teamName: "text", tag: "text" });
+
 teamSchema.index({ "stats.winRate": -1 }); // For leaderboards
 teamSchema.index({ isVerified: 1, createdAt: -1 }); // Optimized for landing pages
 teamSchema.index({ region: 1, isRecruiting: 1, createdAt: -1 }); // Optimized for discovery
+
 // Partial Indexes for uniqueness ensuring name reuse after soft delete
 teamSchema.index({ teamName: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });
 teamSchema.index({ slug: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });

@@ -11,6 +11,7 @@ import { useEventStore } from "@/features/events/store/useEventStore";
 import { OrganizerProfileHeader } from "../components/profile/OrganizerProfileHeader";
 import { OrganizerEventsTab } from "../components/profile/OrganizerEventsTab";
 import { OrganizerAboutTab } from "../components/profile/OrganizerAboutTab";
+import { ProfileBannerLayout } from "@/components/shared/ProfileBannerLayout";
 
 const OrganizerProfile = () => {
   const { id } = useParams<{ id: string }>();
@@ -68,7 +69,7 @@ const OrganizerProfile = () => {
   }
 
   return (
-    <div className="pt-8 pb-16 text-white sm:pt-16">
+    <ProfileBannerLayout>
       <OrganizerProfileHeader organizer={currentOrg} stats={stats} />
 
       {/* Navigation Tabs */}
@@ -98,7 +99,7 @@ const OrganizerProfile = () => {
           </div>
         </Tabs>
       </div>
-    </div>
+    </ProfileBannerLayout>
   );
 };
 

@@ -11,14 +11,16 @@ interface TeamCardProps {
     index: number;
 }
 
-const TeamCard: React.FC<TeamCardProps> = React.memo(({ team, index }) => {
+const TeamCard = React.memo(React.forwardRef<HTMLDivElement, TeamCardProps>(({ team, index }, ref) => {
     return (
         <motion.div
+            ref={ref}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
             whileHover={{ y: -5 }}
             className="group"
+            layout // Enable layout animations
         >
             <Link
                 to={TEAM_ROUTES.PROFILE.replace(":id", team._id)}
@@ -32,7 +34,7 @@ const TeamCard: React.FC<TeamCardProps> = React.memo(({ team, index }) => {
                     {team.isRecruiting && (
                         <div className="relative">
                             <div className="absolute -inset-1 bg-emerald-500/20 blur-sm rounded-full animate-pulse" />
-                            <span className="relative flex items-center px-2.5 py-1 rounded-full bg-white/5 text-emerald-400 text-[10px] font-black border border-emerald-500/30 uppercase tracking-tighter">
+                            <span className="relative flex items-center px-2.5 py-1 rounded-full bg-white/5 text-emerald-400 text-[10px] font-black border border-emerald-500/30">
                                 Recruiting
                             </span>
                         </div>
@@ -57,10 +59,10 @@ const TeamCard: React.FC<TeamCardProps> = React.memo(({ team, index }) => {
                         </div>
                     </div>
                     <div className="text-center">
-                        <h3 className="text-xl font-black text-white group-hover:text-purple-300 transition-colors uppercase tracking-tight leading-none mb-1">
+                        <h3 className="text-xl font-black text-white group-hover:text-purple-300 transition-colors leading-none mb-1">
                             {team.teamName}
                         </h3>
-                        <span className="text-[10px] font-bold text-purple-400/50 tracking-[0.2em]">#{team.tag}</span>
+                        <span className="text-[10px] font-bold text-purple-400/50">#{team.tag}</span>
                     </div>
                 </div>
 
@@ -68,19 +70,19 @@ const TeamCard: React.FC<TeamCardProps> = React.memo(({ team, index }) => {
                 <div className="grid grid-cols-2 gap-4 mb-8">
                     <div className="flex flex-col items-center gap-1 p-3 rounded-2xl bg-white/[0.02] border border-white/5 group-hover:border-purple-500/20 transition-all duration-500">
                         <Users className="w-4 h-4 text-purple-400/70" />
-                        <span className="text-[10px] text-white/40 uppercase font-black">Members</span>
+                        <span className="text-[10px] text-white/40 font-black">Members</span>
                         <span className="text-sm text-white font-bold">{team.teamMembers?.length || 0}</span>
                     </div>
                     <div className="flex flex-col items-center gap-1 p-3 rounded-2xl bg-white/[0.02] border border-white/5 group-hover:border-purple-500/20 transition-all duration-500">
                         <Trophy className="w-4 h-4 text-indigo-400/70" />
-                        <span className="text-[10px] text-white/40 uppercase font-black">Tourneys</span>
+                        <span className="text-[10px] text-white/40 font-black">Tourneys</span>
                         <span className="text-sm text-white font-bold">{team.playedTournaments?.length || 0}</span>
                     </div>
                 </div>
 
                 {/* Bio */}
                 <div className="relative mb-8">
-                    <p className="text-sm text-purple-200/40 line-clamp-2 text-center h-10 leading-relaxed italic px-2">
+                    <p className="text-sm text-purple-200/40 line-clamp-2 text-center h-10 leading-relaxed px-2">
                         "{team.bio || "Crafting a legacy in the digital arena..."}"
                     </p>
                 </div>
@@ -89,17 +91,17 @@ const TeamCard: React.FC<TeamCardProps> = React.memo(({ team, index }) => {
                 <div className="flex items-center justify-between pt-5 border-t border-white/5 relative">
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5">
                         <Globe className="w-3.5 h-3.5 text-purple-500/70" />
-                        <span className="text-[10px] font-black text-purple-200/60 uppercase tracking-widest">
+                        <span className="text-[10px] font-black text-purple-200/60">
                             {team.region || "Global"}
                         </span>
                     </div>
-                    <div className="flex items-center gap-1 text-[10px] font-black text-white/40 group-hover:text-purple-400 transition-all duration-500 uppercase tracking-tighter">
+                    <div className="flex items-center gap-1 text-[10px] font-black text-white/40 group-hover:text-purple-400 transition-all duration-500">
                         Nexus Profile <span className="text-purple-500">→</span>
                     </div>
                 </div>
             </Link>
         </motion.div>
     );
-});
+}));
 
 export default TeamCard;

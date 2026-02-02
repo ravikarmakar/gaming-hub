@@ -45,7 +45,7 @@ export interface OrganizerStateType {
 
   // API Calls
   createOrg: (orgData: FormData) => Promise<boolean>;
-  fetchOrganizers: (page?: number, limit?: number, search?: string) => Promise<void>;
+  fetchOrganizers: (page?: number, limit?: number, search?: string, append?: boolean) => Promise<void>;
   getOrgById: (orgId: string, page?: number, limit?: number, search?: string) => Promise<Organizer | null>;
   updateOrg: (data: any) => Promise<boolean>;
   deleteOrg: () => Promise<boolean>;
@@ -113,17 +113,20 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
     }
   },
 
-  fetchOrganizers: async (page = 1, limit = 20, search = "") => {
-    set({ isLoading: true, error: null });
+  fetchOrganizers: async (page = 1, limit = 20, search = "", append = false) => {
+    set({ isLoading: true, error: null }); // Always set loading to true to prevent triggering infinite scroll repeatedly
     try {
       const { data } = await axiosInstance.get(ORGANIZER_ENDPOINTS.LIST_ORGANIZERS, {
         params: { page, limit, search }
       });
-      set({
-        organizers: data.data,
+
+      set((state) => ({
+        organizers: append && state.organizers
+          ? [...state.organizers, ...data.data]
+          : data.data,
         organizersPagination: data.pagination,
         isLoading: false
-      });
+      }));
     } catch (error) {
       set({ error: getErrorMessage(error, "Error fetching organizers"), isLoading: false });
     }

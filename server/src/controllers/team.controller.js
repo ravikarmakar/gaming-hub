@@ -285,10 +285,15 @@ export const fetchAllTeams = TryCatchHandler(async (req, res) => {
   // Build query filter
   const query = { isDeleted: false };
   if (search) {
-    query.$or = [
-      { teamName: { $regex: search, $options: "i" } },
-      { tag: { $regex: search, $options: "i" } },
-    ];
+    if (search.length > 2) {
+      query.$text = { $search: search };
+    } else {
+      // Fallback for short terms to verify "starts with"
+      query.$or = [
+        { teamName: { $regex: `^${search}`, $options: "i" } },
+        { tag: { $regex: `^${search}`, $options: "i" } },
+      ];
+    }
   }
   if (region) query.region = region;
   if (isRecruiting !== undefined) query.isRecruiting = isRecruiting === "true";
