@@ -79,5 +79,27 @@ export const updateProfileValidation = {
         esportsRole: Joi.string().valid("rusher", "sniper", "support", "igl", "coach", "player").optional().messages({
             "any.only": "Please select a valid esports role",
         }),
+        region: Joi.string().valid("na", "eu", "sea", "sa", "mea", "global").optional().messages({
+            "any.only": "Please select a valid region",
+        }),
+        country: Joi.string().max(100).optional().allow(""),
+        isLookingForTeam: Joi.boolean().optional(),
+        gameIgn: Joi.string().max(30).allow("").optional(),
+        gameUid: Joi.string().max(30).allow("").optional(),
+        gender: Joi.string().valid("male", "female", "other", "prefer_not_to_say").optional(),
+        dob: Joi.date().iso().optional().allow(null, ""),
+        phoneNumber: Joi.string().max(20).allow("").optional(),
+    }),
+};
+
+export const updateSettingsValidation = {
+    body: Joi.object({
+        allowChallenges: Joi.boolean().optional(),
+        allowMessages: Joi.boolean().optional(),
+        notifications: Joi.object({
+            platform: Joi.boolean().optional(),
+            email: Joi.boolean().optional(),
+            sms: Joi.boolean().optional(),
+        }).optional(),
     }),
 };

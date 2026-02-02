@@ -1,6 +1,7 @@
-import { axiosInstance } from "@/lib/axios";
 import axios from "axios";
 import { create } from "zustand";
+
+import { axiosInstance } from "@/lib/axios";
 import { User } from "@/features/auth/lib/types";
 import { ORGANIZER_ENDPOINTS, PLAYER_ENDPOINTS } from "../lib/endpoints";
 import { Notification } from "@/features/notifications/store/useNotificationStore";
@@ -35,6 +36,7 @@ export interface OrganizerStateType {
   // Pagination State
   memberPagination: { total: number; page: number; limit: number; pages: number } | null;
   joinRequestPagination: { total: number; page: number; limit: number; pages: number } | null;
+  organizersPagination: { total: number; page: number; limit: number; pages: number } | null;
 
   // Actions
   setIsCreateOrgOpen: (open: boolean) => void;
@@ -43,6 +45,7 @@ export interface OrganizerStateType {
 
   // API Calls
   createOrg: (orgData: FormData) => Promise<boolean>;
+  fetchOrganizers: (page?: number, limit?: number, search?: string) => Promise<void>;
   getOrgById: (orgId: string, page?: number, limit?: number, search?: string) => Promise<Organizer | null>;
   updateOrg: (data: any) => Promise<boolean>;
   deleteOrg: () => Promise<boolean>;
@@ -92,6 +95,7 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
   notifications: [],
   memberPagination: null,
   joinRequestPagination: null,
+  organizersPagination: null,
 
   setIsCreateOrgOpen: (open) => set({ isCreateOrgOpen: open }),
   clearAvailableUsers: () => set({ availableUsers: [] }),
@@ -106,6 +110,22 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
     } catch (error) {
       set({ error: getErrorMessage(error, "Error creating organizer"), isLoading: false });
       return false;
+    }
+  },
+
+  fetchOrganizers: async (page = 1, limit = 20, search = "") => {
+    set({ isLoading: true, error: null });
+    try {
+      const { data } = await axiosInstance.get(ORGANIZER_ENDPOINTS.LIST_ORGANIZERS, {
+        params: { page, limit, search }
+      });
+      set({
+        organizers: data.data,
+        organizersPagination: data.pagination,
+        isLoading: false
+      });
+    } catch (error) {
+      set({ error: getErrorMessage(error, "Error fetching organizers"), isLoading: false });
     }
   },
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -8,13 +8,11 @@ import {
     Building2,
     Mail,
     Tag,
-    Camera,
     Globe,
     MessageCircle,
     Twitter,
     Instagram,
     Briefcase,
-    Image as ImageIcon,
     X,
     Loader2
 } from "lucide-react";
@@ -54,7 +52,7 @@ import {
     FormDescription
 } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import FileUpload from "@/components/FileUpload";
 
 import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
@@ -67,9 +65,6 @@ const OrganizerSettingsPage = () => {
     const { currentOrg, updateOrg, deleteOrg, isLoading, error, getOrgById } = useOrganizerStore();
     const { user } = useAuthStore();
     const { can } = useAccess();
-
-    const profileInputRef = useRef<HTMLInputElement>(null);
-    const bannerInputRef = useRef<HTMLInputElement>(null);
 
     // Initial values based on currentOrg
     const defaultValues: Partial<OrgSettingsFormSchema> = {
@@ -122,30 +117,9 @@ const OrganizerSettingsPage = () => {
         }
     }, [currentOrg, reset, user?.orgId, getOrgById]);
 
-    // Handle Image Previews
-    const watchedImage = watch("image");
-    const watchedBanner = watch("banner");
-
-    const getPreview = (file: File | undefined, fallbackUrl: string | undefined) => {
-        if (file instanceof File) {
-            return URL.createObjectURL(file);
-        }
-        return fallbackUrl;
-    };
-
-    const imagePreview = getPreview(watchedImage, currentOrg?.imageUrl);
-    const bannerPreview = getPreview(watchedBanner, currentOrg?.bannerUrl);
-
     // RBAC
     const canUpdate = can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.updateOrg]);
     const canDelete = can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.deleteOrg]);
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, fieldName: "image" | "banner") => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setValue(fieldName, file, { shouldDirty: true });
-        }
-    };
 
     const onSubmit = async (values: OrgSettingsFormSchema) => {
         if (!currentOrg?._id) return;
@@ -205,62 +179,36 @@ const OrganizerSettingsPage = () => {
                         {/* Profile Overview (Left Column) */}
                         <div className="space-y-6">
                             <Card className="bg-transparent border-white/5 h-fit overflow-hidden">
-                                <div className="h-24 relative bg-[#0B0C1A] border-b border-white/5 group">
-                                    <img
-                                        src={bannerPreview || "/placeholder-banner.jpg"}
-                                        alt="Banner"
-                                        className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B0C1A] to-transparent" />
-                                    {canUpdate && (
-                                        <>
-                                            <Button
-                                                size="icon"
-                                                variant="secondary"
-                                                type="button"
-                                                onClick={() => bannerInputRef.current?.click()}
-                                                className="absolute top-2 right-2 rounded-full size-8 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 hover:bg-black/80 border border-white/10"
-                                            >
-                                                <ImageIcon className="size-4 text-white" />
-                                            </Button>
-                                            <input
-                                                type="file"
-                                                ref={bannerInputRef}
-                                                className="hidden"
-                                                accept="image/*"
-                                                onChange={(e) => handleFileChange(e, "banner")}
+                                <div className="space-y-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="banner"
+                                        render={({ field }) => (
+                                            <FileUpload
+                                                variant="banner"
+                                                value={field.value || currentOrg?.bannerUrl}
+                                                onChange={field.onChange}
+                                                disabled={!canUpdate}
+                                                label="Change Banner"
                                             />
-                                        </>
-                                    )}
-                                </div>
-                                <CardHeader className="text-center -mt-12 overflow-visible">
-                                    <div className="relative mx-auto w-24 h-24 mb-4">
-                                        <Avatar className="w-full h-full border-4 border-[#0B0C1A] shadow-2xl">
-                                            <AvatarImage src={imagePreview} />
-                                            <AvatarFallback className="bg-purple-500/10 text-purple-400 text-2xl font-bold">
-                                                {currentOrg?.name?.[0]}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        {canUpdate && (
-                                            <>
-                                                <Button
-                                                    size="icon"
-                                                    variant="secondary"
-                                                    type="button"
-                                                    onClick={() => profileInputRef.current?.click()}
-                                                    className="absolute bottom-0 right-0 rounded-full size-8 shadow-lg border border-white/10 bg-gray-900 hover:bg-gray-800"
-                                                >
-                                                    <Camera className="size-4 text-purple-400" />
-                                                </Button>
-                                                <input
-                                                    type="file"
-                                                    ref={profileInputRef}
-                                                    className="hidden"
-                                                    accept="image/*"
-                                                    onChange={(e) => handleFileChange(e, "image")}
-                                                />
-                                            </>
                                         )}
+                                    />
+                                </div>
+                                <CardHeader className="text-center -mt-16 overflow-visible">
+                                    <div className="relative mx-auto mb-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="image"
+                                            render={({ field }) => (
+                                                <FileUpload
+                                                    variant="avatar"
+                                                    value={field.value || currentOrg?.imageUrl}
+                                                    onChange={field.onChange}
+                                                    disabled={!canUpdate}
+                                                    fallbackText={currentOrg?.name?.[0]}
+                                                />
+                                            )}
+                                        />
                                     </div>
                                     <CardTitle className="text-white text-xl">{currentOrg?.name}</CardTitle>
                                     <div className="flex flex-wrap items-center justify-center gap-2 mt-3">

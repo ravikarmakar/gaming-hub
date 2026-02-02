@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { User, ShieldCheck, Gamepad2, Users, Star, Activity } from "lucide-react";
-import { User as UserType } from "@/features/auth/store/useAuthStore";
+import { User, ShieldCheck, Gamepad2, Users, Star, Activity, Sword } from "lucide-react";
+import { User as UserType } from "@/features/auth/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -32,12 +32,19 @@ const PlayerCard: React.FC<PlayerCardProps> = ({ player, index }) => {
                 {/* Glow Effect */}
                 <div className="absolute -inset-0.5 bg-gradient-to-br from-violet-600/30 to-fuchsia-600/30 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition duration-500" />
 
-                {/* Verification Badge */}
-                {player.isAccountVerified && (
-                    <div className="absolute top-5 right-5 z-10 p-1 rounded-full bg-blue-500/10 border border-blue-500/20 shadow-lg shadow-blue-500/10">
-                        <ShieldCheck className="w-4 h-4 text-blue-400 fill-blue-400/20" />
-                    </div>
-                )}
+                {/* Verification Badges */}
+                <div className="absolute top-5 right-5 z-10 flex gap-2">
+                    {player.isAccountVerified && (
+                        <div className="p-1 rounded-full bg-blue-500/10 border border-blue-500/20 shadow-lg shadow-blue-500/10" title="Account Verified">
+                            <ShieldCheck className="w-4 h-4 text-blue-400 fill-blue-400/20" />
+                        </div>
+                    )}
+                    {player.isPlayerVerified && (
+                        <div className="p-1 rounded-full bg-purple-500/10 border border-purple-500/20 shadow-lg shadow-purple-500/10" title="Player Verified">
+                            <Sword className="w-4 h-4 text-purple-400 fill-purple-400/20" />
+                        </div>
+                    )}
+                </div>
 
                 {/* Header: Avatar & Username */}
                 <div className="flex flex-col items-center mb-8 pt-4 relative">

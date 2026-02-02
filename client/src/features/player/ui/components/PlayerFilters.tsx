@@ -18,6 +18,8 @@ interface PlayerFiltersProps {
     onRoleChange: (val: string | undefined) => void;
     isVerified: boolean | undefined;
     onVerifiedChange: (val: boolean | undefined) => void;
+    isPlayerVerified: boolean | undefined;
+    onPlayerVerifiedChange: (val: boolean | undefined) => void;
     hasTeam: boolean | undefined;
     onHasTeamChange: (val: boolean | undefined) => void;
 }
@@ -29,6 +31,8 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
     onRoleChange,
     isVerified,
     onVerifiedChange,
+    isPlayerVerified,
+    onPlayerVerifiedChange,
     hasTeam,
     onHasTeamChange,
 }) => {
@@ -78,7 +82,16 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
                         onCheckedChange={(checked) => onVerifiedChange(checked ? true : undefined)}
                         className="border-blue-500/30 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 rounded-sm w-4 h-4"
                     />
-                    <span className={`text-[10px] font-black uppercase tracking-wider transition-colors ${isVerified ? 'text-blue-400' : 'text-white/40 group-hover:text-white/60'}`}>Verified</span>
+                    <span className={`text-[10px] font-black uppercase tracking-wider transition-colors ${isVerified ? 'text-blue-400' : 'text-white/40 group-hover:text-white/60'}`}>Account Verified</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer group px-3 py-2 rounded-xl hover:bg-white/5 transition-colors">
+                    <Checkbox
+                        checked={isPlayerVerified === true}
+                        onCheckedChange={(checked) => onPlayerVerifiedChange(checked ? true : undefined)}
+                        className="border-purple-500/30 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600 rounded-sm w-4 h-4"
+                    />
+                    <span className={`text-[10px] font-black uppercase tracking-wider transition-colors ${isPlayerVerified ? 'text-purple-400' : 'text-white/40 group-hover:text-white/60'}`}>Player Verified</span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer group px-3 py-2 rounded-xl hover:bg-white/5 transition-colors">

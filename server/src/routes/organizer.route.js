@@ -9,6 +9,7 @@ import {
   removeStaff,
   getDashboardStats,
   transferOwnership,
+  getOrganizers,
 } from "../controllers/organizer.controller.js";
 import {
   sendJoinRequest,
@@ -35,6 +36,8 @@ import {
 } from "../validations/organizer.validation.js";
 
 const router = express.Router();
+
+router.get("/", getOrganizers);
 
 router.use(isAuthenticated, isVerified);
 

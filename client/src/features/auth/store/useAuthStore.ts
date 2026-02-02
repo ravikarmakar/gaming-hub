@@ -28,6 +28,7 @@ interface AuthStateTypes {
   verifyEmail: (otp: string) => Promise<{ success: boolean; message: string }>;
   deleteAccount: () => Promise<boolean>;
   updateProfile: (formData: FormData) => Promise<boolean>;
+  updateSettings: (settings: { allowChallenges?: boolean; allowMessages?: boolean }) => Promise<boolean>;
   sendPassResetOtp: (
     email: string
   ) => Promise<{ success: boolean; message: string }>;
@@ -343,6 +344,21 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || "Failed to update profile";
       set({ isLoading: false, error: errorMsg });
+      return false;
+    }
+  },
+  updateSettings: async (settings) => {
+    set({ isLoading: true, error: null });
+    try {
+      const { data } = await axiosInstance.put(AUTH_ENDPOINTS.UPDATE_SETTINGS, settings);
+      if (data.success && data.user) {
+        set({ user: data.user });
+      }
+      set({ isLoading: false });
+      return data.success;
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || "Failed to update settings";
+      set({ error: errorMsg, isLoading: false });
       return false;
     }
   },

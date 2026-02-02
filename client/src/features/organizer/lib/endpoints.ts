@@ -1,6 +1,7 @@
 export const ORGANIZER_BASE = "/organizers";
 
 export const ORGANIZER_ENDPOINTS = {
+    LIST_ORGANIZERS: ORGANIZER_BASE,
     CREATE_ORG: `${ORGANIZER_BASE}/create-org`,
     GET_ORG_DETAILS: (orgId: string) => `${ORGANIZER_BASE}/${orgId}`,
     GET_CURRENT_ORG: `${ORGANIZER_BASE}`,

@@ -14,6 +14,7 @@ import {
   resetPassword,
   updateProfile,
   deleteAccount,
+  updateSettings,
 } from "../controllers/auth.controller.js";
 import { isAuthenticated } from "../middleware/auth.middleware.js";
 import { rateLimiter } from "../middleware/rateLimiter.middleware.js";
@@ -26,6 +27,7 @@ import {
   resetPasswordValidation,
   verifyEmailValidation,
   updateProfileValidation,
+  updateSettingsValidation,
 } from "../validations/auth.validation.js";
 import { upload } from "../middleware/multer.middleware.js";
 
@@ -107,13 +109,14 @@ router.post(
   verifyEmail
 );
 
-router.put("/update-profile", upload.single("avatar"),
+router.put("/update-profile", upload.fields([{ name: "avatar", maxCount: 1 }, { name: "coverImage", maxCount: 1 }]),
   rateLimiter({ limit: 5, timer: 60, key: "updateProfile" }),
   validateRequest(updateProfileValidation),
   updateProfile
 );
 
 router.delete("/delete-account", deleteAccount);
+router.put("/update-settings", validateRequest(updateSettingsValidation), updateSettings);
 
 export default router;
 

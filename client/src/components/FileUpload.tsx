@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Upload, X, AlertTriangle, ImageIcon, FileText } from "lucide-react";
+import { Upload, X, AlertTriangle, ImageIcon, FileText, Camera } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface FileUploadProps {
   label?: string;
@@ -17,13 +19,15 @@ interface FileUploadProps {
   disabled?: boolean;
   className?: string;
   compact?: boolean;
+  variant?: "dropzone" | "avatar" | "banner";
+  fallbackText?: string;
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({
   label,
   name,
   id,
-  accept = "image/*,application/pdf",
+  accept = "image/*",
   maxSize = 10 * 1024 * 1024,
   error,
   onChange,
@@ -33,6 +37,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
   disabled = false,
   className,
   compact = false,
+  variant = "dropzone",
+  fallbackText,
 }) => {
   const [internalFile, setInternalFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(typeof value === "string" ? value : null);
@@ -43,6 +49,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
   useEffect(() => {
     if (value instanceof File) {
       setInternalFile(value);
+      const reader = new FileReader();
+      reader.onloadend = () => setPreview(reader.result as string);
+      reader.readAsDataURL(value);
     } else if (typeof value === "string") {
       setPreview(value);
     } else if (value === null) {
@@ -74,11 +83,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
           newErrors.push(`Format ${file.type.split('/')[1].toUpperCase()} not supported.`);
         }
 
-        if (isImage) {
+        if (isImage && newErrors.length === 0) {
           const reader = new FileReader();
           reader.onloadend = () => setPreview(reader.result as string);
           reader.readAsDataURL(file);
-        } else {
+        } else if (!isImage) {
           setPreview(null);
         }
       }
@@ -119,7 +128,97 @@ const FileUpload: React.FC<FileUploadProps> = ({
   };
 
   const displayedErrors = [...internalErrors, ...(error ? [error] : [])];
-  const isImage = internalFile?.type.startsWith("image/") || (preview && typeof value === 'string');
+  const isImage = internalFile?.type.startsWith("image/") || (preview && typeof value === 'string') || (preview && internalFile);
+
+  if (variant === "avatar") {
+    return (
+      <div className={cn("relative group", className)}>
+        <input
+          ref={inputRef}
+          type="file"
+          id={id || name}
+          name={name}
+          accept={accept}
+          onChange={handleInputChange}
+          className="hidden"
+          disabled={disabled}
+        />
+        <div className="relative mx-auto w-24 h-24 sm:w-32 sm:h-32">
+          <Avatar className="w-full h-full border-4 border-[#06040a] bg-[#0d0b14] shadow-2xl relative overflow-hidden group-hover:border-purple-500/50 transition-all">
+            <AvatarImage src={preview || undefined} className="object-cover" />
+            <AvatarFallback className="bg-purple-500/10 text-purple-400 text-2xl font-bold">
+              {fallbackText || <ImageIcon className="w-8 h-8" />}
+            </AvatarFallback>
+          </Avatar>
+          {!disabled && (
+            <Button
+              size="icon"
+              variant="secondary"
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="absolute bottom-0 right-0 rounded-full size-8 sm:size-10 shadow-lg border border-white/10 bg-gray-900 hover:bg-purple-600 transition-colors z-10"
+            >
+              <Camera className="size-4 sm:size-5 text-purple-400 group-hover:text-white" />
+            </Button>
+          )}
+        </div>
+        {displayedErrors.length > 0 && (
+          <div className="mt-2 text-center">
+            {displayedErrors.map((err, i) => (
+              <p key={i} className="text-[10px] font-bold text-rose-500 uppercase tracking-tight">{err}</p>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (variant === "banner") {
+    return (
+      <div className={cn("relative group rounded-2xl overflow-hidden border border-white/5 bg-white/[0.02]", className)}>
+        <input
+          ref={inputRef}
+          type="file"
+          id={id || name}
+          name={name}
+          accept={accept}
+          onChange={handleInputChange}
+          className="hidden"
+          disabled={disabled}
+        />
+        <div className="h-48 relative">
+          <img
+            src={preview || "/placeholder-banner.jpg"}
+            alt="Banner"
+            className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#06040a] to-transparent" />
+          {!disabled && (
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                className="bg-black/60 backdrop-blur-md border border-white/10 px-6 py-2.5 rounded-xl text-[10px] font-black tracking-[2px] transition-all hover:bg-black/80 text-white"
+              >
+                <Camera className="w-4 h-4 mr-2" />
+                {label || "Change Banner"}
+              </Button>
+            </div>
+          )}
+        </div>
+        {displayedErrors.length > 0 && (
+          <div className="absolute top-2 left-2 right-2">
+            {displayedErrors.map((err, i) => (
+              <div key={i} className="flex items-center gap-2 bg-black/60 backdrop-blur-md p-2 rounded-lg text-rose-500 border border-rose-500/20">
+                <AlertTriangle size={12} />
+                <p className="text-[10px] font-black uppercase tracking-widest">{err}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={cn("space-y-2", className)}>

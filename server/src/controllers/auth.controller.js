@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import axios from "axios";
 import qs from "qs";
+import geoip from "geoip-lite";
 import { redis } from "../config/redis.js";
 
 import User from "../models/user.model.js";
@@ -550,7 +551,7 @@ export const resetPassword = TryCatchHandler(async (req, res, next) => {
 
 export const updateProfile = TryCatchHandler(async (req, res, next) => {
   const userId = req.user.userId;
-  const { username, bio, esportsRole } = req.body;
+  const { username, bio, esportsRole, region, country, isLookingForTeam, gameIgn, gameUid, gender, phoneNumber, dob } = req.body;
 
   const user = await User.findById(userId);
   if (!user) return next(new CustomError("User not found", 404));
@@ -558,21 +559,55 @@ export const updateProfile = TryCatchHandler(async (req, res, next) => {
   if (username) user.username = username;
   if (bio !== undefined) user.bio = bio;
   if (esportsRole) user.esportsRole = esportsRole;
+  if (region) user.region = region;
+  if (isLookingForTeam !== undefined) {
+    user.isLookingForTeam = String(isLookingForTeam) === 'true';
+  }
+  if (gameIgn !== undefined) user.gameIgn = gameIgn;
+  if (gameUid !== undefined) user.gameUid = gameUid;
+  if (gender !== undefined) user.gender = gender;
+  if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
+  if (dob !== undefined) user.dob = dob;
 
-  if (req.file) {
-    const uploadRes = await uploadOnImageKit(
-      req.file.path,
-      `avatar-${userId}-${Date.now()}`,
-      "/users/avatars"
-    );
+  if (country) {
+    user.country = country;
+  } else if (!user.country) {
+    // Auto-detect country from IP
+    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+    const geo = geoip.lookup(ip);
+    if (geo) {
+      user.country = geo.country;
+      user.countryCode = geo.country;
+    }
+  }
 
-    if (uploadRes) {
-      // Delete old avatar if it exists and is not the default one
-      if (user.avatarFileId) {
-        await deleteFromImageKit(user.avatarFileId);
+  if (req.files) {
+    if (req.files.avatar) {
+      const avatarFile = req.files.avatar[0];
+      const uploadRes = await uploadOnImageKit(
+        avatarFile.path,
+        `avatar-${userId}-${Date.now()}`,
+        "/users/avatars"
+      );
+      if (uploadRes) {
+        if (user.avatarFileId) await deleteFromImageKit(user.avatarFileId);
+        user.avatar = uploadRes.url;
+        user.avatarFileId = uploadRes.fileId;
       }
-      user.avatar = uploadRes.url;
-      user.avatarFileId = uploadRes.fileId;
+    }
+
+    if (req.files.coverImage) {
+      const coverFile = req.files.coverImage[0];
+      const uploadRes = await uploadOnImageKit(
+        coverFile.path,
+        `cover-${userId}-${Date.now()}`,
+        "/users/covers"
+      );
+      if (uploadRes) {
+        if (user.coverImageFileId) await deleteFromImageKit(user.coverImageFileId);
+        user.coverImage = uploadRes.url;
+        user.coverImageFileId = uploadRes.fileId;
+      }
     }
   }
 
@@ -625,5 +660,45 @@ export const deleteAccount = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Account deleted successfully",
+  });
+});
+
+export const updateSettings = TryCatchHandler(async (req, res, next) => {
+  const userId = req.user.userId;
+  const { allowChallenges, allowMessages, notifications } = req.body;
+
+  const user = await User.findById(userId);
+  if (!user) return next(new CustomError("User not found", 404));
+
+  if (!user.settings) {
+    user.settings = {
+      allowChallenges: true,
+      allowMessages: true,
+    };
+  }
+
+  if (allowChallenges !== undefined) user.settings.allowChallenges = allowChallenges;
+  if (allowMessages !== undefined) user.settings.allowMessages = allowMessages;
+
+  if (notifications) {
+    if (!user.settings.notifications) {
+      user.settings.notifications = {
+        platform: true,
+        email: true,
+        sms: false,
+      };
+    }
+    if (notifications.platform !== undefined) user.settings.notifications.platform = notifications.platform;
+    if (notifications.email !== undefined) user.settings.notifications.email = notifications.email;
+    if (notifications.sms !== undefined) user.settings.notifications.sms = notifications.sms;
+  }
+
+  await user.save();
+  await redis.del(`user_profile:${userId}`);
+
+  res.status(200).json({
+    success: true,
+    message: "Settings updated successfully",
+    user,
   });
 });

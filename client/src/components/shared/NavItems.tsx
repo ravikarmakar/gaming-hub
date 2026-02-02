@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronDown, Flame, Gamepad2, Home, Trophy, Users } from "lucide-react";
+import { ChevronDown, Gamepad2, Home, Trophy, LifeBuoy } from "lucide-react";
 
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
@@ -12,32 +12,29 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { EVENT_ROUTES } from "@/features/events/lib";
 import { PLAYER_ROUTES } from "@/features/player/lib/routes";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
+import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 
 const navItems = [
   { name: "Home", icon: Home, href: ROUTES.HOME },
-  {
-    name: "Esports",
-    icon: Gamepad2,
-    hasDropdown: true,
-    dropdownItems: [
-      { name: "Find players", href: PLAYER_ROUTES.ALL_PLAYERS },
-      { name: "Find team", href: TEAM_ROUTES.ALL_TEAMS },
-    ],
-  },
   {
     name: "Tournaments",
     icon: Trophy,
     href: EVENT_ROUTES.TOURNAMENTS,
   },
   {
-    name: "Trending",
-    icon: Flame,
-    href: ROUTES.TRENDING,
+    name: "Discover",
+    icon: Gamepad2,
+    hasDropdown: true,
+    dropdownItems: [
+      { name: "Players", href: PLAYER_ROUTES.ALL_PLAYERS },
+      { name: "Teams", href: TEAM_ROUTES.ALL_TEAMS },
+      { name: "Organizers", href: ORGANIZER_ROUTES.ORGANIZERS },
+    ],
   },
   {
-    name: "Community",
-    icon: Users,
-    href: ROUTES.COMMUNITY,
+    name: "Support",
+    icon: LifeBuoy,
+    href: "#",
   },
 ];
 

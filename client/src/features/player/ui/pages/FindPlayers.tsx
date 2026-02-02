@@ -14,6 +14,7 @@ const FindPlayers: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedRole, setSelectedRole] = useState<string | undefined>(undefined);
     const [isVerified, setIsVerified] = useState<boolean | undefined>(undefined);
+    const [isPlayerVerified, setIsPlayerVerified] = useState<boolean | undefined>(undefined);
     const [hasTeam, setHasTeam] = useState<boolean | undefined>(undefined);
 
     // Debounced search/filter trigger
@@ -23,6 +24,7 @@ const FindPlayers: React.FC = () => {
                 username: searchTerm || undefined,
                 esportsRole: selectedRole,
                 isAccountVerified: isVerified,
+                isPlayerVerified: isPlayerVerified,
                 hasTeam: hasTeam,
                 page: 1,
                 limit: 12,
@@ -31,7 +33,7 @@ const FindPlayers: React.FC = () => {
         }, 500);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, selectedRole, isVerified, hasTeam, fetchPlayers]);
+    }, [searchTerm, selectedRole, isVerified, isPlayerVerified, hasTeam, fetchPlayers]);
 
     // Load more handler
     const handleLoadMore = () => {
@@ -40,6 +42,7 @@ const FindPlayers: React.FC = () => {
                 username: searchTerm || undefined,
                 esportsRole: selectedRole,
                 isAccountVerified: isVerified,
+                isPlayerVerified: isPlayerVerified,
                 hasTeam: hasTeam,
                 page: currentPage + 1,
                 limit: 12,
@@ -104,6 +107,8 @@ const FindPlayers: React.FC = () => {
                         onRoleChange={setSelectedRole}
                         isVerified={isVerified}
                         onVerifiedChange={setIsVerified}
+                        isPlayerVerified={isPlayerVerified}
+                        onPlayerVerifiedChange={setIsPlayerVerified}
                         hasTeam={hasTeam}
                         onHasTeamChange={setHasTeam}
                     />

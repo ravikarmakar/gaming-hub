@@ -1018,4 +1018,38 @@ export const cancelOrgInvite = TryCatchHandler(async (req, res, next) => {
   });
 });
 
+export const getOrganizers = TryCatchHandler(async (req, res, next) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 12;
+  const search = req.query.search || "";
+  const skip = (page - 1) * limit;
+
+  const query = { isDeleted: false };
+  if (search) {
+    query.name = { $regex: search, $options: "i" };
+  }
+
+  const [organizers, total] = await Promise.all([
+    Organizer.find(query)
+      .select("name imageUrl description tag isVerified isHiring socialLinks createdAt")
+      .sort("-createdAt")
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Organizer.countDocuments(query),
+  ]);
+
+  res.status(200).json({
+    success: true,
+    message: "Organizers fetched successfully",
+    data: organizers,
+    pagination: {
+      total,
+      page,
+      limit,
+      pages: Math.ceil(total / limit),
+    },
+  });
+});
+
 

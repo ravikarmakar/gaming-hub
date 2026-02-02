@@ -1,69 +1,40 @@
 import React from "react";
 import { Gamepad2, Trophy, Clock, Target, Swords } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import { User } from "@/features/auth/lib/types";
 
-type GameStats = {
-  game: string;
-  rank: string;
-  rating: number;
-  hoursPlayed: number;
-  winRate: number;
-  matches: number;
-  kda: number;
-  color: string;
-  tier: "bronze" | "silver" | "gold" | "platinum" | "diamond" | "master" | "grandmaster";
-};
+interface PlayerStatsProps {
+  player: User;
+}
 
-export const PlayerStats: React.FC = () => {
-  const gameStats: GameStats[] = [
-    {
-      game: "Valorant",
-      rank: "Diamond 1",
-      rating: 2450,
-      hoursPlayed: 1200,
-      winRate: 67,
-      matches: 800,
-      kda: 2.3,
-      color: "#6366f1",
-      tier: "diamond",
-    },
-    {
-      game: "League of Legends",
-      rank: "Platinum 3",
-      rating: 2100,
-      hoursPlayed: 900,
-      winRate: 59,
-      matches: 600,
-      kda: 2.0,
-      color: "#06b6d4",
-      tier: "platinum",
-    },
-    {
-      game: "CS:GO",
-      rank: "Master Guardian",
-      rating: 1800,
-      hoursPlayed: 600,
-      winRate: 54,
-      matches: 400,
-      kda: 1.8,
-      color: "#f59e42",
-      tier: "gold",
-    },
-  ];
+export const PlayerStats: React.FC<PlayerStatsProps> = ({ player }) => {
+  const gameStats = player.playerStats?.gameSpecificStats || [];
+
+  if (gameStats.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 bg-[#0d091a]/40 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] shadow-2xl text-center">
+        <div className="p-6 rounded-full bg-blue-500/10 border border-blue-500/20 mb-6">
+          <Gamepad2 className="w-12 h-12 text-blue-400 opacity-50" />
+        </div>
+        <h3 className="text-2xl font-black tracking-tighter text-white mb-2">No Battle Data</h3>
+        <p className="text-sm text-white/40 max-w-sm">No game-specific tactical data has been recorded for this operative yet.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
       {gameStats.map((stats, index) => (
-        <GameStatCard key={stats.game} stats={stats} index={index} />
+        <GameStatCard key={index} stats={stats} index={index} />
       ))}
     </div>
   );
 };
 
-const GameStatCard: React.FC<{ stats: GameStats, index: number }> = ({ stats, index }) => {
-  const tierColors = {
+const GameStatCard: React.FC<{ stats: any, index: number }> = ({ stats, index }) => {
+  const tierColors: any = {
     bronze: "from-amber-700 to-amber-900 border-amber-500/30 text-amber-500",
     silver: "from-slate-400 to-slate-600 border-slate-400/30 text-slate-300",
     gold: "from-yellow-400 to-yellow-600 border-yellow-500/30 text-yellow-500",
@@ -84,50 +55,47 @@ const GameStatCard: React.FC<{ stats: GameStats, index: number }> = ({ stats, in
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div
-                className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 group-hover:bg-violet-500/10 transition-colors"
-                style={{ color: stats.color }}
-              >
+              <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 group-hover:bg-violet-500/10 transition-colors text-violet-400">
                 <Gamepad2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-xl font-black italic text-white uppercase tracking-tight">{stats.game}</h3>
-                <div className="flex items-center gap-2 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">
+                <h3 className="text-xl font-black text-white tracking-tight">{stats.game}</h3>
+                <div className="flex items-center gap-2 text-[10px] font-black text-white/30 tracking-[0.2em]">
                   <Clock className="w-3 h-3" />
                   <span>{stats.hoursPlayed.toLocaleString()} Combat Hours</span>
                 </div>
               </div>
             </div>
-            <Badge className={`bg-gradient-to-r ${tierColors[stats.tier]} border shadow-lg uppercase text-[9px] font-black tracking-widest px-3 py-1`}>
-              {stats.tier}
+            <Badge className={`bg-gradient-to-r ${tierColors[stats.tier || "bronze"]} border shadow-lg text-[9px] font-black tracking-widest px-3 py-1`}>
+              {stats.tier || "RANK"}
             </Badge>
           </div>
 
           {/* Core Stats Grid */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 text-center space-y-1">
-              <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Combat Rating</p>
-              <p className="text-2xl font-black text-white italic tracking-tighter">{stats.rating}</p>
+              <p className="text-[9px] font-black text-white/20 tracking-[0.2em]">Combat Rating</p>
+              <p className="text-2xl font-black text-white tracking-tighter">{stats.rating}</p>
             </div>
             <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 text-center space-y-1">
-              <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.2em]">Success Rate</p>
-              <p className="text-2xl font-black text-emerald-400 italic tracking-tighter">{stats.winRate}%</p>
+              <p className="text-[9px] font-black text-white/20 tracking-[0.2em]">Success Rate</p>
+              <p className="text-2xl font-black text-emerald-400 tracking-tighter">{stats.winRate}%</p>
             </div>
           </div>
 
           {/* Rank Section */}
           <div className="relative pt-4 border-t border-white/5">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.3em]">Current Deployment Rank</span>
+              <span className="text-[10px] font-black text-white/20 tracking-[0.3em]">Current Deployment Rank</span>
               <Trophy className="w-4 h-4 text-violet-500/50" />
             </div>
-            <p className="text-2xl font-black text-white italic transition-all group-hover:text-violet-400">
+            <p className="text-2xl font-black text-white transition-all group-hover:text-violet-400">
               {stats.rank}
             </p>
           </div>
 
           {/* Secondary Stats */}
-          <div className="flex items-center justify-between pt-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+          <div className="flex items-center justify-between pt-4 text-[10px] font-black tracking-[0.2em] text-white/40">
             <div className="flex items-center gap-2">
               <Swords className="w-3.5 h-3.5" />
               <span>{stats.matches} Engagements</span>

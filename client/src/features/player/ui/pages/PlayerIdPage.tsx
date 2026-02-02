@@ -28,16 +28,16 @@ const PlayerIdPage = () => {
 
   if (!selectedPlayer) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-white/40 italic">
-        PLAYER DOSSIER NOT FOUND...
+      <div className="min-h-screen flex items-center justify-center text-white/40 tracking-[0.5em] font-black text-xl">
+        PLAYER PROFILE NOT FOUND...
       </div>
     );
   }
 
-  const playerCoverImg = "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop";
+
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
+    <div className="min-h-screen bg-[#050505] text-white overflow-x-hidden">
       {/* Background Decorative Orbs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-violet-800/20 blur-[120px] rounded-full animate-pulse" style={{ animationDuration: "15000ms" }} />
@@ -47,14 +47,16 @@ const PlayerIdPage = () => {
 
       {/* Banner Section */}
       <div className="relative h-64 md:h-80 lg:h-96 w-full overflow-hidden">
-        <motion.img
-          initial={{ scale: 1.1 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 10, repeat: Infinity, repeatType: "reverse" }}
-          src={playerCoverImg}
-          alt="Campaign Background"
-          className="object-cover w-full h-full opacity-40 grayscale-[0.5]"
-        />
+        {selectedPlayer.coverImage && (
+          <motion.img
+            initial={{ scale: 1.1 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 10, repeat: Infinity, repeatType: "reverse" }}
+            src={selectedPlayer.coverImage}
+            alt="Campaign Background"
+            className="object-cover w-full h-full opacity-40 grayscale-[0.5]"
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/60 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#050505] to-transparent" />
       </div>
@@ -75,8 +77,8 @@ const PlayerIdPage = () => {
                 >
                   <div className="flex items-center gap-2">
                     <Info className="w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Tactical Overview</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">Overview</span>
+                    <span className="text-[10px] font-black tracking-widest hidden sm:inline">Tactical Overview</span>
+                    <span className="text-[10px] font-black tracking-widest sm:hidden">Overview</span>
                   </div>
                 </TabsTrigger>
                 <TabsTrigger
@@ -85,8 +87,8 @@ const PlayerIdPage = () => {
                 >
                   <div className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Battle Stats</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">Stats</span>
+                    <span className="text-[10px] font-black tracking-widest hidden sm:inline">Battle Stats</span>
+                    <span className="text-[10px] font-black tracking-widest sm:hidden">Stats</span>
                   </div>
                 </TabsTrigger>
                 <TabsTrigger
@@ -95,8 +97,8 @@ const PlayerIdPage = () => {
                 >
                   <div className="flex items-center gap-2">
                     <Award className="w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Commendations</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">Honors</span>
+                    <span className="text-[10px] font-black tracking-widest hidden sm:inline">Commendations</span>
+                    <span className="text-[10px] font-black tracking-widest sm:hidden">Honors</span>
                   </div>
                 </TabsTrigger>
                 <TabsTrigger
@@ -105,8 +107,8 @@ const PlayerIdPage = () => {
                 >
                   <div className="flex items-center gap-2">
                     <Settings className="w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Gear Setup</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest sm:hidden">Setup</span>
+                    <span className="text-[10px] font-black tracking-widest hidden sm:inline">Gear Setup</span>
+                    <span className="text-[10px] font-black tracking-widest sm:hidden">Setup</span>
                   </div>
                 </TabsTrigger>
               </TabsList>
@@ -120,10 +122,10 @@ const PlayerIdPage = () => {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
               >
-                {activeTab === "overview" && <PlayerOverview />}
-                {activeTab === "stats" && <PlayerStats />}
-                {activeTab === "achievements" && <PlayerAchievements />}
-                {activeTab === "equipment" && <PlayerEquipment />}
+                {activeTab === "overview" && <PlayerOverview player={selectedPlayer} />}
+                {activeTab === "stats" && <PlayerStats player={selectedPlayer} />}
+                {activeTab === "achievements" && <PlayerAchievements player={selectedPlayer} />}
+                {activeTab === "equipment" && <PlayerEquipment player={selectedPlayer} />}
               </motion.div>
             </AnimatePresence>
           </Tabs>

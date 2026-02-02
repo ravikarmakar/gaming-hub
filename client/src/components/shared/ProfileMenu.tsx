@@ -27,6 +27,14 @@ import { TEAM_ACCESS } from "@/features/teams/lib/access";
 import { PLAYER_ROUTES } from "@/features/player/lib/routes";
 import { AUTH_ROUTES } from "@/features/auth/lib/routes";
 
+interface MenuOption {
+  name: string;
+  icon: any;
+  href?: string;
+  onClick?: () => void;
+  color: string;
+}
+
 const ProfileMenu = () => {
   const navigate = useNavigate();
   const { user, logout, isLoading } = useAuthStore();
@@ -38,43 +46,67 @@ const ProfileMenu = () => {
   const canViewOrgDashboard = user?.orgId && can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.viewDashboardButton]);
   const canViewTeamDashboard = user?.teamId && can(TEAM_ACCESS.dashboard);
 
-  const profileOptions = [
+  const userOptions: MenuOption[] = [
     {
       name: "My Profile",
       icon: User,
       href: PLAYER_ROUTES.PLAYER_DETAILS.replace(":id", user?._id ?? ""),
       color: "text-blue-400",
     },
-    ...(user?.teamId
-      ? [
-        {
-          name: "Team Profile",
-          icon: UserCog,
-          href: TEAM_ROUTES.PROFILE.replace(":id", user.teamId),
-          color: "text-purple-400",
-        },
-        ...(canViewTeamDashboard ? [{
-          name: "Team Dashboard",
-          icon: Settings,
-          href: TEAM_ROUTES.DASHBOARD,
-          color: "text-indigo-400",
-        }] : []),
-      ]
-      : [
-        {
-          name: "Create Team",
-          icon: PlusCircle,
-          onClick: () => setIsCreateTeamOpen(true),
-          color: "text-emerald-400",
-        },
-      ]),
     {
       name: "Notifications",
       icon: Bell,
       href: ROUTES.NOTIFICATIONS,
       color: "text-amber-400",
     },
-    ...(user?.canCreateOrg && !user?.orgId
+    {
+      name: "Settings",
+      icon: UserCog,
+      href: PLAYER_ROUTES.PLAYER_SETTINGS.replace(":id", user?._id ?? ""),
+      color: "text-blue-400",
+    },
+  ];
+
+  const teamOptions: MenuOption[] = user?.teamId
+    ? [
+      {
+        name: "Team Profile",
+        icon: UserCog,
+        href: TEAM_ROUTES.PROFILE.replace(":id", user.teamId),
+        color: "text-purple-400",
+      },
+      ...(canViewTeamDashboard ? [{
+        name: "Team Dashboard",
+        icon: Settings,
+        href: TEAM_ROUTES.DASHBOARD,
+        color: "text-indigo-400",
+      }] : []),
+    ]
+    : [
+      {
+        name: "Create Team",
+        icon: PlusCircle,
+        onClick: () => setIsCreateTeamOpen(true),
+        color: "text-emerald-400",
+      },
+    ];
+
+  const orgOptions: MenuOption[] = user?.orgId
+    ? [
+      {
+        name: "Organization Profile",
+        icon: Building,
+        href: ORGANIZER_ROUTES.PROFILE.replace(":id", user.orgId),
+        color: "text-purple-400",
+      },
+      ...(canViewOrgDashboard ? [{
+        name: "Organization Dashboard",
+        icon: LayoutDashboard,
+        href: ORGANIZER_ROUTES.DASHBOARD.replace(":id", user.orgId),
+        color: "text-indigo-400",
+      }] : []),
+    ]
+    : (user?.canCreateOrg
       ? [
         {
           name: "Create Organization",
@@ -83,30 +115,7 @@ const ProfileMenu = () => {
           color: "text-purple-400",
         },
       ]
-      : []),
-    ...(user?.orgId
-      ? [
-        {
-          name: "Organization Profile",
-          icon: Building,
-          href: ORGANIZER_ROUTES.PROFILE.replace(":id", user.orgId),
-          color: "text-purple-400",
-        },
-        ...(canViewOrgDashboard ? [{
-          name: "Organization Dashboard",
-          icon: LayoutDashboard,
-          href: ORGANIZER_ROUTES.DASHBOARD.replace(":id", user.orgId),
-          color: "text-indigo-400",
-        }] : []),
-      ]
-      : []),
-    {
-      name: "Settings",
-      icon: UserCog,
-      href: PLAYER_ROUTES.PLAYER_SETTINGS.replace(":id", user?._id ?? ""),
-      color: "text-blue-400",
-    }
-  ];
+      : []);
 
   return (
     <>
@@ -152,19 +161,34 @@ const ProfileMenu = () => {
 
             <DropdownMenuSeparator className="bg-purple-500/10 mx-2" />
 
+            {/* User Section */}
             <DropdownMenuGroup className="py-1">
-              {profileOptions.map((option) => (
+              {userOptions.map((option) => (
+                <DropdownMenuItem
+                  key={option.name}
+                  onClick={() => {
+                    if (option.href) navigate(option.href);
+                    else option.onClick?.();
+                  }}
+                  className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg cursor-pointer transition-colors focus:bg-purple-500/10 focus:text-white"
+                >
+                  <option.icon className={cn("w-4.5 h-4.5", option.color)} />
+                  {option.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+
+            <DropdownMenuSeparator className="bg-purple-500/10 mx-2" />
+
+            {/* Team Section */}
+            <DropdownMenuGroup className="py-1">
+              {teamOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.name}
                   onSelect={(e) => {
                     if (!option.href) {
                       e.preventDefault();
-                      // Apply 150ms timeout for Create Organization to allow menu to close
-                      if (option.name === "Create Organization") {
-                        setTimeout(() => option.onClick?.(), 150);
-                      } else {
-                        setTimeout(() => option.onClick?.(), 100);
-                      }
+                      setTimeout(() => option.onClick?.(), 100);
                     }
                   }}
                   onClick={() => {
@@ -177,6 +201,33 @@ const ProfileMenu = () => {
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
+
+            {orgOptions.length > 0 && (
+              <>
+                <DropdownMenuSeparator className="bg-purple-500/10 mx-2" />
+                {/* Organization Section */}
+                <DropdownMenuGroup className="py-1">
+                  {orgOptions.map((option) => (
+                    <DropdownMenuItem
+                      key={option.name}
+                      onSelect={(e) => {
+                        if (!option.href) {
+                          e.preventDefault();
+                          setTimeout(() => option.onClick?.(), 150);
+                        }
+                      }}
+                      onClick={() => {
+                        if (option.href) navigate(option.href);
+                      }}
+                      className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg cursor-pointer transition-colors focus:bg-purple-500/10 focus:text-white"
+                    >
+                      <option.icon className={cn("w-4.5 h-4.5", option.color)} />
+                      {option.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
+              </>
+            )}
 
             <DropdownMenuSeparator className="bg-purple-500/10 mx-2" />
 

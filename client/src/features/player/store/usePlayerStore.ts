@@ -14,6 +14,7 @@ interface PlayerStoreState {
     username?: string;
     esportsRole?: string;
     isAccountVerified?: boolean;
+    isPlayerVerified?: boolean;
     hasTeam?: boolean;
     page?: number;
     limit?: number;

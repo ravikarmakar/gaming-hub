@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +13,6 @@ import {
     LayoutDashboard,
     Save,
     Loader2,
-    X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -54,11 +53,6 @@ const TeamSettings = () => {
     const { user } = useAuthStore();
     const { can } = useAccess();
 
-    const [previews, setPreviews] = useState({
-        image: null as string | null,
-        banner: null as string | null,
-    });
-
     const form = useForm<TeamForm>({
         resolver: zodResolver(teamSchema),
         defaultValues: {
@@ -88,17 +82,12 @@ const TeamSettings = () => {
                 youtube: currentTeam.socialLinks?.youtube || "",
                 instagram: currentTeam.socialLinks?.instagram || "",
             });
-            setPreviews({
-                image: currentTeam.imageUrl,
-                banner: currentTeam.bannerUrl,
-            });
         }
     }, [currentTeam, form]);
 
     const onSubmit = async (data: TeamForm) => {
         const formData = new FormData();
 
-        // Append text fields
         formData.append("teamName", data.teamName);
         formData.append("tag", data.tag);
         if (data.bio) formData.append("bio", data.bio);
@@ -110,7 +99,6 @@ const TeamSettings = () => {
         if (data.youtube) formData.append("youtube", data.youtube);
         if (data.instagram) formData.append("instagram", data.instagram);
 
-        // Append files if they exist
         if (data.image instanceof File) formData.append("image", data.image);
         if (data.banner instanceof File) formData.append("banner", data.banner);
 
@@ -119,23 +107,6 @@ const TeamSettings = () => {
             toast.success("Team settings updated successfully!");
         } else {
             toast.error("Failed to update team settings");
-        }
-    };
-
-    const handleFileChange = (field: any, file: File | null, type: "image" | "banner") => {
-        field.onChange(file);
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPreviews((prev) => ({ ...prev, [type]: reader.result as string }));
-            };
-            reader.readAsDataURL(file);
-        } else {
-            // Revert to original if cleared
-            setPreviews((prev) => ({
-                ...prev,
-                [type]: currentTeam ? (type === "image" ? currentTeam.imageUrl : currentTeam.bannerUrl) : null,
-            }));
         }
     };
 
@@ -151,10 +122,6 @@ const TeamSettings = () => {
                 discord: currentTeam.socialLinks?.discord || "",
                 youtube: currentTeam.socialLinks?.youtube || "",
                 instagram: currentTeam.socialLinks?.instagram || "",
-            });
-            setPreviews({
-                image: currentTeam.imageUrl,
-                banner: currentTeam.bannerUrl,
             });
             toast.success("Changes reset locally");
         }
@@ -237,27 +204,13 @@ const TeamSettings = () => {
                                             <Label className="text-gray-300">Team Logo</Label>
                                             <FormControl>
                                                 <FileUpload
-                                                    name="image"
-                                                    onChange={(file) => handleFileChange(field, file, "image")}
-                                                    accept="image/*"
-                                                    compact
+                                                    variant="avatar"
+                                                    value={field.value || currentTeam?.imageUrl}
+                                                    onChange={field.onChange}
                                                     maxSize={MAX_FILE_SIZE}
+                                                    fallbackText={currentTeam?.teamName?.[0]}
                                                 />
                                             </FormControl>
-                                            {previews.image && (
-                                                <div className="relative w-24 h-24 mt-2 overflow-hidden border rounded-lg border-purple-500/20 bg-black/40 group">
-                                                    <img src={previews.image} alt="Logo preview" className="object-cover w-full h-full" />
-                                                    {field.value && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleFileChange(field, null, "image")}
-                                                            className="absolute p-1 text-white transition-opacity bg-red-500/80 rounded-full opacity-0 top-1 right-1 hover:bg-red-500 group-hover:opacity-100"
-                                                        >
-                                                            <X className="w-3 h-3" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            )}
                                             <FormMessage />
                                         </div>
                                     )}
@@ -271,27 +224,12 @@ const TeamSettings = () => {
                                             <Label className="text-gray-300">Team Banner</Label>
                                             <FormControl>
                                                 <FileUpload
-                                                    name="banner"
-                                                    onChange={(file) => handleFileChange(field, file, "banner")}
-                                                    accept="image/*"
-                                                    compact
+                                                    variant="banner"
+                                                    value={field.value || currentTeam?.bannerUrl}
+                                                    onChange={field.onChange}
                                                     maxSize={MAX_FILE_SIZE}
                                                 />
                                             </FormControl>
-                                            {previews.banner && (
-                                                <div className="relative w-full h-24 mt-2 overflow-hidden border rounded-lg border-purple-500/20 bg-black/40 group">
-                                                    <img src={previews.banner} alt="Banner preview" className="object-cover w-full h-full" />
-                                                    {field.value && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleFileChange(field, null, "banner")}
-                                                            className="absolute p-1.5 text-white transition-opacity bg-red-500/80 rounded-full opacity-0 top-2 right-2 hover:bg-red-500 group-hover:opacity-100"
-                                                        >
-                                                            <X className="w-3 h-3" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            )}
                                             <FormMessage />
                                         </div>
                                     )}

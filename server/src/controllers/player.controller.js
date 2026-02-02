@@ -39,6 +39,10 @@ export const getPlayers = TryCatchHandler(async (req, res, next) => {
         query.isAccountVerified = isAccountVerified === "true";
     }
 
+    if (req.query.isPlayerVerified !== undefined) {
+        query.isPlayerVerified = req.query.isPlayerVerified === "true";
+    }
+
     if (hasTeam !== undefined) {
         if (hasTeam === "true") {
             query.teamId = { $ne: null };
@@ -93,7 +97,7 @@ export const getPlayerById = TryCatchHandler(async (req, res, next) => {
     }
 
     const player = await User.findOne({ _id: id, isDeleted: false })
-        .select("-password -verifyOtp -resetOtp")
+        .select("-password -verifyOtp -resetOtp -verifyOtpExpireAt -resetOtpExpireAt")
         .populate("teamId", "teamName tag imageUrl bio")
         .lean();
 

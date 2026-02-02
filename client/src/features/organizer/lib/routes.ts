@@ -12,4 +12,5 @@ export const ORGANIZER_ROUTES = {
     SETTINGS: `${ORGANIZER_BASE}/settings`,
     JOIN_REQUESTS: `${ORGANIZER_BASE}/join-requests`,
     PROFILE: "/organizer/:id",
+    ORGANIZERS: "/organizers",
 } as const;
