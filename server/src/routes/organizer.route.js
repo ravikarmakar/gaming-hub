@@ -17,6 +17,10 @@ import {
   handleJoinRequest,
 } from "../controllers/join-request.controller.js";
 import {
+  getPendingInvitesForEntity,
+  cancelInvitation,
+} from "../controllers/invitation.controller.js";
+import {
   isAuthenticated,
   isVerified,
 } from "../middleware/auth.middleware.js";
@@ -59,5 +63,9 @@ router.delete("/:orgId/remove-staff/:id", authorize(Scopes.ORG, [Roles.ORG.MANAG
 router.post("/:orgId/join", validateRequest(joinOrgValidation), sendJoinRequest);
 router.get("/:orgId/join-requests", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER]), getJoinRequests);
 router.put("/:orgId/join-requests/:requestId", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER]), validateRequest(manageJoinRequestValidation), handleJoinRequest);
+
+// Invitation Management
+router.get("/:orgId/invites", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER]), getPendingInvitesForEntity);
+router.delete("/:orgId/invites/:inviteId", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER]), cancelInvitation);
 
 export default router;

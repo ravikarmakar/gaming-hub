@@ -76,10 +76,10 @@ export const groupDetails = async (req, res) => {
 // ⚡ High-Performance Batch Group Creation
 export const createGroups = async (req, res) => {
   try {
-    const { roundId, totalMatch = 1, matchTime } = req.body;
+    const { roundId, totalMatch = 1, matchTime, eventId } = req.body;
 
-    if (!roundId) {
-      return res.status(400).json({ message: "Round ID is required!" });
+    if (!roundId || !eventId) {
+      return res.status(400).json({ message: "Round ID and Event ID are required!" });
     }
 
     // 1️⃣ Check if round exists
@@ -94,7 +94,7 @@ export const createGroups = async (req, res) => {
     if (round.roundNumber === 1) {
       // Fetch Approved Teams from Registrations for Round 1
       const registrations = await EventRegistration.find({
-        eventId: round.eventId._id,
+        eventId: eventId,
         status: "approved"
       });
       allTeams = registrations.map((reg) => reg.teamId);
@@ -189,13 +189,42 @@ export const createGroups = async (req, res) => {
     // 5.5 Apply Round Scheduling (Overwrites if manual passed for entire batch, but usually automated)
     // If Round has startTime and gapMinutes, apply them unless matchTime was specifically passed
     if (round.startTime) {
-      const start = new Date(round.startTime);
+      let currentMatchTime = new Date(round.startTime);
       const gap = round.gapMinutes || 0;
 
+      // Extract daily window times
+      const [startHour, startMin] = (round.dailyStartTime || "13:00").split(":").map(Number);
+      const [endHour, endMin] = (round.dailyEndTime || "21:00").split(":").map(Number);
+
+      // Helper to set time on a date
+      const setTime = (date, hours, minutes) => {
+        const d = new Date(date);
+        d.setHours(hours, minutes, 0, 0);
+        return d;
+      };
+
+      // Set initial match time to at least the daily start time of the starts date
+      const dayStart = setTime(currentMatchTime, startHour, startMin);
+      if (currentMatchTime < dayStart) {
+        currentMatchTime = dayStart;
+      }
+
       groupsData.forEach((group, index) => {
-        // If matchTime is not manually sent in body (which is single value for all), use schedule
+        // If matchTime is not manually sent in body, use schedule
         if (!req.body.matchTime) {
-          group.matchTime = new Date(start.getTime() + (index * gap * 60000));
+          if (index > 0) {
+            currentMatchTime = new Date(currentMatchTime.getTime() + (gap * 60000));
+          }
+
+          // Check if exceeded daily window
+          const dayEnd = setTime(currentMatchTime, endHour, endMin);
+          if (currentMatchTime > dayEnd) {
+            // Shift to next day
+            currentMatchTime.setDate(currentMatchTime.getDate() + 1);
+            currentMatchTime = setTime(currentMatchTime, startHour, startMin);
+          }
+
+          group.matchTime = new Date(currentMatchTime);
         }
         // Apply other defaults
         group.totalMatch = round.matchesPerGroup || group.totalMatch;
@@ -225,6 +254,53 @@ export const createGroups = async (req, res) => {
 
     // 8️⃣ Batch Insert Leaderboards
     await Leaderboard.insertMany(leaderboardsData);
+
+    // 9️⃣ NOTIFY TEAMS ABOUT THEIR GROUPS
+    try {
+      const mongoose = (await import("mongoose")).default;
+      const Notification = mongoose.model("Notification");
+
+      for (const group of createdGroups) {
+        // Since group.teams contains teamIds, we need to populate or fetch team details if we want more info
+        // But for now, we just notify all members of these teams
+        for (const teamId of group.teams) {
+          const Team = mongoose.model("Team");
+          const team = await Team.findById(teamId);
+
+          if (!team) continue;
+
+          const recipientIds = team.teamMembers
+            .filter(m => m.isActive)
+            .map(m => m.user);
+
+          for (const userId of recipientIds) {
+            await Notification.create({
+              recipient: userId,
+              sender: req.user._id,
+              type: "GROUP_CREATED",
+              content: {
+                title: "Your Group is Ready!",
+                message: `You've been assigned to ${group.groupName} in ${round.roundName} for ${round.eventId.eventName}. Match starts at ${new Date(group.matchTime).toLocaleString()}.`
+              },
+              relatedData: {
+                eventId: round.eventId._id,
+                teamId: team._id,
+                groupId: group._id
+              },
+              actions: [
+                {
+                  label: "View Team List",
+                  actionType: "VIEW",
+                  payload: { path: `/groups/${group._id}/teams` }
+                }
+              ]
+            });
+          }
+        }
+      }
+    } catch (notifError) {
+      console.error("Error sending group creation notifications:", notifError);
+    }
 
     return res.status(201).json({
       message: "Groups and Leaderboards created successfully!",
@@ -259,8 +335,8 @@ export const updateGroup = async (req, res) => {
     } else if (group.matchesPlayed > 0) {
       group.status = "ongoing";
     } else if (group.status === "completed") {
-        // If it was completed but totalMatch increased
-        group.status = "ongoing";
+      // If it was completed but totalMatch increased
+      group.status = "ongoing";
     }
 
     await group.save();

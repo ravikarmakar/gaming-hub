@@ -28,7 +28,7 @@ const PlayerCard = React.forwardRef<HTMLDivElement, PlayerCardProps>(({ player, 
             layout
         >
             <Link
-                to={`/player/${player._id}`}
+                to={`/players/${player._id}`}
                 className="block relative h-full bg-white/[0.03] backdrop-blur-md border border-white/10 rounded-3xl p-6 hover:bg-white/[0.05] hover:border-violet-500/40 transition-all duration-500 overflow-hidden"
             >
                 {/* Glow Effect */}

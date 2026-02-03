@@ -8,6 +8,7 @@ export interface Team {
     _id: string;
     teamName: string;
     teamLogo?: string;
+    isQualified?: boolean;
 }
 
 export interface LeaderboardEntry {
@@ -36,7 +37,10 @@ export interface Group {
     teams: Team[];
     roundId: string;
     matchesPlayed?: number;
-    status?: 'pending' | 'ongoing' | 'completed';
+    totalSelectedTeam?: number;
+    status?: 'pending' | 'ongoing' | 'completed' | 'cancelled';
+    roomId?: number;
+    roomPassword?: number;
 }
 
 export interface Round {
@@ -47,6 +51,8 @@ export interface Round {
     eventId: string;
     groups?: Group[];
     startTime?: string;
+    dailyStartTime?: string;
+    dailyEndTime?: string;
     gapMinutes?: number;
     matchesPerGroup?: number;
     qualifyingTeams?: number;
@@ -70,20 +76,21 @@ interface TournamentState {
 
     // Actions
     fetchRounds: (eventId: string) => Promise<void>;
-    createRound: (eventId: string, params: { roundName?: string; startTime?: string; gapMinutes?: number; matchesPerGroup?: number; qualifyingTeams?: number }) => Promise<boolean>;
-    updateRound: (roundId: string, roundName: string) => Promise<boolean>;
-    updateRoundStatus: (roundId: string, status: "pending" | "ongoing" | "completed") => Promise<boolean>;
-    deleteRound: (roundId: string) => Promise<boolean>;
+    createRound: (eventId: string, params: { roundName?: string; startTime?: string; dailyStartTime?: string; dailyEndTime?: string; gapMinutes?: number; matchesPerGroup?: number; qualifyingTeams?: number }) => Promise<boolean>;
+    updateRound: (roundId: string, eventId: string, roundName: string) => Promise<boolean>;
+    updateRoundStatus: (roundId: string, eventId: string, status: "pending" | "ongoing" | "completed") => Promise<boolean>;
+    deleteRound: (roundId: string, eventId: string) => Promise<boolean>;
 
     fetchGroups: (roundId: string, page?: number, limit?: number) => Promise<void>;
-    createGroups: (roundId: string, totalMatch?: number, matchTime?: string) => Promise<boolean>;
-    updateGroup: (groupId: string, data: { groupName?: string; totalMatch?: number; roomId?: number; roomPassword?: number; totalSelectedTeam?: number; matchTime?: string }) => Promise<boolean>;
+    fetchGroupDetails: (groupId: string) => Promise<Group | null>;
+    createGroups: (roundId: string, eventId: string, totalMatch?: number, matchTime?: string) => Promise<boolean>;
+    updateGroup: (groupId: string, eventId: string, data: { groupName?: string; totalMatch?: number; roomId?: number; roomPassword?: number; totalSelectedTeam?: number; matchTime?: string }) => Promise<boolean>;
     startEvent: (eventId: string) => Promise<boolean>;
     finishEvent: (eventId: string) => Promise<boolean>;
 
     fetchLeaderboard: (groupId: string) => Promise<void>;
-    updateTeamScore: (groupId: string, teamId: string, stats: { kills?: number; position?: number; wins?: number; matchesPlayed?: number; score?: number; isQualified?: boolean }) => Promise<boolean>;
-    updateGroupResults: (groupId: string, results: { teamId: string, rank: number, kills: number }[]) => Promise<boolean>;
+    updateTeamScore: (groupId: string, eventId: string, teamId: string, stats: { kills?: number; position?: number; wins?: number; matchesPlayed?: number; score?: number; isQualified?: boolean }) => Promise<boolean>;
+    updateGroupResults: (groupId: string, eventId: string, results: { teamId: string, rank: number, kills: number }[]) => Promise<boolean>;
 }
 
 export const useTournamentStore = create<TournamentState>((set, get) => ({
@@ -136,10 +143,10 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
         }
     },
 
-    updateRound: async (roundId, roundName) => {
+    updateRound: async (roundId, eventId, roundName) => {
         set({ isLoading: true, error: null });
         try {
-            await axiosInstance.put(`/rounds/${roundId}`, { roundName });
+            await axiosInstance.put(`/rounds/${roundId}`, { eventId, roundName });
             set((state) => ({
                 rounds: state.rounds.map(r => r._id === roundId ? { ...r, roundName } : r),
                 isLoading: false
@@ -151,10 +158,10 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
             return false;
         }
     },
-    updateRoundStatus: async (roundId, status) => {
+    updateRoundStatus: async (roundId, eventId, status) => {
         set({ isLoading: true, error: null });
         try {
-            await axiosInstance.put(`/rounds/${roundId}`, { status });
+            await axiosInstance.put(`/rounds/${roundId}`, { eventId, status });
             set((state) => ({
                 rounds: state.rounds.map(r => r._id === roundId ? { ...r, status } : r),
                 isLoading: false
@@ -167,10 +174,11 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
         }
     },
 
-    deleteRound: async (roundId) => {
+    deleteRound: async (roundId, eventId) => {
         set({ isLoading: true, error: null });
         try {
-            await axiosInstance.delete(`/rounds/${roundId}`);
+            // RBAC might need eventId in query or payload for DELETE
+            await axiosInstance.delete(`/rounds/${roundId}`, { data: { eventId } });
             set((state) => ({
                 rounds: state.rounds.filter(r => r._id !== roundId),
                 groups: [], // Clear groups as they belong to the deleted round (if it was selected)
@@ -204,12 +212,25 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
             set({ isLoading: false, error: message });
         }
     },
+    fetchGroupDetails: async (groupId) => {
+        set({ isLoading: true, error: null });
+        try {
+            const res = await axiosInstance.get(`/groups/${groupId}`);
+            set({ isLoading: false });
+            return res.data.group;
+        } catch (err) {
+            const message = handleApiError(err, "Failed to fetch group details");
+            set({ isLoading: false, error: message });
+            return null;
+        }
+    },
 
-    createGroups: async (roundId, totalMatch = 1, matchTime) => {
+    createGroups: async (roundId, eventId, totalMatch = 1, matchTime) => {
         set({ isCreating: true, error: null });
         try {
             const res = await axiosInstance.post("/groups/create", {
                 roundId,
+                eventId,
                 totalMatch,
                 matchTime
             });
@@ -236,10 +257,10 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
         }
     },
 
-    updateGroup: async (groupId, data) => {
+    updateGroup: async (groupId, eventId, data) => {
         set({ isLoading: true, error: null });
         try {
-            await axiosInstance.put(`/groups/${groupId}`, data);
+            await axiosInstance.put(`/groups/${groupId}`, { ...data, eventId });
             set((state) => ({
                 groups: state.groups.map(g => g._id === groupId ? { ...g, ...data } : g),
                 isLoading: false
@@ -266,11 +287,12 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
         }
     },
 
-    updateTeamScore: async (groupId, teamId, stats) => {
+    updateTeamScore: async (groupId, eventId, teamId, stats) => {
         set({ isLoading: true, error: null });
         try {
             const res = await axiosInstance.put(`/leaderboards/${groupId}/score`, {
                 teamId,
+                eventId,
                 ...stats,
             });
             // Update local leaderboard state
@@ -291,10 +313,10 @@ export const useTournamentStore = create<TournamentState>((set, get) => ({
         }
     },
 
-    updateGroupResults: async (groupId, results) => {
+    updateGroupResults: async (groupId, eventId, results) => {
         set({ isLoading: true, error: null });
         try {
-            const res = await axiosInstance.put(`/leaderboards/${groupId}/results`, { results });
+            const res = await axiosInstance.put(`/leaderboards/${groupId}/results`, { results, eventId });
 
             // Update local state
             set((state) => ({

@@ -16,7 +16,7 @@ export interface Notification {
         username: string;
         avatar: string;
     } | null;
-    type: "TEAM_INVITE" | "TEAM_JOIN_REQUEST" | "TEAM_LEAVE" | "TEAM_KICK" | "EVENT_REMINDER" | "EVENT_REGISTRATION" | "ORGANIZATION_INVITE" | "SYSTEM";
+    type: "TEAM_INVITE" | "TEAM_JOIN_REQUEST" | "TEAM_LEAVE" | "TEAM_KICK" | "EVENT_REMINDER" | "EVENT_REGISTRATION" | "ORGANIZATION_INVITE" | "SYSTEM" | "ROUND_CREATED" | "GROUP_CREATED";
     content: {
         title: string;
         message: string;
@@ -26,6 +26,7 @@ export interface Notification {
         teamId?: any;
         eventId?: any;
         orgId?: any;
+        groupId?: any;
         inviteId?: string;
     };
     actions: NotificationAction[];
@@ -46,6 +47,7 @@ interface NotificationState {
     fetchNotifications: (page?: number) => Promise<void>;
     markAsRead: (id: string) => Promise<void>;
     markAllAsRead: () => Promise<void>;
+    setUnreadCount: (count: number) => void;
     performAction: (id: string, actionType: string) => Promise<void>;
     clearError: () => void;
 }
@@ -70,7 +72,10 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
     clearError: () => set({ error: null }),
 
+    setUnreadCount: (count) => set({ unreadCount: count }),
+
     fetchNotifications: async (page = 1) => {
+        if (get().isLoading) return;
         set({ isLoading: true, error: null });
         try {
             const response = await axiosInstance.get(`/notifications?page=${page}`);

@@ -262,8 +262,6 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
   // 2. Set Redis Cache (Post-transformation)
   await redis.set(`team_details:${teamId}`, JSON.stringify(responseData), { ex: 3600 }); // 1 hour
 
-  console.log("FINAL RESPONSE (FetchDetails):", JSON.stringify(responseData.teamMembers, null, 2));
-
   res.status(200).json({
     success: true,
     message: "Team details fetched successfully",

@@ -24,6 +24,12 @@ const roundSchema = new mongoose.Schema(
     startTime: {
       type: Date, // When the first match starts
     },
+    dailyStartTime: {
+      type: String, // e.g., "13:00"
+    },
+    dailyEndTime: {
+      type: String, // e.g., "21:00"
+    },
     gapMinutes: {
       type: Number, // Gap between groups
       default: 0,

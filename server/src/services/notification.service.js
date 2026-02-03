@@ -46,7 +46,10 @@ export const notificationHandlers = {
         const invite = await Invitation.findById(inviteId);
 
         if (!invite) {
-            throw new CustomError("Invitation no longer exists", 404);
+            notification.status = "archived";
+            notification.actions = [];
+            await notification.save();
+            return "This invitation no longer exists or has been cancelled.";
         }
 
         const teamId = invite.entityId || notification.relatedData.teamId;
@@ -120,7 +123,10 @@ export const notificationHandlers = {
         const invite = await Invitation.findById(inviteId);
 
         if (!invite) {
-            throw new CustomError("Invitation no longer exists", 404);
+            notification.status = "archived";
+            notification.actions = [];
+            await notification.save();
+            return "This invitation no longer exists or has been cancelled.";
         }
 
         const orgId = invite.entityId || notification.relatedData.orgId;

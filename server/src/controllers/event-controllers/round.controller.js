@@ -42,7 +42,7 @@ export const getRounds = async (req, res) => {
 
 export const createRound = async (req, res) => {
   try {
-    const { eventId, roundName, startTime, gapMinutes, matchesPerGroup, qualifyingTeams } = req.body;
+    const { eventId, roundName, startTime, dailyStartTime, dailyEndTime, gapMinutes, matchesPerGroup, qualifyingTeams } = req.body;
 
     // Event ID check
     if (!eventId) {
@@ -85,6 +85,8 @@ export const createRound = async (req, res) => {
       status: "pending",
       roundNumber: roundCount + 1,
       startTime,
+      dailyStartTime,
+      dailyEndTime,
       gapMinutes,
       matchesPerGroup,
       qualifyingTeams
@@ -92,6 +94,40 @@ export const createRound = async (req, res) => {
 
     // Note: We do not push to event.rounds because Event schema does not have a rounds array
     // The relationship is handled by Round.eventId
+
+    // ✅ PUSH NOTIFICATIONS TO ALL REGISTERED TEAMS
+    try {
+      // Find all approved registrations for this event to get the teamIds
+      const registrations = await EventRegistration.find({ eventId, status: "approved" }).populate("teamId");
+
+      for (const reg of registrations) {
+        if (!reg.teamId) continue;
+
+        // Notify all active members of each team
+        const team = reg.teamId;
+        const recipientIds = team.teamMembers
+          .filter(m => m.isActive)
+          .map(m => m.user);
+
+        for (const userId of recipientIds) {
+          await mongoose.model("Notification").create({
+            recipient: userId,
+            sender: req.user._id, // The organizer who created the round
+            type: "ROUND_CREATED",
+            content: {
+              title: "New Round Created!",
+              message: `${event.eventName}: ${newRound.roundName} has been created. Scheduled to start on ${new Date(startTime).toLocaleString()}.`
+            },
+            relatedData: {
+              eventId,
+              teamId: team._id
+            }
+          });
+        }
+      }
+    } catch (notifError) {
+      console.error("Error sending round creation notifications:", notifError);
+    }
 
     return res.status(201).json({
       message: "New round created successfully!",
@@ -143,13 +179,15 @@ export const getRoundDetails = async (req, res) => {
 export const updateRound = async (req, res) => {
   try {
     const { roundId } = req.params;
-    const { roundName, startTime, gapMinutes, matchesPerGroup, qualifyingTeams, status } = req.body;
+    const { roundName, startTime, dailyStartTime, dailyEndTime, gapMinutes, matchesPerGroup, qualifyingTeams, status } = req.body;
 
     if (!roundId) return res.status(400).json({ message: "Round ID required" });
 
     const updateData = {};
     if (roundName) updateData.roundName = roundName;
     if (startTime) updateData.startTime = startTime;
+    if (dailyStartTime) updateData.dailyStartTime = dailyStartTime;
+    if (dailyEndTime) updateData.dailyEndTime = dailyEndTime;
     if (gapMinutes !== undefined) updateData.gapMinutes = gapMinutes;
     if (matchesPerGroup !== undefined) updateData.matchesPerGroup = matchesPerGroup;
     if (qualifyingTeams !== undefined) updateData.qualifyingTeams = qualifyingTeams;

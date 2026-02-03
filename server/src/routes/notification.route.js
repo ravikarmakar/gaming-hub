@@ -3,6 +3,7 @@ import { isAuthenticated } from "../middleware/auth.middleware.js";
 import {
     getMyNotifications,
     markAsRead,
+    markAllAsRead,
     handleNotificationAction,
     getOrgNotifications,
 } from "../controllers/notification.controller.js";
@@ -14,6 +15,7 @@ router.use(isAuthenticated);
 
 router.get("/", getMyNotifications);
 router.get("/org/:orgId", getOrgNotifications);
+router.patch("/read-all", markAllAsRead);
 router.patch("/:id/read", markAsRead);
 router.post("/:id/action", handleNotificationAction);
 

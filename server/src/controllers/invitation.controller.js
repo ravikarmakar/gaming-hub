@@ -2,6 +2,7 @@ import Invitation from "../models/invitation.model.js";
 import Team from "../models/team.model.js";
 import User from "../models/user.model.js";
 import Organizer from "../models/organizer.model.js";
+import { Notification } from "../models/notification.model.js";
 import { Roles, Scopes } from "../constants/roles.js";
 import { createNotificationWithActions } from "../services/notification.service.js";
 
@@ -173,6 +174,84 @@ export const respondToInvitation = async (req, res) => {
     res.status(200).json({
       success: true,
       message: `Invitation ${action} successfully`,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc Get all pending invitations for a specific entity (Team or Organizer)
+ */
+export const getPendingInvitesForEntity = async (req, res) => {
+  try {
+    const { orgId, teamId } = req.params;
+    const entityId = orgId || teamId;
+
+    if (!entityId) {
+      return res.status(400).json({ success: false, message: "Entity ID is required" });
+    }
+
+    const invitations = await Invitation.find({
+      entityId,
+      status: "pending",
+    })
+      .populate("receiver", "username email avatar")
+      .sort("-createdAt");
+
+    res.status(200).json({
+      success: true,
+      data: invitations,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc Cancel a pending invitation
+ */
+export const cancelInvitation = async (req, res) => {
+  try {
+    const { inviteId } = req.params;
+
+    const invitation = await Invitation.findById(inviteId);
+    if (!invitation) {
+      return res.status(404).json({ success: false, message: "Invitation not found" });
+    }
+
+    if (invitation.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot cancel an invitation that is already ${invitation.status}`
+      });
+    }
+
+    // Note: RBAC middleware should handle authorization before reaching here,
+    // ensuring the user has rights to manage this entity's invitations.
+
+    await Invitation.findByIdAndDelete(inviteId);
+
+    // Synchronize with notifications: Archive the related notification
+    try {
+      await Notification.updateMany(
+        { "relatedData.inviteId": inviteId },
+        {
+          $set: {
+            status: "archived",
+            "content.message": "This invitation has been cancelled by the sender."
+          },
+          $unset: { actions: "" } // Remove actions so user can't click them
+        }
+      );
+    } catch (notifyError) {
+      console.error("[CancelInvite Notification Sync Error]:", notifyError);
+      // We don't fail the request if notification sync fails
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Invitation cancelled successfully",
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

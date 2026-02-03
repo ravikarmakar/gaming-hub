@@ -126,6 +126,12 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
     try {
       const response = await axiosInstance.get(AUTH_ENDPOINTS.GET_PROFILE);
       set({ user: response.data.user });
+
+      // Update unread count if available
+      if (typeof response.data.unreadCount === "number") {
+        const { useNotificationStore } = await import("@/features/notifications/store/useNotificationStore");
+        useNotificationStore.getState().setUnreadCount(response.data.unreadCount);
+      }
     } catch {
       // 401 = guest user (normal)
       set({ user: null });

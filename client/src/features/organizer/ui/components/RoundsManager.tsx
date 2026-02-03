@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useTournamentStore } from "@/features/organizer/store/useTournamentStore";
 import { GroupsGrid } from "./GroupsGrid";
 import toast from "react-hot-toast";
@@ -104,10 +105,14 @@ export const RoundsManager = ({ eventId }: RoundsManagerProps) => {
     const [isCreateRoundOpen, setIsCreateRoundOpen] = useState(false);
     const [isDeleteRoundOpen, setIsDeleteRoundOpen] = useState(false);
     const [newRoundName, setNewRoundName] = useState("");
-    const [newStartTime, setNewStartTime] = useState("");
+    const [newStartDate, setNewStartDate] = useState("");
+    const [newDailyStartTime, setNewDailyStartTime] = useState("13:00");
+    const [newDailyEndTime, setNewDailyEndTime] = useState("21:00");
     const [newGapMinutes, setNewGapMinutes] = useState(30);
     const [newMatches, setNewMatches] = useState(1);
     const [newQualify, setNewQualify] = useState(1);
+    const [isGrandFinal, setIsGrandFinal] = useState(false);
+    const [newMatchTime, setNewMatchTime] = useState("18:00");
 
     // Edit Round State
     const [isEditRoundOpen, setIsEditRoundOpen] = useState(false);
@@ -158,11 +163,23 @@ export const RoundsManager = ({ eventId }: RoundsManagerProps) => {
             toast.error("Please enter a round name");
             return;
         }
+        if (!newStartDate) {
+            toast.error("Please select a start date");
+            return;
+        }
+
+        let startTime = newStartDate;
+        if (isGrandFinal && newMatchTime) {
+            // Combine date and time for Grand Final
+            startTime = `${newStartDate}T${newMatchTime}:00`;
+        }
 
         const success = await createRound(eventId, {
             roundName: newRoundName,
-            startTime: newStartTime,
-            gapMinutes: newGapMinutes,
+            startTime, // Pass the date (and time if GF) as startTime
+            dailyStartTime: isGrandFinal ? "" : newDailyStartTime,
+            dailyEndTime: isGrandFinal ? "" : newDailyEndTime,
+            gapMinutes: isGrandFinal ? 0 : newGapMinutes,
             matchesPerGroup: newMatches,
             qualifyingTeams: newQualify
         });
@@ -171,23 +188,27 @@ export const RoundsManager = ({ eventId }: RoundsManagerProps) => {
             fetchRounds(eventId); // Refresh list
             setIsCreateRoundOpen(false);
             setNewRoundName("");
-            setNewStartTime("");
+            setNewStartDate("");
+            setNewDailyStartTime("13:00");
+            setNewDailyEndTime("21:00");
             setNewGapMinutes(30);
+            setIsGrandFinal(false);
+            setNewMatchTime("18:00");
         }
-    }, [eventId, newRoundName, newStartTime, newGapMinutes, newMatches, newQualify, createRound, fetchRounds]);
+    }, [eventId, newRoundName, newStartDate, newDailyStartTime, newDailyEndTime, newGapMinutes, newMatches, newQualify, isGrandFinal, newMatchTime, createRound, fetchRounds]);
 
     const handleCreateGroups = useCallback(async () => {
-        if (!selectedRound) return;
-        const success = await createGroups(selectedRound._id);
+        if (!selectedRound || !eventId) return;
+        const success = await createGroups(selectedRound._id, eventId);
         if (success) {
             toast.success("Groups generation started!");
         }
-    }, [selectedRound, createGroups]);
+    }, [selectedRound, eventId, createGroups]);
 
     const handleCompleteRound = useCallback(async () => {
-        if (!selectedRound) return;
+        if (!selectedRound || !eventId) return;
         setIsSavingStatus(true);
-        const success = await updateRoundStatus(selectedRound._id, 'completed');
+        const success = await updateRoundStatus(selectedRound._id, eventId, 'completed');
         setIsSavingStatus(false);
         if (success) {
             toast.success(`${selectedRound.roundName} marked as completed!`);
@@ -223,58 +244,117 @@ export const RoundsManager = ({ eventId }: RoundsManagerProps) => {
                     </Button>
                 </div>
 
-                {!isSidebarCollapsed && (
-                    <div className="px-4">
-                        <Dialog open={isCreateRoundOpen} onOpenChange={setIsCreateRoundOpen}>
-                            <DialogTrigger asChild>
-                                <Button
-                                    className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                                    disabled={isCreateDisabled}
-                                    title={isGrandFinale ? "Cannot create more rounds after Grand Finale (1 group)" : !canCreateRound ? "Complete the current round groups first" : "Create Round"}
-                                >
-                                    {isCreating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-                                    Create Round
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="bg-gray-900 border-white/10 text-white">
-                                <DialogHeader>
-                                    <DialogTitle>Create New Round</DialogTitle>
-                                    <DialogDescription className="text-gray-400">
-                                        Enter a name for this round (e.g., "Qualifiers", "Semi-Finals").
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div className="grid gap-4 py-4">
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label htmlFor="name" className="text-right text-gray-300">
-                                            Name
-                                        </Label>
+                <div className={isSidebarCollapsed ? "px-2 flex justify-center" : "px-4"}>
+                    <Dialog open={isCreateRoundOpen} onOpenChange={setIsCreateRoundOpen}>
+                        <DialogTrigger asChild>
+                            <Button
+                                className={isSidebarCollapsed ? "bg-purple-600 hover:bg-purple-700 text-white h-10 w-10 rounded-full shrink-0" : "w-full bg-purple-600 hover:bg-purple-700 text-white"}
+                                size={isSidebarCollapsed ? "icon" : "default"}
+                                disabled={isCreateDisabled}
+                                title={isGrandFinale ? "Cannot create more rounds after Grand Finale (1 group)" : !canCreateRound ? "Complete the current round groups first" : "Create Round"}
+                            >
+                                {isSidebarCollapsed ? (
+                                    <Plus className="w-5 h-5" />
+                                ) : (
+                                    <>
+                                        {isCreating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                                        Create Round
+                                    </>
+                                )}
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="bg-gray-900 border-white/10 text-white">
+                            <DialogHeader>
+                                <DialogTitle>Create New Round</DialogTitle>
+                                <DialogDescription className="text-gray-400">
+                                    Enter a name for this round (e.g., "Qualifiers", "Semi-Finals").
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="flex items-center justify-between p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                                    <div className="space-y-0.5">
+                                        <Label className="text-purple-300 font-bold">Grand Finale</Label>
+                                        <p className="text-[10px] text-purple-300/60 leading-tight">Simplified scheduling for the final match.</p>
+                                    </div>
+                                    <Switch
+                                        checked={isGrandFinal}
+                                        onCheckedChange={(checked) => {
+                                            setIsGrandFinal(checked);
+                                            if (checked) {
+                                                setNewRoundName("Grand Finale");
+                                                setNewMatches(1);
+                                                setNewQualify(0);
+                                            }
+                                        }}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="name" className="text-right text-gray-300">
+                                        Name
+                                    </Label>
+                                    <Input
+                                        id="name"
+                                        value={newRoundName}
+                                        onChange={(e) => setNewRoundName(e.target.value)}
+                                        className="col-span-3 bg-white/5 border-white/10 text-white focus:border-purple-500"
+                                        placeholder="Round Name"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label className="text-right text-gray-300">Match Date</Label>
+                                    <Input
+                                        type="date"
+                                        value={newStartDate}
+                                        onChange={(e) => setNewStartDate(e.target.value)}
+                                        className="col-span-3 bg-white/5 border-white/10 text-white"
+                                    />
+                                </div>
+
+                                {isGrandFinal ? (
+                                    <div className="grid grid-cols-4 items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300">
+                                        <Label className="text-right text-gray-300">Match Time</Label>
                                         <Input
-                                            id="name"
-                                            value={newRoundName}
-                                            onChange={(e) => setNewRoundName(e.target.value)}
-                                            className="col-span-3 bg-white/5 border-white/10 text-white focus:border-purple-500"
-                                            placeholder="Round Name"
+                                            type="time"
+                                            value={newMatchTime}
+                                            onChange={(e) => setNewMatchTime(e.target.value)}
+                                            className="col-span-3 bg-white/5 border-white/10 text-white border-purple-500/30 focus:border-purple-500"
                                         />
                                     </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label className="text-right text-gray-300">Start Time</Label>
-                                        <Input
-                                            type="datetime-local"
-                                            value={newStartTime}
-                                            onChange={(e) => setNewStartTime(e.target.value)}
-                                            className="col-span-3 bg-white/5 border-white/10 text-white"
-                                        />
+                                ) : (
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
+                                        <div className="grid grid-cols-4 items-center gap-4">
+                                            <Label className="text-right text-gray-300">Daily Start</Label>
+                                            <Input
+                                                type="time"
+                                                value={newDailyStartTime}
+                                                onChange={(e) => setNewDailyStartTime(e.target.value)}
+                                                className="col-span-3 bg-white/5 border-white/10 text-white"
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-4 items-center gap-4">
+                                            <Label className="text-right text-gray-300">Daily End</Label>
+                                            <Input
+                                                type="time"
+                                                value={newDailyEndTime}
+                                                onChange={(e) => setNewDailyEndTime(e.target.value)}
+                                                className="col-span-3 bg-white/5 border-white/10 text-white"
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-4 items-center gap-4">
+                                            <Label className="text-right text-gray-300">Gap (Min)</Label>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                value={newGapMinutes}
+                                                onChange={(e) => setNewGapMinutes(parseInt(e.target.value) || 0)}
+                                                className="col-span-3 bg-white/5 border-white/10 text-white"
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label className="text-right text-gray-300">Gap (Min)</Label>
-                                        <Input
-                                            type="number"
-                                            min="0"
-                                            value={newGapMinutes}
-                                            onChange={(e) => setNewGapMinutes(parseInt(e.target.value) || 0)}
-                                            className="col-span-3 bg-white/5 border-white/10 text-white"
-                                        />
-                                    </div>
+                                )}
+
+                                <div className="space-y-4 pt-2 border-t border-white/5">
                                     <div className="grid grid-cols-4 items-center gap-4">
                                         <Label className="text-right text-gray-300">Matches</Label>
                                         <Input
@@ -286,59 +366,31 @@ export const RoundsManager = ({ eventId }: RoundsManagerProps) => {
                                         />
                                     </div>
                                     <div className="grid grid-cols-4 items-center gap-4">
-                                        <Label className="text-right text-gray-300">Qualify</Label>
+                                        <Label className="text-right text-gray-300">Winner Selection</Label>
                                         <Input
                                             type="number"
-                                            min="1"
+                                            min="0"
                                             value={newQualify}
-                                            onChange={(e) => setNewQualify(parseInt(e.target.value) || 1)}
+                                            onChange={(e) => setNewQualify(parseInt(e.target.value) || 0)}
                                             className="col-span-3 bg-white/5 border-white/10 text-white"
+                                            placeholder={isGrandFinal ? "e.g. 1 for winner" : ""}
                                         />
                                     </div>
                                 </div>
-                                <DialogFooter>
-                                    <Button
-                                        onClick={handleCreateRound}
-                                        className="bg-purple-600 hover:bg-purple-700 text-white"
-                                        disabled={isCreating}
-                                    >
-                                        {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Create Round
-                                    </Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
-                    </div>
-                )}
-
-                {isSidebarCollapsed && (
-                    <div className="px-2 flex justify-center">
-                        <Dialog open={isCreateRoundOpen} onOpenChange={setIsCreateRoundOpen}>
-                            <DialogTrigger asChild>
+                            </div>
+                            <DialogFooter>
                                 <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="bg-purple-600 hover:bg-purple-700 text-white h-10 w-10 rounded-full"
-                                    disabled={isCreateDisabled}
-                                    title={isGrandFinale ? "Cannot create more rounds after Grand Finale (1 group)" : !canCreateRound ? "Complete the current round groups first" : "Create Round"}
+                                    onClick={handleCreateRound}
+                                    className="bg-purple-600 hover:bg-purple-700 text-white"
+                                    disabled={isCreating}
                                 >
-                                    <Plus className="w-5 h-5" />
+                                    {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Create Round
                                 </Button>
-                            </DialogTrigger>
-                            <DialogContent className="bg-gray-900 border-white/10 text-white">
-                                {/* Same Dialog Content - duplicated for now or refactor to shared state triggered */}
-                                {/* Since state is shared `isCreateRoundOpen`, duplication of Trigger is fine, Content must be outside or specific */}
-                                {/* Actually, simpler to keep one Dialog at root level? No, Dialog is coupled with Button usually. 
-                                    I will reuse the state `isCreateRoundOpen`. 
-                                    To avoid duplication of huge Dialog content code, I will move DialogContent OUTSIDE the conditional sidebars 
-                                    and just have hidden trigger or programmatic open? 
-                                    Better: Keep it simple. Just duplicate trigger logic or move content out.
-                                    Moving Content OUT creates cleaner code.
-                                */}
-                            </DialogContent>
-                        </Dialog>
-                    </div>
-                )}
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                </div>
 
                 <div className="space-y-2 px-4 flex-1 overflow-y-auto custom-scrollbar">
                     {isLoading && rounds.length === 0 ? (
@@ -396,9 +448,16 @@ export const RoundsManager = ({ eventId }: RoundsManagerProps) => {
 
                                             <div className="grid grid-cols-2 gap-4 py-4">
                                                 <div className="bg-white/5 p-4 rounded-lg space-y-1">
-                                                    <span className="text-xs text-gray-400 uppercase tracking-wider">Start Time</span>
+                                                    <span className="text-xs text-gray-400 uppercase tracking-wider">Start Date</span>
                                                     <div className="font-medium text-white">
-                                                        {selectedRound.startTime ? new Date(selectedRound.startTime).toLocaleString() : 'Not scheduled'}
+                                                        {selectedRound.startTime ? new Date(selectedRound.startTime).toLocaleDateString() : 'Not scheduled'}
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-white/5 p-4 rounded-lg space-y-1">
+                                                    <span className="text-xs text-gray-400 uppercase tracking-wider">Daily Window</span>
+                                                    <div className="font-medium text-white">
+                                                        {selectedRound.dailyStartTime || "13:00"} - {selectedRound.dailyEndTime || "21:00"}
                                                     </div>
                                                 </div>
 
@@ -495,7 +554,7 @@ export const RoundsManager = ({ eventId }: RoundsManagerProps) => {
                                                 <Button
                                                     variant="destructive"
                                                     onClick={async () => {
-                                                        const success = await deleteRound(selectedRound._id);
+                                                        const success = await deleteRound(selectedRound._id, eventId);
                                                         if (success) {
                                                             toast.success("Round deleted successfully");
                                                             setIsDeleteRoundOpen(false);
@@ -526,16 +585,11 @@ export const RoundsManager = ({ eventId }: RoundsManagerProps) => {
                                             <DialogFooter>
                                                 <Button
                                                     onClick={async () => {
-                                                        if (selectedRound && editRoundName.trim()) {
-                                                            const success = await useTournamentStore.getState().updateRound(selectedRound._id, editRoundName);
+                                                        if (selectedRound && editRoundName.trim() && eventId) {
+                                                            const success = await useTournamentStore.getState().updateRound(selectedRound._id, eventId, editRoundName);
                                                             if (success) {
                                                                 toast.success("Round updated!");
                                                                 setIsEditRoundOpen(false);
-                                                                // Update local selected round object or wait for store to propagate? 
-                                                                // Store updates rounds array, but selectedRound is local state.
-                                                                // Better to update selectedRound or let effect sync it.
-                                                                // setSelectedRound(prev => prev ? ({ ...prev, roundName: editRoundName }) : null);
-                                                                // Derived state handles this automatically!
                                                             }
                                                         }
                                                     }}
@@ -613,7 +667,7 @@ export const RoundsManager = ({ eventId }: RoundsManagerProps) => {
                         </div>
 
                         {/* Groups Grid */}
-                        <GroupsGrid roundId={selectedRound._id} />
+                        <GroupsGrid roundId={selectedRound._id} eventId={eventId} />
                     </>
                 ) : (
                     <div className="flex h-full items-center justify-center text-gray-500">

@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Bell, Check, Calendar, Users, Info } from "lucide-react";
+import { Bell, Check, Calendar, Users, Info, XCircle, AlertCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,8 @@ const NotificationItem = React.forwardRef<HTMLDivElement, NotificationItemProps>
                 return { icon: <Users className="w-5 h-5 text-red-400" />, label: "Team Update", textColor: "text-red-400" };
             case "EVENT_REGISTRATION":
             case "EVENT_REMINDER":
+            case "ROUND_CREATED":
+            case "GROUP_CREATED":
                 return { icon: <Calendar className="w-5 h-5 text-purple-400" />, label: "Tournament", textColor: "text-purple-400" };
             case "ORGANIZATION_INVITE":
                 return { icon: <Bell className="w-5 h-5 text-amber-400" />, label: "Org Invite", textColor: "text-amber-400" };
@@ -40,8 +42,48 @@ const NotificationItem = React.forwardRef<HTMLDivElement, NotificationItemProps>
 
     const typeConfig = getTypeConfig();
 
+    const getArchivedStatusConfig = () => {
+        const message = notification.content.message.toLowerCase();
+        if (message.includes("cancelled")) {
+            return {
+                label: "Cancelled",
+                icon: <XCircle className="w-3 h-3" />,
+                className: "bg-red-500/10 border-red-500/20 text-red-400"
+            };
+        }
+        if (message.includes("declined") || message.includes("rejected")) {
+            return {
+                label: "Declined",
+                icon: <AlertCircle className="w-3 h-3" />,
+                className: "bg-orange-500/10 border-orange-500/20 text-orange-400"
+            };
+        }
+        if (message.includes("accepted")) {
+            return {
+                label: "Accepted",
+                icon: <Check className="w-3 h-3" />,
+                className: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+            };
+        }
+        return {
+            label: "Handled",
+            icon: <Check className="w-3 h-3" />,
+            className: "bg-emerald-600/[0.03] border-emerald-500/10 text-emerald-500/60"
+        };
+    };
+
+    const archivedConfig = getArchivedStatusConfig();
+
     const handleAction = async (e: React.MouseEvent, actionType: string) => {
         e.stopPropagation();
+        if (actionType === "VIEW") {
+            const viewAction = notification.actions.find(a => a.actionType === "VIEW");
+            if (viewAction?.payload?.path) {
+                navigate(viewAction.payload.path);
+                markAsRead(notification._id);
+                return;
+            }
+        }
         await performAction(notification._id, actionType);
     };
 
@@ -51,7 +93,9 @@ const NotificationItem = React.forwardRef<HTMLDivElement, NotificationItemProps>
         }
 
         // Redirect logic
-        if (notification.relatedData?.teamId) {
+        if (notification.type === "GROUP_CREATED" && notification.relatedData?.groupId) {
+            navigate(`/groups/${notification.relatedData.groupId}/teams`);
+        } else if (notification.relatedData?.teamId) {
             navigate(`/dashboard/team`); // Redirect to team dashboard for team events
         } else if (notification.relatedData?.eventId) {
             navigate(EVENT_ROUTES.TOURNAMENT_DETAILS.replace(":eventId", notification.relatedData.eventId));
@@ -143,18 +187,18 @@ const NotificationItem = React.forwardRef<HTMLDivElement, NotificationItemProps>
                 </div>
 
                 {notification.status === "archived" && (
-                    <div className="flex-shrink-0 hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600/[0.03] border border-emerald-500/10 text-[10px] font-black tracking-wider text-emerald-500/60">
-                        <Check className="w-3 h-3" />
-                        <span>Handled</span>
+                    <div className={`flex-shrink-0 hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-black tracking-wider transition-all ${archivedConfig.className}`}>
+                        {archivedConfig.icon}
+                        <span>{archivedConfig.label.toUpperCase()}</span>
                     </div>
                 )}
             </div>
 
             {/* Mobile Handled Status */}
             {notification.status === "archived" && (
-                <div className="flex sm:hidden items-center gap-1.5 text-[9px] font-bold text-emerald-500/50 mt-3 pt-3 border-t border-white/5">
-                    <Check className="w-3 h-3" />
-                    <span>HANDLED</span>
+                <div className={`flex sm:hidden items-center gap-1.5 text-[9px] font-bold mt-3 pt-3 border-t border-white/5 ${archivedConfig.className.split(' ').pop()?.replace('text-', 'text-opacity-50 text-') || archivedConfig.className}`}>
+                    {archivedConfig.icon}
+                    <span>{archivedConfig.label.toUpperCase()}</span>
                 </div>
             )}
         </motion.div>

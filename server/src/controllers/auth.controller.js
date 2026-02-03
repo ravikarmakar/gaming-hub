@@ -5,6 +5,7 @@ import geoip from "geoip-lite";
 import { redis } from "../config/redis.js";
 
 import User from "../models/user.model.js";
+import { Notification } from "../models/notification.model.js";
 import { TryCatchHandler } from "../middleware/error.middleware.js";
 import { CustomError } from "../utils/CustomError.js";
 import {
@@ -437,13 +438,18 @@ export const getProfile = TryCatchHandler(async (req, res, next) => {
   const user = await User.findById(userId).select("+verifyOtpExpireAt");
   if (!user) return next(new CustomError("User not found", 404));
 
+  const unreadCount = await Notification.countDocuments({
+    recipient: userId,
+    status: "unread",
+  });
+
   try {
     await redis.set(cacheKey, JSON.stringify(user), { ex: 60 });
   } catch (setCacheError) {
     console.error("Redis setex error in getProfile:", setCacheError);
   }
 
-  return res.status(200).json({ success: true, user });
+  return res.status(200).json({ success: true, user, unreadCount });
 });
 
 export const sendResetPasswordOtp = TryCatchHandler(async (req, res, next) => {

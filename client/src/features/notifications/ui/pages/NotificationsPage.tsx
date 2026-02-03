@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Filter, Trash2, Loader2, Inbox } from "lucide-react";
+import { Bell, Trash2, Loader2, Inbox } from "lucide-react";
 import { useNotificationStore } from "../../store/useNotificationStore";
 import NotificationItem from "../components/NotificationItem";
 import { Button } from "@/components/ui/button";
@@ -50,14 +50,6 @@ const NotificationsPage: React.FC = () => {
                         transition={{ delay: 0.2 }}
                         className="flex items-center gap-3"
                     >
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 sm:flex-none bg-white/[0.03] border-white/10 text-gray-400 hover:text-white rounded-xl h-10 px-4 backdrop-blur-sm transition-all hover:bg-white/[0.08] text-xs font-bold"
-                        >
-                            <Filter className="w-3.5 h-3.5 mr-2" />
-                            Filter
-                        </Button>
                         <Button
                             variant="outline"
                             size="sm"

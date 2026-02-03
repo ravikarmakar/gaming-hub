@@ -281,7 +281,7 @@ export const updateGroupResults = async (req, res) => {
     // Update results for each team
     results.forEach(({ teamId, rank, kills }) => {
       const entry = leaderboard.teamScore.find(
-        (t) => t.teamId._id.toString() === teamId.toString()
+        (t) => t.teamId.toString() === teamId.toString()
       );
 
       if (entry) {

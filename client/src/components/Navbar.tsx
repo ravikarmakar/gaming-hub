@@ -23,6 +23,7 @@ import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore"
 import { useNotificationStore } from "@/features/notifications/store/useNotificationStore";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { ORG_ACTIONS_ACCESS, ORG_ACTIONS } from "@/features/organizer/lib/access";
+import { AUTH_ROUTES } from "@/features/auth/lib/routes";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -37,10 +38,15 @@ const Navbar = () => {
 
   useEffect(() => {
     if (user && !hasFetchedNotifications.current) {
-      fetchNotifications();
+      // Only fetch if platform notifications are enabled AND there are unread notifications
+      const platformNotificationsEnabled = user.settings?.notifications?.platform !== false;
+
+      if (platformNotificationsEnabled && unreadCount > 0) {
+        fetchNotifications();
+      }
       hasFetchedNotifications.current = true;
     }
-  }, [user]);
+  }, [user, unreadCount, fetchNotifications]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -191,7 +197,7 @@ const Navbar = () => {
                         {!user && !isLoading && (
                           <Button
                             onClick={() => {
-                              navigate(ROUTES.LOGIN);
+                              navigate(AUTH_ROUTES.LOGIN);
                               setIsMobileMenuOpen(false);
                             }}
                             className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold h-12 rounded-xl shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all duration-300"

@@ -77,6 +77,7 @@ const AllTournaments = lazy(() => import("@/features/events/ui/pages/AllTourname
 
 // Notification Features
 const NotificationsPage = lazy(() => import("@/features/notifications/ui/pages/NotificationsPage"));
+const GroupTeamList = lazy(() => import("@/features/organizer/ui/pages/GroupTeamList"));
 
 const App = () => {
   const checkingAuth = useCheckingAuth();
@@ -117,6 +118,7 @@ const App = () => {
                 <Route path={TEAM_ROUTES.PROFILE} element={<TeamIdPage />} />
                 <Route path={ROUTES.NOTIFICATIONS} element={<NotificationsPage />} />
                 <Route path={EVENT_ROUTES.TOURNAMENT_DETAILS} element={<TournamentById />} />
+                <Route path={ROUTES.GROUP_TEAM_LIST} element={<GroupTeamList />} />
               </Route>
             </Route>
 

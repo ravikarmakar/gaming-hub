@@ -192,6 +192,10 @@ export default function OrganizerTournamentDashboard() {
                                 <Settings className="w-5 h-5 text-gray-400" />
                                 General Actions
                             </h3>
+                            <p className="text-xs mb-6 text-red-400/80 italic">
+                                <span className="font-bold not-italic text-red-500 mr-1">Note:</span>
+                                Tournament details cannot be modified once registration has closed. Subject to platform <span className="font-bold text-white hover:underline cursor-pointer" onClick={() => navigate('/terms')}>terms and conditions</span>.
+                            </p>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <Button
                                     onClick={handleEdit}
