@@ -27,11 +27,7 @@ const ProtectedRoute = () => {
   }, [user, location.pathname, sendVerifyOtp]);
 
   if (checkingAuth && !user) {
-    return (
-      <div className="relative min-h-[60vh]">
-        <LoadingSpinner />
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!user) {

@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 
 export default function LoadingSpinner() {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-[#02000a]/60 backdrop-blur-md z-50">
+    <div className="flex items-center justify-center min-h-[60vh] w-full">
       <div className="relative">
         <div className="absolute inset-0 blur-2xl bg-purple-600/40 rounded-full animate-pulse" />
         <motion.div
