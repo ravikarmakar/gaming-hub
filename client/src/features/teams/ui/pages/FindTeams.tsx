@@ -24,11 +24,15 @@ const FindTeams: React.FC = () => {
         });
     }, [fetchTeams, search, region, isRecruiting, isVerified]);
 
+    const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
+
     useEffect(() => {
         // Debounce search
+        const delay = hasAttemptedFetch ? 500 : 0;
         const timer = setTimeout(() => {
             loadTeams(1, false);
-        }, 500);
+            setHasAttemptedFetch(true);
+        }, delay);
         return () => clearTimeout(timer);
     }, [search, region, isRecruiting, isVerified, loadTeams]);
 

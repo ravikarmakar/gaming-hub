@@ -9,6 +9,8 @@ interface CustomAxiosRequestConfig extends AxiosRequestConfig {
 }
 
 let refreshPromise: Promise<void> | null = null;
+let lastFailureTime = 0;
+const FAILURE_COOLDOWN = 5000; // 5 seconds
 
 axiosInstance.interceptors.response.use(
   (response) => response,
@@ -24,6 +26,11 @@ axiosInstance.interceptors.response.use(
       !(originalRequest.url && originalRequest.url.includes(AUTH_ENDPOINTS.REFRESH_TOKEN));
 
     if (shouldIntercept) {
+      // If we failed recently, don't keep trying
+      if (Date.now() - lastFailureTime < FAILURE_COOLDOWN) {
+        return Promise.reject(error);
+      }
+
       originalRequest._retry = true;
 
       try {
@@ -42,6 +49,7 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         refreshPromise = null;
+        lastFailureTime = Date.now();
         return Promise.reject(error);
       }
     }

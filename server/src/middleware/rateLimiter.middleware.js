@@ -12,7 +12,11 @@ export const rateLimiter =
         const p = redis.pipeline();
         p.incr(fullKey);
         p.expire(fullKey, timer);
-        const [requestCount] = await p.exec();
+        const results = await Promise.race([
+          p.exec(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 5000))
+        ]);
+        const [requestCount] = results;
 
         if (requestCount > limit) {
           const timeRemaining = await redis.ttl(fullKey);

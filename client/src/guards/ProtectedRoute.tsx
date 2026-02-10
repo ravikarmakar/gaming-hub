@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { AUTH_ROUTES } from "@/features/auth/lib/routes";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 const ProtectedRoute = () => {
   const location = useLocation();
@@ -25,8 +26,12 @@ const ProtectedRoute = () => {
     }
   }, [user, location.pathname, sendVerifyOtp]);
 
-  if (checkingAuth) {
-    return null;
+  if (checkingAuth && !user) {
+    return (
+      <div className="relative min-h-[60vh]">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
   if (!user) {

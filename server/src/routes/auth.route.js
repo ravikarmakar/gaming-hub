@@ -35,19 +35,19 @@ const router = express.Router();
 
 router.post(
   "/register",
-  rateLimiter({ limit: 5, timer: 60, key: "register" }),
+  rateLimiter({ limit: 10, timer: 60, key: "register" }),
   validateRequest(registerValidation),
   register
 );
 router.post(
   "/login",
-  rateLimiter({ limit: 5, timer: 60, key: "login" }),
+  rateLimiter({ limit: 10, timer: 60, key: "login" }),
   validateRequest(loginValidation),
   login
 );
 router.post(
   "/refresh-token",
-  rateLimiter({ limit: 5, timer: 60, key: "refreshToken" }),
+  rateLimiter({ limit: 20, timer: 60, key: "refreshToken" }),
   refreshToken
 );
 
@@ -85,8 +85,8 @@ router.post(
 
 router.get(
   "/get-profile",
-  rateLimiter({ limit: 30, timer: 60, key: "profile" }),
   isAuthenticated,
+  rateLimiter({ limit: 100, timer: 60, key: "profile" }),
   getProfile
 );
 
@@ -110,7 +110,7 @@ router.post(
 );
 
 router.put("/update-profile", upload.fields([{ name: "avatar", maxCount: 1 }, { name: "coverImage", maxCount: 1 }]),
-  rateLimiter({ limit: 5, timer: 60, key: "updateProfile" }),
+  rateLimiter({ limit: 50, timer: 60, key: "updateProfile" }),
   validateRequest(updateProfileValidation),
   updateProfile
 );

@@ -1,15 +1,17 @@
 import GameStore from "@/pages/games/FeaturedGame";
 import { HeroSection } from "../components/HeroSection";
-import FeaturedEvents from "@/pages/events/FeaturedEvents";
-import TrustedOrgs from "@/pages/home/TrustedOrgs";
+import FeaturedEvents from "@/features/events/ui/components/FeaturedEvents";
+import { PlatformFeatures } from "../components/PlatformFeatures";
+import { UniqueFeatures } from "../components/UniqueFeatures";
 
 const HomePage = () => {
   return (
     <>
       <HeroSection />
-      <TrustedOrgs />
-      <GameStore />
+      <PlatformFeatures />
+      <UniqueFeatures />
       <FeaturedEvents />
+      <GameStore />
     </>
   );
 };

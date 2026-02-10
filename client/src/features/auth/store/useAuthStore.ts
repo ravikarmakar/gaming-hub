@@ -135,6 +135,11 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
     } catch {
       // 401 = guest user (normal)
       set({ user: null });
+
+      // Ensure loading states are cleared if this was the initial load
+      if (isInitialLoad) {
+        set({ checkingAuth: false, isLoading: false });
+      }
     } finally {
       // Only update checkingAuth if this was the initial load
       if (isInitialLoad) {
@@ -334,7 +339,7 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
   },
 
   updateProfile: async (formData: FormData) => {
-    set({ isLoading: true, error: null });
+    set({ error: null });
     try {
       const { data } = await axiosInstance.put(AUTH_ENDPOINTS.UPDATE_PROFILE, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -345,26 +350,25 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
         useAuthStore.setState({ user: data.user });
       }
 
-      set({ isLoading: false, error: null });
+      set({ error: null });
       return data.success;
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || "Failed to update profile";
-      set({ isLoading: false, error: errorMsg });
+      set({ error: errorMsg });
       return false;
     }
   },
   updateSettings: async (settings) => {
-    set({ isLoading: true, error: null });
+    set({ error: null });
     try {
       const { data } = await axiosInstance.put(AUTH_ENDPOINTS.UPDATE_SETTINGS, settings);
       if (data.success && data.user) {
         set({ user: data.user });
       }
-      set({ isLoading: false });
       return data.success;
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || "Failed to update settings";
-      set({ error: errorMsg, isLoading: false });
+      set({ error: errorMsg });
       return false;
     }
   },

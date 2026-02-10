@@ -17,7 +17,10 @@ import { syncUserInTeams } from "../services/team.service.js";
 import { oauth2Client, discordOAuthConfig } from "../config/oauth.js";
 import { transporter } from "../config/mail.js";
 import { generateOTP, sendVerificationEmail } from "../services/otp.service.js";
-import { uploadOnImageKit, deleteFromImageKit } from "../services/imagekit.service.js";
+import {
+  uploadOnImageKit,
+  deleteFromImageKit,
+} from "../services/imagekit.service.js";
 
 export const register = TryCatchHandler(async (req, res, next) => {
   const { username, email, password } = req.body;
@@ -76,10 +79,12 @@ export const login = TryCatchHandler(async (req, res, next) => {
 
   // Check if user registered via OAuth - cannot use password login
   if (user.oauthProvider) {
-    return next(new CustomError(
-      `This account uses ${user.oauthProvider} login. Please sign in with ${user.oauthProvider}.`,
-      401
-    ));
+    return next(
+      new CustomError(
+        `This account uses ${user.oauthProvider} login. Please sign in with ${user.oauthProvider}.`,
+        401,
+      ),
+    );
   }
 
   const isMatch = await user.matchPassword(password);
@@ -215,10 +220,20 @@ export const googleLogin = TryCatchHandler(async (req, res, next) => {
   if (user) {
     // Existing user - only allow if they originally signed up with Google
     if (!user.oauthProvider) {
-      return next(new CustomError("This email is registered with password. Please login with your password.", 400));
+      return next(
+        new CustomError(
+          "This email is registered with password. Please login with your password.",
+          400,
+        ),
+      );
     }
     if (user.oauthProvider !== "google") {
-      return next(new CustomError(`This email is linked to ${user.oauthProvider}. Please login with ${user.oauthProvider}.`, 400));
+      return next(
+        new CustomError(
+          `This email is linked to ${user.oauthProvider}. Please login with ${user.oauthProvider}.`,
+          400,
+        ),
+      );
     }
   } else {
     user = await User.create({
@@ -293,7 +308,8 @@ export const discordLogin = TryCatchHandler(async (req, res, next) => {
       if (!user.oauthProvider) {
         return res.status(400).json({
           success: false,
-          message: "This email is registered with password. Please login with your password.",
+          message:
+            "This email is registered with password. Please login with your password.",
         });
       }
       if (user.oauthProvider !== "discord") {
@@ -463,10 +479,12 @@ export const sendResetPasswordOtp = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("You first need to verify your email", 401));
 
   if (user.oauthProvider)
-    return next(new CustomError(
-      `This account uses ${user.oauthProvider} login and has no password. Please sign in with ${user.oauthProvider}.`,
-      400
-    ));
+    return next(
+      new CustomError(
+        `This account uses ${user.oauthProvider} login and has no password. Please sign in with ${user.oauthProvider}.`,
+        400,
+      ),
+    );
 
   // Generate otp
   const otp = String(Math.floor(100000 + Math.random() * 900000));
@@ -494,30 +512,36 @@ export const sendResetPasswordOtp = TryCatchHandler(async (req, res, next) => {
   });
 });
 
-export const verifyResetPasswordOtp = TryCatchHandler(async (req, res, next) => {
-  const { email, otp } = req.body;
+export const verifyResetPasswordOtp = TryCatchHandler(
+  async (req, res, next) => {
+    const { email, otp } = req.body;
 
-  if (!email || !otp) {
-    return next(new CustomError("Email and OTP are required", 400));
-  }
+    if (!email || !otp) {
+      return next(new CustomError("Email and OTP are required", 400));
+    }
 
-  const user = await User.findOne({ email }).select("+resetOtp +resetOtpExpireAt");
+    const user = await User.findOne({ email }).select(
+      "+resetOtp +resetOtpExpireAt",
+    );
 
-  if (!user) return next(new CustomError("User not found", 404));
+    if (!user) return next(new CustomError("User not found", 404));
 
-  if (
-    !user.resetOtp ||
-    user.resetOtp !== otp ||
-    user.resetOtpExpireAt < Date.now()
-  ) {
-    return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
-  }
+    if (
+      !user.resetOtp ||
+      user.resetOtp !== otp ||
+      user.resetOtpExpireAt < Date.now()
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid or expired OTP" });
+    }
 
-  res.status(200).json({
-    success: true,
-    message: "OTP verified successfully. You can now reset your password.",
-  });
-});
+    res.status(200).json({
+      success: true,
+      message: "OTP verified successfully. You can now reset your password.",
+    });
+  },
+);
 
 export const resetPassword = TryCatchHandler(async (req, res, next) => {
   const { email, otp, newPassword } = req.body;
@@ -557,7 +581,19 @@ export const resetPassword = TryCatchHandler(async (req, res, next) => {
 
 export const updateProfile = TryCatchHandler(async (req, res, next) => {
   const userId = req.user.userId;
-  const { username, bio, esportsRole, region, country, isLookingForTeam, gameIgn, gameUid, gender, phoneNumber, dob } = req.body;
+  const {
+    username,
+    bio,
+    esportsRole,
+    region,
+    country,
+    isLookingForTeam,
+    gameIgn,
+    gameUid,
+    gender,
+    phoneNumber,
+    dob,
+  } = req.body;
 
   const user = await User.findById(userId);
   if (!user) return next(new CustomError("User not found", 404));
@@ -567,7 +603,7 @@ export const updateProfile = TryCatchHandler(async (req, res, next) => {
   if (esportsRole) user.esportsRole = esportsRole;
   if (region) user.region = region;
   if (isLookingForTeam !== undefined) {
-    user.isLookingForTeam = String(isLookingForTeam) === 'true';
+    user.isLookingForTeam = String(isLookingForTeam) === "true";
   }
   if (gameIgn !== undefined) user.gameIgn = gameIgn;
   if (gameUid !== undefined) user.gameUid = gameUid;
@@ -588,32 +624,48 @@ export const updateProfile = TryCatchHandler(async (req, res, next) => {
   }
 
   if (req.files) {
+    const uploadPromises = [];
+    const filesToDelete = [];
+
     if (req.files.avatar) {
       const avatarFile = req.files.avatar[0];
-      const uploadRes = await uploadOnImageKit(
+      const uploadPromise = uploadOnImageKit(
         avatarFile.path,
         `avatar-${userId}-${Date.now()}`,
-        "/users/avatars"
-      );
-      if (uploadRes) {
-        if (user.avatarFileId) await deleteFromImageKit(user.avatarFileId);
-        user.avatar = uploadRes.url;
-        user.avatarFileId = uploadRes.fileId;
-      }
+        "/users/avatars",
+      ).then((uploadRes) => {
+        if (uploadRes) {
+          if (user.avatarFileId) filesToDelete.push(user.avatarFileId);
+          user.avatar = uploadRes.url;
+          user.avatarFileId = uploadRes.fileId;
+        }
+      });
+      uploadPromises.push(uploadPromise);
     }
 
     if (req.files.coverImage) {
       const coverFile = req.files.coverImage[0];
-      const uploadRes = await uploadOnImageKit(
+      const uploadPromise = uploadOnImageKit(
         coverFile.path,
         `cover-${userId}-${Date.now()}`,
-        "/users/covers"
+        "/users/covers",
+      ).then((uploadRes) => {
+        if (uploadRes) {
+          if (user.coverImageFileId) filesToDelete.push(user.coverImageFileId);
+          user.coverImage = uploadRes.url;
+          user.coverImageFileId = uploadRes.fileId;
+        }
+      });
+      uploadPromises.push(uploadPromise);
+    }
+
+    await Promise.all(uploadPromises);
+
+    // Non-blocking cleanup of old images
+    if (filesToDelete.length > 0) {
+      Promise.all(filesToDelete.map((id) => deleteFromImageKit(id))).catch(
+        (err) => console.error("Background image cleanup failed:", err),
       );
-      if (uploadRes) {
-        if (user.coverImageFileId) await deleteFromImageKit(user.coverImageFileId);
-        user.coverImage = uploadRes.url;
-        user.coverImageFileId = uploadRes.fileId;
-      }
     }
   }
 
@@ -683,7 +735,8 @@ export const updateSettings = TryCatchHandler(async (req, res, next) => {
     };
   }
 
-  if (allowChallenges !== undefined) user.settings.allowChallenges = allowChallenges;
+  if (allowChallenges !== undefined)
+    user.settings.allowChallenges = allowChallenges;
   if (allowMessages !== undefined) user.settings.allowMessages = allowMessages;
 
   if (notifications) {
@@ -694,9 +747,12 @@ export const updateSettings = TryCatchHandler(async (req, res, next) => {
         sms: false,
       };
     }
-    if (notifications.platform !== undefined) user.settings.notifications.platform = notifications.platform;
-    if (notifications.email !== undefined) user.settings.notifications.email = notifications.email;
-    if (notifications.sms !== undefined) user.settings.notifications.sms = notifications.sms;
+    if (notifications.platform !== undefined)
+      user.settings.notifications.platform = notifications.platform;
+    if (notifications.email !== undefined)
+      user.settings.notifications.email = notifications.email;
+    if (notifications.sms !== undefined)
+      user.settings.notifications.sms = notifications.sms;
   }
 
   await user.save();

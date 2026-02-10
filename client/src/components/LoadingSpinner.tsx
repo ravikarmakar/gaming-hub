@@ -1,11 +1,18 @@
 import { Loader } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function LoadingSpinner() {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-black/40 via-purple-950/50 to-black/40 backdrop-blur-lg z-50">
+    <div className="absolute inset-0 flex items-center justify-center bg-[#02000a]/60 backdrop-blur-md z-50">
       <div className="relative">
-        <div className="absolute inset-0 blur-3xl bg-purple-600/30 rounded-full animate-pulse" />
-        <Loader className="relative w-16 h-16 text-purple-400 animate-spin sm:w-10 sm:h-10 drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]" />
+        <div className="absolute inset-0 blur-2xl bg-purple-600/40 rounded-full animate-pulse" />
+        <motion.div
+          initial={{ scale: 0.8 }}
+          animate={{ scale: 1 }}
+          transition={{ repeat: Infinity, duration: 1, repeatType: "reverse" }}
+        >
+          <Loader className="relative w-12 h-12 text-purple-400 animate-spin drop-shadow-[0_0_15px_rgba(168,85,247,0.6)]" />
+        </motion.div>
       </div>
     </div>
   );

@@ -16,8 +16,11 @@ const FindPlayers: React.FC = () => {
     const [isPlayerVerified, setIsPlayerVerified] = useState<boolean | undefined>(undefined);
     const [hasTeam, setHasTeam] = useState<boolean | undefined>(undefined);
 
+    const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
+
     // Debounced search/filter trigger
     useEffect(() => {
+        const delay = hasAttemptedFetch ? 500 : 0;
         const delayDebounceFn = setTimeout(() => {
             fetchPlayers({
                 username: searchTerm || undefined,
@@ -29,7 +32,8 @@ const FindPlayers: React.FC = () => {
                 limit: 20,
                 append: false
             });
-        }, 500);
+            setHasAttemptedFetch(true);
+        }, delay);
 
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm, selectedRole, isVerified, isPlayerVerified, hasTeam, fetchPlayers]);

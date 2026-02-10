@@ -34,7 +34,7 @@ const navItems = [
   {
     name: "Support",
     icon: LifeBuoy,
-    href: "#",
+    href: ROUTES.SUPPORT,
   },
 ];
 

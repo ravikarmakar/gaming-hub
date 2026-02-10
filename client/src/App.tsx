@@ -1,6 +1,6 @@
 import { useEffect, useRef, lazy, Suspense } from "react";
 import { Toaster } from "react-hot-toast";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, Outlet } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
 
 // Stores & Constants
@@ -29,8 +29,10 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { ErrorFallback } from "@/components/ErrorFallback";
 import CreateOrgDialog from "@/features/organizer/ui/components/CreateOrgDialog";
 import CreateTeamModal from "@/features/teams/ui/components/CreateTeamModal";
+import ScrollToTop from "@/components/shared/ScrollToTop";
 
 // Lazy Loaded Pages
+const SupportPage = lazy(() => import("@/components/SupportPage"));
 const HomePage = lazy(() => import("@/features/home/ui/pages/HomePage"));
 const LoginPage = lazy(() => import("@/features/auth/ui/LoginPage"));
 const SignupPage = lazy(() => import("@/features/auth/ui/SignupPage"));
@@ -91,9 +93,9 @@ const App = () => {
     }
   }, [checkAuth]);
 
-  // Only show the global blackout for the initial auth check when we're sure we're loading
+  // Only show the global blackout for the initial auth load
   if (checkingAuth && !hasCalled.current) {
-    return <div className="fixed inset-0 z-[9999] bg-black" />;
+    return <div className="fixed inset-0 z-[9999] bg-[#02000a]" />;
   }
 
   return (
@@ -102,26 +104,35 @@ const App = () => {
       <CreateOrgDialog />
       <CreateTeamModal />
       <ErrorBoundary FallbackComponent={ErrorFallback}>
-        <Suspense fallback={<LoadingSpinner />}>
-          <Routes>
-            <Route element={<MainLayout />}>
-              <Route index element={<HomePage />} />
-              <Route path={EVENT_ROUTES.TOURNAMENTS} element={<AllTournaments />} />
-              <Route path={TEAM_ROUTES.ALL_TEAMS} element={<Teams />} />
-              <Route path={ORGANIZER_ROUTES.ORGANIZERS} element={<FindOrganizers />} />
+        <ScrollToTop />
+        <Routes>
+          <Route element={<MainLayout />}>
+            <Route index element={<HomePage />} />
+            <Route path={EVENT_ROUTES.TOURNAMENTS} element={<AllTournaments />} />
+            <Route path={TEAM_ROUTES.ALL_TEAMS} element={<Teams />} />
+            <Route path={ORGANIZER_ROUTES.ORGANIZERS} element={<FindOrganizers />} />
+            <Route path={ROUTES.SUPPORT} element={<SupportPage />} />
 
-              <Route element={<ProtectedRoute />}>
-                <Route path={ORGANIZER_ROUTES.PROFILE} element={<OrganizerProfile />} />
-                <Route path={PLAYER_ROUTES.ALL_PLAYERS} element={<FindPlayers />} />
-                <Route path={PLAYER_ROUTES.PLAYER_DETAILS} element={<PlayerIdPage />} />
-                <Route path={PLAYER_ROUTES.PLAYER_SETTINGS} element={<PlayerSettings />} />
-                <Route path={TEAM_ROUTES.PROFILE} element={<TeamIdPage />} />
-                <Route path={ROUTES.NOTIFICATIONS} element={<NotificationsPage />} />
-                <Route path={EVENT_ROUTES.TOURNAMENT_DETAILS} element={<TournamentById />} />
-                <Route path={ROUTES.GROUP_TEAM_LIST} element={<GroupTeamList />} />
-              </Route>
+            <Route element={<ProtectedRoute />}>
+              <Route path={ORGANIZER_ROUTES.PROFILE} element={<OrganizerProfile />} />
+              <Route path={PLAYER_ROUTES.ALL_PLAYERS} element={<FindPlayers />} />
+              <Route path={PLAYER_ROUTES.PLAYER_DETAILS} element={<PlayerIdPage />} />
+              <Route path={PLAYER_ROUTES.PLAYER_SETTINGS} element={<PlayerSettings />} />
+              <Route path={TEAM_ROUTES.PROFILE} element={<TeamIdPage />} />
+              <Route path={ROUTES.NOTIFICATIONS} element={<NotificationsPage />} />
+              <Route path={EVENT_ROUTES.TOURNAMENT_DETAILS} element={<TournamentById />} />
+              <Route path={ROUTES.GROUP_TEAM_LIST} element={<GroupTeamList />} />
             </Route>
+          </Route>
 
+          {/* Wrapper for routes outside MainLayout */}
+          <Route
+            element={
+              <Suspense fallback={<LoadingSpinner />}>
+                <Outlet />
+              </Suspense>
+            }
+          >
             {/* Team Routes */}
             <Route element={<ProtectedRoute />}>
               <Route element={<RoleGuard access={TEAM_ACCESS.dashboard} />}>
@@ -153,10 +164,6 @@ const App = () => {
                   <Route path={ORGANIZER_ROUTES.SETTINGS} element={<OrganizerSettingsPage />} />
                 </Route>
               </Route>
-
-              {/* <Route path={ROUTES.SUPER_ADMIN} element={<SuperAdminLayout />}>
-                <Route index element={<DashboardPage />} />
-                </Route> */}
             </Route>
 
             {/* Auth Routes */}
@@ -173,10 +180,10 @@ const App = () => {
                 <Route path={AUTH_ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
               </Route>
             </Route>
+          </Route>
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </ErrorBoundary>
     </>
   );

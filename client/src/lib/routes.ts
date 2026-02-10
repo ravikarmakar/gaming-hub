@@ -3,4 +3,5 @@ export const ROUTES = {
   SUPER_ADMIN: "/super-admin/:id",
   NOTIFICATIONS: "/notifications",
   GROUP_TEAM_LIST: "/groups/:groupId/teams",
+  SUPPORT: "/support",
 };

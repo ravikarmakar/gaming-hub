@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Save, Gamepad2, Hash, Trophy } from "lucide-react";
@@ -27,7 +27,8 @@ import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { playerSettingsSchema, PlayerSettingsValues } from "@/features/player/lib/playerSchema";
 
 export const GameInfoSettingsForm: React.FC = () => {
-    const { updateProfile, isLoading, error, user } = useAuthStore();
+    const { updateProfile, error, user } = useAuthStore();
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const form = useForm<PlayerSettingsValues>({
         resolver: zodResolver(playerSettingsSchema),
@@ -72,7 +73,10 @@ export const GameInfoSettingsForm: React.FC = () => {
         formData.append("gameIgn", values.gameIgn || "");
         formData.append("gameUid", values.gameUid || "");
 
+        setIsSubmitting(true);
         const success = await updateProfile(formData);
+        setIsSubmitting(false);
+
         if (success) {
             toast.success("Game information updated successfully");
             form.reset(values);
@@ -162,18 +166,18 @@ export const GameInfoSettingsForm: React.FC = () => {
                                 type="button"
                                 variant="outline"
                                 onClick={onReset}
-                                disabled={isLoading}
+                                disabled={isSubmitting}
                                 className="h-12 px-8 border-white/5 hover:bg-white/5 text-zinc-400 text-[10px] font-black tracking-[2px] rounded-xl transition-all"
                             >
                                 Cancel
                             </Button>
                             <Button
                                 type="submit"
-                                disabled={isLoading}
+                                disabled={isSubmitting}
                                 className="group relative overflow-hidden px-10 h-12 bg-white text-black hover:bg-zinc-200 transition-all font-black tracking-[2px] text-[10px] rounded-xl active:scale-[0.98] shadow-xl shadow-white/5"
                             >
                                 <span className="relative z-10 flex items-center gap-2">
-                                    {isLoading ? (
+                                    {isSubmitting ? (
                                         <>
                                             <Loader2 className="w-3 h-3 animate-spin" />
                                             Saving...

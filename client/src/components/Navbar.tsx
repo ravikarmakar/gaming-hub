@@ -67,7 +67,7 @@ const Navbar = () => {
       animate={{ y: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className={cn(
-        "fixed z-50 w-full font-sans transition-all duration-500 ease-in-out border-b",
+        "fixed top-0 z-50 w-full font-sans transition-all duration-500 ease-in-out border-b",
         scrolled
           ? "bg-[#0a0514]/80 backdrop-blur-xl border-purple-500/20 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
           : "bg-transparent border-transparent py-4"

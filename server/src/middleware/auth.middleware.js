@@ -28,11 +28,16 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
     let cachedProfile = null;
 
     try {
-      const results = await p.exec();
+      // Set a strict timeout for the Redis check (e.g., 2 seconds)
+      const results = await Promise.race([
+        p.exec(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 2000))
+      ]);
       isBlacklisted = results[0];
       cachedProfile = results[1];
     } catch (redisError) {
-      console.error("Redis auth pipeline error:", redisError);
+      console.warn(">>> [AUTH] Redis check timed out or failed:", redisError.message);
+      // Fallback: don't block auth if Redis is slow, but log it
     }
 
     if (isBlacklisted)
