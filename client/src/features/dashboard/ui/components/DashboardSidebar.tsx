@@ -1,3 +1,4 @@
+import { brand } from "@/config/brand";
 import { Link, useLocation } from "react-router-dom";
 import { StarIcon, PanelLeftCloseIcon, PanelLeftIcon } from "lucide-react";
 
@@ -59,18 +60,15 @@ export const DashboardSidebar = ({ sidebarItems }: Props) => {
           className="flex items-center gap-3 transition-all duration-200 group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:bg-white/5 group-data-[collapsible=icon]:rounded-xl"
         >
           <img
-            src="/logo.svg"
+            src={brand.logo}
             height={32}
             width={32}
-            alt="Gaming Hub"
+            alt={brand.name}
             className="group-data-[collapsible=icon]:size-6 transition-all"
           />
           <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="text-lg font-bold text-white tracking-tight leading-none">
-              Gaming
-            </span>
-            <span className="text-lg font-bold tracking-tight leading-none text-purple-400">
-              Hub
+            <span className="text-lg font-bold text-white tracking-tight leading-none whitespace-nowrap">
+              {brand.name}
             </span>
           </div>
         </Link>

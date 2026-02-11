@@ -1,154 +1,152 @@
-import { motion } from "framer-motion";
+import { brand } from "@/config/brand";
+import { Separator } from "@/components/ui/separator";
+import { Link } from "react-router-dom";
 import {
   Twitter,
-  Twitch,
+  Instagram,
   Youtube,
   MessageSquare,
-  Gamepad2,
-  Trophy,
-  Users,
-  HelpCircle,
 } from "lucide-react";
 
-const navigationLinks = {
-  games: {
-    title: "Games",
-    icon: Gamepad2,
+const navigationLinks = [
+  {
+    title: "Platform",
     links: [
-      { label: "Action Games", href: "#" },
-      { label: "Adventure", href: "#" },
-      { label: "Strategy", href: "#" },
-      { label: "Sports", href: "#" },
+      { label: "Play", href: "/play" },
+      { label: "Tournaments", href: "/tournaments" },
+      { label: "Teams", href: "/teams" },
+      { label: "Premium", href: "/premium" },
     ],
   },
-  esports: {
-    title: "Esports",
-    icon: Trophy,
+  {
+    title: "Support",
     links: [
-      { label: "Tournaments", href: "#" },
-      { label: "Live Events", href: "#" },
-      { label: "Rankings", href: "#" },
-      { label: "Teams", href: "#" },
+      { label: "Help Center", href: "/help" },
+      { label: "Rules & Guidelines", href: "/rules" },
+      { label: "Contact Us", href: "/contact" },
+      { label: "Status", href: "/status" },
     ],
   },
-  community: {
-    title: "Community",
-    icon: Users,
+  {
+    title: "Company",
     links: [
-      { label: "Forums", href: "#" },
-      { label: "Discord", href: "#" },
-      { label: "Find Players", href: "#" },
-      { label: "Clans", href: "#" },
+      { label: "About Us", href: "/about" },
+      { label: "Careers", href: "/careers" },
+      { label: "Blog", href: "/blog" },
+      { label: "Partners", href: "/partners" },
     ],
   },
-  resources: {
-    title: "Resources",
-    icon: HelpCircle,
-    links: [
-      { label: "Support", href: "#" },
-      { label: "News", href: "#" },
-      { label: "Guides", href: "#" },
-      { label: "FAQ", href: "#" },
-    ],
-  },
-};
+];
 
 const socials = [
-  { icon: Twitter, label: "Twitter", color: "#1DA1F2" },
-  { icon: Twitch, label: "Twitch", color: "#9146FF" },
-  { icon: Youtube, label: "YouTube", color: "#FF0000" },
-  { icon: MessageSquare, label: "Discord", color: "#5865F2" },
+  { icon: Twitter, label: "Twitter", href: "#", color: "#1DA1F2" },
+  { icon: Instagram, label: "Instagram", href: "#", color: "#5a0101ff" },
+  { icon: Youtube, label: "YouTube", href: "#", color: "#FF0000" },
+  { icon: MessageSquare, label: "Discord", href: "#", color: "#5865F2" },
 ];
 
 const Footer = () => {
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="relative bg-gradient-to-b from-purple-900/10 via-[#12001d] to-black">
-      <div className="container px-4 py-12 mx-auto">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-5">
-          {/* Logo & Social Section */}
-          <div className="flex flex-col items-center lg:col-span-1 lg:items-start">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="flex flex-col items-center space-y-6 lg:items-start"
-            >
-              <div className="flex flex-wrap justify-center gap-3 lg:justify-start">
-                {socials.map(({ icon: Icon, label, color }) => (
-                  <motion.a
-                    key={label}
-                    href="#"
-                    className="relative group"
-                    whileHover={{ y: -2 }}
-                    style={{ "--social-color": color } as React.CSSProperties}
-                  >
-                    <div
-                      className="absolute inset-0 transition-opacity rounded-lg opacity-0 group-hover:opacity-20"
-                      style={{ backgroundColor: color }}
-                    />
-                    <div className="relative w-10 h-10 rounded-lg bg-gray-800/50 flex items-center justify-center text-gray-400 group-hover:text-[var(--social-color)] transition-all border border-gray-700/50 group-hover:border-[var(--social-color)]/50">
-                      <Icon size={20} />
-                    </div>
-                  </motion.a>
-                ))}
+    <footer className="relative bg-[#05020a] border-t border-purple-500/10 overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-[128px] pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-[128px] pointer-events-none" />
+
+      <div className="container px-4 py-16 mx-auto relative z-10">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-8">
+          {/* Brand Section */}
+          <div className="lg:col-span-5 space-y-8">
+            <Link to="/" className="flex items-center gap-3 group w-fit">
+              <div className="relative">
+                <div className="absolute -inset-2 bg-purple-500/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <img
+                  src={brand.logo}
+                  alt={brand.name}
+                  className="w-10 h-10 relative z-10 transition-transform duration-300 group-hover:scale-110"
+                />
               </div>
-            </motion.div>
+              <span className="text-2xl font-bold font-orbitron text-white tracking-wider group-hover:text-purple-400 transition-colors">
+                {brand.name}
+              </span>
+            </Link>
+
+            <p className="text-gray-400 max-w-sm leading-relaxed text-base">
+              The ultimate destination for competitive gaming. Join thousands of
+              players, compete in daily tournaments, and rise through the ranks to
+              become a legend.
+            </p>
+
+            <div className="flex items-center gap-4">
+              {socials.map((social) => (
+                <a
+                  key={social.label}
+                  href={social.href}
+                  className="group relative p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-purple-500/30 transition-all duration-300"
+                  aria-label={social.label}
+                >
+                  <social.icon
+                    size={20}
+                    className="text-gray-400 group-hover:text-white transition-colors"
+                    style={{
+                      filter: `drop-shadow(0 0 0 transparent)`,
+                    }}
+                  />
+                  <div
+                    className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-300"
+                    style={{ backgroundColor: social.color }}
+                  />
+                </a>
+              ))}
+            </div>
           </div>
 
           {/* Navigation Links */}
-          <div className="grid grid-cols-2 gap-8 lg:col-span-4 sm:grid-cols-2 lg:grid-cols-4">
-            {Object.values(navigationLinks).map(
-              ({ title, icon: Icon, links }) => (
-                <motion.div
-                  key={title}
-                  className="flex flex-col items-center space-y-4 sm:items-start"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <div className="flex items-center gap-2 font-bold text-white">
-                    <Icon className="w-5 h-5 text-purple-400" />
-                    <h3>{title}</h3>
-                  </div>
-                  <ul className="space-y-2 text-center sm:text-left">
-                    {links.map(({ label, href }) => (
-                      <motion.li key={label}>
-                        <a
-                          href={href}
-                          className="relative block py-1 text-sm text-gray-400 transition-colors hover:text-white group"
-                        >
-                          <span className="relative">
-                            {label}
-                            <span className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-[#bb5eea] via-[#8b5cf6] to-[#55015d] transform scale-x-0 group-hover:scale-x-100 transition-transform" />
-                          </span>
-                        </a>
-                      </motion.li>
-                    ))}
-                  </ul>
-                </motion.div>
-              )
-            )}
+          <div className="lg:col-span-7 grid grid-cols-2 md:grid-cols-3 gap-8">
+            {navigationLinks.map((section) => (
+              <div key={section.title} className="space-y-6">
+                <h3 className="text-lg font-bold text-white font-orbitron tracking-wide">
+                  {section.title}
+                </h3>
+                <ul className="space-y-4">
+                  {section.links.map((link) => (
+                    <li key={link.label}>
+                      <Link
+                        to={link.href}
+                        className="group flex items-center gap-2 text-gray-400 hover:text-purple-400 transition-colors text-sm font-medium"
+                      >
+                        <span className="w-1 h-1 rounded-full bg-purple-500/0 group-hover:bg-purple-500 transition-all duration-300" />
+                        <span className="relative">
+                          {link.label}
+                          <span className="absolute -bottom-1 left-0 w-0 h-px bg-purple-400 transition-all duration-300 group-hover:w-full" />
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="pt-6 mt-12 border-t border-gray-800/30">
-          <div className="flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left">
-            <p className="text-sm text-gray-500">
-              {new Date().getFullYear()} GamerX. All rights reserved.
-            </p>
-            <div className="flex gap-6">
-              {["Privacy", "Terms", "Contact"].map((item) => (
-                <motion.a
-                  key={item}
-                  href="#"
-                  className="text-sm text-gray-500 hover:text-[#5eead4] transition-colors"
-                  whileHover={{ x: 2 }}
-                >
-                  {item}
-                </motion.a>
-              ))}
-            </div>
+        <Separator className="my-12 bg-white/5" />
+
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <p className="text-gray-500 text-sm">
+            © {currentYear} {brand.name}. All rights reserved.
+          </p>
+
+          <div className="flex items-center gap-8">
+            {["Privacy Policy", "Terms of Service", "Cookie Policy"].map((item) => (
+              <Link
+                key={item}
+                to="#"
+                className="text-gray-500 hover:text-white text-sm transition-colors"
+              >
+                {item}
+              </Link>
+            ))}
           </div>
         </div>
       </div>

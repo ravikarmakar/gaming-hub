@@ -34,7 +34,7 @@ export default function AuthLayout() {
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
           <img
-            src="/auth-bg.png"
+            src="/backgrounds/auth-bg.png"
             alt="Gaming Background"
             className="object-cover w-full h-full opacity-60"
           />

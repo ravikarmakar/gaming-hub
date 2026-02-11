@@ -162,7 +162,8 @@ const TournamentById = () => {
                             <GlassCard className="aspect-[16/9] sm:aspect-[21/9] md:aspect-[3/1] p-0 relative overflow-hidden border-white/10 rounded-2xl sm:rounded-[2rem] shadow-2xl">
                                 <img
                                     src={eventDetails.image || "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070"}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[2000ms] opacity-80"
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform opacity-80"
+                                    style={{ transitionDuration: "2000ms" }}
                                     alt={eventDetails.title}
                                 />
                                 {/* Dynamic Overlays */}

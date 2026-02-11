@@ -1,3 +1,4 @@
+import { brand } from "@/config/brand";
 import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, Gamepad2, Bell } from "lucide-react";
@@ -81,14 +82,14 @@ const Navbar = () => {
               <div className="relative">
                 <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
                 <img
-                  src="/logo.svg"
-                  alt="Nexus Logo"
+                  src={brand.logo}
+                  alt={`${brand.name} Logo`}
                   className="relative w-9 h-9 transition-transform duration-300 group-hover:scale-110"
                   loading="lazy"
                 />
               </div>
               <span className="hidden sm:block text-xl font-bold tracking-tighter text-white font-orbitron">
-                NEXUS
+                {brand.name}
               </span>
             </Link>
           </div>
@@ -149,7 +150,7 @@ const Navbar = () => {
                     <SheetHeader className="p-6 border-b border-purple-500/10">
                       <SheetTitle className="flex items-center gap-2 text-2xl font-bold text-white tracking-tight">
                         <Gamepad2 className="w-8 h-8 text-purple-500" />
-                        NEXUS
+                        {brand.name}
                       </SheetTitle>
                     </SheetHeader>
 

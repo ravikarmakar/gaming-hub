@@ -1,4 +1,4 @@
-import GameStore from "@/pages/games/FeaturedGame";
+import GameSection from "../components/GameSection";
 import { HeroSection } from "../components/HeroSection";
 import FeaturedEvents from "@/features/events/ui/components/FeaturedEvents";
 import { PlatformFeatures } from "../components/PlatformFeatures";
@@ -9,9 +9,9 @@ const HomePage = () => {
     <>
       <HeroSection />
       <PlatformFeatures />
+      <GameSection />
       <UniqueFeatures />
       <FeaturedEvents />
-      <GameStore />
     </>
   );
 };

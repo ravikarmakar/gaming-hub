@@ -1,235 +1,185 @@
-import { useState, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { motion, useMotionValue, useSpring } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Home, AlertTriangle, Terminal, Cpu, Activity, ShieldAlert } from "lucide-react";
+import { Home, Terminal } from "lucide-react";
 import { Button } from "./ui/button";
 
 export const NotFound = () => {
   const navigate = useNavigate();
-  const [glitchTitle, setGlitchTitle] = useState("404");
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Mouse Parallax Logic
+  // Smooth Mouse Position Tracking
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
+  const smoothX = useSpring(mouseX, { damping: 20, stiffness: 100 });
+  const smoothY = useSpring(mouseY, { damping: 20, stiffness: 100 });
 
-  const springConfig = { damping: 25, stiffness: 150 };
-  const rotateX = useSpring(useMotionValue(0), springConfig);
-  const rotateY = useSpring(useMotionValue(0), springConfig);
-
-  const springMouseX = useSpring(mouseX, springConfig);
-  const springMouseY = useSpring(mouseY, springConfig);
+  // 3D Parallax Values
+  const rotateX = useSpring(useMotionValue(0), { damping: 20, stiffness: 80 });
+  const rotateY = useSpring(useMotionValue(0), { damping: 20, stiffness: 80 });
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       const { clientX, clientY } = e;
       const { innerWidth, innerHeight } = window;
-      const xPct = (clientX / innerWidth - 0.5) * 20;
-      const yPct = (clientY / innerHeight - 0.5) * -20;
 
       mouseX.set(clientX);
       mouseY.set(clientY);
+
+      // Calculate parallax rotation
+      const xPct = (clientX / innerWidth - 0.5) * 15;
+      const yPct = (clientY / innerHeight - 0.5) * -15;
       rotateX.set(yPct);
       rotateY.set(xPct);
     };
 
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [rotateX, rotateY, mouseX, mouseY]);
-
-  // Random glitch effect for the title
-  useEffect(() => {
-    const chars = "404%/!X";
-    const interval = setInterval(() => {
-      if (Math.random() > 0.9) {
-        const glitched = "404".split("").map(c => Math.random() > 0.8 ? chars[Math.floor(Math.random() * chars.length)] : c).join("");
-        setGlitchTitle(glitched);
-        setTimeout(() => setGlitchTitle("404"), 150);
-      }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
+  }, [mouseX, mouseY, rotateX, rotateY]);
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#0a0514] font-mono selection:bg-purple-500/30 cursor-none">
+    <div
+      ref={containerRef}
+      className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#050110] font-mono selection:bg-purple-500/30 px-4"
+    >
+      {/* Texture Overlays */}
+      <div className="absolute inset-0 z-[50] pointer-events-none opacity-[0.03] mix-blend-overlay"
+        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
+      />
+      <div className="absolute inset-0 z-[51] pointer-events-none opacity-[0.02] bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]" />
 
-      {/* Dynamic Cursor Spotlight */}
+      {/* Interactive Mouse Spotlight */}
       <motion.div
-        className="pointer-events-none fixed inset-0 z-50 mix-blend-soft-light"
+        className="pointer-events-none fixed inset-0 z-10 mix-blend-soft-light opacity-40 hidden md:block"
         style={{
-          background: `radial-gradient(circle 300px at ${springMouseX.get()}px ${springMouseY.get()}px, rgba(139, 92, 246, 0.15), transparent 80%)`,
+          background: `radial-gradient(circle 500px at var(--mouse-x, 0px) var(--mouse-y, 0px), rgba(139, 92, 246, 0.1), transparent 80%)`,
         }}
         animate={{
-          background: `radial-gradient(circle 300px at ${springMouseX.get()}px ${springMouseY.get()}px, rgba(139, 92, 246, 0.15), transparent 80%)`
+          background: `radial-gradient(circle 500px at var(--mouse-x, 0px) var(--mouse-y, 0px), rgba(139, 92, 246, 0.1), transparent 80%)`
         }}
       />
 
-      {/* Cyber Background Layers */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Animated Grid */}
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)`,
-            backgroundSize: '40px 40px'
+      {/* Dynamic Background Orbs (Subdued) */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <motion.div
+          animate={{
+            x: [0, 50, -30, 0],
+            y: [0, -40, 60, 0],
           }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          className="absolute top-[10%] left-[10%] w-[60vw] h-[60vw] max-w-[600px] bg-[#581c87]/10 blur-[130px] rounded-full"
         />
+        <motion.div
+          animate={{
+            x: [0, -60, 40, 0],
+            y: [0, 50, -50, 0],
+          }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          className="absolute bottom-[10%] right-[10%] w-[50vw] h-[50vw] max-w-[500px] bg-[#9333ea]/08 blur-[130px] rounded-full"
+        />
+      </div>
 
-        {/* Tilting Data Streams */}
+      {/* Main Content */}
+      <div className="relative z-20 flex flex-col items-center max-w-2xl w-full text-center py-12">
+        {/* Premium Large 404 with 3D Parallax */}
         <motion.div
           style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-          className="absolute inset-0 flex items-center justify-center"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+          className="relative group cursor-default"
         >
-          <div className="relative w-[150%] h-[150%] opacity-20">
-            {[...Array(5)].map((_, i) => (
-              <motion.div
-                key={i}
-                animate={{
-                  y: ["-20%", "20%"],
-                  opacity: [0.1, 0.3, 0.1]
-                }}
-                transition={{
-                  duration: 5 + i * 2,
-                  repeat: Infinity,
-                  ease: "linear"
-                }}
-                className="absolute h-[1px] w-full bg-gradient-to-r from-transparent via-violet-500 to-transparent"
-                style={{ top: `${20 * i}%` }}
-              />
-            ))}
-          </div>
-        </motion.div>
-      </div>
+          <div className="absolute inset-[-20%] blur-[60px] bg-purple-500/05 group-hover:bg-purple-500/15 transition-all duration-1000 rounded-full"
+            style={{ transform: "translateZ(-50px)" }} />
 
-      {/* Corrupted HUD Elements */}
-      <div className="absolute inset-0 p-8 flex flex-col justify-between pointer-events-none opacity-40">
-        <div className="flex justify-between items-start">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-[10px] text-purple-500 font-bold tracking-widest animate-pulse">
-              <ShieldAlert size={12} /> CRITICAL_SYSTEM_FAILURE: SECTOR_ZERO
-            </div>
-            <div className="text-[8px] text-white/20 whitespace-pre font-mono leading-none">
-              {`[STATUS] OFFLINE\n[LOC] UNKNOWN_VAR_77\n[AUTH] ACCESS_DENIED`}
-            </div>
-          </div>
-          <div className="text-right space-y-2">
-            <div className="flex items-center justify-end gap-2 text-violet-400">
-              <span className="text-[10px] uppercase font-black">Link_Status</span>
-              <Activity size={12} className="animate-bounce" />
-            </div>
-            <div className="w-32 h-[2px] bg-white/5 relative overflow-hidden">
-              <motion.div
-                animate={{ x: ["-100%", "100%"] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0 bg-violet-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-between items-end">
-          <div className="flex items-center gap-4">
-            <Cpu size={24} className="text-white/10" />
-            <div className="text-[8px] text-white/20 tracking-[0.4em] uppercase">
-              Neural_Nexus_Sync: FAILED
-            </div>
-          </div>
-          <div className="font-mono text-[8px] text-white/10 text-right">
-            0x000FF404 // KERNEL_PANIC
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <motion.div
-        style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-        className="relative z-20 flex flex-col items-center"
-      >
-        <div className="relative group">
-          {/* Chromatic Aberration Layers */}
-          <motion.div
-            animate={{
-              x: [-1, 1, -1],
-              opacity: [0.5, 0.8, 0.5]
-            }}
-            transition={{ duration: 0.1, repeat: Infinity }}
-            className="absolute inset-0 text-[150px] md:text-[280px] font-black font-orbitron text-purple-600 mix-blend-screen blur-[2px] select-none pointer-events-none opacity-40"
-          >
-            {glitchTitle}
-          </motion.div>
-          <motion.div
-            animate={{
-              x: [1, -1, 1],
-              opacity: [0.5, 0.8, 0.5]
-            }}
-            transition={{ duration: 0.1, repeat: Infinity }}
-            className="absolute inset-0 text-[150px] md:text-[280px] font-black font-orbitron text-indigo-500 mix-blend-screen blur-[2px] select-none pointer-events-none opacity-40"
-          >
-            {glitchTitle}
-          </motion.div>
-
-          <h1 className="text-[150px] md:text-[280px] font-black font-orbitron text-white leading-none tracking-tighter drop-shadow-2xl relative z-10 transition-all duration-75">
-            {glitchTitle}
+          <h1 className="text-[clamp(140px,25vw,280px)] font-[900] font-orbitron leading-none tracking-tighter select-none
+            text-transparent bg-clip-text bg-gradient-to-b from-white via-white/70 to-purple-900/40
+            drop-shadow-[0_20px_20px_rgba(0,0,0,0.8)] relative z-10"
+            style={{ transform: "translateZ(50px)" }}>
+            404
           </h1>
 
-          {/* Center Scanline */}
           <motion.div
-            animate={{ top: ["0%", "100%", "0%"] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-            className="absolute left-0 right-0 h-[2px] bg-white/20 blur-sm z-20 pointer-events-none"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.6, duration: 1.2 }}
+            className="absolute top-1/2 left-[-10%] right-[-10%] h-[2px] bg-gradient-to-r from-transparent via-purple-500/20 to-transparent"
+            style={{ transform: "translateZ(25px)" }}
           />
+        </motion.div>
+
+        {/* Narrative Section */}
+        <div className="mt-4 md:mt-8 space-y-4 md:space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.8 }}
+          >
+            <h2 className="text-2xl md:text-5xl font-black font-orbitron tracking-[0.2em] text-white/90 uppercase italic">
+              Page Not Found
+            </h2>
+          </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6, duration: 1 }}
+            className="text-gray-500 text-sm md:text-xl leading-relaxed max-w-sm md:max-w-md mx-auto font-medium px-4"
+          >
+            The page you are looking for doesn't exist or has been moved.
+          </motion.p>
         </div>
 
-        {/* Message HUD */}
+        {/* Action Hub */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="mt-8 p-6 md:p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 backdrop-blur-3xl max-w-lg text-center relative group overflow-hidden"
+          transition={{ delay: 0.8, duration: 0.8 }}
+          className="mt-12 md:mt-20 flex flex-col sm:flex-row gap-4 md:gap-8 w-full sm:w-auto px-6"
         >
-          {/* Corner Decals */}
-          <div className="absolute top-4 left-4 w-2 h-2 border-t border-l border-violet-500/50" />
-          <div className="absolute top-4 right-4 w-2 h-2 border-t border-r border-violet-500/50" />
-          <div className="absolute bottom-4 left-4 w-2 h-2 border-b border-l border-violet-500/50" />
-          <div className="absolute bottom-4 right-4 w-2 h-2 border-b border-r border-violet-500/50" />
+          <Button
+            onClick={() => navigate(-1)}
+            variant="ghost"
+            className="group relative h-14 md:h-16 px-8 md:px-12 rounded-2xl border border-white/[0.03] bg-white/[0.01] backdrop-blur-xl text-gray-500 hover:text-white transition-all overflow-hidden flex-1 sm:flex-none"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/05 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Terminal size={20} className="mr-3 text-purple-600/60 group-hover:scale-110 group-hover:rotate-6 transition-transform" />
+            <span className="relative z-10 font-black tracking-[0.2em] uppercase text-[10px] md:text-xs">Go Back</span>
+          </Button>
 
-          <h2 className="text-xl md:text-3xl font-black font-grotesk uppercase italic tracking-widest text-white mb-4">
-            Connection Lost
-          </h2>
-          <p className="text-white/40 text-[10px] md:text-xs leading-relaxed uppercase tracking-[0.2em]">
-            The requested sector has been detached from the grid.
-            Reality sync error detected at 0x404.
-          </p>
-
-          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center pointer-events-auto">
-            <Button
-              onClick={() => navigate(-1)}
-              variant="ghost"
-              className="h-12 px-6 rounded-xl border border-white/5 hover:bg-white/5 text-white text-[10px] font-bold uppercase tracking-widest group"
-            >
-              <Terminal size={14} className="mr-2 text-violet-500" />
-              Retry_Link
-            </Button>
-
-            <Button
-              onClick={() => navigate("/")}
-              className="h-12 px-8 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-[10px] font-bold uppercase tracking-widest relative overflow-hidden group shadow-2xl shadow-purple-600/20"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-              <Home size={14} className="mr-2" />
-              Return_Home
-            </Button>
-          </div>
+          <Button
+            onClick={() => navigate("/")}
+            className="group relative h-14 md:h-16 px-10 md:px-14 rounded-2xl bg-purple-900/10 border border-purple-500/20 text-purple-300 font-black hover:bg-purple-900/20 transition-all shadow-2xl overflow-hidden flex-1 sm:flex-none"
+          >
+            <div className="absolute inset-0 bg-gradient-to-tr from-white/05 via-transparent to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+            <Home size={20} className="mr-3 group-hover:scale-110 group-hover:-rotate-6 transition-transform" />
+            <span className="relative z-10 tracking-[0.2em] uppercase text-[10px] md:text-xs text-purple-200">Return Home</span>
+          </Button>
         </motion.div>
-      </motion.div>
 
-      {/* Background Ambience Icons */}
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 text-white/5 border border-white/5 p-4 rounded-full animate-pulse">
-        <AlertTriangle size={48} />
-      </div>
-      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 -translate-y-1/2 text-white/5 border border-white/5 p-4 rounded-full animate-pulse" style={{ animationDelay: '1s' }}>
-        <ShieldAlert size={48} />
+        {/* Global Footer Trace */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.15 }}
+          transition={{ delay: 1.4, duration: 1 }}
+          className="mt-16 md:mt-28 flex items-center gap-6 text-[9px] md:text-[10px] font-mono tracking-[0.6em] text-purple-500/40 uppercase"
+        >
+          <span className="w-12 h-px bg-gradient-to-r from-transparent via-purple-500/10 to-transparent" />
+          KRM ESPORTS // ERROR 404
+          <span className="w-12 h-px bg-gradient-to-r from-transparent via-purple-500/10 to-transparent" />
+        </motion.div>
       </div>
 
+      {/* Inline styles for mouse position variables */}
+      <style>{`
+        :root {
+          --mouse-x: ${smoothX.get()}px;
+          --mouse-y: ${smoothY.get()}px;
+        }
+      `}</style>
     </div>
   );
 };
+
+
+
