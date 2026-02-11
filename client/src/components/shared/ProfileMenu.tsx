@@ -128,7 +128,7 @@ const ProfileMenu = () => {
               <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-full blur opacity-0 group-hover:opacity-50 transition duration-300" />
               <Avatar className="relative w-10 h-10 border-2 border-purple-500/20 transition-transform duration-300 group-hover:scale-105 group-active:scale-95">
                 <AvatarImage src={user.avatar} alt={user.username} className="object-cover" />
-                <AvatarFallback className="bg-[#0a0514] text-purple-200 font-bold">
+                <AvatarFallback className="bg-brand-dark text-purple-200 font-bold">
                   {user.username.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -138,7 +138,7 @@ const ProfileMenu = () => {
           <DropdownMenuContent
             align="end"
             sideOffset={8}
-            className="w-72 p-2 bg-[#0a0514]/95 backdrop-blur-xl border border-purple-500/20 text-white shadow-[0_10px_40px_rgba(0,0,0,0.6)] animate-in fade-in zoom-in-95 duration-200"
+            className="w-72 p-2 bg-brand-dark/95 backdrop-blur-xl border border-purple-500/20 text-white shadow-[0_10px_40px_rgba(0,0,0,0.6)] animate-in fade-in zoom-in-95 duration-200"
           >
             <DropdownMenuLabel className="p-4 mb-1">
               <div className="flex items-center gap-4">

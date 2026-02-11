@@ -1,5 +1,5 @@
 import { brand } from "@/config/brand";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, Gamepad2, Bell } from "lucide-react";
 import { motion } from "framer-motion";
@@ -21,7 +21,7 @@ import ProfileMenu from "./shared/ProfileMenu";
 import { DashboardButton } from "./shared/DashboardButton";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
-import { useNotificationStore } from "@/features/notifications/store/useNotificationStore";
+import { useNotificationManager } from "@/features/notifications/hooks/useNotificationManager";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { ORG_ACTIONS_ACCESS, ORG_ACTIONS } from "@/features/organizer/lib/access";
 import { AUTH_ROUTES } from "@/features/auth/lib/routes";
@@ -34,20 +34,11 @@ const Navbar = () => {
   const { can } = useAccess()
 
   const { user, isLoading } = useAuthStore();
-  const { unreadCount, fetchNotifications } = useNotificationStore();
-  const hasFetchedNotifications = useRef(false);
 
-  useEffect(() => {
-    if (user && !hasFetchedNotifications.current) {
-      // Only fetch if platform notifications are enabled AND there are unread notifications
-      const platformNotificationsEnabled = user.settings?.notifications?.platform !== false;
+  // Use the notification manager hook
+  const { unreadCount } = useNotificationManager();
 
-      if (platformNotificationsEnabled && unreadCount > 0) {
-        fetchNotifications();
-      }
-      hasFetchedNotifications.current = true;
-    }
-  }, [user, unreadCount, fetchNotifications]);
+  // Removed manual fetch logic here as it's handled in the hook
 
   useEffect(() => {
     const handleScroll = () => {
@@ -70,7 +61,7 @@ const Navbar = () => {
       className={cn(
         "fixed top-0 z-50 w-full font-sans transition-all duration-500 ease-in-out border-b",
         scrolled
-          ? "bg-[#0a0514]/80 backdrop-blur-xl border-purple-500/20 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+          ? "bg-brand-dark/80 backdrop-blur-xl border-purple-500/20 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
           : "bg-transparent border-transparent py-4"
       )}
     >
@@ -122,7 +113,7 @@ const Navbar = () => {
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
-                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#0a0514] opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-brand-dark opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Link>
               )}
 
@@ -143,7 +134,7 @@ const Navbar = () => {
                   </SheetTrigger>
                   <SheetContent
                     side="right"
-                    className="w-full sm:max-w-sm bg-[#0a0514] border-l border-purple-500/20 p-0 overflow-hidden"
+                    className="w-full sm:max-w-sm bg-brand-dark border-l border-purple-500/20 p-0 overflow-hidden"
                   >
                     <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,0.1),transparent_50%)]" />
 
@@ -158,10 +149,8 @@ const Navbar = () => {
                       {user && (
                         <div className="flex items-center p-4 rounded-2xl bg-purple-500/5 border border-purple-500/10 shadow-inner">
                           <Avatar className="w-12 h-12 border-2 border-purple-500/20 shadow-lg">
-                            <AvatarImage
-                              src={user.avatar || "/api/placeholder/48/48"}
-                              alt={user.username}
-                            />
+                            <AvatarImage src={user?.avatar} alt={user?.username} />
+
                             <AvatarFallback className="bg-purple-900/50 text-purple-200 text-lg">
                               {user.username.charAt(0).toUpperCase()}
                             </AvatarFallback>

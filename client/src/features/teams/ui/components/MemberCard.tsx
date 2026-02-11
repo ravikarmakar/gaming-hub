@@ -144,6 +144,7 @@ export const MemberCard = ({
                         <Button
                             variant="ghost"
                             size="icon"
+                            aria-label="Edit Member"
                             onClick={() => onViewProfile(member.user)}
                             className="h-8 w-8 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
                             title="View Profile"
@@ -157,6 +158,7 @@ export const MemberCard = ({
                                     <Button
                                         variant="ghost"
                                         size="icon"
+                                        aria-label="Remove Member"
                                         className="h-8 w-8 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
                                     >
                                         <MoreVertical className="w-4 h-4" />

@@ -127,7 +127,7 @@ const NavItems = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="start"
-                    className="p-2 min-w-[180px] bg-[#0a0514] border-purple-500/20 text-purple-100 shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
+                    className="p-2 min-w-[180px] bg-brand-dark border-purple-500/20 text-purple-100 shadow-[0_10px_40px_rgba(0,0,0,0.5)]"
                   >
                     {item.dropdownItems?.map((drop) => (
                       <DropdownMenuItem

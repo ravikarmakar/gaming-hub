@@ -81,7 +81,7 @@ const TeamLayout = () => {
   return (
     <SidebarProvider>
       <DashboardSidebar sidebarItems={filteredLinks} />
-      <main className="flex flex-col w-screen h-screen bg-[#06070D] overflow-hidden relative text-white">
+      <main className="flex flex-col w-screen h-screen bg-brand-black overflow-hidden relative text-white">
         {/* Universal Background FX */}
         <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-purple-600/10 to-transparent pointer-events-none z-0" />
         <div className="absolute top-40 right-10 w-96 h-96 bg-blue-600/5 rounded-full blur-[120px] pointer-events-none z-0" />

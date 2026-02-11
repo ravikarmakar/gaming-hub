@@ -158,7 +158,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                 <ImageIcon className="w-4 h-4 text-purple-500" />
                                 <CardTitle className="text-sm font-black text-white tracking-[2px]">Appearance</CardTitle>
                             </div>
-                            <CardDescription className="text-xs text-zinc-500 font-medium">
+                            <CardDescription className="text-xs text-zinc-400 font-medium">
                                 Customize your visual presence on the platform.
                             </CardDescription>
                         </CardHeader>
@@ -182,7 +182,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                     />
                                     <div className="flex-1 space-y-2 pb-2">
                                         <h3 className="text-sm font-black text-white tracking-[2px]">Profile Picture</h3>
-                                        <p className="text-[10px] text-zinc-500 leading-relaxed font-medium max-w-xs">
+                                        <p className="text-[10px] text-zinc-400 leading-relaxed font-medium max-w-xs">
                                             Your primary profile image. Recommended size 512x512px.
                                         </p>
                                     </div>
@@ -198,7 +198,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                 <UserIcon className="w-4 h-4 text-blue-500" />
                                 <CardTitle className="text-sm font-black text-white tracking-[2px]">Personal Details</CardTitle>
                             </div>
-                            <CardDescription className="text-xs text-zinc-500 font-medium">
+                            <CardDescription className="text-xs text-zinc-400 font-medium">
                                 Your personal information is used for identity verification and support.
                             </CardDescription>
                         </CardHeader>
@@ -211,7 +211,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                         <FormItem className="space-y-2.5">
                                             <div className="flex items-center gap-2 px-1">
                                                 <UserIcon className="w-3 h-3 text-blue-500/50" />
-                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-500">Gender</FormLabel>
+                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-400">Gender</FormLabel>
                                             </div>
                                             <Select
                                                 onValueChange={field.onChange}
@@ -250,7 +250,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                         <FormItem className="space-y-2.5">
                                             <div className="flex items-center gap-2 px-1">
                                                 <Calendar className="w-3 h-3 text-purple-500/50" />
-                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-500">Date of Birth</FormLabel>
+                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-400">Date of Birth</FormLabel>
                                             </div>
                                             <FormControl>
                                                 <div className="relative group">
@@ -275,7 +275,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                     <FormItem className="space-y-2.5">
                                         <div className="flex items-center gap-2 px-1">
                                             <Phone className="w-3 h-3 text-emerald-500/50" />
-                                            <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-500">Phone Number</FormLabel>
+                                            <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-400">Phone Number</FormLabel>
                                         </div>
                                         <FormControl>
                                             <div className="relative group">
@@ -295,10 +295,10 @@ export const ProfileSettingsForm: React.FC = () => {
 
                             <div className="space-y-2.5 opacity-60 grayscale pointer-events-none">
                                 <div className="flex items-center gap-2 px-1">
-                                    <Mail className="w-3 h-3 text-zinc-500" />
-                                    <label className="text-[10px] font-black tracking-[3px] text-zinc-500">Primary Email</label>
+                                    <Mail className="w-3 h-3 text-zinc-400" />
+                                    <label className="text-[10px] font-black tracking-[3px] text-zinc-400">Primary Email</label>
                                 </div>
-                                <div className="h-12 bg-white/[0.03] border-white/5 rounded-xl text-zinc-500 font-bold tracking-tight text-sm px-4 flex items-center border-dashed border">
+                                <div className="h-12 bg-white/[0.03] border-white/5 rounded-xl text-zinc-400 font-bold tracking-tight text-sm px-4 flex items-center border-dashed border">
                                     {user?.email}
                                 </div>
                                 <p className="text-[9px] font-bold text-zinc-600 tracking-widest px-1">
@@ -315,7 +315,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                 <UserIcon className="w-4 h-4 text-blue-500" />
                                 <CardTitle className="text-sm font-black text-white tracking-[2px]">Primary Details</CardTitle>
                             </div>
-                            <CardDescription className="text-xs text-zinc-500 font-medium">
+                            <CardDescription className="text-xs text-zinc-400 font-medium">
                                 Your basic information and community presence.
                             </CardDescription>
                         </CardHeader>
@@ -326,7 +326,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                     name="username"
                                     render={({ field }) => (
                                         <FormItem className="space-y-2.5">
-                                            <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-500 px-1">Username</FormLabel>
+                                            <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-400 px-1">Username</FormLabel>
                                             <FormControl>
                                                 <div className="relative group">
                                                     <Input
@@ -347,7 +347,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                     name="esportsRole"
                                     render={({ field }) => (
                                         <FormItem className="space-y-2.5">
-                                            <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-500 px-1">Esports Role</FormLabel>
+                                            <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-400 px-1">Esports Role</FormLabel>
                                             <Select
                                                 onValueChange={field.onChange}
                                                 defaultValue={field.value}
@@ -376,7 +376,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                     name="region"
                                     render={({ field }) => (
                                         <FormItem className="space-y-2.5">
-                                            <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-500 px-1">Region</FormLabel>
+                                            <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-400 px-1">Region</FormLabel>
                                             <Select
                                                 onValueChange={field.onChange}
                                                 defaultValue={field.value}
@@ -412,7 +412,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                     name="country"
                                     render={({ field }) => (
                                         <FormItem className="space-y-2.5">
-                                            <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-500 px-1">Country</FormLabel>
+                                            <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-400 px-1">Country</FormLabel>
                                             <FormControl>
                                                 <div className="relative group">
                                                     <Input
@@ -436,8 +436,8 @@ export const ProfileSettingsForm: React.FC = () => {
                                     <FormItem className="flex flex-row items-center justify-between rounded-2xl border border-white/5 bg-white/[0.03] p-6 group hover:border-purple-500/20 transition-all">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
-                                                <div className={`w - 1.5 h - 1.5 rounded - full ${field.value ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-600'} `} />
-                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-500">Looking for Team</FormLabel>
+                                                <div className={`w-1.5 h-1.5 rounded-full ${field.value ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-600'} `} />
+                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-400">Looking for Team</FormLabel>
                                             </div>
                                             <CardDescription className="text-[10px] font-bold text-zinc-600 tracking-widest leading-relaxed">
                                                 {field.value
@@ -465,7 +465,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                 <FileText className="w-4 h-4 text-emerald-500" />
                                 <CardTitle className="text-sm font-black text-white tracking-[2px]">About You</CardTitle>
                             </div>
-                            <CardDescription className="text-xs text-zinc-500 font-medium">
+                            <CardDescription className="text-xs text-zinc-400 font-medium">
                                 Describe yourself and your gaming experience.
                             </CardDescription>
                         </CardHeader>
@@ -475,7 +475,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                 name="bio"
                                 render={({ field }) => (
                                     <FormItem className="space-y-2.5">
-                                        <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-500 px-1">Bio</FormLabel>
+                                        <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-400 px-1">Bio</FormLabel>
                                         <FormControl>
                                             <div className="relative group">
                                                 <Textarea
@@ -508,7 +508,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                 <Share2 className="w-4 h-4 text-pink-500" />
                                 <CardTitle className="text-sm font-black text-white tracking-[2px]">Social Connections</CardTitle>
                             </div>
-                            <CardDescription className="text-xs text-zinc-500 font-medium">
+                            <CardDescription className="text-xs text-zinc-400 font-medium">
                                 Link your social media profiles to build your community.
                             </CardDescription>
                         </CardHeader>
@@ -521,7 +521,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                         <FormItem className="space-y-2.5">
                                             <div className="flex items-center gap-2 px-1">
                                                 <Disc className="w-3 h-3 text-[#5865F2]" />
-                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-500">Discord</FormLabel>
+                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-400">Discord</FormLabel>
                                             </div>
                                             <FormControl>
                                                 <div className="relative group">
@@ -545,7 +545,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                         <FormItem className="space-y-2.5">
                                             <div className="flex items-center gap-2 px-1">
                                                 <Twitter className="w-3 h-3 text-[#1DA1F2]" />
-                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-500">Twitter (X)</FormLabel>
+                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-400">Twitter (X)</FormLabel>
                                             </div>
                                             <FormControl>
                                                 <div className="relative group">
@@ -569,7 +569,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                         <FormItem className="space-y-2.5">
                                             <div className="flex items-center gap-2 px-1">
                                                 <Instagram className="w-3 h-3 text-[#E1306C]" />
-                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-500">Instagram</FormLabel>
+                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-400">Instagram</FormLabel>
                                             </div>
                                             <FormControl>
                                                 <div className="relative group">
@@ -593,7 +593,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                         <FormItem className="space-y-2.5">
                                             <div className="flex items-center gap-2 px-1">
                                                 <Youtube className="w-3 h-3 text-[#FF0000]" />
-                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-500">YouTube</FormLabel>
+                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-400">YouTube</FormLabel>
                                             </div>
                                             <FormControl>
                                                 <div className="relative group">
@@ -617,7 +617,7 @@ export const ProfileSettingsForm: React.FC = () => {
                                         <FormItem className="space-y-2.5 md:col-span-2">
                                             <div className="flex items-center gap-2 px-1">
                                                 <Globe className="w-3 h-3 text-emerald-500" />
-                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-500">Website</FormLabel>
+                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-400">Website</FormLabel>
                                             </div>
                                             <FormControl>
                                                 <div className="relative group">

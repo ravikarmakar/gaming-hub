@@ -58,7 +58,7 @@ export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
                         placeholder="Search teams..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:ring-purple-500/20"
+                        className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-gray-400 focus:ring-purple-500/20"
                     />
                 </div>
                 <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest">
@@ -102,7 +102,7 @@ export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
 
                             <CardContent className="p-5 flex items-center gap-4">
                                 <Avatar className="h-14 w-14 border-2 border-white/10 shadow-lg group-hover:scale-105 transition-transform">
-                                    <AvatarImage src={team.imageUrl || undefined} />
+                                    <AvatarImage src={team.imageUrl || undefined} alt={team.teamName} />
                                     <AvatarFallback className="bg-purple-600/20 text-purple-300 font-bold text-xl">
                                         {team.teamName[0].toUpperCase()}
                                     </AvatarFallback>
@@ -127,7 +127,7 @@ export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
                                 <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-9 w-9 text-gray-600 hover:text-purple-400 hover:bg-purple-500/10 rounded-xl"
+                                    className="h-9 w-9 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-xl"
                                     title="View Team Profile"
                                 >
                                     <ExternalLink className="w-4 h-4" />

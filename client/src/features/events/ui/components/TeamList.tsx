@@ -147,7 +147,7 @@ const TeamList = ({ eventId }: TeamListProps) => {
           </>
         ) : (
           <div className="py-20 text-center bg-white/[0.02] border border-dashed border-white/10 rounded-2xl">
-            <Users className="w-12 h-12 text-gray-600 mx-auto mb-4 opacity-20" />
+            <Users className="w-12 h-12 text-gray-400 mx-auto mb-4 opacity-20" />
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">
               No Combat Units Detected in Sector.
             </p>

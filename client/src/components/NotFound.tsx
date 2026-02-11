@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Home, Terminal } from "lucide-react";
 import { Button } from "./ui/button";
 
-export const NotFound = () => {
+export default function NotFound() {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
 

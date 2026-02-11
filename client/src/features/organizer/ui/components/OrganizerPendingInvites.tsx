@@ -1,12 +1,15 @@
 import { useEffect } from "react";
+import toast from "react-hot-toast";
 import { format } from "date-fns";
 import { X, Clock } from "lucide-react";
-import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import toast from "react-hot-toast";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
+import { Invite } from "@/features/organizer/lib/types";
 
 interface OrganizerPendingInvitesProps {
     orgId: string;
@@ -40,12 +43,12 @@ export const OrganizerPendingInvites = ({ orgId }: OrganizerPendingInvitesProps)
             </h3>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {pendingInvites.map((invite: any) => (
+                {pendingInvites.map((invite: Invite) => (
                     <Card key={invite._id} className="bg-[#1a1b2e] border-white/5 overflow-hidden">
                         <CardContent className="p-4 flex items-center justify-between gap-4">
                             <div className="flex items-center gap-3 overflow-hidden">
                                 <Avatar className="w-10 h-10 border border-white/10">
-                                    <AvatarImage src={invite.receiver.avatar} />
+                                    <AvatarImage src={invite.receiver.avatar} alt={invite.receiver.username} />
                                     <AvatarFallback>{invite.receiver.username[0]}</AvatarFallback>
                                 </Avatar>
                                 <div className="min-w-0">
@@ -67,6 +70,7 @@ export const OrganizerPendingInvites = ({ orgId }: OrganizerPendingInvitesProps)
                                 size="icon"
                                 onClick={() => handleCancel(invite._id)}
                                 disabled={isLoading}
+                                aria-label="Cancel Invite"
                                 className="text-gray-500 hover:text-red-400 hover:bg-red-500/10 shrink-0"
                             >
                                 <X className="w-4 h-4" />

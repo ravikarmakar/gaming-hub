@@ -13,7 +13,7 @@ const NotificationsPage: React.FC = () => {
     }, [fetchNotifications]);
 
     return (
-        <div className="min-h-screen pt-24 pb-12 bg-[#0a0514] relative overflow-hidden">
+        <div className="min-h-screen pt-24 pb-12 bg-brand-dark relative overflow-hidden">
             {/* Background Ambient Orbs */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-purple-600/5 blur-[120px]" />

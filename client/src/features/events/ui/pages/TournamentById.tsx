@@ -96,7 +96,7 @@ const TournamentById = () => {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-[#06070D]">
+            <div className="flex items-center justify-center min-h-screen bg-brand-black">
                 <div className="text-center">
                     <div className="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin mb-4" />
                     <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Accessing Arena Protocol...</p>
@@ -106,7 +106,7 @@ const TournamentById = () => {
     }
 
     if (!eventDetails) return (
-        <div className="flex items-center justify-center min-h-screen bg-[#06070D] text-gray-400">
+        <div className="flex items-center justify-center min-h-screen bg-brand-black text-gray-400">
             Mission intel not found.
         </div>
     );
@@ -126,7 +126,7 @@ const TournamentById = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#06070D] text-white relative overflow-hidden pb-12 pt-24">
+        <div className="min-h-screen bg-brand-black text-white relative overflow-hidden pb-12 pt-24">
             {/* Background Ambience */}
             <div className="absolute top-0 right-0 w-[1000px] h-[1000px] bg-purple-600/10 rounded-full blur-[180px] -mr-96 -mt-96 pointer-events-none" />
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-600/5 rounded-full blur-[150px] pointer-events-none opacity-50" />
@@ -167,8 +167,8 @@ const TournamentById = () => {
                                     alt={eventDetails.title}
                                 />
                                 {/* Dynamic Overlays */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-[#06070D] via-transparent to-transparent opacity-90" />
-                                <div className="absolute inset-0 bg-gradient-to-r from-[#06070D]/60 via-transparent to-transparent opacity-40" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-transparent to-transparent opacity-90" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-brand-black/60 via-transparent to-transparent opacity-40" />
 
                                 {/* Status Chip on Banner */}
                                 <div className="absolute top-4 left-4 sm:top-6 sm:left-6 flex gap-2 sm:gap-3">
@@ -237,8 +237,8 @@ const TournamentById = () => {
                             <Tabs defaultValue="intel" className="space-y-6 sm:space-y-8">
                                 <div className="relative">
                                     {/* Horizontal Scroll Gradient Fades */}
-                                    <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#06070D] to-transparent z-10 pointer-events-none opacity-0 sm:hidden" />
-                                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#06070D] to-transparent z-10 pointer-events-none sm:hidden" />
+                                    <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-brand-black to-transparent z-10 pointer-events-none opacity-0 sm:hidden" />
+                                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-brand-black to-transparent z-10 pointer-events-none sm:hidden" />
 
                                     <TabsList className="bg-white/5 border border-white/10 p-1 h-auto rounded-xl sm:rounded-2xl flex flex-nowrap overflow-x-auto scrollbar-hide justify-start w-full">
                                         <TabsTrigger
@@ -340,7 +340,7 @@ const TournamentById = () => {
 
                                 <TabsContent value="rules" className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                                     <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-white/5 rounded-3xl border border-dashed border-white/10">
-                                        <Gavel size={48} className="text-gray-600 mb-2" />
+                                        <Gavel size={48} className="text-gray-400 mb-2" />
                                         <h3 className="text-xl font-bold text-white uppercase tracking-widest">Standard Protocol</h3>
                                         <p className="text-gray-500 max-w-sm text-sm">The official ruleset for this tournament is currently being encrypted. Please refer to general platform guidelines in the meantime.</p>
                                     </div>
@@ -348,7 +348,7 @@ const TournamentById = () => {
 
                                 <TabsContent value="points" className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                                     <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-white/5 rounded-3xl border border-dashed border-white/10">
-                                        <ListOrdered size={48} className="text-gray-600 mb-2" />
+                                        <ListOrdered size={48} className="text-gray-400 mb-2" />
                                         <h3 className="text-xl font-bold text-white uppercase tracking-widest">Points Encryption</h3>
                                         <p className="text-gray-500 max-w-sm text-sm">Detailed point distribution mechanics for each round will be displayed here once the tournament commences.</p>
                                     </div>
@@ -356,7 +356,7 @@ const TournamentById = () => {
 
                                 <TabsContent value="chat" className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                                     <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-white/5 rounded-3xl border border-dashed border-white/10">
-                                        <MessageSquare size={48} className="text-gray-600 mb-2" />
+                                        <MessageSquare size={48} className="text-gray-400 mb-2" />
                                         <h3 className="text-xl font-bold text-white uppercase tracking-widest">Secure Comm-Link</h3>
                                         <p className="text-gray-500 max-w-sm text-sm">End-to-end encrypted communication channel between combat units and command center will be established pre-match.</p>
                                     </div>

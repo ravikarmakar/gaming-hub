@@ -129,7 +129,7 @@ const NotificationItem = React.forwardRef<HTMLDivElement, NotificationItemProps>
                             <img
                                 src={notification.sender.avatar}
                                 alt={notification.sender.username}
-                                className="absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-[#0a0514] z-10"
+                                className="absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-brand-dark z-10"
                             />
                         )}
                         <div className="scale-75 sm:scale-90">

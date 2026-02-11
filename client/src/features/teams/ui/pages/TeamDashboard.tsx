@@ -236,7 +236,7 @@ const TeamDashboard = () => {
             ) : (
               <div className="h-full flex flex-col items-center justify-center p-8 text-center border border-white/10 rounded-2xl bg-[#0F111A]/40 backdrop-blur-xl shadow-2xl shadow-purple-500/5">
                 <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                  <Trophy className="w-8 h-8 text-gray-600" />
+                  <Trophy className="w-8 h-8 text-gray-400" />
                 </div>
                 <h3 className="text-lg font-bold text-white mb-2">No Active Tournaments</h3>
                 <p className="text-gray-400 text-sm mb-6 max-w-[200px]">Ready to compete? Find your next challenge now.</p>

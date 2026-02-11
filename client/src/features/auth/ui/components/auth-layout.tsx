@@ -68,7 +68,7 @@ export default function AuthLayout() {
           </Card>
 
           {/* Footer text */}
-          <p className="mt-8 text-xs text-center text-gray-600">
+          <p className="mt-8 text-xs text-center text-gray-400">
             © {new Date().getFullYear()} GameVerse. All rights reserved.
           </p>
         </div>

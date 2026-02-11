@@ -107,7 +107,7 @@ const TeamTournamentsPage = () => {
             ) : (
                 <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-[#0F111A]/60 rounded-2xl border border-dashed border-white/10 backdrop-blur-xl shadow-2xl shadow-purple-500/5">
                     <div className="p-4 rounded-full bg-white/[0.03] mb-4">
-                        <Trophy className="w-12 h-12 text-gray-600" />
+                        <Trophy className="w-12 h-12 text-gray-400" />
                     </div>
                     <h3 className="text-xl font-bold text-white mb-2">No Tournaments Found</h3>
                     <p className="text-gray-400 max-w-md">

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import React from "react";
+import { toast } from "react-hot-toast";
 import {
   MapPin,
   MessageCircle,
@@ -16,7 +16,6 @@ import {
   Link as LinkIcon
 } from "lucide-react";
 
-import { toast } from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -163,6 +162,7 @@ export const PlayerHeader: React.FC<Props> = ({ player }) => {
             <Button
               variant="outline"
               size="icon"
+              aria-label="Edit Profile"
               className="w-12 h-12 rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-white backdrop-blur-md transition-all active:scale-95 ml-auto"
               onClick={() => {
                 navigator.clipboard.writeText(window.location.href);

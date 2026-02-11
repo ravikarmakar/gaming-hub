@@ -97,7 +97,7 @@ const OrganizerJoinRequestsPage = () => {
                                 </Button>
                                 <div className="flex items-center gap-1 mx-2 text-xs">
                                     <span className="text-white font-medium">{page}</span>
-                                    <span className="text-gray-600">/</span>
+                                    <span className="text-gray-400">/</span>
                                     <span className="text-gray-500">{joinRequestPagination.pages}</span>
                                 </div>
                                 <Button
@@ -129,7 +129,7 @@ const JoinRequestItem = memo(({ request, processingId, onAction }: {
                 {/* User Info */}
                 <div className="flex items-center gap-4 shrink-0">
                     <Avatar className="w-12 h-12 border-2 border-white/10">
-                        <AvatarImage src={request.requester.avatar} />
+                        <AvatarImage src={request.requester.avatar} alt={request.requester.username} />
                         <AvatarFallback className="bg-purple-900/50 text-purple-200">
                             {request.requester.username[0].toUpperCase()}
                         </AvatarFallback>

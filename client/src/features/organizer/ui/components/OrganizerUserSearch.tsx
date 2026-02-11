@@ -79,7 +79,7 @@ export const OrganizerUserSearch = ({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="overflow-hidden p-0 bg-[#0a0514] border-purple-500/20 shadow-2xl sm:max-w-[500px] max-w-[95vw]">
+            <DialogContent className="overflow-hidden p-0 bg-brand-dark border-purple-500/20 shadow-2xl sm:max-w-[500px] max-w-[95vw]">
                 <Command className="rounded-lg bg-transparent">
                     <div className="relative border-b border-purple-500/10">
                         <CommandInput

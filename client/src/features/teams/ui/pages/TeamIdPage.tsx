@@ -101,7 +101,7 @@ export default function TeamIdPage() {
 
         <TabsContent value="matches" className="mt-8">
           <Card className="bg-white/5 border-white/10 p-12 text-center">
-            <Trophy className="w-12 h-12 text-gray-600 mx-auto mb-4 opacity-50" />
+            <Trophy className="w-12 h-12 text-gray-400 mx-auto mb-4 opacity-50" />
             <h3 className="text-lg font-bold text-white mb-1">Match History Coming Soon</h3>
             <p className="text-gray-500 text-sm">We're currently synchronizing match data for {currentTeam.teamName}.</p>
           </Card>

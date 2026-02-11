@@ -686,7 +686,7 @@ const GroupCard = memo(({ group, roundMatches, onSelect, onEdit }: GroupCardProp
                     </div>
                 ))}
                 {(group.teams?.length || 0) > 3 && (
-                    <div className="text-xs text-gray-600 pl-3.5">
+                    <div className="text-xs text-gray-400 pl-3.5">
                         + {(group.teams?.length || 0) - 3} more
                     </div>
                 )}

@@ -55,7 +55,7 @@ export const OrganizerMemberList = ({
                     placeholder="Search by username..."
                     value={searchQuery}
                     onChange={(e) => onSearchChange?.(e.target.value)}
-                    className="pl-10 bg-black/40 border-white/10 focus:border-purple-500/50 focus:ring-purple-500/20 text-white placeholder:text-gray-600 h-10 transition-all duration-300 rounded-xl"
+                    className="pl-10 bg-black/40 border-white/10 focus:border-purple-500/50 focus:ring-purple-500/20 text-white placeholder:text-gray-400 h-10 transition-all duration-300 rounded-xl"
                 />
             </div>
 
@@ -66,7 +66,7 @@ export const OrganizerMemberList = ({
                 </div>
             ) : (!members || members.length === 0) ? (
                 <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
-                    <Users className="w-12 h-12 text-gray-600 mb-3" />
+                    <Users className="w-12 h-12 text-gray-400 mb-3" />
                     <h3 className="text-xl font-bold text-white mb-2">No Members Found</h3>
                     <p className="text-gray-400 text-sm">Your organization's roster is empty or no matches for "{searchQuery}".</p>
                 </div>
@@ -108,7 +108,7 @@ export const OrganizerMemberList = ({
                                 </Button>
                                 <div className="flex items-center gap-1 mx-2">
                                     <span className="text-xs font-medium text-white">{pagination.page}</span>
-                                    <span className="text-gray-600">/</span>
+                                    <span className="text-gray-400">/</span>
                                     <span className="text-xs text-gray-500">{pagination.pages}</span>
                                 </div>
                                 <Button

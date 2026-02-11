@@ -1,11 +1,17 @@
 import { create } from "zustand";
-import axios from "axios";
 
 import "../../../lib/axiosInterceptor";
 import { axiosInstance } from "@/lib/axios";
 import { AUTH_ENDPOINTS } from "../lib/endpoints";
 import { User } from "../lib/types";
+import { runAsync } from "@/lib/store-utils";
 
+interface AuthResponse {
+  success: boolean;
+  message: string;
+  user?: User;
+  unreadCount?: number;
+}
 
 interface AuthStateTypes {
   user: User | null;
@@ -43,12 +49,6 @@ interface AuthStateTypes {
   ) => Promise<{ success: boolean; message: string }>;
 }
 
-const getErrorMessage = (error: unknown, defaultMsg: string): string => {
-  return axios.isAxiosError(error)
-    ? error.response?.data?.message || defaultMsg
-    : "Network error. Please check your connection.";
-};
-
 export const useAuthStore = create<AuthStateTypes>((set, get) => ({
   user: null,
   error: null,
@@ -57,50 +57,34 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
   checkingAuth: true,
 
   register: async (username, email, password) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await axiosInstance.post(AUTH_ENDPOINTS.REGISTER, {
+    const { data } = await runAsync(set, async () => {
+      const response = await axiosInstance.post<AuthResponse>(AUTH_ENDPOINTS.REGISTER, {
         username,
         email,
         password,
       });
       set({ user: response.data.user });
-      return response.data.user;
-    } catch (error) {
-      const errMsg = getErrorMessage(error, "Registration failed. Please try again.");
-      set({ error: errMsg });
-      return null;
-    } finally {
-      set({ isLoading: false });
-    }
+      return response.data.user || null;
+    }, "Registration failed. Please try again.");
+    return data || null;
   },
 
   login: async (identifier, password) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await axiosInstance.post(AUTH_ENDPOINTS.LOGIN, {
+    const { success } = await runAsync(set, async () => {
+      const response = await axiosInstance.post<AuthResponse>(AUTH_ENDPOINTS.LOGIN, {
         identifier,
         password,
       });
       set({ user: response.data.user });
       return true;
-    } catch (error) {
-      const errMsg = getErrorMessage(error, "Failed to login! Please try again.");
-      set({ error: errMsg });
-      return false;
-    } finally {
-      set({ isLoading: false });
-    }
+    }, "Failed to login! Please try again.");
+    return success;
   },
 
   logout: async () => {
-    set({ isLoading: true, error: null });
-    try {
+    await runAsync(set, async () => {
       await axiosInstance.post(AUTH_ENDPOINTS.LOGOUT);
-    } catch (error) {
-      // Silently fail on logout errors (state will be cleared anyway)
-      console.error("Logout failed:", error);
-    } finally {
+    }, "Logout failed").finally(() => {
       set({
         user: null,
         isVerifying: false,
@@ -108,7 +92,7 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
         checkingAuth: false,
         error: null,
       });
-    }
+    });
   },
 
   checkAuth: async () => {
@@ -124,7 +108,7 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
     set({ error: null });
 
     try {
-      const response = await axiosInstance.get(AUTH_ENDPOINTS.GET_PROFILE);
+      const response = await axiosInstance.get<AuthResponse>(AUTH_ENDPOINTS.GET_PROFILE);
       set({ user: response.data.user });
 
       // Update unread count if available
@@ -151,10 +135,9 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
   refreshToken: async () => {
     // Background process - no UI loading state
     try {
-      const response = await axiosInstance.post(AUTH_ENDPOINTS.REFRESH_TOKEN);
+      const response = await axiosInstance.post<AuthResponse>(AUTH_ENDPOINTS.REFRESH_TOKEN);
       const { user } = response.data;
       if (user) set({ user });
-      return response.data;
     } catch (error) {
       // fail silently in UI but throw for interceptor
       set({ user: null });
@@ -163,213 +146,149 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
   },
 
   googleAuth: async (code) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await axiosInstance.get(`${AUTH_ENDPOINTS.GOOGLE}?code=${code}`);
-      set({ user: response.data.user });
-      return response.data.user;
-    } catch (error) {
-      const errMsg = getErrorMessage(error, "Error while Google Register!");
-      set({ error: errMsg });
-      return null;
-    } finally {
-      set({ isLoading: false, checkingAuth: false });
-    }
+    const { data } = await runAsync(set, async () => {
+      const response = await axiosInstance.get<AuthResponse>(`${AUTH_ENDPOINTS.GOOGLE}?code=${encodeURIComponent(code)}`);
+      set({ user: response.data.user, checkingAuth: false });
+      return response.data.user || null;
+    }, "Error while Google Register!", "isLoading", "error");
+    return data || null;
   },
 
   loginWithDiscord: async (code) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await axiosInstance.post(`${AUTH_ENDPOINTS.DISCORD}?code=${code}`);
-      set({ user: response.data.user });
-      return response.data.user;
-    } catch (error) {
-      const errMsg = getErrorMessage(error, "Error while Discord Register & login!");
-      set({ error: errMsg });
-      return null;
-    } finally {
-      set({ isLoading: false, checkingAuth: false });
-    }
+    const { data } = await runAsync(set, async () => {
+      const response = await axiosInstance.post<AuthResponse>(`${AUTH_ENDPOINTS.DISCORD}?code=${encodeURIComponent(code)}`);
+      set({ user: response.data.user, checkingAuth: false });
+      // Return explicit null if user is undefined to match interface
+      return response.data.user || null;
+    }, "Error while Discord Register & login!");
+    return data || null;
   },
 
   sendVerifyOtp: async () => {
-    set({ isVerifying: true, error: null });
-    try {
-      const response = await axiosInstance.post(AUTH_ENDPOINTS.SEND_VERIFY_OTP);
-
+    const { success, data, message } = await runAsync(set, async () => {
+      const response = await axiosInstance.post<AuthResponse>(AUTH_ENDPOINTS.SEND_VERIFY_OTP);
       if (response.data.user) {
         set({ user: response.data.user });
       }
-
       return {
         success: true,
         message: response.data.message,
       };
-    } catch (error) {
-      const errMsg = getErrorMessage(error, "Failed to send OTP");
-      set({ error: errMsg });
-      return { success: false, message: errMsg };
-    } finally {
-      set({ isVerifying: false });
-    }
+    }, "Failed to send OTP", "isVerifying"); // Use isVerifying as loading key
+
+    return success ? data : { success: false, message: message || "Failed to send OTP" };
   },
 
   verifyEmail: async (otp) => {
-    set({ isVerifying: true, error: null });
-    try {
-      const response = await axiosInstance.post(AUTH_ENDPOINTS.VERIFY_ACCOUNT, {
+    const { success, data, message } = await runAsync(set, async () => {
+      const response = await axiosInstance.post<AuthResponse>(AUTH_ENDPOINTS.VERIFY_ACCOUNT, {
         otp,
       });
-
       if (response.data.user) {
         set({ user: response.data.user });
       }
-
       return {
         success: true,
         message: response.data.message,
       };
-    } catch (error) {
-      const errMsg = getErrorMessage(error, "Failed to verify account");
-      set({ error: errMsg });
-      return { success: false, message: errMsg };
-    } finally {
-      set({ isVerifying: false });
-    }
+    }, "Failed to verify account", "isVerifying");
+
+    return success ? data : { success: false, message: message || "Failed to verify account" };
   },
 
   sendPassResetOtp: async (email) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await axiosInstance.post(AUTH_ENDPOINTS.SEND_RESET_OTP, {
+    const { success, data, message } = await runAsync(set, async () => {
+      const response = await axiosInstance.post<AuthResponse>(AUTH_ENDPOINTS.SEND_RESET_OTP, {
         email,
       });
 
       if (!response.data.success) {
-        const errorMsg = response.data.message || "Something went wrong";
-        set({ error: errorMsg });
-        return { success: false, message: errorMsg };
+        throw new Error(response.data.message || "Something went wrong");
       }
 
       return {
         success: true,
         message: response.data.message,
       };
-    } catch (error) {
-      const errMsg = getErrorMessage(error, "Failed to send password reset OTP");
-      set({ error: errMsg });
-      return { success: false, message: errMsg };
-    } finally {
-      set({ isLoading: false, checkingAuth: false });
-    }
+    }, "Failed to send password reset OTP");
+
+    return success ? data : { success: false, message: message || "Failed to send password reset OTP" };
   },
 
   verifyPassResetOtp: async (email, otp) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await axiosInstance.post(AUTH_ENDPOINTS.VERIFY_RESET_OTP, {
+    const { success, data, message } = await runAsync(set, async () => {
+      const response = await axiosInstance.post<AuthResponse>(AUTH_ENDPOINTS.VERIFY_RESET_OTP, {
         email,
         otp,
       });
 
       if (!response.data.success) {
-        const errorMsg = response.data.message || "Something went wrong";
-        set({ error: errorMsg });
-        return { success: false, message: errorMsg };
+        throw new Error(response.data.message || "Something went wrong");
       }
 
       return {
         success: true,
         message: response.data.message,
       };
-    } catch (error) {
-      const errMsg = getErrorMessage(error, "Failed to verify reset code");
-      set({ error: errMsg });
-      return { success: false, message: errMsg };
-    } finally {
-      set({ isLoading: false, checkingAuth: false });
-    }
+    }, "Failed to verify reset code");
+
+    return success ? data : { success: false, message: message || "Failed to verify reset code" };
   },
 
   resetPassword: async (email, otp, newPassword) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await axiosInstance.post(AUTH_ENDPOINTS.RESET_PASSWORD, {
+    const { success, data, message } = await runAsync(set, async () => {
+      const response = await axiosInstance.post<AuthResponse>(AUTH_ENDPOINTS.RESET_PASSWORD, {
         email,
         otp,
         newPassword,
       });
 
       if (!response.data.success) {
-        const errorMsg = response.data.message || "Something went wrong";
-        set({ error: errorMsg });
-        return { success: false, message: errorMsg };
+        throw new Error(response.data.message || "Something went wrong");
       }
 
       return {
         success: true,
         message: response.data.message,
       };
-    } catch (error) {
-      const errMsg = getErrorMessage(error, "Failed to reset password! Try again");
-      set({ error: errMsg });
-      return { success: false, message: errMsg };
-    } finally {
-      set({ isLoading: false, checkingAuth: false });
-    }
+    }, "Failed to reset password! Try again");
+
+    return success ? data : { success: false, message: message || "Failed to reset password! Try again" };
   },
 
   deleteAccount: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      const { data } = await axiosInstance.delete(AUTH_ENDPOINTS.DELETE_ACCOUNT);
+    const { success, data } = await runAsync(set, async () => {
+      const { data } = await axiosInstance.delete<AuthResponse>(AUTH_ENDPOINTS.DELETE_ACCOUNT);
       if (data.success) {
-        // Clear auth store on success
         useAuthStore.setState({ user: null });
       }
-      set({ isLoading: false, error: null });
       return data.success;
-    } catch (err: any) {
-      set({
-        isLoading: false,
-        error: err.response?.data?.message || "Failed to delete account",
-      });
-      return false;
-    }
+    }, "Failed to delete account");
+    return success ? data : false;
   },
 
   updateProfile: async (formData: FormData) => {
-    set({ error: null });
-    try {
-      const { data } = await axiosInstance.put(AUTH_ENDPOINTS.UPDATE_PROFILE, formData, {
+    const { success, data } = await runAsync(set, async () => {
+      const { data } = await axiosInstance.put<AuthResponse>(AUTH_ENDPOINTS.UPDATE_PROFILE, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
       if (data.success && data.user) {
-        // Update user in auth store
         useAuthStore.setState({ user: data.user });
       }
-
-      set({ error: null });
       return data.success;
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || "Failed to update profile";
-      set({ error: errorMsg });
-      return false;
-    }
+    }, "Failed to update profile", "isLoading"); // Default is isLoading, but explicit is fine
+    return success ? data : false;
   },
+
   updateSettings: async (settings) => {
-    set({ error: null });
-    try {
-      const { data } = await axiosInstance.put(AUTH_ENDPOINTS.UPDATE_SETTINGS, settings);
+    const { success, data } = await runAsync(set, async () => {
+      const { data } = await axiosInstance.put<AuthResponse>(AUTH_ENDPOINTS.UPDATE_SETTINGS, settings);
       if (data.success && data.user) {
         set({ user: data.user });
       }
       return data.success;
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || "Failed to update settings";
-      set({ error: errorMsg });
-      return false;
-    }
+    }, "Failed to update settings", "isLoading");
+    return success ? data : false;
   },
 }));

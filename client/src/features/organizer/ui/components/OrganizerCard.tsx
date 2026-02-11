@@ -25,7 +25,7 @@ const OrganizerCard = React.memo(React.forwardRef<HTMLDivElement, OrganizerCardP
             className="group relative"
         >
             <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-[28px] opacity-0 group-hover:opacity-30 blur transition duration-500" />
-            <div className="relative h-full bg-[#0a0514]/80 border border-white/10 rounded-[28px] overflow-hidden backdrop-blur-sm flex flex-col p-6 transition-all duration-300 group-hover:border-purple-500/30 group-hover:-translate-y-1">
+            <div className="relative h-full bg-brand-dark/80 border border-white/10 rounded-[28px] overflow-hidden backdrop-blur-sm flex flex-col p-6 transition-all duration-300 group-hover:border-purple-500/30 group-hover:-translate-y-1">
 
                 {/* Card Header */}
                 <div className="flex items-start justify-between mb-6">

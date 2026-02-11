@@ -78,9 +78,21 @@ export const OrganizerInviteDialog = ({ open, onOpenChange, orgId }: OrganizerIn
                         </div>
                         <div className="space-y-2 max-h-[300px] overflow-y-auto">
                             {availableUsers?.map((user: any) => (
-                                <div key={user._id} onClick={() => handleSelectUser(user)} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
+                                <div
+                                    key={user._id}
+                                    onClick={() => handleSelectUser(user)}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            if (e.key === ' ') e.preventDefault();
+                                            handleSelectUser(user);
+                                        }
+                                    }}
+                                    className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                                >
                                     <Avatar className="w-8 h-8">
-                                        <AvatarImage src={user.avatar} />
+                                        <AvatarImage src={user.avatar} alt={user.username} />
                                         <AvatarFallback>{user.username[0]}</AvatarFallback>
                                     </Avatar>
                                     <div>
@@ -99,7 +111,7 @@ export const OrganizerInviteDialog = ({ open, onOpenChange, orgId }: OrganizerIn
                     <div className="space-y-4">
                         <div className="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
                             <Avatar className="w-10 h-10">
-                                <AvatarImage src={selectedUser.avatar} />
+                                <AvatarImage src={selectedUser.avatar} alt={selectedUser.username} />
                                 <AvatarFallback>{selectedUser.username[0]}</AvatarFallback>
                             </Avatar>
                             <div>

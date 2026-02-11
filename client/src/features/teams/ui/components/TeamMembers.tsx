@@ -66,7 +66,7 @@ export const TeamMembers = ({
       return (
         <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed border-white/10 rounded-2xl bg-[#0F111A]/40 backdrop-blur-xl">
           <div className="p-4 rounded-full bg-white/[0.03] mb-4">
-            <Users className="w-8 h-8 text-gray-600" />
+            <Users className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="text-gray-300 font-medium mb-1">No members found</h3>
           <p className="text-gray-500 text-sm">There are no members in this category.</p>

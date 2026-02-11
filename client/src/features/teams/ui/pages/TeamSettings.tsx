@@ -257,7 +257,7 @@ const TeamSettings = () => {
                                             <FormControl>
                                                 <Input
                                                     {...field}
-                                                    className="text-white bg-black/20 border-purple-500/20 placeholder:text-gray-600 focus:border-purple-500/50"
+                                                    className="text-white bg-black/20 border-purple-500/20 placeholder:text-gray-400 focus:border-purple-500/50"
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -275,7 +275,7 @@ const TeamSettings = () => {
                                                 <Input
                                                     {...field}
                                                     maxLength={5}
-                                                    className="uppercase text-white bg-black/20 border-purple-500/20 placeholder:text-gray-600 focus:border-purple-500/50"
+                                                    className="uppercase text-white bg-black/20 border-purple-500/20 placeholder:text-gray-400 focus:border-purple-500/50"
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -294,7 +294,7 @@ const TeamSettings = () => {
                                             <Textarea
                                                 {...field}
                                                 rows={4}
-                                                className="text-white bg-black/20 border-purple-500/20 placeholder:text-gray-600 focus:border-purple-500/50"
+                                                className="text-white bg-black/20 border-purple-500/20 placeholder:text-gray-400 focus:border-purple-500/50"
                                                 placeholder="Tell the world about your team..."
                                             />
                                         </FormControl>

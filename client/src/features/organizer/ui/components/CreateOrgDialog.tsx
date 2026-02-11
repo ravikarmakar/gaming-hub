@@ -105,7 +105,7 @@ const CreateOrgDialog: React.FC = () => {
         <Dialog open={isCreateOrgOpen} onOpenChange={setIsCreateOrgOpen}>
             <DialogContent
                 onCloseAutoFocus={(e) => e.preventDefault()}
-                className="sm:max-w-[500px] bg-[#0a0514]/98 backdrop-blur-2xl border border-purple-500/20 text-white p-0 overflow-hidden shadow-2xl shadow-purple-500/20"
+                className="sm:max-w-[500px] bg-brand-dark/98 backdrop-blur-2xl border border-purple-500/20 text-white p-0 overflow-hidden shadow-2xl shadow-purple-500/20"
             >
                 <div className="h-1 w-full bg-gradient-to-r from-purple-600 via-indigo-500 to-purple-600" />
 

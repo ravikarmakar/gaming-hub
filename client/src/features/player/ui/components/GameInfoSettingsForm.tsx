@@ -96,7 +96,7 @@ export const GameInfoSettingsForm: React.FC = () => {
                                 <Gamepad2 className="w-4 h-4 text-purple-500" />
                                 <CardTitle className="text-sm font-black text-white tracking-[2px]">Game Identity</CardTitle>
                             </div>
-                            <CardDescription className="text-xs text-zinc-500 font-medium">
+                            <CardDescription className="text-xs text-zinc-400 font-medium">
                                 Link your in-game identity to your platform profile.
                             </CardDescription>
                         </CardHeader>
@@ -109,7 +109,7 @@ export const GameInfoSettingsForm: React.FC = () => {
                                         <FormItem className="space-y-2.5">
                                             <div className="flex items-center gap-2 px-1">
                                                 <Trophy className="w-3 h-3 text-yellow-500/50" />
-                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-500">In-Game Name (IGN)</FormLabel>
+                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-400">In-Game Name (IGN)</FormLabel>
                                             </div>
                                             <FormControl>
                                                 <div className="relative group">
@@ -136,7 +136,7 @@ export const GameInfoSettingsForm: React.FC = () => {
                                         <FormItem className="space-y-2.5">
                                             <div className="flex items-center gap-2 px-1">
                                                 <Hash className="w-3 h-3 text-blue-500/50" />
-                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-500">Unique ID (UID)</FormLabel>
+                                                <FormLabel className="text-[10px] font-black tracking-[3px] text-zinc-400">Unique ID (UID)</FormLabel>
                                             </div>
                                             <FormControl>
                                                 <div className="relative group">

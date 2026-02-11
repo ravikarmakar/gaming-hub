@@ -42,7 +42,7 @@ export default function GroupTeamList() {
 
     if (isLoading) {
         return (
-            <div className="flex h-screen items-center justify-center bg-[#0a0514]">
+            <div className="flex h-screen items-center justify-center bg-brand-dark">
                 <Loader2 className="w-10 h-10 text-purple-500 animate-spin" />
             </div>
         );
@@ -50,7 +50,7 @@ export default function GroupTeamList() {
 
     if (!group) {
         return (
-            <div className="flex flex-col h-screen items-center justify-center bg-[#0a0514] text-gray-400">
+            <div className="flex flex-col h-screen items-center justify-center bg-brand-dark text-gray-400">
                 <Trophy className="w-16 h-16 mb-4 opacity-20" />
                 <p className="text-xl font-bold">Group not found</p>
                 <Button onClick={() => navigate(-1)} variant="ghost" className="mt-4">
@@ -61,7 +61,7 @@ export default function GroupTeamList() {
     }
 
     return (
-        <div className="min-h-screen bg-[#0a0514] text-white p-6 pb-20">
+        <div className="min-h-screen bg-brand-dark text-white p-6 pb-20">
             <div className="max-w-5xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="flex items-center justify-between">
@@ -69,6 +69,7 @@ export default function GroupTeamList() {
                         <Button
                             variant="ghost"
                             size="icon"
+                            aria-label="Go back"
                             onClick={() => navigate(-1)}
                             className="text-gray-400 hover:text-white hover:bg-white/5"
                         >
@@ -128,7 +129,7 @@ export default function GroupTeamList() {
                         <h2 className="text-xl font-bold flex items-center gap-3">
                             <Users className="w-6 h-6 text-purple-500" />
                             Assigned Teams
-                            <span className="text-gray-600 font-normal">({group.teams?.length || 0})</span>
+                            <span className="text-gray-400 font-normal">({group.teams?.length || 0})</span>
                         </h2>
 
                         {/* Future Chat Implementation */}
@@ -153,7 +154,7 @@ export default function GroupTeamList() {
                                         {team.teamLogo ? (
                                             <img src={team.teamLogo} alt={team.teamName} className="w-full h-full object-cover" />
                                         ) : (
-                                            <Users className="w-6 h-6 text-gray-600" />
+                                            <Users className="w-6 h-6 text-gray-400" />
                                         )}
                                     </div>
                                     <div>
@@ -163,7 +164,13 @@ export default function GroupTeamList() {
                                         <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Verified Team</p>
                                     </div>
                                 </div>
-                                <Button size="icon" variant="ghost" className="text-gray-600 hover:text-purple-400">
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="text-gray-400 hover:text-purple-400"
+                                    aria-label="Team Chat"
+                                    onClick={() => toast.success("Chat feature coming soon!")}
+                                >
                                     <MessageSquare className="w-4 h-4" />
                                 </Button>
                             </Card>

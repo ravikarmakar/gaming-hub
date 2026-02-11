@@ -175,7 +175,7 @@ const VerifyEmail = () => {
           variant="link"
           onClick={handleResend}
           disabled={resendCooldown > 0 || isVerifying}
-          className="h-auto p-0 font-bold text-purple-400 hover:text-purple-300 transition-colors disabled:text-gray-600"
+          className="h-auto p-0 font-bold text-purple-400 hover:text-purple-300 transition-colors disabled:text-gray-400"
         >
           {resendCooldown > 0 ? (
             `Resend code in ${resendCooldown}s`
@@ -191,7 +191,7 @@ const VerifyEmail = () => {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-[#0a0514] border border-purple-500/30 p-10 rounded-3xl text-center shadow-[0_0_50px_-10px_rgba(168,85,247,0.4)]"
+            className="bg-brand-dark border border-purple-500/30 p-10 rounded-3xl text-center shadow-[0_0_50px_-10px_rgba(168,85,247,0.4)]"
           >
             <div className="w-24 h-24 bg-gradient-to-br from-green-500/20 to-emerald-500/20 text-green-400 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/20 shadow-[0_0_30px_-5px_rgba(34,197,94,0.3)]">
               <Check className="w-12 h-12" />

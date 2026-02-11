@@ -144,7 +144,7 @@ export const PlayerSearchCommand = ({
             {/* ... children ... */}
             <CommandEmpty className="py-8 text-center">
               <div className="flex flex-col items-center gap-2">
-                <Search className="w-8 h-8 text-gray-600" />
+                <Search className="w-8 h-8 text-gray-400" />
                 <p className="text-sm text-gray-400">
                   {searchTerm.trim().length === 0
                     ? "Type to search for players"

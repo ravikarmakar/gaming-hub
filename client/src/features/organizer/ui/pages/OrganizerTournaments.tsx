@@ -116,7 +116,7 @@ const OrganizerTournaments: React.FC = () => {
               placeholder="Search tournaments..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-11 pl-10 bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:ring-2 focus:ring-purple-500/40 transition-all rounded-lg"
+              className="h-11 pl-10 bg-white/5 border-white/10 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500/40 transition-all rounded-lg"
             />
           </div>
 

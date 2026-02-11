@@ -122,7 +122,7 @@ const SupportPage = () => {
                                     <Mail className="w-5 h-5 text-purple-400" />
                                     Send us a message
                                 </CardTitle>
-                                <CardDescription className="text-zinc-500">
+                                <CardDescription className="text-zinc-400">
                                     We typically reply within 24 hours.
                                 </CardDescription>
                             </CardHeader>
@@ -254,7 +254,7 @@ const SupportPage = () => {
                                                     <HelpCircle className={cn("w-5 h-5 mt-0.5 shrink-0 transition-colors", isOpen ? "text-purple-400" : "text-purple-500/50 group-hover:text-purple-400")} />
                                                     {item.question}
                                                 </h3>
-                                                <ChevronDown className={cn("w-5 h-5 text-zinc-500 transition-transform duration-300", isOpen && "rotate-180 text-purple-400")} />
+                                                <ChevronDown className={cn("w-5 h-5 text-zinc-400 transition-transform duration-300", isOpen && "rotate-180 text-purple-400")} />
                                             </div>
                                             <AnimatePresence>
                                                 {isOpen && (

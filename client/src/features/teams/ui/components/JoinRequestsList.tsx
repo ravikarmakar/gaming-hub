@@ -33,7 +33,7 @@ export const JoinRequestsList: React.FC = () => {
     if (!joinRequests || joinRequests.length === 0) {
         return (
             <Card className="bg-[#0F111A]/40 border-white/10 p-12 text-center backdrop-blur-md">
-                <Clock className="w-12 h-12 text-gray-600 mx-auto mb-4 opacity-50" />
+                <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4 opacity-50" />
                 <h3 className="text-lg font-bold text-white mb-1">No Pending Requests</h3>
                 <p className="text-gray-500 text-sm">When players apply to join your team, they will appear here.</p>
             </Card>

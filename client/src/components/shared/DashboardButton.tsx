@@ -34,7 +34,7 @@ export const DashboardButton = ({
         variant="outline"
         onClick={() => navigate(ORGANIZER_ROUTES.DASHBOARD)}
         className={cn(
-          "relative w-full h-10 px-4 flex items-center gap-2 font-bold text-white transition-all bg-[#0a0514] border-purple-500/20 hover:border-purple-500/50 hover:bg-purple-500/5 group-active:scale-95",
+          "relative w-full h-10 px-4 flex items-center gap-2 font-bold text-white transition-all bg-brand-dark border-purple-500/20 hover:border-purple-500/50 hover:bg-purple-500/5 group-active:scale-95",
           "sm:w-auto sm:px-5 rounded-lg"
         )}
         disabled={isLoading}

@@ -145,7 +145,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         />
         <div className="relative mx-auto w-24 h-24 sm:w-32 sm:h-32">
           <Avatar className="w-full h-full border-4 border-[#06040a] bg-[#0d0b14] shadow-2xl relative overflow-hidden group-hover:border-purple-500/50 transition-all">
-            <AvatarImage src={preview || undefined} className="object-cover" />
+            <AvatarImage src={preview || undefined} alt="File preview" className="object-cover" />
             <AvatarFallback className="bg-purple-500/10 text-purple-400 text-2xl font-bold">
               {fallbackText || <ImageIcon className="w-8 h-8" />}
             </AvatarFallback>
@@ -153,6 +153,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
           {!disabled && (
             <Button
               size="icon"
+              aria-label="Remove file"
               variant="secondary"
               type="button"
               onClick={() => inputRef.current?.click()}
@@ -230,7 +231,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
           >
             {label} {required && <span className="text-purple-500">*</span>}
           </label>
-          {hint && <span className="text-[10px] text-gray-600 font-bold uppercase">{hint}</span>}
+          {hint && <span className="text-[10px] text-gray-400 font-bold uppercase">{hint}</span>}
         </div>
       )}
 

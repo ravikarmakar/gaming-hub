@@ -36,7 +36,7 @@ const PlayerSettings: React.FC = () => {
                                     Account <span className="text-purple-500">Settings</span>
                                 </h1>
                             </div>
-                            <p className="text-sm text-zinc-500 font-medium max-w-xl leading-relaxed">
+                            <p className="text-sm text-zinc-400 font-medium max-w-xl leading-relaxed">
                                 Manage your profile information, security settings, and personal preferences.
                             </p>
                         </div>
@@ -59,7 +59,7 @@ const PlayerSettings: React.FC = () => {
                         <TabsList className="bg-transparent h-auto p-0 flex space-x-10">
                             <TabsTrigger
                                 value="profile"
-                                className="px-0 py-4 bg-transparent border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent rounded-none text-zinc-500 data-[state=active]:text-white font-black uppercase text-[11px] tracking-[2px] transition-all"
+                                className="px-0 py-4 bg-transparent border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent rounded-none text-zinc-400 data-[state=active]:text-white font-black uppercase text-[11px] tracking-[2px] transition-all"
                             >
                                 <div className="flex items-center space-x-2">
                                     <UserCog className="w-3.5 h-3.5" />
@@ -68,7 +68,7 @@ const PlayerSettings: React.FC = () => {
                             </TabsTrigger>
                             <TabsTrigger
                                 value="account"
-                                className="px-0 py-4 bg-transparent border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent rounded-none text-zinc-500 data-[state=active]:text-white font-black uppercase text-[11px] tracking-[2px] transition-all"
+                                className="px-0 py-4 bg-transparent border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent rounded-none text-zinc-400 data-[state=active]:text-white font-black uppercase text-[11px] tracking-[2px] transition-all"
                             >
                                 <div className="flex items-center space-x-2">
                                     <Shield className="w-3.5 h-3.5" />
@@ -77,7 +77,7 @@ const PlayerSettings: React.FC = () => {
                             </TabsTrigger>
                             <TabsTrigger
                                 value="game"
-                                className="px-0 py-4 bg-transparent border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent rounded-none text-zinc-500 data-[state=active]:text-white font-black uppercase text-[11px] tracking-[2px] transition-all"
+                                className="px-0 py-4 bg-transparent border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent rounded-none text-zinc-400 data-[state=active]:text-white font-black uppercase text-[11px] tracking-[2px] transition-all"
                             >
                                 <div className="flex items-center space-x-2">
                                     <Gamepad2 className="w-3.5 h-3.5" />

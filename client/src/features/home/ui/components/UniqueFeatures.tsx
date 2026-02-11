@@ -111,7 +111,7 @@ export const UniqueFeatures = () => {
                                             "text-3xl lg:text-4xl font-black tracking-tighter transition-all duration-500",
                                             activeTab === index
                                                 ? "text-white"
-                                                : "text-zinc-700 group-hover:text-zinc-500"
+                                                : "text-zinc-700 group-hover:text-zinc-400"
                                         )}>
                                             {feature.title}
                                         </h3>

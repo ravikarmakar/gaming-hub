@@ -74,6 +74,8 @@ module.exports = {
 					800: '#6b21a8',
 					900: '#581c87',
 					950: '#3b0764',
+					dark: '#0a0514',
+					black: '#06070D',
 				}
 			},
 			backgroundSize: {

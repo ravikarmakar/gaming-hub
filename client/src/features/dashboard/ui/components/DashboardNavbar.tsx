@@ -100,7 +100,7 @@ export const DashboardNavbar = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-40 w-full backdrop-blur-xl bg-[#0a0514]/80 border-b border-white/5 transition-all duration-300">
+    <nav className="sticky top-0 z-40 w-full backdrop-blur-xl bg-brand-dark/80 border-b border-white/5 transition-all duration-300">
       <div className="flex h-16 items-center justify-between px-6 gap-4">
 
         {/* Left: Breadcrumbs & Context */}
@@ -141,7 +141,7 @@ export const DashboardNavbar = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-hover:text-gray-400 transition-colors" />
             <Input
               placeholder="Search tournaments, teams, players..."
-              className="w-full bg-[#130b24] border-white/5 rounded-full pl-10 pr-12 h-10 text-sm focus-visible:ring-1 focus-visible:ring-purple-500/50 focus-visible:border-purple-500/50 transition-all placeholder:text-gray-600"
+              className="w-full bg-[#130b24] border-white/5 rounded-full pl-10 pr-12 h-10 text-sm focus-visible:ring-1 focus-visible:ring-purple-500/50 focus-visible:border-purple-500/50 transition-all placeholder:text-gray-400"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
               <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 font-mono text-[10px] font-medium text-gray-400 opacity-100">
@@ -158,9 +158,9 @@ export const DashboardNavbar = () => {
 
           <div className="h-6 w-px bg-white/10 mx-1 hidden sm:block" />
 
-          {/* <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 relative">
+          {/* <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white hover:bg-white/5 relative" aria-label="Notifications">
             <Bell className="w-5 h-5" />
-            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-[#0a0514]"></span>
+            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-brand-dark"></span>
           </Button> */}
 
           <ProfileMenu />

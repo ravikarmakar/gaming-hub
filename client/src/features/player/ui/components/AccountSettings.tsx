@@ -103,7 +103,7 @@ export const AccountSettings: React.FC = () => {
                             <ShieldCheck className="w-4 h-4 text-emerald-500" />
                             <CardTitle className="text-sm font-black text-white tracking-[2px] ">Account & Security</CardTitle>
                         </div>
-                        <CardDescription className="text-xs text-zinc-500 font-medium">
+                        <CardDescription className="text-xs text-zinc-400 font-medium">
                             Manage your account verification and security status.
                         </CardDescription>
                     </CardHeader>
@@ -111,7 +111,7 @@ export const AccountSettings: React.FC = () => {
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 md:p-6 rounded-2xl bg-white/[0.03] border border-white/5 gap-4 sm:gap-0">
                             <div className="space-y-1">
                                 <p className="text-[11px] font-black text-zinc-300 tracking-widest">Account Verification</p>
-                                <p className="text-[10px] text-zinc-500 font-medium leading-relaxed max-w-[200px]">
+                                <p className="text-[10px] text-zinc-400 font-medium leading-relaxed max-w-[200px]">
                                     {user?.isAccountVerified
                                         ? "Your email address has been verified."
                                         : "Please verify your email address to secure your account."}
@@ -139,7 +139,7 @@ export const AccountSettings: React.FC = () => {
                                     <Sword className="w-3.5 h-3.5 text-purple-400 opacity-50" />
                                     <p className="text-[11px] font-black text-zinc-300 tracking-widest">Player Verification</p>
                                 </div>
-                                <p className="text-[10px] text-zinc-500 font-medium leading-relaxed max-w-[200px]">
+                                <p className="text-[10px] text-zinc-400 font-medium leading-relaxed max-w-[200px]">
                                     {user?.isPlayerVerified
                                         ? "You are a verified player on the platform."
                                         : "Apply for player verification to participate in official events."}
@@ -169,7 +169,7 @@ export const AccountSettings: React.FC = () => {
                             <Target className="w-4 h-4 text-violet-500" />
                             <CardTitle className="text-sm font-black text-white tracking-[2px] ">Privacy Settings</CardTitle>
                         </div>
-                        <CardDescription className="text-xs text-zinc-500 font-medium">
+                        <CardDescription className="text-xs text-zinc-400 font-medium">
                             Control how other players can interact with you.
                         </CardDescription>
                     </CardHeader>
@@ -182,7 +182,7 @@ export const AccountSettings: React.FC = () => {
                                     </div>
                                     <div className="space-y-1">
                                         <p className="text-[11px] font-black text-zinc-300 tracking-widest">Allow 1v1 Challenges</p>
-                                        <p className="text-[10px] text-zinc-500 font-medium">Allow other players to send you direct challenge requests.</p>
+                                        <p className="text-[10px] text-zinc-400 font-medium">Allow other players to send you direct challenge requests.</p>
                                     </div>
                                 </div>
                                 <Switch
@@ -199,7 +199,7 @@ export const AccountSettings: React.FC = () => {
                                     </div>
                                     <div className="space-y-1">
                                         <p className="text-[11px] font-black text-zinc-300 tracking-widest">Allow Messages</p>
-                                        <p className="text-[10px] text-zinc-500 font-medium">Allow other players to send you direct messages.</p>
+                                        <p className="text-[10px] text-zinc-400 font-medium">Allow other players to send you direct messages.</p>
                                     </div>
                                 </div>
                                 <Switch
@@ -238,7 +238,7 @@ export const AccountSettings: React.FC = () => {
                             <Bell className="w-4 h-4 text-purple-500" />
                             <CardTitle className="text-sm font-black text-white tracking-[2px]">Notification Engine</CardTitle>
                         </div>
-                        <CardDescription className="text-xs text-zinc-500 font-medium">
+                        <CardDescription className="text-xs text-zinc-400 font-medium">
                             Choose how you want to receive tactical updates and alerts.
                         </CardDescription>
                     </CardHeader>
@@ -251,7 +251,7 @@ export const AccountSettings: React.FC = () => {
                                     </div>
                                     <div className="space-y-1">
                                         <p className="text-[11px] font-black text-zinc-300 tracking-widest uppercase">Platform</p>
-                                        <p className="text-[9px] text-zinc-500 font-bold tracking-wider">In-app notifications</p>
+                                        <p className="text-[9px] text-zinc-400 font-bold tracking-wider">In-app notifications</p>
                                     </div>
                                 </div>
                                 <Switch
@@ -271,7 +271,7 @@ export const AccountSettings: React.FC = () => {
                                     </div>
                                     <div className="space-y-1">
                                         <p className="text-[11px] font-black text-zinc-300 tracking-widest uppercase">Email</p>
-                                        <p className="text-[9px] text-zinc-500 font-bold tracking-wider">Tactical emails</p>
+                                        <p className="text-[9px] text-zinc-400 font-bold tracking-wider">Tactical emails</p>
                                     </div>
                                 </div>
                                 <Switch
@@ -291,7 +291,7 @@ export const AccountSettings: React.FC = () => {
                                     </div>
                                     <div className="space-y-1">
                                         <p className="text-[11px] font-black text-zinc-300 tracking-widest uppercase">SMS/Phone</p>
-                                        <p className="text-[9px] text-zinc-500 font-bold tracking-wider">Urgent alerts</p>
+                                        <p className="text-[9px] text-zinc-400 font-bold tracking-wider">Urgent alerts</p>
                                     </div>
                                 </div>
                                 <Switch
@@ -341,7 +341,7 @@ export const AccountSettings: React.FC = () => {
                         <AlertTriangle className="w-4 h-4 text-red-500/70" />
                         <CardTitle className="text-sm font-black text-white tracking-[2px] ">Termination Zone</CardTitle>
                     </div>
-                    <CardDescription className="text-xs text-zinc-500 font-medium">
+                    <CardDescription className="text-xs text-zinc-400 font-medium">
                         Permanent actions that cannot be undone.
                     </CardDescription>
                 </CardHeader>
@@ -349,7 +349,7 @@ export const AccountSettings: React.FC = () => {
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 md:p-6 rounded-2xl bg-red-500/[0.02] border border-red-500/10 gap-4 sm:gap-0">
                         <div className="space-y-1">
                             <p className="text-[11px] font-black text-zinc-300 tracking-widest">Total Deletion</p>
-                            <p className="text-[10px] text-zinc-500 font-medium leading-relaxed max-w-[200px]">
+                            <p className="text-[10px] text-zinc-400 font-medium leading-relaxed max-w-[200px]">
                                 Delete your account and all associated data permanently.
                             </p>
                         </div>
@@ -363,7 +363,7 @@ export const AccountSettings: React.FC = () => {
                                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-red-500/50 to-transparent" />
                                 <AlertDialogHeader className="space-y-4">
                                     <AlertDialogTitle className="text-2xl font-black text-white  tracking-tighter">Delete Account Permanentally?</AlertDialogTitle>
-                                    <AlertDialogDescription className="text-sm text-zinc-500 font-medium leading-relaxed font-mono">
+                                    <AlertDialogDescription className="text-sm text-zinc-400 font-medium leading-relaxed font-mono">
                                         This action is irreversible. All your data, including profile, stats, and history, will be permanently removed.
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>

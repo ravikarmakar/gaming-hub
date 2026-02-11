@@ -137,7 +137,7 @@ const GameSection = () => {
                 </motion.h2>
             </div>
 
-            <div className="relative w-full h-[600px] rounded-[2.5rem] overflow-hidden bg-[#0a0514] border border-purple-500/20 shadow-2xl shadow-purple-900/20 flex flex-col md:flex-row group/container perspective-[1000px]">
+            <div className="relative w-full h-[600px] rounded-[2.5rem] overflow-hidden bg-brand-dark border border-purple-500/20 shadow-2xl shadow-purple-900/20 flex flex-col md:flex-row group/container perspective-[1000px]">
                 {/* Background Gradient/Mesh */}
                 <div className="absolute inset-0 bg-gradient-to-br from-[#1a0b2e] via-[#0d0616] to-[#05020a] opacity-80 pointer-events-none" />
 
@@ -169,7 +169,7 @@ const GameSection = () => {
                         {/* Background Image */}
                         <div className="absolute inset-0 w-full h-full">
                             <div className={cn(
-                                "absolute inset-0 bg-[#0a0514] transition-opacity duration-500 z-10",
+                                "absolute inset-0 bg-brand-dark transition-opacity duration-500 z-10",
                                 activeId === game.id ? "opacity-20" : "opacity-60 group-hover/container:opacity-40"
                             )} />
                             <img
@@ -183,7 +183,7 @@ const GameSection = () => {
                             />
                             {/* Gradient Overlay */}
                             <div className={cn(
-                                "absolute inset-0 bg-gradient-to-t from-[#0a0514] via-purple-900/10 to-transparent",
+                                "absolute inset-0 bg-gradient-to-t from-brand-dark via-purple-900/10 to-transparent",
                                 activeId === game.id ? "opacity-80" : "opacity-90"
                             )} />
                         </div>

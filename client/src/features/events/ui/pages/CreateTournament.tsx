@@ -374,7 +374,7 @@ export default function CreateTournament() {
                             size="icon"
                             type="button"
                             onClick={() => remove(index)}
-                            className="h-10 w-10 text-gray-600 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                            className="h-10 w-10 text-gray-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
                           >
                             <X size={14} />
                           </Button>

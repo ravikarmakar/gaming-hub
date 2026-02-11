@@ -87,7 +87,7 @@ const OrganizerDashboard = () => {
           <div className="relative mb-6">
             <div className="absolute inset-0 bg-purple-500/20 blur-2xl rounded-full" />
             <Avatar className="w-24 h-24 border-2 border-purple-500/20 relative z-10">
-              <AvatarImage src={orgInfo?.imageUrl} />
+              <AvatarImage src={orgInfo?.imageUrl} alt={orgInfo?.name} />
               <AvatarFallback className="bg-purple-500/10 text-purple-400 text-2xl font-bold">
                 {orgInfo?.name?.[0] || user?.username?.[0]}
               </AvatarFallback>
@@ -271,7 +271,7 @@ const OrganizerDashboard = () => {
                     <p className="text-xs font-bold text-gray-300 uppercase tracking-tight">
                       {activity.type}: <span className="text-gray-500 normal-case font-medium">{activity.desc}</span>
                     </p>
-                    <p className="text-[9px] text-gray-600 font-bold">{activity.time}</p>
+                    <p className="text-[9px] text-gray-400 font-bold">{activity.time}</p>
                   </div>
                 </div>
               ))}

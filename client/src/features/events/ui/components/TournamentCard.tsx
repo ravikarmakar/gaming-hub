@@ -115,6 +115,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
+                                                aria-label="Edit Tournament"
                                                 type="button"
                                                 onClick={handleEditClick}
                                                 className="h-8 w-8 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white hover:bg-purple-600/80 hover:text-white transition-all p-0"
@@ -132,6 +133,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
+                                                aria-label="Delete Tournament"
                                                 type="button"
                                                 onClick={handleDeleteClick}
                                                 className="h-8 w-8 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all p-0"
