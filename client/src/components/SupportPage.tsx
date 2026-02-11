@@ -51,13 +51,13 @@ const SupportPage = () => {
         },
     });
 
-    const onSubmit = async (values: SupportFormValues) => {
+    const onSubmit = async () => {
         setIsSubmitting(true);
 
         // Simulate API call
         await new Promise((resolve) => setTimeout(resolve, 1500));
 
-        console.log("Support Form Submitted:", values);
+        // console.log("Support Form Submitted:", values);
         toast.success("Message sent successfully! We'll get back to you shortly.");
 
         form.reset();
