@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 import { cn } from "@/lib/utils";
-import { User } from "@/features/auth/store/useAuthStore";
+import { User } from "@/features/auth/lib/types";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 
 type DashboardButtonProps = {

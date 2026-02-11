@@ -9,7 +9,7 @@ export const brand = {
         // Add social links here in the future
     },
     contact: {
-        email: "contact@krmesports@gmail.com",
+        email: "contact.krmesports@gmail.com",
         phone: "+91 1234567890",
     }
 };

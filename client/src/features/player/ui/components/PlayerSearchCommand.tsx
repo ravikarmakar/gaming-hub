@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 
 import { useDebounce } from "@/hooks/useDebounce";
 import { usePlayerStore } from "../../store/usePlayerStore";
-import { User } from "@/features/auth/store/useAuthStore";
+import { User } from "@/features/auth/lib/types";
 
 interface PlayerSearchCommandProps {
   open: boolean;

@@ -102,7 +102,7 @@ export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
 
                             <CardContent className="p-5 flex items-center gap-4">
                                 <Avatar className="h-14 w-14 border-2 border-white/10 shadow-lg group-hover:scale-105 transition-transform">
-                                    <AvatarImage src={team.teamLogo} />
+                                    <AvatarImage src={team.imageUrl || undefined} />
                                     <AvatarFallback className="bg-purple-600/20 text-purple-300 font-bold text-xl">
                                         {team.teamName[0].toUpperCase()}
                                     </AvatarFallback>
@@ -119,7 +119,7 @@ export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
                                             </Badge>
                                         )}
                                         <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                            {team.memberCount || 4} Members
+                                            {team.teamMembers?.length || 0} Members
                                         </span>
                                     </div>
                                 </div>

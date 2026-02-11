@@ -17,6 +17,8 @@ const GAMES = [
         longDescription: "Fast-paced action with unique characters and tactical gameplay. Join millions in the ultimate survival test.",
         color: "from-purple-600/80 to-purple-800/80",
         accent: "text-amber-400",
+        accentBg: "bg-amber-400/20",
+        glow: "bg-gradient-to-t from-purple-600/80 to-transparent",
         image: "/assets/games/free-fire.jpg",
         icon: Flame
     },
@@ -28,6 +30,8 @@ const GAMES = [
         longDescription: "The ultimate survival shooter. Drop in, gear up, and compete for the Chicken Dinner with your squad.",
         color: "from-emerald-500/80 to-teal-600/80",
         accent: "text-emerald-400",
+        accentBg: "bg-emerald-400/20",
+        glow: "bg-gradient-to-t from-emerald-500/80 to-transparent",
         image: "/assets/games/bgmi.jpg",
         icon: Crosshair
     },
@@ -39,6 +43,8 @@ const GAMES = [
         longDescription: "A voxel-based shooter where destruction is the key to victory. Build, destroy, and conquer the arena.",
         color: "from-violet-500/80 to-purple-600/80",
         accent: "text-violet-400",
+        accentBg: "bg-violet-400/20",
+        glow: "bg-gradient-to-t from-violet-500/80 to-transparent",
         image: "/assets/games/pixel.jpg",
         icon: Zap
     },
@@ -50,6 +56,8 @@ const GAMES = [
         longDescription: "High-speed competitive combat in a futuristic cyberpunk metropolis. Speed is everything.",
         color: "from-cyan-500/80 to-blue-600/80",
         accent: "text-cyan-400",
+        accentBg: "bg-cyan-400/20",
+        glow: "bg-gradient-to-t from-cyan-500/80 to-transparent",
         image: "/assets/games/clash-royale.jpg",
         icon: Target
     },
@@ -74,6 +82,19 @@ const GameSection = () => {
         const y = (e.clientY - top - height / 2) / 25;
         mouseX.set(x);
         mouseY.set(-y); // Invert Y for natural tilt
+    };
+
+    const activateCard = (id: string) => {
+        setActiveId(id);
+        mouseX.set(0);
+        mouseY.set(0);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent, id: string) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            activateCard(id);
+        }
     };
 
     const contentVariants = {
@@ -123,11 +144,13 @@ const GameSection = () => {
                 {GAMES.map((game) => (
                     <motion.div
                         key={game.id}
-                        onMouseEnter={() => {
-                            setActiveId(game.id);
-                            mouseX.set(0);
-                            mouseY.set(0);
-                        }}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Select ${game.title} battlefield`}
+                        aria-expanded={activeId === game.id}
+                        onMouseEnter={() => activateCard(game.id)}
+                        onFocus={() => activateCard(game.id)}
+                        onKeyDown={(e) => handleKeyDown(e, game.id)}
                         onMouseMove={(e) => handleMouseMove(e, game.id)}
                         onMouseLeave={() => {
                             mouseX.set(0);
@@ -139,7 +162,7 @@ const GameSection = () => {
                             transitionTimingFunction: "cubic-bezier(0.32,0.72,0,1)"
                         }}
                         className={cn(
-                            "relative h-full transition-all duration-700 overflow-hidden border-r border-white/5 last:border-r-0 cursor-pointer will-change-transform z-10",
+                            "relative h-full transition-all duration-700 overflow-hidden border-r border-white/5 last:border-r-0 cursor-pointer will-change-transform z-10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-purple-500/50",
                             activeId === game.id ? "flex-[3.5] z-20" : "flex-1 hover:flex-[1.2] opacity-80 hover:opacity-100"
                         )}
                     >
@@ -173,7 +196,7 @@ const GameSection = () => {
                                     layout
                                     className="flex items-center gap-3 mb-3 bg-black/40 backdrop-blur-md p-1.5 pr-4 rounded-full border border-white/5"
                                 >
-                                    <div className={cn("p-2 rounded-full", activeId === game.id ? game.accent.replace('text-', 'bg-') + "/20 " + game.accent : "bg-white/5 text-gray-400")}>
+                                    <div className={cn("p-2 rounded-full", activeId === game.id ? `${game.accentBg} ${game.accent}` : "bg-white/5 text-gray-400")}>
                                         <game.icon size={18} />
                                     </div>
                                     {activeId === game.id && (
@@ -263,7 +286,7 @@ const GameSection = () => {
 
                         {/* Active Indicator Glow */}
                         {activeId === game.id && (
-                            <div className={cn("absolute inset-0 pointer-events-none transition-opacity duration-700 opacity-100", game.color.replace('from-', 'bg-gradient-to-t from-').replace('to-', 'to-transparent opacity-10'))} />
+                            <div className={cn("absolute inset-0 pointer-events-none transition-opacity duration-700 opacity-100", game.glow)} />
                         )}
                     </motion.div>
                 ))}

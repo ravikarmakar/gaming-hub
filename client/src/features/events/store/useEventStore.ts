@@ -3,7 +3,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 
 import { axiosInstance } from "@/lib/axios";
-import { Team } from "@/features/teams/store/useTeamStore";
+import { Team } from "@/features/teams/lib/types";
 import { EVENT_ENDPOINTS } from "../lib/endpoints";
 import { handleApiError } from "@/lib/api-helper";
 import { Event } from "../lib/types";

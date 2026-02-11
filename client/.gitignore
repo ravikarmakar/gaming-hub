@@ -35,3 +35,6 @@ pz3.tsx
 
 test
 __tests__
+
+# TypeScript
+*.tsbuildinfo

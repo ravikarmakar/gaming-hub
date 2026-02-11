@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 
 import { useDebounce } from "@/hooks/useDebounce";
 import { useOrganizerStore } from "../../store/useOrganizerStore";
-import { User } from "@/features/auth/store/useAuthStore";
+import { User } from "@/features/auth/lib/types";
 
 interface OrganizerUserSearchProps {
     open: boolean;

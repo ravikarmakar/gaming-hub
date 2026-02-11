@@ -39,10 +39,10 @@ const navigationLinks = [
 ];
 
 const socials = [
-  { icon: Twitter, label: "Twitter", href: "#", color: "#1DA1F2" },
-  { icon: Instagram, label: "Instagram", href: "#", color: "#5a0101ff" },
-  { icon: Youtube, label: "YouTube", href: "#", color: "#FF0000" },
-  { icon: MessageSquare, label: "Discord", href: "#", color: "#5865F2" },
+  { icon: Twitter, label: "Twitter", href: "https://x.com/krmesports", color: "#1DA1F2" },
+  { icon: Instagram, label: "Instagram", href: "https://instagram.com/krmesports", color: "#E4405F" },
+  { icon: Youtube, label: "YouTube", href: "https://youtube.com/@krmesports", color: "#FF0000" },
+  { icon: MessageSquare, label: "Discord", href: "https://discord.gg/krmesports", color: "#5865F2" },
 ];
 
 const Footer = () => {
@@ -83,6 +83,8 @@ const Footer = () => {
                 <a
                   key={social.label}
                   href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="group relative p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-purple-500/30 transition-all duration-300"
                   aria-label={social.label}
                 >
@@ -138,15 +140,24 @@ const Footer = () => {
           </p>
 
           <div className="flex items-center gap-8">
-            {["Privacy Policy", "Terms of Service", "Cookie Policy"].map((item) => (
-              <Link
-                key={item}
-                to="#"
-                className="text-gray-500 hover:text-white text-sm transition-colors"
-              >
-                {item}
-              </Link>
-            ))}
+            <Link
+              to="/privacy-policy"
+              className="text-gray-500 hover:text-white text-sm transition-colors"
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              to="/terms-of-service"
+              className="text-gray-500 hover:text-white text-sm transition-colors"
+            >
+              Terms of Service
+            </Link>
+            <Link
+              to="/cookie-policy"
+              className="text-gray-500 hover:text-white text-sm transition-colors"
+            >
+              Cookie Policy
+            </Link>
           </div>
         </div>
       </div>

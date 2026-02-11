@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-import { motion, useMotionValue, useSpring } from "framer-motion";
+import { motion, useMotionValue, useSpring, useMotionTemplate } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Home, Terminal } from "lucide-react";
 import { Button } from "./ui/button";
@@ -15,8 +15,13 @@ export const NotFound = () => {
   const smoothY = useSpring(mouseY, { damping: 20, stiffness: 100 });
 
   // 3D Parallax Values
-  const rotateX = useSpring(useMotionValue(0), { damping: 20, stiffness: 80 });
-  const rotateY = useSpring(useMotionValue(0), { damping: 20, stiffness: 80 });
+  const rawRotateX = useMotionValue(0);
+  const rawRotateY = useMotionValue(0);
+  const rotateX = useSpring(rawRotateX, { damping: 20, stiffness: 80 });
+  const rotateY = useSpring(rawRotateY, { damping: 20, stiffness: 80 });
+
+  // Reactive spotlight gradient
+  const spotlightBackground = useMotionTemplate`radial-gradient(circle 500px at ${smoothX}px ${smoothY}px, rgba(139, 92, 246, 0.1), transparent 80%)`;
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -29,13 +34,13 @@ export const NotFound = () => {
       // Calculate parallax rotation
       const xPct = (clientX / innerWidth - 0.5) * 15;
       const yPct = (clientY / innerHeight - 0.5) * -15;
-      rotateX.set(yPct);
-      rotateY.set(xPct);
+      rawRotateX.set(yPct);
+      rawRotateY.set(xPct);
     };
 
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [mouseX, mouseY, rotateX, rotateY]);
+  }, [mouseX, mouseY, rawRotateX, rawRotateY]);
 
   return (
     <div
@@ -52,10 +57,7 @@ export const NotFound = () => {
       <motion.div
         className="pointer-events-none fixed inset-0 z-10 mix-blend-soft-light opacity-40 hidden md:block"
         style={{
-          background: `radial-gradient(circle 500px at var(--mouse-x, 0px) var(--mouse-y, 0px), rgba(139, 92, 246, 0.1), transparent 80%)`,
-        }}
-        animate={{
-          background: `radial-gradient(circle 500px at var(--mouse-x, 0px) var(--mouse-y, 0px), rgba(139, 92, 246, 0.1), transparent 80%)`
+          background: spotlightBackground,
         }}
       />
 
@@ -75,7 +77,7 @@ export const NotFound = () => {
             y: [0, 50, -50, 0],
           }}
           transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute bottom-[10%] right-[10%] w-[50vw] h-[50vw] max-w-[500px] bg-[#9333ea]/08 blur-[130px] rounded-full"
+          className="absolute bottom-[10%] right-[10%] w-[50vw] h-[50vw] max-w-[500px] bg-[#9333ea]/5 blur-[130px] rounded-full"
         />
       </div>
 
@@ -89,7 +91,7 @@ export const NotFound = () => {
           transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
           className="relative group cursor-default"
         >
-          <div className="absolute inset-[-20%] blur-[60px] bg-purple-500/05 group-hover:bg-purple-500/15 transition-all duration-1000 rounded-full"
+          <div className="absolute inset-[-20%] blur-[60px] bg-purple-500/5 group-hover:bg-purple-500/15 transition-all duration-1000 rounded-full"
             style={{ transform: "translateZ(-50px)" }} />
 
           <h1 className="text-[clamp(140px,25vw,280px)] font-[900] font-orbitron leading-none tracking-tighter select-none
@@ -103,7 +105,7 @@ export const NotFound = () => {
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
             transition={{ delay: 0.6, duration: 1.2 }}
-            className="absolute top-1/2 left-[-10%] right-[-10%] h-[2px] bg-gradient-to-r from-transparent via-purple-500/20 to-transparent"
+            className="absolute top-1/2 left-[-10%] right-[-10%] h-[2px] bg-gradient-to-r from-transparent via-purple-500/10 to-transparent"
             style={{ transform: "translateZ(25px)" }}
           />
         </motion.div>
@@ -138,11 +140,17 @@ export const NotFound = () => {
           className="mt-12 md:mt-20 flex flex-col sm:flex-row gap-4 md:gap-8 w-full sm:w-auto px-6"
         >
           <Button
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              if (window.history.length > 2) {
+                navigate(-1);
+              } else {
+                navigate("/");
+              }
+            }}
             variant="ghost"
             className="group relative h-14 md:h-16 px-8 md:px-12 rounded-2xl border border-white/[0.03] bg-white/[0.01] backdrop-blur-xl text-gray-500 hover:text-white transition-all overflow-hidden flex-1 sm:flex-none"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/05 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             <Terminal size={20} className="mr-3 text-purple-600/60 group-hover:scale-110 group-hover:rotate-6 transition-transform" />
             <span className="relative z-10 font-black tracking-[0.2em] uppercase text-[10px] md:text-xs">Go Back</span>
           </Button>
@@ -170,13 +178,6 @@ export const NotFound = () => {
         </motion.div>
       </div>
 
-      {/* Inline styles for mouse position variables */}
-      <style>{`
-        :root {
-          --mouse-x: ${smoothX.get()}px;
-          --mouse-y: ${smoothY.get()}px;
-        }
-      `}</style>
     </div>
   );
 };
