@@ -1,50 +1,91 @@
-import "./config/env.js";
+import "./shared/config/env.js";
+import * as Sentry from "@sentry/node";
+import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import express from "express";
 import cookieParese from "cookie-parser";
 import cors from "cors";
 import morgan from "morgan";
-import { errorHandle } from "./middleware/error.middleware.js";
+import { stream } from "./shared/utils/logger.js";
+import helmet from "helmet";
+import mongoSanitize from "express-mongo-sanitize";
+import xss from "xss-clean";
+import hpp from "hpp";
+import { errorHandle } from "./shared/middleware/error.middleware.js";
+import { rateLimiter } from "./shared/middleware/rateLimiter.middleware.js";
 
-import authRouter from "./routes/auth.route.js";
-import userRouter from "./routes/player.route.js";
-import organizerRouter from "./routes/organizer.route.js";
+import authRouter from "./modules/auth/auth.route.js";
+import userRouter from "./modules/user/user.route.js";
+import organizerRouter from "./modules/organizer/organizer.route.js";
 
 // Team Imports
-import teamRouter from "./routes/team.route.js";
-import notificationRouter from "./routes/notification.route.js";
-import invitationRouter from "./routes/invitation.route.js";
+import teamRouter from "./modules/team/team.route.js";
+import notificationRouter from "./modules/notification/notification.route.js";
+import invitationRouter from "./modules/invitation/invitation.route.js";
 
 // Event Imports
-import eventRouter from "./routes/event.route.js";
-import roundsRouter from "./routes/event-routes/round.route.js";
-import groupsRouter from "./routes/event-routes/group.route.js";
-import leaderboardRouter from "./routes/event-routes/leaderboard.route.js";
-import { corsOptions } from "./config/corsOptions.js";
+import eventRouter from "./modules/event/event.route.js";
+import roundsRouter from "./modules/event/routes/round.route.js";
+import groupsRouter from "./modules/event/routes/group.route.js";
+import leaderboardRouter from "./modules/event/routes/leaderboard.route.js";
+import { corsOptions } from "./shared/config/corsOptions.js";
+
+// Initialize Sentry
+if (process.env.SENTRY_DSN) {
+    Sentry.init({
+        dsn: process.env.SENTRY_DSN,
+        integrations: [
+            nodeProfilingIntegration(),
+        ],
+        // Tracing
+        tracesSampleRate: 1.0,
+        // Profiles sample rate is relative to tracesSampleRate. 
+        // 1.0 is very heavy, reducing to 0.1 for better performance.
+        profilesSampleRate: 0.1,
+    });
+}
 
 const app = express();
 
 app.use(cors(corsOptions));
-app.use(morgan("dev"));
-app.use(express.json());
+app.use(morgan("dev", { stream }));
+app.use(express.json({ limit: "10kb" }));
 app.use(cookieParese());
 
+// Security Middleware - Disable in test environment to avoid interference with tests
+if (process.env.NODE_ENV !== "test") {
+    app.use(helmet());
+    app.use(mongoSanitize());
+    app.use(xss());
+    app.use(hpp());
+    app.use(rateLimiter({ limit: 100, timer: 15 * 60, key: "global" }));
+}
+
 app.get("/", (req, res) => {
-    res.send("This is calling from gaming-hub backend");
+    res.send("This is calling from KRM Esports backend");
 });
 
-app.use("/api/auth", authRouter);
-app.use("/api/teams", teamRouter);
-app.use("/api/notifications", notificationRouter);
-app.use("/api/organizers", organizerRouter);
-app.use("/api/invitations", invitationRouter);
-app.use("/api/players", userRouter);
+const v1Router = express.Router();
 
-app.use("/api/events", eventRouter);
+v1Router.use("/auth", authRouter);
+v1Router.use("/teams", teamRouter);
+v1Router.use("/notifications", notificationRouter);
+v1Router.use("/organizers", organizerRouter);
+v1Router.use("/invitations", invitationRouter);
+v1Router.use("/players", userRouter);
+v1Router.use("/events", eventRouter);
+v1Router.use("/rounds", roundsRouter);
+v1Router.use("/groups", groupsRouter);
+v1Router.use("/leaderboards", leaderboardRouter);
 
-app.use("/api/rounds", roundsRouter);
-app.use("/api/groups", groupsRouter);
-app.use("/api/leaderboards", leaderboardRouter);
+app.use("/api/v1", v1Router);
+
+// Sentry v8+ Error Handler (already setup via setupExpressErrorHandler or can use custom)
+// Sentry.setupExpressErrorHandler(app) should be called before other error handlers
+if (process.env.SENTRY_DSN) {
+    Sentry.setupExpressErrorHandler(app);
+}
 
 app.use(errorHandle);
 
 export default app;
+

@@ -1,0 +1,405 @@
+2026-02-12 20:17:12 info: Test Info Log
+2026-02-12 20:17:12 warn: Test Warn Log
+2026-02-12 20:17:12 error: Test Error Log Test Error Object
+2026-02-12 20:20:06 info: Server is running on port http://localhost:4000
+2026-02-12 20:20:06 info: MongoDB Connected: localhost
+2026-02-12 20:20:41 info: Server is running on port http://localhost:4000
+2026-02-12 20:20:41 info: MongoDB Connected: localhost
+2026-02-12 20:21:10 info: Server is running on port http://localhost:4000
+2026-02-12 20:21:10 info: MongoDB Connected: localhost
+2026-02-12 20:21:15 info: [0mGET /api/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:21:16 debug: >>> [RATE LIMITER REDIS] global: 468.66ms
+2026-02-12 20:21:16 debug: >>> [RATE LIMITER REDIS] global: 535.07ms
+2026-02-12 20:21:16 info: >>> [L2 REDIS GET] __express__/api/events/all-events?limit=6: 143.93ms
+2026-02-12 20:21:16 info: >>> [CACHE MISS] __express__/api/events/all-events?limit=6
+2026-02-12 20:21:16 info: >>> [L2 REDIS GET] __express__/api/events/all-events?limit=6: 382.94ms
+2026-02-12 20:21:16 info: >>> [L2 CACHE HIT] __express__/api/events/all-events?limit=6
+2026-02-12 20:21:16 info: [0mGET /api/events/all-events?limit=6 [32m200[0m 853.449 ms - 651[0m
+2026-02-12 20:25:20 info: Server is running on port http://localhost:4000
+2026-02-12 20:25:20 info: MongoDB Connected: localhost
+2026-02-12 20:25:36 info: Server is running on port http://localhost:4000
+2026-02-12 20:25:36 info: MongoDB Connected: localhost
+2026-02-12 20:25:44 info: Server is running on port http://localhost:4000
+2026-02-12 20:25:44 info: MongoDB Connected: localhost
+2026-02-12 20:29:04 info: Server is running on port http://localhost:4000
+2026-02-12 20:29:05 info: MongoDB Connected: localhost
+2026-02-12 20:30:34 info: Server is running on port http://localhost:4000
+2026-02-12 20:30:34 info: MongoDB Connected: localhost
+2026-02-12 20:30:37 info: Server is running on port http://localhost:4000
+2026-02-12 20:30:37 info: MongoDB Connected: localhost
+2026-02-12 20:31:10 info: Server is running on port http://localhost:4000
+2026-02-12 20:31:10 info: MongoDB Connected: localhost
+2026-02-12 20:32:04 info: Server is running on port http://localhost:4000
+2026-02-12 20:32:04 info: MongoDB Connected: localhost
+2026-02-12 20:32:15 info: Server is running on port http://localhost:4000
+2026-02-12 20:32:15 info: MongoDB Connected: localhost
+2026-02-12 20:32:39 info: Server is running on port http://localhost:4000
+2026-02-12 20:32:39 info: MongoDB Connected: localhost
+2026-02-12 20:32:45 info: [0mGET /api/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:32:47 debug: >>> [RATE LIMITER REDIS] global: 1901.47ms
+2026-02-12 20:32:47 debug: >>> [RATE LIMITER REDIS] global: 2276.61ms
+2026-02-12 20:32:47 info: [0mGET /api/auth/get-profile [33m401[0m 2283.981 ms - 1388[0m
+2026-02-12 20:32:47 debug: >>> [RATE LIMITER REDIS] global: 1921.68ms
+2026-02-12 20:32:47 info: >>> [L2 REDIS GET] __express__/api/events/all-events?limit=6: 648.03ms
+2026-02-12 20:32:47 info: >>> [CACHE MISS] __express__/api/events/all-events?limit=6
+2026-02-12 20:32:47 info: [0mGET /api/events/all-events?limit=6 [32m200[0m 2580.596 ms - 651[0m
+2026-02-12 20:32:47 debug: >>> [RATE LIMITER REDIS] global: 674.03ms
+2026-02-12 20:32:48 debug: >>> [RATE LIMITER REDIS] refreshToken: 574.54ms
+2026-02-12 20:32:48 info: >>> [L2 REDIS GET] __express__/api/events/all-events?limit=6: 1418.89ms
+2026-02-12 20:32:48 info: >>> [L2 CACHE HIT] __express__/api/events/all-events?limit=6
+2026-02-12 20:32:49 info: [0mPOST /api/auth/refresh-token [32m200[0m 1743.445 ms - 1849[0m
+2026-02-12 20:32:49 debug: >>> [RATE LIMITER REDIS] global: 136.25ms
+2026-02-12 20:32:49 debug: >>> [RATE LIMITER REDIS] global: 133.89ms
+2026-02-12 20:32:49 info: [0mGET /api/notifications?page=1 [32m200[0m 337.641 ms - 112[0m
+2026-02-12 20:32:49 debug: >>> [RATE LIMITER REDIS] profile: 131.29ms
+2026-02-12 20:32:49 info: [0mGET /api/auth/get-profile [32m200[0m 755.268 ms - 1456[0m
+2026-02-12 20:33:00 info: [0mGET /api/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:33:02 debug: >>> [RATE LIMITER REDIS] global: 2356.50ms
+2026-02-12 20:33:02 debug: >>> [RATE LIMITER REDIS] global: 1998.20ms
+2026-02-12 20:33:02 info: >>> [L1 CACHE HIT] __express__/api/events/all-events?limit=6
+2026-02-12 20:33:02 debug: >>> [RATE LIMITER REDIS] global: 2037.17ms
+2026-02-12 20:33:02 info: >>> [L1 CACHE HIT] __express__/api/events/all-events?limit=6
+2026-02-12 20:33:02 info: [0mGET /api/events/all-events?limit=6 [32m200[0m 2038.413 ms - 651[0m
+2026-02-12 20:33:04 warn: >>> [AUTH] Redis check timed out or failed:
+2026-02-12 20:33:05 debug: >>> [RATE LIMITER REDIS] profile: 869.49ms
+2026-02-12 20:33:05 error: "[object Object]" is not valid JSON
+2026-02-12 20:33:06 info: [0mGET /api/auth/get-profile [32m200[0m 6198.705 ms - 1456[0m
+2026-02-12 20:33:07 debug: >>> [RATE LIMITER REDIS] global: 1241.14ms
+2026-02-12 20:33:09 warn: >>> [AUTH] Redis check timed out or failed:
+2026-02-12 20:33:09 info: [0mGET /api/notifications?page=1 [32m200[0m 3249.311 ms - 112[0m
+2026-02-12 20:34:14 info: Server is running on port http://localhost:4000
+2026-02-12 20:34:14 info: MongoDB Connected: localhost
+2026-02-12 20:34:17 info: Server is running on port http://localhost:4000
+2026-02-12 20:34:17 info: MongoDB Connected: localhost
+2026-02-12 20:34:58 debug: >>> [RATE LIMITER REDIS] global: 568.54ms
+2026-02-12 20:34:58 info: [0mGET / [32m200[0m 573.055 ms - 40[0m
+2026-02-12 20:34:59 debug: >>> [RATE LIMITER REDIS] global: 191.55ms
+2026-02-12 20:34:59 info: [0mGET /favicon.ico [33m404[0m 193.500 ms - 150[0m
+2026-02-12 20:36:43 info: Server is running on port http://localhost:4000
+2026-02-12 20:36:43 info: MongoDB Connected: localhost
+2026-02-12 20:36:46 info: Server is running on port http://localhost:4000
+2026-02-12 20:36:46 info: MongoDB Connected: localhost
+2026-02-12 20:37:04 info: Server is running on port http://localhost:4000
+2026-02-12 20:37:04 info: MongoDB Connected: localhost
+2026-02-12 20:37:09 info: Server is running on port http://localhost:4000
+2026-02-12 20:37:09 info: MongoDB Connected: localhost
+2026-02-12 20:37:50 info: [0mGET /api/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:37:55 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:37:55 info: [0mGET /api/auth/get-profile [31m500[0m 5013.288 ms - 67[0m
+2026-02-12 20:37:55 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:37:55 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:37:55 info: [0mGET /api/events/all-events?limit=6 [31m500[0m 5002.161 ms - 67[0m
+2026-02-12 20:38:32 info: [0mGET /api/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:38:36 debug: >>> [RATE LIMITER REDIS] global: 4185.12ms
+2026-02-12 20:38:36 debug: >>> [RATE LIMITER REDIS] global: 4507.44ms
+2026-02-12 20:38:36 debug: >>> [RATE LIMITER REDIS] global: 4216.52ms
+2026-02-12 20:38:38 info: >>> [L2 REDIS GET] __express__/api/events/all-events?limit=6: 1431.08ms
+2026-02-12 20:38:38 info: >>> [CACHE MISS] __express__/api/events/all-events?limit=6
+2026-02-12 20:38:38 info: [0mGET /api/events/all-events?limit=6 [32m200[0m 5658.148 ms - 651[0m
+2026-02-12 20:38:38 warn: >>> [AUTH] Redis check timed out or failed: Redis timeout
+2026-02-12 20:38:40 debug: >>> [RATE LIMITER REDIS] profile: 1122.68ms
+2026-02-12 20:38:40 info: >>> [L2 REDIS GET] __express__/api/events/all-events?limit=6: 3546.37ms
+2026-02-12 20:38:40 info: >>> [L2 CACHE HIT] __express__/api/events/all-events?limit=6
+2026-02-12 20:38:41 info: [0mGET /api/auth/get-profile [32m200[0m 9572.964 ms - 1456[0m
+2026-02-12 20:38:42 debug: >>> [RATE LIMITER REDIS] global: 709.85ms
+2026-02-12 20:38:43 info: [0mGET /api/notifications?page=1 [32m200[0m 1513.217 ms - 112[0m
+2026-02-12 20:38:56 info: [0mGET /api/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:38:57 debug: >>> [RATE LIMITER REDIS] global: 1379.87ms
+2026-02-12 20:38:57 info: >>> [L1 CACHE HIT] __express__/api/events/all-events?limit=6
+2026-02-12 20:38:57 debug: >>> [RATE LIMITER REDIS] global: 1871.85ms
+2026-02-12 20:38:57 debug: >>> [RATE LIMITER REDIS] global: 1615.88ms
+2026-02-12 20:38:57 info: >>> [L1 CACHE HIT] __express__/api/events/all-events?limit=6
+2026-02-12 20:38:57 info: [0mGET /api/events/all-events?limit=6 [32m200[0m 1616.752 ms - 651[0m
+2026-02-12 20:38:58 debug: >>> [RATE LIMITER REDIS] profile: 156.76ms
+2026-02-12 20:38:58 info: [0mGET /api/auth/get-profile [32m200[0m 2234.011 ms - 1454[0m
+2026-02-12 20:38:58 debug: >>> [RATE LIMITER REDIS] global: 163.54ms
+2026-02-12 20:38:58 info: [0mGET /api/notifications?page=1 [32m200[0m 365.633 ms - 112[0m
+2026-02-12 20:39:07 info: [0mGET /api/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:39:08 debug: >>> [RATE LIMITER REDIS] global: 767.74ms
+2026-02-12 20:39:08 debug: >>> [RATE LIMITER REDIS] global: 1007.40ms
+2026-02-12 20:39:08 debug: >>> [RATE LIMITER REDIS] global: 1335.49ms
+2026-02-12 20:39:09 info: >>> [L2 REDIS GET] __express__/api/events/all-events?limit=6: 389.59ms
+2026-02-12 20:39:09 info: >>> [L2 CACHE HIT] __express__/api/events/all-events?limit=6
+2026-02-12 20:39:09 info: >>> [L2 REDIS GET] __express__/api/events/all-events?limit=6: 350.00ms
+2026-02-12 20:39:09 info: >>> [L2 CACHE HIT] __express__/api/events/all-events?limit=6
+2026-02-12 20:39:09 info: [0mGET /api/events/all-events?limit=6 [32m200[0m 1686.680 ms - 651[0m
+2026-02-12 20:39:09 debug: >>> [RATE LIMITER REDIS] profile: 255.07ms
+2026-02-12 20:39:09 info: [0mGET /api/auth/get-profile [32m200[0m 2037.816 ms - 1454[0m
+2026-02-12 20:39:09 debug: >>> [RATE LIMITER REDIS] global: 196.11ms
+2026-02-12 20:39:09 info: [0mGET /api/notifications?page=1 [32m200[0m 501.657 ms - 112[0m
+2026-02-12 20:40:01 info: [0mGET /api/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:40:02 debug: >>> [RATE LIMITER REDIS] global: 778.81ms
+2026-02-12 20:40:02 debug: >>> [RATE LIMITER REDIS] global: 763.03ms
+2026-02-12 20:40:02 debug: >>> [RATE LIMITER REDIS] global: 829.81ms
+2026-02-12 20:40:02 info: >>> [L2 REDIS GET] __express__/api/events/all-events?limit=6: 231.64ms
+2026-02-12 20:40:02 info: >>> [L2 CACHE HIT] __express__/api/events/all-events?limit=6
+2026-02-12 20:40:03 info: >>> [L2 REDIS GET] __express__/api/events/all-events?limit=6: 442.64ms
+2026-02-12 20:40:03 info: >>> [L2 CACHE HIT] __express__/api/events/all-events?limit=6
+2026-02-12 20:40:03 info: [0mGET /api/events/all-events?limit=6 [32m200[0m 1273.730 ms - 651[0m
+2026-02-12 20:40:03 debug: >>> [RATE LIMITER REDIS] profile: 140.15ms
+2026-02-12 20:40:03 info: [0mGET /api/auth/get-profile [32m200[0m 2221.280 ms - 1456[0m
+2026-02-12 20:40:03 debug: >>> [RATE LIMITER REDIS] global: 152.77ms
+2026-02-12 20:40:04 info: [0mGET /api/notifications?page=1 [32m200[0m 501.542 ms - 112[0m
+2026-02-12 20:40:16 info: [0mGET /api/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:40:21 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:40:21 info: [0mGET /api/auth/get-profile [31m500[0m 5001.861 ms - 67[0m
+2026-02-12 20:40:21 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:40:21 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:40:21 info: [0mGET /api/events/all-events?limit=6 [31m500[0m 5001.158 ms - 67[0m
+2026-02-12 20:41:27 info: Server is running on port http://localhost:4000
+2026-02-12 20:41:27 info: MongoDB Connected: localhost
+2026-02-12 20:41:29 info: Server is running on port http://localhost:4000
+2026-02-12 20:41:29 info: MongoDB Connected: localhost
+2026-02-12 20:42:23 info: Server is running on port http://localhost:4000
+2026-02-12 20:42:23 info: MongoDB Connected: localhost
+2026-02-12 20:42:40 info: [0mGET /api/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:42:40 debug: >>> [RATE LIMITER REDIS] global: 409.00ms
+2026-02-12 20:42:41 debug: >>> [RATE LIMITER REDIS] global: 665.89ms
+2026-02-12 20:42:41 debug: >>> [RATE LIMITER REDIS] global: 672.44ms
+2026-02-12 20:42:41 info: >>> [L2 REDIS GET] __express__/api/events/all-events?limit=6: 748.18ms
+2026-02-12 20:42:41 info: >>> [L2 CACHE HIT] __express__/api/events/all-events?limit=6
+2026-02-12 20:42:41 info: [0mGET /api/events/all-events?limit=6 [32m200[0m 1424.095 ms - 651[0m
+2026-02-12 20:42:41 debug: >>> [RATE LIMITER REDIS] profile: 772.27ms
+2026-02-12 20:42:41 info: >>> [L2 REDIS GET] __express__/api/events/all-events?limit=6: 801.24ms
+2026-02-12 20:42:41 info: >>> [L2 CACHE HIT] __express__/api/events/all-events?limit=6
+2026-02-12 20:42:43 info: [0mGET /api/auth/get-profile [32m200[0m 3738.382 ms - 1456[0m
+2026-02-12 20:42:44 debug: >>> [RATE LIMITER REDIS] global: 792.70ms
+2026-02-12 20:42:44 info: [0mGET /api/notifications?page=1 [32m200[0m 1045.534 ms - 112[0m
+2026-02-12 20:42:51 info: Server is running on port http://localhost:4000
+2026-02-12 20:42:51 info: MongoDB Connected: localhost
+2026-02-12 20:43:07 info: Server is running on port http://localhost:4000
+2026-02-12 20:43:07 info: MongoDB Connected: localhost
+2026-02-12 20:43:35 info: Server is running on port http://localhost:4000
+2026-02-12 20:43:35 info: MongoDB Connected: localhost
+2026-02-12 20:43:43 info: [0mGET /api/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:43:43 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:43 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:44 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:44 warn: >>> [AUTH] Redis check timed out or failed: Redis timeout
+2026-02-12 20:43:45 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/cache.middleware.js:33:64)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:45 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/cache.middleware.js:33:64)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:45 info: [0mGET /api/events/all-events?limit=6 [32m200[0m 2019.082 ms - 651[0m
+2026-02-12 20:43:45 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:47 info: [0mGET /api/auth/get-profile [32m200[0m 4557.421 ms - 1456[0m
+2026-02-12 20:43:47 debug: >>> [RATE LIMITER REDIS] global: 694.78ms
+2026-02-12 20:43:48 warn: >>> [AUTH] Redis check timed out or failed: Redis timeout
+2026-02-12 20:43:48 info: [0mGET /api/notifications?page=1 [32m200[0m 1704.817 ms - 112[0m
+2026-02-12 20:43:56 info: [0mGET /api/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:43:56 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:57 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:57 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:57 warn: >>> [AUTH] Redis check timed out or failed: Redis timeout
+2026-02-12 20:43:57 debug: >>> [RATE LIMITER REDIS] profile: 356.82ms
+2026-02-12 20:43:58 info: >>> [L2 REDIS GET] __express__/api/events/all-events?limit=6: 799.15ms
+2026-02-12 20:43:58 info: >>> [CACHE MISS] __express__/api/events/all-events?limit=6
+2026-02-12 20:43:58 info: [0mGET /api/events/all-events?limit=6 [32m200[0m 1803.111 ms - 651[0m
+2026-02-12 20:43:58 info: >>> [L2 REDIS GET] __express__/api/events/all-events?limit=6: 842.26ms
+2026-02-12 20:43:58 info: >>> [CACHE MISS] __express__/api/events/all-events?limit=6
+2026-02-12 20:43:58 error: SyntaxError: "[object Object]" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at getUserProfile (file:///home/ravi/Desktop/my-project/gaming-site/server/src/modules/auth/auth.service.js:303:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///home/ravi/Desktop/my-project/gaming-site/server/src/modules/auth/auth.controller.js:187:41
+    at async file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/error.middleware.js:82:5
+2026-02-12 20:43:58 info: [0mGET /api/auth/get-profile [32m200[0m 2705.443 ms - 1456[0m
+2026-02-12 20:43:58 debug: >>> [RATE LIMITER REDIS] global: 132.34ms
+2026-02-12 20:43:58 info: [0mGET /api/notifications?page=1 [32m200[0m 297.121 ms - 112[0m
+2026-02-12 20:44:47 info: Server is running on port http://localhost:4000
+2026-02-12 20:44:47 info: MongoDB Connected: localhost
+2026-02-12 20:50:06 info: Server is running on port http://localhost:4000
+2026-02-12 20:50:06 info: MongoDB Connected: localhost
+2026-02-12 20:50:08 info: Server is running on port http://localhost:4000
+2026-02-12 20:50:08 info: MongoDB Connected: localhost
+2026-02-12 20:50:24 info: Server is running on port http://localhost:4000
+2026-02-12 20:50:24 info: MongoDB Connected: localhost
+2026-02-12 20:50:27 info: Server is running on port http://localhost:4000
+2026-02-12 20:50:27 info: MongoDB Connected: localhost
+2026-02-12 20:50:29 info: Server is running on port http://localhost:4000
+2026-02-12 20:50:29 info: MongoDB Connected: localhost
+2026-02-12 20:50:46 info: Server is running on port http://localhost:4000
+2026-02-12 20:50:46 info: MongoDB Connected: localhost
+2026-02-12 20:54:25 info: Server is running on port http://localhost:4000
+2026-02-12 20:54:25 info: MongoDB Connected: localhost
+2026-02-12 20:55:26 debug: >>> [RATE LIMITER REDIS] global: 516.01ms
+2026-02-12 20:55:26 info: [0mGET /api/v1/auth/get-profile [33m401[0m 522.262 ms - 1388[0m
+2026-02-12 20:55:26 info: [0mGET /api/v1/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:55:26 debug: >>> [RATE LIMITER REDIS] global: 178.14ms
+2026-02-12 20:55:26 debug: >>> [RATE LIMITER REDIS] global: 368.75ms
+2026-02-12 20:55:26 info: >>> [L2 REDIS GET] __express__/api/v1/events/all-events?limit=6: 203.90ms
+2026-02-12 20:55:26 info: >>> [CACHE MISS] __express__/api/v1/events/all-events?limit=6
+2026-02-12 20:55:26 info: [0mGET /api/v1/events/all-events?limit=6 [32m200[0m 583.908 ms - 651[0m
+2026-02-12 20:55:26 debug: >>> [RATE LIMITER REDIS] global: 625.35ms
+2026-02-12 20:55:27 info: >>> [L2 REDIS GET] __express__/api/v1/events/all-events?limit=6: 614.71ms
+2026-02-12 20:55:27 info: >>> [L2 CACHE HIT] __express__/api/v1/events/all-events?limit=6
+2026-02-12 20:55:27 debug: >>> [RATE LIMITER REDIS] refreshToken: 202.36ms
+2026-02-12 20:55:27 info: [0mPOST /api/v1/auth/refresh-token [32m200[0m 1588.380 ms - 1849[0m
+2026-02-12 20:55:28 debug: >>> [RATE LIMITER REDIS] global: 155.99ms
+2026-02-12 20:55:28 debug: >>> [RATE LIMITER REDIS] global: 161.51ms
+2026-02-12 20:55:28 info: [0mGET /api/v1/notifications?page=1 [32m200[0m 364.615 ms - 112[0m
+2026-02-12 20:55:28 debug: >>> [RATE LIMITER REDIS] profile: 146.86ms
+2026-02-12 20:55:28 info: [0mGET /api/v1/auth/get-profile [32m200[0m 827.354 ms - 1456[0m
+2026-02-12 20:55:33 info: [0mGET /api/v1/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:55:34 debug: >>> [RATE LIMITER REDIS] global: 732.47ms
+2026-02-12 20:55:34 debug: >>> [RATE LIMITER REDIS] global: 538.36ms
+2026-02-12 20:55:34 info: >>> [L1 CACHE HIT] __express__/api/v1/events/all-events?limit=6
+2026-02-12 20:55:34 debug: >>> [RATE LIMITER REDIS] global: 586.44ms
+2026-02-12 20:55:34 info: >>> [L1 CACHE HIT] __express__/api/v1/events/all-events?limit=6
+2026-02-12 20:55:34 info: [0mGET /api/v1/events/all-events?limit=6 [32m200[0m 587.595 ms - 651[0m
+2026-02-12 20:55:35 debug: >>> [RATE LIMITER REDIS] profile: 247.13ms
+2026-02-12 20:55:35 info: [0mGET /api/v1/auth/get-profile [32m200[0m 1591.117 ms - 1454[0m
+2026-02-12 20:55:35 debug: >>> [RATE LIMITER REDIS] global: 272.14ms
+2026-02-12 20:55:35 info: [0mGET /api/v1/notifications?page=1 [32m200[0m 449.430 ms - 112[0m
+2026-02-12 20:55:39 debug: >>> [RATE LIMITER REDIS] global: 275.29ms
+2026-02-12 20:55:39 info: [0mGET /api/v1/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:55:39 debug: >>> [RATE LIMITER REDIS] global: 261.00ms
+2026-02-12 20:55:39 info: >>> [L1 CACHE HIT] __express__/api/v1/events/all-events?limit=6
+2026-02-12 20:55:39 debug: >>> [RATE LIMITER REDIS] profile: 606.71ms
+2026-02-12 20:55:39 info: [0mGET /api/v1/auth/get-profile [32m200[0m 1022.721 ms - 1454[0m
+2026-02-12 20:55:39 debug: >>> [RATE LIMITER REDIS] global: 736.19ms
+2026-02-12 20:55:39 info: >>> [L1 CACHE HIT] __express__/api/v1/events/all-events?limit=6
+2026-02-12 20:55:39 info: [0mGET /api/v1/events/all-events?limit=6 [32m200[0m 737.252 ms - 651[0m
+2026-02-12 20:55:40 debug: >>> [RATE LIMITER REDIS] global: 237.37ms
+2026-02-12 20:55:40 info: [0mGET /api/v1/notifications?page=1 [32m200[0m 391.071 ms - 112[0m
+2026-02-12 20:55:45 info: [0mGET /api/v1/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:55:45 debug: >>> [RATE LIMITER REDIS] global: 529.03ms
+2026-02-12 20:55:45 info: >>> [L1 CACHE HIT] __express__/api/v1/events/all-events?limit=6
+2026-02-12 20:55:45 info: [0mGET /api/v1/events/all-events?limit=6 [32m200[0m 529.775 ms - 651[0m
+2026-02-12 20:55:46 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:55:46 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:55:46 info: >>> [L1 CACHE HIT] __express__/api/v1/events/all-events?limit=6
+2026-02-12 20:55:46 debug: >>> [RATE LIMITER REDIS] profile: 366.12ms
+2026-02-12 20:55:46 info: [0mGET /api/v1/auth/get-profile [32m200[0m 1513.829 ms - 1454[0m
+2026-02-12 20:55:47 debug: >>> [RATE LIMITER REDIS] global: 380.16ms
+2026-02-12 20:55:47 info: [0mGET /api/v1/notifications?page=1 [32m200[0m 522.028 ms - 112[0m
+2026-02-12 20:55:50 debug: >>> [RATE LIMITER REDIS] global: 302.76ms
+2026-02-12 20:55:51 info: [0mGET /api/v1/events/all-events?limit=6 [0m-[0m - ms - -[0m
+2026-02-12 20:55:51 debug: >>> [RATE LIMITER REDIS] global: 143.99ms
+2026-02-12 20:55:51 info: >>> [L1 CACHE HIT] __express__/api/v1/events/all-events?limit=6
+2026-02-12 20:55:51 debug: >>> [RATE LIMITER REDIS] global: 585.66ms
+2026-02-12 20:55:51 info: >>> [L1 CACHE HIT] __express__/api/v1/events/all-events?limit=6
+2026-02-12 20:55:51 info: [0mGET /api/v1/events/all-events?limit=6 [32m200[0m 586.456 ms - 651[0m
+2026-02-12 20:55:51 debug: >>> [RATE LIMITER REDIS] profile: 299.21ms
+2026-02-12 20:55:51 info: [0mGET /api/v1/auth/get-profile [32m200[0m 1210.725 ms - 1454[0m
+2026-02-12 20:55:52 debug: >>> [RATE LIMITER REDIS] global: 337.77ms
+2026-02-12 20:55:52 info: [0mGET /api/v1/notifications?page=1 [32m200[0m 484.904 ms - 112[0m
+2026-02-12 21:02:26 info: [0mPOST /api/teams/create-team [33m404[0m 5.701 ms - 161[0m
+2026-02-12 21:02:27 info: [0mPUT /api/teams/update-team [33m404[0m 0.479 ms - 160[0m
+2026-02-12 21:02:27 info: [0mPUT /api/teams/update-team [33m404[0m 0.227 ms - 160[0m
+2026-02-12 21:02:27 info: [0mPOST /api/teams/create-team [33m404[0m 0.229 ms - 161[0m
+2026-02-12 21:02:27 info: [0mPOST /api/teams/create-team [33m404[0m 0.355 ms - 161[0m
+2026-02-12 21:02:27 info: [0mPOST /api/teams/create-team [33m404[0m 0.291 ms - 161[0m
+2026-02-12 21:02:27 info: [0mPOST /api/teams/create-team [33m404[0m 0.191 ms - 161[0m
+2026-02-12 21:02:27 info: [0mPOST /api/teams/create-team [33m404[0m 0.217 ms - 161[0m
+2026-02-12 21:02:27 info: [0mPOST /api/teams/create-team [33m404[0m 0.575 ms - 161[0m
+2026-02-12 21:02:28 info: [0mPOST /api/teams/698df28ce419f257a729f2c3/join-request [33m404[0m 0.331 ms - 187[0m
+2026-02-12 21:02:28 info: [0mPOST /api/teams/698df28ce419f257a729f2d6/join-request [33m404[0m 0.238 ms - 187[0m
+2026-02-12 21:02:28 info: [0mPOST /api/teams/698df28ce419f257a729f2e9/join-request [33m404[0m 0.168 ms - 187[0m
+2026-02-12 21:02:28 info: [0mPOST /api/teams/698df28ce419f257a729f2fc/join-request [33m404[0m 0.174 ms - 187[0m
+2026-02-12 21:02:28 info: [0mPOST /api/teams/698df28ce419f257a729f2fc/join-request [33m404[0m 0.137 ms - 187[0m
+2026-02-12 21:03:10 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:10 info: [0mPOST /api/v1/teams/create-team [32m201[0m 144.971 ms - 914[0m
+2026-02-12 21:03:11 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:11 info: [0mPUT /api/v1/teams/update-team [32m200[0m 25.677 ms - 916[0m
+2026-02-12 21:03:11 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:11 info: [0mPUT /api/v1/teams/update-team [33m403[0m 6.298 ms - 389[0m
+2026-02-12 21:03:11 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:11 info: [0mPOST /api/v1/teams/create-team [32m201[0m 31.829 ms - 915[0m
+2026-02-12 21:03:11 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:11 info: [0mPUT /api/v1/teams/add-members [32m200[0m 23.570 ms - 68[0m
+2026-02-12 21:03:11 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:11 info: [0mPOST /api/v1/teams/create-team [32m201[0m 20.558 ms - 916[0m
+2026-02-12 21:03:12 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:12 info: [0mPUT /api/v1/teams/add-members [32m200[0m 21.639 ms - 68[0m
+2026-02-12 21:03:12 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:12 info: [0mPUT /api/v1/teams/transfer-owner [32m200[0m 22.407 ms - 1218[0m
+2026-02-12 21:03:12 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:12 info: [0mPOST /api/v1/teams/create-team [32m201[0m 17.579 ms - 916[0m
+2026-02-12 21:03:12 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:12 info: [0mPUT /api/v1/teams/add-members [32m200[0m 21.446 ms - 68[0m
+2026-02-12 21:03:12 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:12 info: [0mPUT /api/v1/teams/manage-member-role [32m200[0m 12.990 ms - 1225[0m
+2026-02-12 21:03:12 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:12 info: [0mPOST /api/v1/teams/create-team [32m201[0m 14.990 ms - 916[0m
+2026-02-12 21:03:12 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:12 info: [0mPUT /api/v1/teams/add-members [32m200[0m 20.767 ms - 68[0m
+2026-02-12 21:03:12 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:12 info: [0mPUT /api/v1/teams/manage-staff-role [32m200[0m 14.207 ms - 1219[0m
+2026-02-12 21:03:12 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:12 info: [0mPOST /api/v1/teams/create-team [32m201[0m 22.201 ms - 916[0m
+2026-02-12 21:03:12 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:12 info: [0mPUT /api/v1/teams/add-members [32m200[0m 15.218 ms - 68[0m
+2026-02-12 21:03:12 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:12 info: [0mPUT /api/v1/teams/leave-member [32m200[0m 27.235 ms - 65[0m
+2026-02-12 21:03:12 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:12 info: [0mPOST /api/v1/teams/create-team [32m201[0m 14.358 ms - 916[0m
+2026-02-12 21:03:12 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:12 info: [0mPUT /api/v1/teams/add-members [32m200[0m 19.991 ms - 68[0m
+2026-02-12 21:03:12 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:12 info: [0mPUT /api/v1/teams/leave-member [33m403[0m 5.834 ms - 558[0m
+2026-02-12 21:03:13 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:13 info: [0mPOST /api/v1/teams/698df2b921afdf2a22ddb114/join-request [32m201[0m 13.257 ms - 332[0m
+2026-02-12 21:03:13 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:13 info: [0mPOST /api/v1/teams/698df2b921afdf2a22ddb130/join-request [32m201[0m 13.890 ms - 332[0m
+2026-02-12 21:03:13 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:13 info: [0mPUT /api/v1/teams/join-requests/698df2b921afdf2a22ddb13b [32m200[0m 36.785 ms - 1205[0m
+2026-02-12 21:03:13 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:13 info: [0mPOST /api/v1/teams/698df2b921afdf2a22ddb163/join-request [32m201[0m 20.504 ms - 340[0m
+2026-02-12 21:03:13 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:13 info: [0mPUT /api/v1/teams/join-requests/698df2b921afdf2a22ddb16e [32m200[0m 15.936 ms - 70[0m
+2026-02-12 21:03:13 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:13 info: [0mPOST /api/v1/teams/698df2b921afdf2a22ddb18a/join-request [32m201[0m 13.825 ms - 327[0m
+2026-02-12 21:03:13 debug: >>> [isVerified] Account is verified. Next.
+2026-02-12 21:03:13 info: [0mPOST /api/v1/teams/698df2b921afdf2a22ddb18a/join-request [33m400[0m 7.146 ms - 519[0m
+2026-02-12 21:03:36 info: Server is running on port http://localhost:4000
+2026-02-12 21:03:36 info: MongoDB Connected: localhost

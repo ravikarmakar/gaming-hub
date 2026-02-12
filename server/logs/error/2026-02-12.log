@@ -1,0 +1,168 @@
+2026-02-12 20:17:12 error: Test Error Log Test Error Object
+2026-02-12 20:25:47 error: uncaughtException: Cannot read properties of undefined (reading 'requestHandler')
+TypeError: Cannot read properties of undefined (reading 'requestHandler')
+    at file:///home/ravi/Desktop/my-project/gaming-site/server/src/app.js:47:25
+    at ModuleJob.run (node:internal/modules/esm/module_job:371:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:669:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+2026-02-12 20:26:20 error: uncaughtException: Cannot read properties of undefined (reading 'requestHandler')
+TypeError: Cannot read properties of undefined (reading 'requestHandler')
+    at file:///home/ravi/Desktop/my-project/gaming-site/server/src/app.js:47:25
+    at ModuleJob.run (node:internal/modules/esm/module_job:371:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:669:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+2026-02-12 20:27:17 error: uncaughtException: Cannot read properties of undefined (reading 'requestHandler')
+TypeError: Cannot read properties of undefined (reading 'requestHandler')
+    at file:///home/ravi/Desktop/my-project/gaming-site/server/src/app.js:47:25
+    at ModuleJob.run (node:internal/modules/esm/module_job:371:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:669:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+2026-02-12 20:27:48 error: uncaughtException: Cannot read properties of undefined (reading 'requestHandler')
+TypeError: Cannot read properties of undefined (reading 'requestHandler')
+    at file:///home/ravi/Desktop/my-project/gaming-site/server/src/app.js:47:25
+    at ModuleJob.run (node:internal/modules/esm/module_job:371:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:669:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+2026-02-12 20:28:13 error: uncaughtException: Cannot read properties of undefined (reading 'requestHandler')
+TypeError: Cannot read properties of undefined (reading 'requestHandler')
+    at file:///home/ravi/Desktop/my-project/gaming-site/server/src/app.js:47:25
+    at ModuleJob.run (node:internal/modules/esm/module_job:371:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:669:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+2026-02-12 20:28:22 error: uncaughtException: Cannot read properties of undefined (reading 'requestHandler')
+TypeError: Cannot read properties of undefined (reading 'requestHandler')
+    at file:///home/ravi/Desktop/my-project/gaming-site/server/src/app.js:47:25
+    at ModuleJob.run (node:internal/modules/esm/module_job:371:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:669:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+2026-02-12 20:28:41 error: uncaughtException: Cannot read properties of undefined (reading 'requestHandler')
+TypeError: Cannot read properties of undefined (reading 'requestHandler')
+    at file:///home/ravi/Desktop/my-project/gaming-site/server/src/app.js:47:25
+    at ModuleJob.run (node:internal/modules/esm/module_job:371:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:669:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+2026-02-12 20:28:54 error: uncaughtException: Cannot read properties of undefined (reading 'requestHandler')
+TypeError: Cannot read properties of undefined (reading 'requestHandler')
+    at file:///home/ravi/Desktop/my-project/gaming-site/server/src/app.js:47:25
+    at ModuleJob.run (node:internal/modules/esm/module_job:371:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:669:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+2026-02-12 20:29:08 error: uncaughtException: listen EADDRINUSE: address already in use :::4000
+Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/express/lib/application.js:635:24)
+    at file:///home/ravi/Desktop/my-project/gaming-site/server/src/server.js:11:5
+    at ModuleJob.run (node:internal/modules/esm/module_job:371:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:669:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+2026-02-12 20:31:12 error: uncaughtException: listen EADDRINUSE: address already in use :::4000
+Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/express/lib/application.js:635:24)
+    at file:///home/ravi/Desktop/my-project/gaming-site/server/src/server.js:11:5
+    at ModuleJob.run (node:internal/modules/esm/module_job:371:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:669:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+2026-02-12 20:31:45 error: uncaughtException: listen EADDRINUSE: address already in use :::4000
+Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/express/lib/application.js:635:24)
+    at file:///home/ravi/Desktop/my-project/gaming-site/server/src/server.js:11:5
+    at ModuleJob.run (node:internal/modules/esm/module_job:371:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:669:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+2026-02-12 20:32:55 error: uncaughtException: listen EADDRINUSE: address already in use :::4000
+Error: listen EADDRINUSE: address already in use :::4000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at app.listen (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/express/lib/application.js:635:24)
+    at file:///home/ravi/Desktop/my-project/gaming-site/server/src/server.js:11:5
+    at ModuleJob.run (node:internal/modules/esm/module_job:371:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:669:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+2026-02-12 20:33:05 error: "[object Object]" is not valid JSON
+2026-02-12 20:37:55 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:37:55 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:37:55 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:40:21 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:40:21 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:40:21 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:43 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:43 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:44 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:45 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/cache.middleware.js:33:64)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:45 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/cache.middleware.js:33:64)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:45 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:56 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:57 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:57 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:43:58 error: SyntaxError: "[object Object]" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at getUserProfile (file:///home/ravi/Desktop/my-project/gaming-site/server/src/modules/auth/auth.service.js:303:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///home/ravi/Desktop/my-project/gaming-site/server/src/modules/auth/auth.controller.js:187:41
+    at async file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/error.middleware.js:82:5
+2026-02-12 20:55:46 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 20:55:46 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
