@@ -14,6 +14,7 @@ const organizerSchema = new mongoose.Schema(
     bannerFileId: { type: String, default: null, trim: true },
     name: {
       type: String,
+      required: true,
       trim: true,
       minlength: 3,
       maxlength: 100,
@@ -25,7 +26,7 @@ const organizerSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
       match: [
-        /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,})+$/,
+        /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/,
         "Please enter valid email",
       ],
     },
@@ -76,10 +77,22 @@ organizerSchema.index({ tag: 1 }, { unique: true, partialFilterExpression: { isD
 organizerSchema.index({ slug: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });
 
 
-// Auto-generate slug from name before saving
+// Auto-generate URL-safe slug from name before saving (only on creation)
 organizerSchema.pre("save", function (next) {
-  if (this.isModified("name")) {
-    this.slug = this.name.toLowerCase().replace(/\s+/g, "-");
+  // Only generate slug for new documents to avoid breaking existing URLs
+  if (this.isNew && this.name) {
+    this.slug = this.name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
+      .replace(/\s+/g, "-") // Replace spaces with hyphens
+      .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
+      .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
+    if (!this.slug || this.slug.length === 0) {
+      // Fallback for names that result in empty slugs (e.g. "!!!" -> "")
+      // Use a timestamp-based slug to ensure uniqueness and validity
+      this.slug = `org-${Date.now()}`;
+    }
   }
   next();
 });

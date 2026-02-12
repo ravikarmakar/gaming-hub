@@ -58,14 +58,20 @@ export const logout = TryCatchHandler(async (req, res, next) => {
     try {
       const p = redis.pipeline();
 
+      // Handle refresh token deletion
       if (refreshToken) {
-        const decoded = jwt.verify(
-          refreshToken,
-          process.env.REFRESH_TOKEN_SECRET,
-        );
-        p.del(`refresh_token:${decoded.userId}`);
+        try {
+          const decoded = jwt.verify(
+            refreshToken,
+            process.env.REFRESH_TOKEN_SECRET,
+          );
+          p.del(`refresh_token:${decoded.userId}`);
+        } catch (error) {
+          logger.warn("Invalid refresh token during logout:", error.message);
+        }
       }
 
+      // Always blacklist access token regardless of refresh token status
       if (accessToken) {
         p.set(`blacklist_token:${accessToken}`, "true", { ex: 15 * 60 });
       }
@@ -223,7 +229,11 @@ export const resetPassword = TryCatchHandler(async (req, res, next) => {
 
 export const updateProfile = TryCatchHandler(async (req, res, next) => {
   // IP address for auto-country detection
-  const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+  // x-forwarded-for may contain multiple IPs (comma-separated), use the first one
+  const forwardedFor = req.headers["x-forwarded-for"];
+  const ip = forwardedFor
+    ? forwardedFor.split(",")[0].trim()
+    : req.socket.remoteAddress;
 
   const user = await updateUserProfile(req.user.userId, req.body, req.files, ip);
 
@@ -237,8 +247,17 @@ export const updateProfile = TryCatchHandler(async (req, res, next) => {
 export const deleteAccount = TryCatchHandler(async (req, res, next) => {
   await deleteUserAccount(req.user.userId);
 
-  res.clearCookie("accessToken");
-  res.clearCookie("refreshToken");
+  res.clearCookie("accessToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  });
+
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  });
 
   res.status(200).json({
     success: true,

@@ -6,13 +6,12 @@ import JoinRequest from "../join-request/join-request.model.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
 import { Roles, Scopes } from "../../shared/constants/roles.js";
 import { redis } from "../../shared/config/redis.js";
-import { createNotification } from "../notification/notification.controller.js";
 import { uploadOnImageKit, deleteFromImageKit } from "../../shared/services/imagekit.service.js";
 import { logger } from "../../shared/utils/logger.js";
 
 // Helper to check uniqueness
 export const checkTeamNameUnique = async (teamName) => {
-  const existingTeam = await Team.findOne({ teamName });
+  const existingTeam = await Team.findOne({ teamName, isDeleted: false });
   if (existingTeam) {
     throw new CustomError(
       "Team name already exists. Please choose a different name.",
@@ -27,10 +26,15 @@ export const checkTeamNameUnique = async (teamName) => {
 export const createTeamService = async (userId, body, file) => {
   const { teamName, bio, tag, region } = body;
 
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  let uploadedImageStart = null;
+
   try {
     await checkTeamNameUnique(teamName);
 
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).session(session);
     if (!user) throw new CustomError("User not found", 404);
     if (user.teamId) throw new CustomError("You are already in a team", 400);
     if (!user.isAccountVerified)
@@ -48,6 +52,7 @@ export const createTeamService = async (userId, body, file) => {
       if (uploadRes) {
         imageUrl = uploadRes.url;
         imageFileId = uploadRes.fileId;
+        uploadedImageStart = imageFileId; // Track for cleanup
       }
     }
 
@@ -70,8 +75,8 @@ export const createTeamService = async (userId, body, file) => {
     };
 
     // 2. Create Team
-    const newTeam = new Team(teamData);
-    await newTeam.save();
+    const newTeam = new Team(teamData); // Pass session to save? No, pass to save options
+    await newTeam.save({ session });
 
     // 3. Update User
     await User.findByIdAndUpdate(
@@ -86,21 +91,36 @@ export const createTeamService = async (userId, body, file) => {
             scopeModel: "Team",
           },
         },
-      }
+      },
+      { session }
     );
+
+    await session.commitTransaction();
+    session.endSession();
 
     // 4. Invalidate user profile cache
     await redis.del(`user_profile:${userId}`);
 
+    // Clean up local file only after success (or failure)
+    if (file && fs.existsSync(file.path)) {
+      try { fs.unlinkSync(file.path); } catch (e) { logger.error("Failed to delete local file:", e); }
+    }
+
     return newTeam;
   } catch (error) {
-    // Cleanup locally uploaded file if any error occurs
+    await session.abortTransaction();
+    session.endSession();
+
+    // Rollback ImageKit upload if DB failed
+    if (uploadedImageStart) {
+      await deleteFromImageKit(uploadedImageStart).catch(err =>
+        logger.error(`Failed to rollback ImageKit upload ${uploadedImageStart}:`, err)
+      );
+    }
+
+    // Cleanup locally uploaded file
     if (file && fs.existsSync(file.path)) {
-      try {
-        fs.unlinkSync(file.path);
-      } catch (e) {
-        logger.error("Failed to delete local file:", e);
-      }
+      try { fs.unlinkSync(file.path); } catch (e) { logger.error("Failed to delete local file:", e); }
     }
     throw error;
   }
@@ -129,6 +149,9 @@ export const updateTeamService = async (teamId, body, files) => {
   }
 
   // Handle branding assets update (logo and banner) - PARALLEL UPLOAD
+  let oldImageFileId = null;
+  let oldBannerFileId = null;
+
   if (files) {
     const uploadPromises = [];
 
@@ -141,7 +164,7 @@ export const updateTeamService = async (teamId, body, files) => {
             "/teams/logos"
           );
           if (uploadRes) {
-            if (team.imageFileId) await deleteFromImageKit(team.imageFileId);
+            oldImageFileId = team.imageFileId; // Store for later deletion
             team.imageUrl = uploadRes.url;
             team.imageFileId = uploadRes.fileId;
           }
@@ -158,7 +181,7 @@ export const updateTeamService = async (teamId, body, files) => {
             "/teams/banners"
           );
           if (uploadRes) {
-            if (team.bannerFileId) await deleteFromImageKit(team.bannerFileId);
+            oldBannerFileId = team.bannerFileId; // Store for later deletion
             team.bannerUrl = uploadRes.url;
             team.bannerFileId = uploadRes.fileId;
           }
@@ -193,6 +216,18 @@ export const updateTeamService = async (teamId, body, files) => {
 
   // Invalidate Team Cache
   await redis.del(`team_details:${team._id}`);
+
+  // Async cleanup of old images AFTER successful save
+  if (oldImageFileId) {
+    deleteFromImageKit(oldImageFileId).catch(err =>
+      logger.error(`Failed to delete old team logo ${oldImageFileId}:`, err)
+    );
+  }
+  if (oldBannerFileId) {
+    deleteFromImageKit(oldBannerFileId).catch(err =>
+      logger.error(`Failed to delete old team banner ${oldBannerFileId}:`, err)
+    );
+  }
 
   return team;
 };
@@ -582,6 +617,11 @@ export const batchAddMembersToTeam = async ({ teamId, memberIds, session = null 
   const team = await Team.findById(teamId).session(session);
   if (!team) throw new CustomError("Team not found", 404);
 
+  // Atomic check: Verify member limit before proceeding
+  if (team.teamMembers.length + memberIds.length > 20) {
+    throw new CustomError("Team limit exceeded. Max 20 members allowed.", 400);
+  }
+
   const users = await User.find({ _id: { $in: memberIds } }).session(session);
   if (users.length !== memberIds.length) throw new CustomError("One or more users not found", 404);
 
@@ -662,6 +702,11 @@ export const syncUserInTeams = async (userId, { username, avatar }) => {
 export const removeMemberFromTeam = async ({ teamId, userId, session = null }) => {
   const team = await Team.findById(teamId).session(session);
   if (!team) throw new CustomError("Team not found", 404);
+
+  // Check if trying to remove captain
+  if (team.captain.toString() === userId.toString()) {
+    throw new CustomError("Cannot remove the Team Captain. Transfer ownership first.", 403);
+  }
 
   // 1. Remove from Team Roster
   await Team.findByIdAndUpdate(

@@ -25,8 +25,8 @@ const SaveEventSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ["Runing", "Completed", "In Progress"],
-    default: "Pending", // Track event registration status
+    enum: ["Running", "Completed", "In Progress"],
+    default: "In Progress", // Track event registration status
   },
 
   eventDate: {
@@ -47,7 +47,8 @@ const SaveEventSchema = new mongoose.Schema({
 });
 
 SaveEventSchema.pre("save", function (next) {
-  if (this.eventDate < Date.now()) {
+  // Only validate event date for new documents, not updates
+  if (this.isNew && this.eventDate < Date.now()) {
     return next(new Error("Event date cannot be in the past."));
   }
   next();

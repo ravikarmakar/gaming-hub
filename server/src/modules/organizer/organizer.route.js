@@ -56,16 +56,16 @@ router.delete("/:orgId/delete", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.OR
 // Staff Management
 router.put("/:orgId/add-staff", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER], { attachDoc: true }), validateRequest(addStaffValidation), addStaff);
 router.put("/:orgId/update-staff-role", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER], { attachDoc: true }), validateRequest(updateStaffRoleValidation), updateStaffRole);
-router.put("/:orgId/transfer-ownership", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER], { attachDoc: true }), validateRequest(transferOwnershipValidation), transferOwnership);
+router.put("/:orgId/transfer-ownership", authorize(Scopes.ORG, [Roles.ORG.OWNER], { attachDoc: true }), validateRequest(transferOwnershipValidation), transferOwnership);
 router.delete("/:orgId/remove-staff/:id", authorize(Scopes.ORG, [Roles.ORG.MANAGER, Roles.ORG.OWNER, Roles.ORG.CO_OWNER], { attachDoc: true }), validateRequest(removeStaffValidation), removeStaff);
 
 // Join Requests Management (Generic)
 router.post("/:orgId/join", validateRequest(joinOrgValidation), sendJoinRequest);
-router.get("/:orgId/join-requests", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER]), getJoinRequests);
-router.put("/:orgId/join-requests/:requestId", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER]), validateRequest(manageJoinRequestValidation), handleJoinRequest);
+router.get("/:orgId/join-requests", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER], { attachDoc: true }), getJoinRequests);
+router.put("/:orgId/join-requests/:requestId", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER], { attachDoc: true }), validateRequest(manageJoinRequestValidation), handleJoinRequest);
 
 // Invitation Management
-router.get("/:orgId/invites", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER]), getPendingInvitesForEntity);
-router.delete("/:orgId/invites/:inviteId", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER]), cancelInvitation);
+router.get("/:orgId/invites", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER], { attachDoc: true }), getPendingInvitesForEntity);
+router.delete("/:orgId/invites/:inviteId", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER], { attachDoc: true }), cancelInvitation);
 
 export default router;

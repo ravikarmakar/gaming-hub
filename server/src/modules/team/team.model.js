@@ -6,7 +6,6 @@ const teamSchema = new mongoose.Schema(
     teamName: {
       type: String,
       required: true,
-      required: true,
       // unique: true, // Handled by partial index below
       trim: true,
       minlength: 3,
@@ -123,14 +122,72 @@ teamSchema.index({ region: 1, isRecruiting: 1, createdAt: -1 }); // Optimized fo
 teamSchema.index({ teamName: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });
 teamSchema.index({ slug: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });
 
-// Auto-generate slug from teamName before saving
+// Auto-generate URL-safe slug from teamName before saving (only on creation)
 teamSchema.pre("save", function (next) {
-  if (this.isModified("teamName")) {
-    this.slug = this.teamName.toLowerCase().replace(/\s+/g, "-");
+  // Only generate slug for new documents to avoid breaking existing URLs
+  if (this.isNew && this.teamName) {
+    this.slug = this.teamName
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
+      .replace(/\s+/g, "-") // Replace spaces with hyphens
+      .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
+      .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
   }
   // Calculate win rate
   if (this.stats && this.stats.totalMatches > 0) {
     this.stats.winRate = Math.round((this.stats.wins / this.stats.totalMatches) * 100);
+  }
+  next();
+});
+
+// Calculate winRate on findOneAndUpdate and updateOne operations
+teamSchema.pre(['findOneAndUpdate', 'updateOne'], function (next) {
+  const update = this.getUpdate();
+
+  // Check if stats are being updated
+  if (update.$set && (update.$set['stats.wins'] !== undefined || update.$set['stats.totalMatches'] !== undefined) ||
+    update.$inc && (update.$inc['stats.wins'] !== undefined || update.$inc['stats.totalMatches'] !== undefined)) {
+
+    // Ensure validators run
+    this.setOptions({ runValidators: true });
+
+    // For findOneAndUpdate, we can calculate in post hook if we have the specific document
+    // For updateOne, it's harder because we don't get the document back. 
+    // Best practice is to rely on application logic or use findOneAndUpdate if result is needed.
+    // However, to fix the reported issue "middleware won't work for updateOne", 
+    // we can try to fetch the document in the post hook if possible, or just accept that 
+    // updateOne strictly updates what's passed.
+    // But since winRate is a derived field, we SHOULD update it.
+
+    // We mark this query to trigger post-hook logic
+    this._calculateWinRate = true;
+  }
+  next();
+});
+
+// Post middleware to calculate winRate after update
+teamSchema.post(['findOneAndUpdate', 'updateOne'], async function (result, next) {
+  // 'result' is the document for findOneAndUpdate (if {new: true}) or the operation result for updateOne
+  if (this._calculateWinRate) {
+    try {
+      // If the operation was updateOne, we don't have the doc. We need to find the doc using the query filter.
+      // this.getFilter() gives the filter used.
+      // But updateOne might update multiple? No, updateOne updates one.
+
+      const filter = this.getFilter();
+      const doc = await this.model.findOne(filter); // Fetch the updated document
+
+      if (doc && doc.stats && doc.stats.totalMatches > 0) {
+        const newWinRate = Math.round((doc.stats.wins / doc.stats.totalMatches) * 100);
+        if (doc.stats.winRate !== newWinRate) {
+          doc.stats.winRate = newWinRate;
+          await doc.save();
+        }
+      }
+    } catch (err) {
+      console.error("Error calculating winRate in post hook:", err);
+    }
   }
   next();
 });

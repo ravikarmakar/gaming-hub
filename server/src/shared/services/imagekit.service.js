@@ -12,11 +12,12 @@ const imagekit = new ImageKit({
 });
 
 export const uploadOnImageKit = async (localFilePath, fileName, folder = "/gaming-hub") => {
+    let fileStream;
     try {
         if (!localFilePath) return null;
 
         // Create a ReadStream for the file
-        const fileStream = fs.createReadStream(localFilePath);
+        fileStream = fs.createReadStream(localFilePath);
 
         // Upload to ImageKit using the correct method for v7+ SDK
         const response = await imagekit.files.upload({
@@ -24,6 +25,8 @@ export const uploadOnImageKit = async (localFilePath, fileName, folder = "/gamin
             fileName: fileName || `file-${Date.now()}`,
             folder: folder,
         });
+
+        if (fileStream) fileStream.destroy();
 
         // Remove the local temporary file
         if (fs.existsSync(localFilePath)) {
@@ -33,6 +36,8 @@ export const uploadOnImageKit = async (localFilePath, fileName, folder = "/gamin
         return response;
     } catch (error) {
         logger.error("ImageKit Upload Error:", error);
+
+        if (fileStream) fileStream.destroy();
 
         // Always remove the local temporary file
         if (fs.existsSync(localFilePath)) {

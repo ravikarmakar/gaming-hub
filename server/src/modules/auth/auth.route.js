@@ -111,8 +111,10 @@ router.post(
   verifyEmail
 );
 
-router.put("/update-profile", upload.fields([{ name: "avatar", maxCount: 1 }, { name: "coverImage", maxCount: 1 }]),
+router.put(
+  "/update-profile",
   rateLimiter({ limit: 50, timer: 60, key: "updateProfile" }),
+  upload.fields([{ name: "avatar", maxCount: 1 }, { name: "coverImage", maxCount: 1 }]),
   validateRequest(updateProfileValidation),
   updateProfile
 );

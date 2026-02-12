@@ -1,5 +1,6 @@
 import { CustomError } from "../utils/CustomError.js";
 import { Roles, Scopes } from "../constants/roles.js";
+import mongoose from "mongoose";
 import Team from "../../modules/team/team.model.js";
 import Organizer from "../../modules/organizer/organizer.model.js";
 import Event from "../../modules/event/event.model.js";
@@ -72,6 +73,10 @@ export const authorize = (scope, requiredRoles = [], options = {}) => {
                 return next(new CustomError(`${scope} ID is required`, 400));
             }
 
+            // Validate ObjectId format before querying
+            if (!mongoose.Types.ObjectId.isValid(scopeId)) {
+                return next(new CustomError(`Invalid ${scope} ID format`, 400));
+            }
 
             let resourceDoc = null;
             if (SCOPE_MODELS[scope]) {
@@ -89,6 +94,9 @@ export const authorize = (scope, requiredRoles = [], options = {}) => {
             );
 
             // Check parent membership
+            // NOTE: This currently checks resourceDoc.orgId or resourceDoc.teamId,
+            // which may not perfectly align with the parentScope parameter.
+            // Consider validating that the field matches the expected parent scope.
             if (!authorizedRole && parentScope && resourceDoc) {
                 const parentId = resourceDoc.orgId || resourceDoc.teamId;
 
@@ -112,7 +120,7 @@ export const authorize = (scope, requiredRoles = [], options = {}) => {
             next();
 
         } catch (error) {
-            logger.error(`[RBAC] Error in ${scope} authorizaton:`, error);
+            logger.error(`[RBAC] Error in ${scope} authorization:`, error);
             next(new CustomError("Internal Server Error during authorization", 500));
         }
     };

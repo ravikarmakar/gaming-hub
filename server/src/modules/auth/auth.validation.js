@@ -13,7 +13,7 @@ export const registerValidation = {
         }),
         password: Joi.string()
             .min(8)
-            .pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$"))
+            .pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d\\s]).{8,}$"))
             .required()
             .messages({
                 "string.empty": "Password is required",
@@ -49,9 +49,10 @@ export const verifyResetOtpValidation = {
             "string.empty": "Email is required",
             "string.email": "Please provide a valid email address",
         }),
-        otp: Joi.string().length(6).required().messages({
+        otp: Joi.string().length(6).pattern(/^[0-9]+$/).required().messages({
             "string.empty": "OTP is required",
             "string.length": "OTP must be exactly 6 digits",
+            "string.pattern.base": "OTP must contain only numeric digits",
         }),
     }),
 };
@@ -59,10 +60,13 @@ export const verifyResetOtpValidation = {
 export const resetPasswordValidation = {
     body: Joi.object({
         email: Joi.string().email().required(),
-        otp: Joi.string().length(6).required(),
+        otp: Joi.string().length(6).pattern(/^[0-9]+$/).required().messages({
+            "string.length": "OTP must be exactly 6 digits",
+            "string.pattern.base": "OTP must contain only numeric digits",
+        }),
         newPassword: Joi.string()
             .min(8)
-            .pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$"))
+            .pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d\\s]).{8,}$"))
             .required()
             .messages({
                 "string.empty": "New password is required",
@@ -74,8 +78,10 @@ export const resetPasswordValidation = {
 
 export const verifyEmailValidation = {
     body: Joi.object({
-        otp: Joi.string().required().messages({
+        otp: Joi.string().length(6).pattern(/^[0-9]+$/).required().messages({
             "string.empty": "OTP is required",
+            "string.length": "OTP must be exactly 6 digits",
+            "string.pattern.base": "OTP must contain only numeric digits",
         }),
     }),
 };
@@ -124,7 +130,7 @@ export const changePasswordValidation = {
         }),
         newPassword: Joi.string()
             .min(8)
-            .pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$"))
+            .pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d\\s]).{8,}$"))
             .required()
             .messages({
                 "string.empty": "New password is required",

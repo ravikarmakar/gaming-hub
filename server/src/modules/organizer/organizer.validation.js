@@ -23,7 +23,7 @@ export const updateOrgValidation = {
         tag: Joi.string().min(2).max(6).optional(),
         isHiring: Joi.alternatives().try(Joi.string(), Joi.boolean()).optional(),
         socialLinks: Joi.alternatives().try(Joi.string(), Joi.object()).optional(), // Handled for JSON parsing in controller
-    }).unknown(true),
+    }),
 };
 
 export const addStaffValidation = {
@@ -65,7 +65,7 @@ export const manageJoinRequestValidation = {
     params: Joi.object({
         orgId: objectId.required(), // Some routes might not have this in path, but usually for nested routes they do.
         requestId: objectId.required(),
-    }).unknown(true), // Allow other params if needed
+    }), // Allow other params if needed
     body: Joi.object({
         action: Joi.string().valid("accepted", "rejected").required(),
     }),

@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       match: [
-        /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+        /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,})+$/,
         "Please provide a valid email address",
       ],
     },
@@ -30,6 +30,7 @@ const userSchema = new mongoose.Schema(
       },
       minlength: [8, "Password must be at least 8 characters"],
       select: false,
+      trim: true, // Security: Prevent whitespace-only passwords
     },
     oauthProvider: { type: String }, // "google", "discord", etc.
     avatar: {
@@ -166,7 +167,15 @@ userSchema.index({ "settings.notifications.email": 1 }); // For notification job
 
 
 userSchema.pre("save", async function (next) {
+  // Only hash if password is modified
   if (!this.isModified("password")) {
+    return next();
+  }
+
+  // Guard against hashing null/undefined/empty passwords
+  if (!this.password || this.password.trim() === "") {
+    // If password is required (non-OAuth users), this will be caught by schema validation
+    // For OAuth users, password is not required, so we skip hashing
     return next();
   }
 

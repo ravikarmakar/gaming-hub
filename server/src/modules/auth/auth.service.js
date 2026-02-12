@@ -88,6 +88,28 @@ export const registerUser = async ({ username, email, password }) => {
   return { user, accessToken, refreshToken };
 };
 
+// Helper function to ensure unique username for OAuth users
+const ensureUniqueUsername = async (baseUsername) => {
+  let username = baseUsername;
+  let suffix = 1;
+  while (await User.findOne({ username })) {
+    username = `${baseUsername}${suffix}`;
+    suffix++;
+  }
+  return username;
+};
+
+// Helper function to sanitize user object
+const sanitizeUserObject = (user) => {
+  const userObj = user.toObject ? user.toObject() : user;
+  delete userObj.password;
+  delete userObj.verifyOtp;
+  delete userObj.resetOtp;
+  delete userObj.verifyOtpExpireAt;
+  delete userObj.resetOtpExpireAt;
+  return userObj;
+};
+
 export const loginUser = async ({ identifier, password }) => {
   if (!identifier || !password) {
     throw new CustomError("All fields are required", 400);
@@ -123,10 +145,7 @@ export const loginUser = async ({ identifier, password }) => {
   const { accessToken, refreshToken } = generateTokens(user._id, user.roles);
   await storeRefreshToken(user._id, refreshToken);
 
-  const userObj = user.toObject();
-  delete userObj.password;
-
-  return { user: userObj, accessToken, refreshToken };
+  return { user: sanitizeUserObject(user), accessToken, refreshToken };
 };
 
 export const handleGoogleLogin = async (code) => {
@@ -154,8 +173,9 @@ export const handleGoogleLogin = async (code) => {
       );
     }
   } else {
+    const uniqueUsername = await ensureUniqueUsername(name);
     user = await User.create({
-      username: name,
+      username: uniqueUsername,
       email,
       avatar: picture,
       oauthProvider: "google",
@@ -166,10 +186,7 @@ export const handleGoogleLogin = async (code) => {
   const { accessToken, refreshToken } = generateTokens(user._id, user.roles);
   await storeRefreshToken(user._id, refreshToken);
 
-  const userObj = user.toObject();
-  delete userObj.password;
-
-  return { user: userObj, accessToken, refreshToken };
+  return { user: sanitizeUserObject(user), accessToken, refreshToken };
 };
 
 export const handleDiscordLogin = async (code) => {
@@ -217,13 +234,14 @@ export const handleDiscordLogin = async (code) => {
       );
     }
   } else {
-    // Discord avatar construction
+    // Discord avatar construction (updated for discriminator deprecation)
     const avatarUrl = avatar
       ? `https://cdn.discordapp.com/avatars/${userRes.data.id}/${avatar}.png`
-      : `https://cdn.discordapp.com/embed/avatars/${parseInt(userRes.data.discriminator) % 5}.png`;
+      : `https://cdn.discordapp.com/embed/avatars/${(BigInt(userRes.data.id) >> 22n) % 6n}.png`;
 
+    const uniqueUsername = await ensureUniqueUsername(username);
     user = await User.create({
-      username,
+      username: uniqueUsername,
       avatar: avatarUrl,
       email,
       oauthProvider: "discord",
@@ -234,22 +252,13 @@ export const handleDiscordLogin = async (code) => {
   const { accessToken, refreshToken } = generateTokens(user._id, user.roles);
   await storeRefreshToken(user._id, refreshToken);
 
-  const userObj = user.toObject();
-  delete userObj.password;
-
-  return { user: userObj, accessToken, refreshToken };
+  return { user: sanitizeUserObject(user), accessToken, refreshToken };
 };
 
 export const sendVerifyOtpService = async (userId) => {
   const user = await User.findById(userId);
   if (!user) throw new CustomError("User not found", 404);
   if (user.isAccountVerified) {
-    throw new CustomError("Account already verified", 400); // Controller handles response, here we throw
-    // Actually controller returned 200 with success:false. I should stick to that pattern or standardize.
-    // Standard service pattern is to throw/return. I'll throw here, but maybe return a status object if 200 is desired.
-    // For now, let's return null or special value? No, simplest is to let controller handle logic or throw error.
-    // But original code returned 200 OK.
-    // I will return a flag.
     return { alreadyVerified: true };
   }
 
@@ -287,9 +296,30 @@ export const verifyEmailService = async (userId, otp) => {
   return user;
 };
 
-// In-memory L1 cache for user profiles
+// In-memory L1 cache for user profiles with LRU eviction
 const profileL1Cache = new Map();
 const L1_TTL = 30 * 1000; // 30 seconds
+const MAX_L1_CACHE_SIZE = 1000;
+
+// Helper to set L1 cache with size limit (LRU eviction)
+const setL1Cache = (key, value) => {
+  // If at capacity, remove oldest entry (first in Map)
+  if (profileL1Cache.size >= MAX_L1_CACHE_SIZE) {
+    const firstKey = profileL1Cache.keys().next().value;
+    profileL1Cache.delete(firstKey);
+  }
+  profileL1Cache.set(key, value);
+};
+
+// Periodic cleanup of expired L1 cache entries
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of profileL1Cache.entries()) {
+    if (now - value.timestamp >= L1_TTL) {
+      profileL1Cache.delete(key);
+    }
+  }
+}, 60000); // Clean up every minute
 
 export const getUserProfile = async (userId, cachedProfile) => {
   const now = Date.now();
@@ -311,7 +341,7 @@ export const getUserProfile = async (userId, cachedProfile) => {
     // Let's check if unreadCount is in the cachedProfile or if we should fetch it.
     if (cachedProfile.unreadCount !== undefined) {
       response.unreadCount = cachedProfile.unreadCount;
-      profileL1Cache.set(l1Key, { data: response, timestamp: now });
+      setL1Cache(l1Key, { data: response, timestamp: now });
       return response;
     }
   }
@@ -337,7 +367,7 @@ export const getUserProfile = async (userId, cachedProfile) => {
         status: "unread",
       });
       const response = { user, unreadCount, cached: true };
-      profileL1Cache.set(l1Key, { data: response, timestamp: now });
+      setL1Cache(l1Key, { data: response, timestamp: now });
       return response;
     } catch (e) {
       logger.error("JSON parse error for cached user profile:", e);
@@ -356,7 +386,7 @@ export const getUserProfile = async (userId, cachedProfile) => {
   const response = { user: user.toObject(), unreadCount, cached: false };
 
   // Update Caches
-  profileL1Cache.set(l1Key, { data: response, timestamp: now });
+  setL1Cache(l1Key, { data: response, timestamp: now });
 
   // Store plain object in Redis to avoid [object Object] serialization
   redis.set(cacheKey, JSON.stringify(response.user), { ex: 60 })
@@ -507,69 +537,99 @@ export const updateUserProfile = async (userId, body, files, ipAddress) => {
     }
   }
 
-  if (files) {
-    const uploadPromises = [];
-    const filesToDelete = [];
+  // Handle Image Uploads with Rollback Support
+  const uploadedFiles = []; // Track new uploads: { fileId, type }
+  const filesToDeleteAfterSave = []; // Track old files to delete ONLY after success
 
-    if (files.avatar) {
-      const avatarFile = files.avatar[0];
-      const uploadPromise = uploadOnImageKit(
-        avatarFile.path,
-        `avatar-${userId}-${Date.now()}`,
-        "/users/avatars",
-      ).then((uploadRes) => {
+  try {
+    if (files) {
+      if (files.avatar) {
+        const avatarFile = files.avatar[0];
+        const uploadRes = await uploadOnImageKit(
+          avatarFile.path,
+          `avatar-${userId}-${Date.now()}`,
+          "/users/avatars",
+        );
+
         if (uploadRes) {
-          if (user.avatarFileId) filesToDelete.push(user.avatarFileId);
+          uploadedFiles.push({ fileId: uploadRes.fileId, type: 'avatar' });
+
+          // Mark old file for deletion later
+          if (user.avatarFileId) {
+            filesToDeleteAfterSave.push(user.avatarFileId);
+          }
+
           user.avatar = uploadRes.url;
           user.avatarFileId = uploadRes.fileId;
         }
-      });
-      uploadPromises.push(uploadPromise);
-    }
+      }
 
-    if (files.coverImage) {
-      const coverFile = files.coverImage[0];
-      const uploadPromise = uploadOnImageKit(
-        coverFile.path,
-        `cover-${userId}-${Date.now()}`,
-        "/users/covers",
-      ).then((uploadRes) => {
+      if (files.coverImage) {
+        const coverFile = files.coverImage[0];
+        const uploadRes = await uploadOnImageKit(
+          coverFile.path,
+          `cover-${userId}-${Date.now()}`,
+          "/users/covers",
+        );
+
         if (uploadRes) {
-          if (user.coverImageFileId) filesToDelete.push(user.coverImageFileId);
+          uploadedFiles.push({ fileId: uploadRes.fileId, type: 'cover' });
+
+          // Mark old file for deletion later
+          if (user.coverImageFileId) {
+            filesToDeleteAfterSave.push(user.coverImageFileId);
+          }
+
           user.coverImage = uploadRes.url;
           user.coverImageFileId = uploadRes.fileId;
         }
-      });
-      uploadPromises.push(uploadPromise);
+      }
     }
 
-    await Promise.all(uploadPromises);
+    // Attempt to save user changes
+    await user.save();
 
-    if (filesToDelete.length > 0) {
-      Promise.all(filesToDelete.map((id) => deleteFromImageKit(id))).catch(
-        (err) => logger.error("Background image cleanup failed:", err),
-      );
+    // If save successful, delete old images (fire and forget)
+    if (filesToDeleteAfterSave.length > 0) {
+      Promise.allSettled(filesToDeleteAfterSave.map(id => deleteFromImageKit(id)))
+        .catch(err => logger.error("Background image cleanup failed:", err));
     }
+
+    await redis.del(`user_profile:${userId}`);
+
+    // Sync denormalized data in teams
+    syncUserInTeams(userId, {
+      username: user.username,
+      avatar: user.avatar,
+    }).catch((err) => logger.error("Denormalization sync failed:", err));
+
+    return user;
+
+  } catch (error) {
+    // Rollback: Delete newly uploaded images because the operation failed
+    if (uploadedFiles.length > 0) {
+      logger.info(`Rolling back ${uploadedFiles.length} uploaded images due to update failure...`);
+      Promise.allSettled(uploadedFiles.map(f => deleteFromImageKit(f.fileId)))
+        .catch(err => logger.error("Rollback cleanup failed:", err));
+    }
+    throw error;
   }
-
-  await user.save();
-  await redis.del(`user_profile:${userId}`);
-
-  // Sync denormalized data in teams
-  syncUserInTeams(userId, {
-    username: user.username,
-    avatar: user.avatar,
-  }).catch((err) => logger.error("Denormalization sync failed:", err));
-
-  return user;
 };
 
 export const deleteUserAccount = async (userId) => {
   const user = await User.findById(userId);
   if (!user) throw new CustomError("User not found", 404);
 
+  // Delete both avatar and cover image from ImageKit
+  const deletePromises = [];
   if (user.avatarFileId) {
-    await deleteFromImageKit(user.avatarFileId);
+    deletePromises.push(deleteFromImageKit(user.avatarFileId));
+  }
+  if (user.coverImageFileId) {
+    deletePromises.push(deleteFromImageKit(user.coverImageFileId));
+  }
+  if (deletePromises.length > 0) {
+    await Promise.allSettled(deletePromises);
   }
 
   user.isDeleted = true;
@@ -577,6 +637,7 @@ export const deleteUserAccount = async (userId) => {
   user.email = `deleted_${userId}@deleted.com`;
   user.avatar = "https://ui-avatars.com/api/?name=deleted&background=777";
   user.avatarFileId = null;
+  user.coverImageFileId = null;
 
   await user.save();
   await redis.del(`user_profile:${userId}`);

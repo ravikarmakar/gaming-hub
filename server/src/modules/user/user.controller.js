@@ -4,6 +4,15 @@ import { CustomError } from "../../shared/utils/CustomError.js";
 import { generateTokens, storeRefreshToken, setCookies } from "../auth/auth.service.js";
 
 /**
+ * Escape special regex characters to prevent injection
+ * @param {string} str - The string to escape
+ * @returns {string} - Escaped string safe for regex
+ */
+const escapeRegex = (str) => {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+/**
  * @desc    Get all players with filtering, search and pagination
  * @route   GET /api/v1/players
  * @access  Private
@@ -19,7 +28,10 @@ export const getPlayers = TryCatchHandler(async (req, res, next) => {
         limit = 12
     } = req.query;
 
-    const skip = (Number(page) - 1) * Number(limit);
+    // Validate and sanitize pagination parameters
+    const validatedPage = Math.max(1, parseInt(page, 10) || 1);
+    const validatedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 12)); // Max 100 items per page
+    const skip = (validatedPage - 1) * validatedLimit;
 
     // Build query
     const query = {
@@ -28,11 +40,14 @@ export const getPlayers = TryCatchHandler(async (req, res, next) => {
     };
 
     if (username) {
+        // Escape regex special characters to prevent injection
+        const escapedUsername = escapeRegex(username.trim());
+
         // Use text search for performance if > 2 chars, else anchored regex
         if (username.length > 2) {
-            query.$text = { $search: username };
+            query.$text = { $search: escapedUsername };
         } else {
-            query.username = { $regex: `^${username}`, $options: "i" };
+            query.username = { $regex: `^${escapedUsername}`, $options: "i" };
         }
     }
 
@@ -70,7 +85,7 @@ export const getPlayers = TryCatchHandler(async (req, res, next) => {
             .populate("teamId", "teamName tag imageUrl")
             .sort("-createdAt")
             .skip(skip)
-            .limit(Number(limit))
+            .limit(validatedLimit)
             .lean(),
         User.countDocuments(query)
     ]);
@@ -82,8 +97,8 @@ export const getPlayers = TryCatchHandler(async (req, res, next) => {
         players,
         pagination: {
             totalCount,
-            currentPage: Number(page),
-            limit: Number(limit),
+            currentPage: validatedPage,
+            limit: validatedLimit,
             hasMore
         }
     });

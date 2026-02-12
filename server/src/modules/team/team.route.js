@@ -27,6 +27,7 @@ import {
   createTeamValidation,
   updateTeamValidation,
   addMembersValidation,
+  removeMemberValidation,
   manageMemberRoleValidation,
   manageStaffRoleValidation,
   transferOwnerValidation,
@@ -54,7 +55,7 @@ router.put(
 );
 
 router.put("/add-members", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), validateRequest(addMembersValidation), addMembers);
-router.put("/remove-member/:id", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), removeMember);
+router.put("/remove-member/:id", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), validateRequest(removeMemberValidation), removeMember);
 router.put("/leave-member", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.PLAYER, Roles.TEAM.MANAGER], { attachDoc: true }), leaveMember);
 router.put("/transfer-owner", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER], { attachDoc: true }), validateRequest(transferOwnerValidation), transferTeamOwnerShip);
 router.put("/manage-member-role", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), validateRequest(manageMemberRoleValidation), manageMemberRole);
@@ -63,7 +64,7 @@ router.delete("/delete-team", isAuthenticated, isVerified, authorize(Scopes.TEAM
 
 // Join Request Routes
 router.post("/:teamId/join-request", isAuthenticated, isVerified, sendJoinRequest);
-router.get("/join-requests/all", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER]), getJoinRequests);
-router.put("/join-requests/:requestId", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER]), validateRequest(manageJoinRequestValidation), handleJoinRequest);
+router.get("/join-requests/all", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), getJoinRequests);
+router.put("/join-requests/:requestId", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), validateRequest(manageJoinRequestValidation), handleJoinRequest);
 
 export default router;

@@ -57,6 +57,11 @@ const eventSchema = new mongoose.Schema(
       index: true,
     },
 
+    status: {
+      type: String,
+      default: "registration-open",
+    },
+
     orgId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organizer",
@@ -83,7 +88,8 @@ const eventSchema = new mongoose.Schema(
 
 // Indexes for performance and scalability
 eventSchema.index({ orgId: 1 });
-eventSchema.index({ status: 1 });
+// Note: 'status' field is deprecated. Use 'registrationStatus' and 'eventProgress' instead.
+// Indexes for these fields are defined inline in the schema.
 eventSchema.index({ game: 1 });
 eventSchema.index({ category: 1 });
 eventSchema.index({ createdAt: -1 });

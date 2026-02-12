@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import JoinRequest from "../join-request/join-request.model.js";
 import Team from "../team/team.model.js";
 import User from "../user/user.model.js";
@@ -52,27 +51,33 @@ export const sendJoinRequest = TryCatchHandler(async (req, res, next) => {
         if (!resource || resource.isDeleted) throw new CustomError("Event not found", 404);
     }
 
-    // 3. Duplicate Request Check
-    const existingRequest = await JoinRequest.findOne({
-        requester: userId,
-        target: targetId,
-        status: "pending",
-    });
-
-    if (existingRequest) {
-        throw new CustomError(`You already have a pending request for this ${targetModel.toLowerCase()}`, 400);
+    // 3. Create Request (unique index prevents duplicates)
+    let joinRequest;
+    try {
+        joinRequest = await JoinRequest.create({
+            requester: userId,
+            target: targetId,
+            targetModel: targetModel,
+            message: message || `${targetModel} join request from ${user.username}`,
+        });
+    } catch (error) {
+        // Handle duplicate key error from unique index
+        if (error.code === 11000) {
+            throw new CustomError(`You already have a pending request for this ${targetModel.toLowerCase()}`, 400);
+        }
+        throw error;
     }
 
-    // 4. Create Request
-    const joinRequest = await JoinRequest.create({
-        requester: userId,
-        target: targetId,
-        targetModel: targetModel,
-        message: message || `${targetModel} join request from ${user.username}`,
-    });
-
     // 5. Notify Responsible Party
-    const recipientId = targetModel === "Team" ? resource.captain : resource.ownerId; // Or specific event manager if applicable
+    let recipientId;
+    if (targetModel === "Team") {
+        recipientId = resource.captain;
+    } else if (targetModel === "Organizer") {
+        recipientId = resource.ownerId;
+    } else if (targetModel === "Event") {
+        // Events may have different ownership fields
+        recipientId = resource.organizerId || resource.createdBy || resource.ownerId;
+    }
 
     if (recipientId) {
         await createNotification({
@@ -103,18 +108,38 @@ export const sendJoinRequest = TryCatchHandler(async (req, res, next) => {
 export const getJoinRequests = TryCatchHandler(async (req, res, next) => {
     // rbacContext is attached by authorize middleware
     const { scopeId, scope } = req.rbacContext;
+    const { page = 1, limit = 20 } = req.query;
 
-    const requests = await JoinRequest.find({
-        target: scopeId,
-        status: "pending",
-    })
-        .populate("requester", "username avatar _id email")
-        .sort("-createdAt");
+    // Validate and sanitize pagination params
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit) || 20)); // Cap at 100
+    const skip = (pageNum - 1) * limitNum;
+
+    const [requests, total] = await Promise.all([
+        JoinRequest.find({
+            target: scopeId,
+            status: "pending",
+        })
+            .populate("requester", "username avatar _id") // Removed email (PII)
+            .sort("-createdAt")
+            .skip(skip)
+            .limit(limitNum),
+        JoinRequest.countDocuments({
+            target: scopeId,
+            status: "pending",
+        })
+    ]);
 
     res.status(200).json({
         success: true,
         message: "Join requests fetched successfully",
         data: requests,
+        pagination: {
+            page: pageNum,
+            limit: limitNum,
+            total,
+            pages: Math.ceil(total / limitNum),
+        },
     });
 });
 
@@ -148,6 +173,17 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
 
             if (joinRequest.targetModel === "Team") {
                 const team = joinRequest.target;
+
+                // Re-check recruiting status (could have changed since request was sent)
+                if (!team.isRecruiting) {
+                    throw new CustomError("This team is no longer recruiting", 400);
+                }
+
+                // Re-check requester hasn't joined another team (race condition)
+                const currentRequester = await User.findById(requester._id);
+                if (currentRequester.teamId) {
+                    throw new CustomError("Requester has already joined another team", 400);
+                }
 
                 // Use Service Layer for the heavy lifting (handles roster update, roles, and denormalization)
                 await addMemberToTeam({
@@ -196,6 +232,11 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                 const event = await Event.findById(joinRequest.target);
                 if (!event) throw new CustomError("Event not found", 404);
 
+                // Check slot availability before processing
+                if (event.maxSlots && event.joinedSlots >= event.maxSlots) {
+                    throw new CustomError("Event is full. No slots available.", 400);
+                }
+
                 const team = await Team.findById(requester.teamId);
                 if (!team) throw new CustomError("Team not found", 404);
 
@@ -229,8 +270,26 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                     substitutes,
                 });
 
-                event.joinedSlots = (event.joinedSlots || 0) + 1;
-                await event.save();
+                // Atomic increment with slot validation
+                const updatedEvent = await Event.findOneAndUpdate(
+                    {
+                        _id: event._id,
+                        $expr: {
+                            $or: [
+                                { $eq: ["$maxSlots", null] }, // No limit
+                                { $lt: ["$joinedSlots", "$maxSlots"] } // Has available slots
+                            ]
+                        }
+                    },
+                    { $inc: { joinedSlots: 1 } },
+                    { new: true }
+                );
+
+                if (!updatedEvent) {
+                    // Rollback: delete the registration we just created
+                    await EventRegistration.deleteOne({ eventId: event._id, teamId: requester.teamId });
+                    throw new CustomError("Event is full. Registration could not be completed.", 400);
+                }
 
                 await createNotification({
                     recipient: requester._id,
@@ -251,8 +310,18 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
             // Handle any side effects like rejecting other requests if user joined one
             if (["Team", "Organizer"].includes(joinRequest.targetModel)) {
                 await JoinRequest.updateMany(
-                    { requester: requester._id, targetModel: joinRequest.targetModel, status: "pending" },
-                    { status: "rejected", message: `User has joined another ${joinRequest.targetModel.toLowerCase()}` }
+                    {
+                        requester: requester._id,
+                        targetModel: joinRequest.targetModel,
+                        status: "pending",
+                        _id: { $ne: requestId } // Exclude current request (already updated)
+                    },
+                    {
+                        status: "rejected",
+                        message: `User has joined another ${joinRequest.targetModel.toLowerCase()}`,
+                        handledBy: userId,
+                        handledAt: new Date()
+                    }
                 );
                 await redis.del(`user_profile:${requester._id}`);
             }

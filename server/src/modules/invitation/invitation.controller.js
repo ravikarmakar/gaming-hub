@@ -33,7 +33,11 @@ export const inviteMember = TryCatchHandler(async (req, res) => {
   const { email, role, targetId, targetModel, playerId, userId: inputUserId } = req.body;
   const { userId } = req.user;
 
-  // 1. Identify Target
+  // 1. Validate and Identify Target
+  if (!targetModel || (targetModel !== "Team" && targetModel !== "Organizer")) {
+    throw new AppError("Invalid targetModel. Must be 'Team' or 'Organizer'", 400);
+  }
+
   let target = null;
   if (targetModel === "Team") {
     target = await Team.findById(targetId);
@@ -41,7 +45,7 @@ export const inviteMember = TryCatchHandler(async (req, res) => {
     target = await Organizer.findById(targetId);
   }
 
-  if (!target) throw new AppError(`${targetModel} not found or undefined`, 404);
+  if (!target) throw new AppError(`${targetModel} not found`, 404);
 
   // 2. Find Invitee (Support both Email and ID)
   let invitee = null;
@@ -112,6 +116,11 @@ export const respondToInvitation = TryCatchHandler(async (req, res) => {
   const { action } = req.body; // 'accepted' or 'rejected'
   const { userId } = req.user;
 
+  // Validate action parameter
+  if (!action || (action !== "accepted" && action !== "rejected")) {
+    throw new AppError("Invalid action. Must be 'accepted' or 'rejected'", 400);
+  }
+
   const invite = await Invitation.findById(invitationId).populate("entityId");
   if (!invite) throw new AppError("Invitation not found", 404);
 
@@ -124,42 +133,58 @@ export const respondToInvitation = TryCatchHandler(async (req, res) => {
   }
 
   if (action === "accepted") {
-    const user = await User.findById(userId);
+    // Use session for atomic updates
+    const session = await User.startSession();
+    session.startTransaction();
 
-    if (invite.entityModel === "Team") {
-      if (user.teamId) throw new AppError("You are already in a team", 400);
+    try {
+      const user = await User.findById(userId).session(session);
 
-      // Update User
-      user.teamId = invite.entityId._id;
-      user.roles.push({
-        scope: Scopes.TEAM,
-        role: invite.role,
-        scopeId: invite.entityId._id,
-        scopeModel: "Team"
-      });
+      if (invite.entityModel === "Team") {
+        if (user.teamId) throw new AppError("You are already in a team", 400);
 
-      // Update Team Roster (Fix: actually add them to the team document)
-      await Team.findByIdAndUpdate(invite.entityId._id, {
-        $push: {
-          teamMembers: {
-            user: user._id,
-            roleInTeam: invite.role === "team:captain" ? "igl" : "player"
-          }
-        }
-      });
-    } else if (invite.entityModel === "Organizer") {
-      if (user.orgId) throw new AppError("You are already in an organization", 400);
+        // Update User
+        user.teamId = invite.entityId._id;
+        user.roles.push({
+          scope: Scopes.TEAM,
+          role: invite.role,
+          scopeId: invite.entityId._id,
+          scopeModel: "Team"
+        });
 
-      user.orgId = invite.entityId._id;
-      user.roles.push({
-        scope: Scopes.ORG,
-        role: invite.role,
-        scopeId: invite.entityId._id,
-        scopeModel: "Organizer"
-      });
+        // Update Team Roster atomically
+        await Team.findByIdAndUpdate(
+          invite.entityId._id,
+          {
+            $push: {
+              teamMembers: {
+                user: user._id,
+                roleInTeam: invite.role === "team:captain" ? "igl" : "player"
+              }
+            }
+          },
+          { session }
+        );
+      } else if (invite.entityModel === "Organizer") {
+        if (user.orgId) throw new AppError("You are already in an organization", 400);
+
+        user.orgId = invite.entityId._id;
+        user.roles.push({
+          scope: Scopes.ORG,
+          role: invite.role,
+          scopeId: invite.entityId._id,
+          scopeModel: "Organizer"
+        });
+      }
+
+      await user.save({ session });
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
-
-    await user.save();
   }
 
   invite.status = action === "accepted" ? "accepted" : "rejected";

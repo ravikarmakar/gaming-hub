@@ -2,6 +2,7 @@ import fs from "fs";
 import mongoose from "mongoose";
 
 import Organizer from "../organizer/organizer.model.js";
+import { Roles, Scopes } from "../../shared/constants/roles.js";
 import User from "../user/user.model.js";
 import Event from "./event.model.js";
 import EventRegistration from "./models/event-registration.model.js";
@@ -10,14 +11,14 @@ import Round from "./models/round.model.js";
 import Group from "./models/group.model.js";
 
 import { TryCatchHandler } from "../../shared/middleware/error.middleware.js";
-import { generateTokens, storeRefreshToken, setCookies } from "../auth/auth.service.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
 
 import { findUserById } from "../user/user.service.js";
 import { findTeamById } from "../team/team.service.js";
 import { findEventById } from "../event/event.service.js";
-import { uploadOnImageKit } from "../../shared/services/imagekit.service.js";
+import { uploadOnImageKit, deleteFromImageKit } from "../../shared/services/imagekit.service.js";
 import { logger } from "../../shared/utils/logger.js";
+import Team from "../team/team.model.js";
 
 const requiredFields = [
   "title",
@@ -27,6 +28,10 @@ const requiredFields = [
   "slots",
   "category",
 ];
+
+const escapeRegex = (string) => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
 
 export const createEvent = TryCatchHandler(async (req, res, next) => {
   const { userId, roles } = req.user;
@@ -115,7 +120,17 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
     image: imageUrl,
     imageFileId: imageFileId,
     eventEndAt: req.body.eventEndAt ? new Date(req.body.eventEndAt) : null,
-    prizeDistribution: req.body.prizeDistribution ? (typeof req.body.prizeDistribution === 'string' ? JSON.parse(req.body.prizeDistribution) : req.body.prizeDistribution) : [],
+    prizeDistribution: (() => {
+      if (!req.body.prizeDistribution) return [];
+      try {
+        return typeof req.body.prizeDistribution === 'string'
+          ? JSON.parse(req.body.prizeDistribution)
+          : req.body.prizeDistribution;
+      } catch (err) {
+        logger.error("Error parsing prizeDistribution in createEvent:", err);
+        return [];
+      }
+    })(),
   });
 
   res.status(201).json({
@@ -152,7 +167,7 @@ export const fetchEventDetailsById = TryCatchHandler(async (req, res, next) => {
   const { eventId } = req.params;
 
   if (!eventId || !mongoose.Types.ObjectId.isValid(eventId)) {
-    return next(new AppError("Invalid event id", 400));
+    return next(new CustomError("Invalid event id", 400));
   }
 
   const event = await Event.findByIdAndUpdate(eventId, { $inc: { views: 1 } }, { new: true });
@@ -175,13 +190,16 @@ export const fetchAllEvents = TryCatchHandler(async (req, res, next) => {
   let query = {};
 
   if (search) {
+    const sanitizedSearch = escapeRegex(search);
     query.$or = [
-      { title: { $regex: search, $options: "i" } },
-      { description: { $regex: search, $options: "i" } },
+      { title: { $regex: sanitizedSearch, $options: "i" } },
+      { description: { $regex: sanitizedSearch, $options: "i" } },
     ];
   }
 
-  if (game && game !== 'all') query.game = { $regex: `^${game}$`, $options: "i" };
+  if (game && game !== 'all') {
+    query.game = { $regex: `^${escapeRegex(game)}$`, $options: "i" };
+  }
   if (category && category !== 'all') query.category = category.toLowerCase();
   if (status && status !== 'all') query.status = status;
 
@@ -264,9 +282,7 @@ export const registerEvent = TryCatchHandler(async (req, res, next) => {
     const players = [];
     const substitutes = [];
 
-    // Map to track if we found at least one of each core role
     const foundCoreRoles = new Set();
-
     team.teamMembers.forEach(member => {
       if (member.isActive) {
         if (coreRoles.includes(member.roleInTeam)) {
@@ -278,60 +294,66 @@ export const registerEvent = TryCatchHandler(async (req, res, next) => {
       }
     });
 
-    // Handle duplicate core roles (if team has 2 rushers, only one is required for 'core', but user wants all core roles registered)
-    // Actually per user: "IGL, Rusher, Sniper, and Support roles will be automatically registered... Any other roles will be listed as substitutes."
-    // And "Any other roles will be listed as substitutes."
-    // And "they fift player can register... if 4 player crotore these okay"
-
-    // Validation: Must have at least one of each core role
     if (foundCoreRoles.size < 4) {
       return next(new CustomError("Your team must have an IGL, Rusher, Sniper, and Support to register.", 400));
     }
 
-    // Atomic Slot Increment with condition check
-    const updatedEvent = await Event.findOneAndUpdate(
-      {
-        _id: eventId,
-        status: "registration-open",
-        $expr: { $lt: ["$joinedSlots", "$maxSlots"] }
-      },
-      { $inc: { joinedSlots: 1 } },
-      { new: true }
-    );
-
-    if (!updatedEvent) {
-      return next(new CustomError("Event is full or registration is not open", 400));
-    }
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
     try {
+      // Atomic Slot Increment with condition check
+      const updatedEvent = await Event.findOneAndUpdate(
+        {
+          _id: eventId,
+          registrationStatus: "registration-open",
+          $expr: { $lt: ["$joinedSlots", "$maxSlots"] }
+        },
+        { $inc: { joinedSlots: 1 } },
+        { new: true, session }
+      );
+
+      if (!updatedEvent) {
+        throw new CustomError("Event is full or registration is not open", 400);
+      }
+
       // Register team directly
-      await EventRegistration.create({
+      await EventRegistration.create([{
         eventId: event._id,
         teamId: team._id,
         status: "approved",
         players,
         substitutes,
+      }], { session });
+
+      // Update team and user history
+      if (!team.playedTournaments.includes(eventId)) {
+        await Team.updateOne(
+          { _id: team._id },
+          { $push: { playedTournaments: eventId } },
+          { session }
+        );
+      }
+
+      await User.updateMany(
+        { _id: { $in: team.teamMembers.map((m) => m.user) }, eventHistory: { $ne: eventId } },
+        { $push: { eventHistory: eventId } },
+        { session }
+      );
+
+      await session.commitTransaction();
+
+      return res.status(200).json({
+        success: true,
+        message: "Your Team successfully registered for the tournament",
       });
+
     } catch (error) {
-      // Rollback the slot increment if registration creation fails
-      await Event.updateOne({ _id: eventId }, { $inc: { joinedSlots: -1 } });
-      throw error;
+      await session.abortTransaction();
+      return next(error);
+    } finally {
+      session.endSession();
     }
-
-    // Update team and user history (as before)
-    if (!team.playedTournaments.includes(eventId)) {
-      team.playedTournaments.push(eventId);
-      await team.save();
-    }
-    await User.updateMany(
-      { _id: { $in: team.teamMembers.map((m) => m.user) }, eventHistory: { $ne: eventId } },
-      { $push: { eventHistory: eventId } }
-    );
-
-    return res.status(200).json({
-      success: true,
-      message: "Your Team successfully registered for the tournament",
-    });
   } else {
     // Create JoinRequest for invite-only event
     await JoinRequest.create({
@@ -362,10 +384,11 @@ export const isTeamRegistered = TryCatchHandler(async (req, res, next) => {
   }
 
   // Check pending request (since teamId is at User level, we check for User's pending request for this Event)
-  const user = await User.findOne({ teamId });
-  if (user) {
+  const usersInTeam = await User.find({ teamId }).select('_id');
+  if (usersInTeam.length > 0) {
+    const userIds = usersInTeam.map(u => u._id);
     const request = await JoinRequest.findOne({
-      requester: user._id,
+      requester: { $in: userIds },
       target: eventId,
       targetModel: "Event",
       status: "pending",
@@ -421,43 +444,65 @@ export const fetchAllRegisteredTeams = TryCatchHandler(
   }
 );
 
-export const closeRegistration = async (req, res) => {
-  try {
-    // Event ID from params
-    const { eventId } = req.params;
-
-    // Event find karo
-    const event = await Event.findById(eventId);
-    if (!event) {
-      return res.status(404).json({ message: "Event not found" });
-    }
-
-    // Check if already closed
-    if (event.status === "registration_closed") {
-      return res.status(400).json({ message: "Registration already closed" });
-    }
-
-    // Registration close karna
-    event.status = "registration_closed";
-    await event.save();
-
-    res.status(200).json({
-      message: "Registration closed successfully",
-      event,
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Internal Server Error", error });
-  }
-};
-
-// Update Event
-export const updateEvent = TryCatchHandler(async (req, res, next) => {
+export const closeRegistration = TryCatchHandler(async (req, res) => {
+  // Event ID from params
   const { eventId } = req.params;
   const { userId, roles } = req.user;
+
+  // Event find karo
+  const event = await Event.findById(eventId);
+  if (!event) {
+    throw new CustomError("Event not found", 404);
+  }
+
+  // Authorization Check
+  const isAuthorized = roles.some(
+    (r) =>
+      (r.scope === Scopes.PLATFORM && r.role === Roles.PLATFORM.SUPER_ADMIN) ||
+      (r.scope === "org" &&
+        r.scopeModel === "Organizer" &&
+        (r.role === "org:owner" || r.role === "org:manager") &&
+        r.scopeId.toString() === event.orgId.toString())
+  );
+  if (!isAuthorized) throw new CustomError("Not authorized to close registration for this event", 403);
+
+  // Check if already closed
+  if (event.registrationStatus === "registration-closed") {
+    return res.status(400).json({ message: "Registration already closed" });
+  }
+
+  // Registration close karna
+  event.registrationStatus = "registration-closed";
+  if (event.status) event.status = "registration-closed"; // Keep root status in sync if exists
+  await event.save();
+
+  res.status(200).json({
+    message: "Registration closed successfully",
+    event,
+  });
+});
+
+export const updateEvent = TryCatchHandler(async (req, res, next) => {
+  const { eventId } = req.params;
+  const { roles } = req.user;
 
   const event = await Event.findById(eventId);
   if (!event) {
     return next(new CustomError("Event not found", 404));
+  }
+
+  // Authorization Check (Defense in depth)
+  const isAuthorized = roles.some(
+    (r) =>
+      (r.scope === Scopes.PLATFORM && r.role === Roles.PLATFORM.SUPER_ADMIN) ||
+      (r.scope === "org" &&
+        r.scopeModel === "Organizer" &&
+        (r.role === "org:owner" || r.role === "org:manager") &&
+        r.scopeId.toString() === event.orgId.toString())
+  );
+  if (!isAuthorized) {
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    throw new CustomError("Not authorized to update this event", 403);
   }
 
   // Handle image update if file provided
@@ -465,18 +510,23 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
   let imageFileId = event.imageFileId;
 
   if (req.file) {
-    const uploadRes = await uploadOnImageKit(
-      req.file.path,
-      `event-poster-${event._id}-${Date.now()}`,
-      "/events/posters"
-    );
+    try {
+      const uploadRes = await uploadOnImageKit(
+        req.file.path,
+        `event-poster-${event._id}-${Date.now()}`,
+        "/events/posters"
+      );
 
-    if (uploadRes) {
-      if (event.imageFileId) {
-        await deleteFromImageKit(event.imageFileId);
+      if (uploadRes) {
+        if (event.imageFileId) {
+          await deleteFromImageKit(event.imageFileId);
+        }
+        imageUrl = uploadRes.url;
+        imageFileId = uploadRes.fileId;
       }
-      imageUrl = uploadRes.url;
-      imageFileId = uploadRes.fileId;
+    } finally {
+      // Always cleanup local file after upload attempt
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     }
   }
 
@@ -485,16 +535,16 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
   if (imageFileId) updateData.imageFileId = imageFileId;
 
   if (req.body.slots) {
-    updateData.maxSlots = Number(req.body.slots);
+    const slotsNum = Number(req.body.slots);
+    if (isNaN(slotsNum) || slotsNum < event.joinedSlots) {
+      throw new CustomError(`Cannot set slots below currently joined: ${event.joinedSlots}`, 400);
+    }
+    updateData.maxSlots = slotsNum;
     delete updateData.slots;
   }
 
   if (req.body.prizePool) {
     updateData.prizePool = Number(req.body.prizePool);
-  }
-
-  if (imageUrl) {
-    updateData.image = imageUrl;
   }
 
   if (req.body.category) {
@@ -507,9 +557,11 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
 
   if (req.body.prizeDistribution) {
     try {
-      updateData.prizeDistribution = typeof req.body.prizeDistribution === 'string' ? JSON.parse(req.body.prizeDistribution) : req.body.prizeDistribution;
+      updateData.prizeDistribution = typeof req.body.prizeDistribution === 'string'
+        ? JSON.parse(req.body.prizeDistribution)
+        : req.body.prizeDistribution;
     } catch (e) {
-      logger.error("Error parsing prizeDistribution:", e);
+      logger.error("Error parsing prizeDistribution in updateEvent:", e);
     }
   }
 
@@ -525,29 +577,45 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
   });
 });
 
-// Delete Event
-export const deleteEvent = async (req, res) => {
-  try {
-    const deletedEvent = await Event.findByIdAndDelete(req.params.eventId);
+export const deleteEvent = TryCatchHandler(async (req, res) => {
+  const { eventId } = req.params;
+  const { userId, roles } = req.user;
 
-    if (!deletedEvent) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Event not found" });
-    }
-
-    // Cleanup ImageKit asset
-    if (deletedEvent.imageFileId) {
-      deleteFromImageKit(deletedEvent.imageFileId);
-    }
-
-    res
-      .status(200)
-      .json({ success: true, message: "Event deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+  const event = await Event.findById(eventId);
+  if (!event) {
+    throw new CustomError("Event not found", 404);
   }
-};
+
+  // Authorization Check
+  const isAuthorized = roles.some(
+    (r) =>
+      (r.scope === Scopes.PLATFORM && r.role === Roles.PLATFORM.SUPER_ADMIN) ||
+      (r.scope === "org" &&
+        r.scopeModel === "Organizer" &&
+        (r.role === "org:owner" || r.role === "org:manager") &&
+        r.scopeId.toString() === event.orgId.toString())
+  );
+  if (!isAuthorized) throw new CustomError("Not authorized to delete this event", 403);
+
+  const deletedEvent = await Event.findByIdAndDelete(eventId);
+
+  // Cleanup associated assets/data
+  if (deletedEvent && deletedEvent.imageFileId) {
+    await deleteFromImageKit(deletedEvent.imageFileId);
+  }
+
+  // Cascade deletions
+  await Promise.all([
+    EventRegistration.deleteMany({ eventId: deletedEvent._id }),
+    Round.deleteMany({ eventId: deletedEvent._id }),
+    Group.deleteMany({ eventId: deletedEvent._id })
+  ]);
+
+  res.status(200).json({
+    success: true,
+    message: "Event and associated data deleted successfully"
+  });
+});
 
 export const unregisterEvent = TryCatchHandler(async (req, res, next) => {
   const { userId } = req.user;
@@ -558,29 +626,43 @@ export const unregisterEvent = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("You are not part of any team", 400));
   }
 
-  const registration = await EventRegistration.findOneAndDelete({
-    eventId,
-    teamId: user.teamId,
-  });
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  if (!registration) {
-    return next(new CustomError("You are not registered for this event", 400));
+  try {
+    const registration = await EventRegistration.findOneAndDelete(
+      { eventId, teamId: user.teamId },
+      { session }
+    );
+
+    if (!registration) {
+      throw new CustomError("You are not registered for this event", 400);
+    }
+
+    // Atomic Slot Decrement
+    await Event.updateOne(
+      { _id: eventId, joinedSlots: { $gt: 0 } },
+      { $inc: { joinedSlots: -1 } },
+      { session }
+    );
+
+    // Optional: Remove from histroy? Usually history remains, but user requested "atomic with registration"
+    // If they meant cleanup history too:
+    // await User.updateMany({ _id: { $in: teamMembers } }, { $pull: { eventHistory: eventId } }, { session });
+
+    await session.commitTransaction();
+
+    res.status(200).json({
+      success: true,
+      message: "Successfully unregistered from the event",
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    return next(error);
+  } finally {
+    session.endSession();
   }
-
-  // Atomic Slot Decrement
-  await Event.updateOne(
-    { _id: eventId, joinedSlots: { $gt: 0 } },
-    { $inc: { joinedSlots: -1 } }
-  );
-
-  res.status(200).json({
-    success: true,
-    message: "Successfully unregistered from the event",
-  });
 });
-
-// TODO: Event owner can remove any team from the event
-// TODO: Notification feature using socket.io
 
 export const startEvent = TryCatchHandler(async (req, res, next) => {
   const { eventId } = req.params;
@@ -589,6 +671,16 @@ export const startEvent = TryCatchHandler(async (req, res, next) => {
   // 1. Fetch Event
   const event = await Event.findById(eventId);
   if (!event) return next(new CustomError("Event not found", 404));
+
+  // 2. Authorization Check
+  const isAuthorized = roles.some(
+    (r) =>
+      r.scope === "org" &&
+      r.scopeModel === "Organizer" &&
+      (r.role === "org:owner" || r.role === "org:manager") &&
+      r.scopeId.toString() === event.orgId.toString()
+  );
+  if (!isAuthorized) throw new CustomError("Not authorized to start this event", 403);
 
   // 3. Status Check
   if (event.eventProgress === "ongoing" || event.eventProgress === "completed") {
@@ -621,6 +713,16 @@ export const finishEvent = TryCatchHandler(async (req, res, next) => {
   const event = await Event.findById(eventId);
   if (!event) return next(new CustomError("Event not found", 404));
 
+  // Authorization Check
+  const isAuthorized = roles.some(
+    (r) =>
+      r.scope === "org" &&
+      r.scopeModel === "Organizer" &&
+      (r.role === "org:owner" || r.role === "org:manager") &&
+      r.scopeId.toString() === event.orgId.toString()
+  );
+  if (!isAuthorized) throw new CustomError("Not authorized to finish this event", 403);
+
   if (event.eventProgress === "completed") {
     return next(new CustomError("Event is already completed", 400));
   }
@@ -637,6 +739,7 @@ export const finishEvent = TryCatchHandler(async (req, res, next) => {
     data: event
   });
 });
+
 export const fetchTournamentsByTeam = TryCatchHandler(async (req, res, next) => {
   const { teamId } = req.params;
 
@@ -671,3 +774,6 @@ export const fetchTournamentsByTeam = TryCatchHandler(async (req, res, next) => 
     data: tournaments,
   });
 });
+
+// TODO: Event owner can remove any team from the event
+// TODO: Notification feature using socket.io

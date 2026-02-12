@@ -1,8 +1,8 @@
+import mongoose from "mongoose";
 import Group from "../models/group.model.js";
 import Round from "../models/round.model.js";
 import Event from "../event.model.js";
 import Leaderboard from "../models/leaderBoard.model.js";
-
 import EventRegistration from "../models/event-registration.model.js";
 import { logger } from "../../../shared/utils/logger.js";
 
@@ -233,70 +233,99 @@ export const createGroups = async (req, res) => {
       });
     }
 
-    // 6️⃣ Batch Insert Groups (Fastest Method)
-    const createdGroups = await Group.insertMany(groupsData);
+    // 6️⃣ Batch Insert Groups and Leaderboards (Atomic Transaction)
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    // 7️⃣ Prepare Leaderboards for each Group
-    const leaderboardsData = createdGroups.map((group) => {
-      const teamsInGroup = groupToTeamsMap[group.groupName] || [];
-
-      const teamScore = teamsInGroup.map((teamId) => ({
-        teamId,
-        score: 0,
-        kills: 0,
-        wins: 0,
-      }));
-
-      return {
-        groupId: group._id,
-        teamScore,
-      };
-    });
-
-    // 8️⃣ Batch Insert Leaderboards
-    await Leaderboard.insertMany(leaderboardsData);
-
-    // 9️⃣ NOTIFY TEAMS ABOUT THEIR GROUPS
+    let createdGroups;
     try {
-      const mongoose = (await import("mongoose")).default;
-      const Notification = mongoose.model("Notification");
+      createdGroups = await Group.insertMany(groupsData, { session });
 
-      for (const group of createdGroups) {
-        // Since group.teams contains teamIds, we need to populate or fetch team details if we want more info
-        // But for now, we just notify all members of these teams
-        for (const teamId of group.teams) {
-          const Team = mongoose.model("Team");
-          const team = await Team.findById(teamId);
+      // 7️⃣ Prepare Leaderboards for each Group
+      const leaderboardsData = createdGroups.map((group) => {
+        const teamsInGroup = groupToTeamsMap[group.groupName] || [];
 
-          if (!team) continue;
+        const teamScore = teamsInGroup.map((teamId) => ({
+          teamId,
+          score: 0,
+          kills: 0,
+          wins: 0,
+        }));
 
-          const recipientIds = team.teamMembers
-            .filter(m => m.isActive)
-            .map(m => m.user);
+        return {
+          groupId: group._id,
+          teamScore,
+        };
+      });
 
-          for (const userId of recipientIds) {
-            await Notification.create({
-              recipient: userId,
-              sender: req.user._id,
-              type: "GROUP_CREATED",
-              content: {
-                title: "Your Group is Ready!",
-                message: `You've been assigned to ${group.groupName} in ${round.roundName} for ${round.eventId.eventName}. Match starts at ${new Date(group.matchTime).toLocaleString()}.`
-              },
-              relatedData: {
-                eventId: round.eventId._id,
-                teamId: team._id,
-                groupId: group._id
-              },
-              actions: [
-                {
-                  label: "View Team List",
-                  actionType: "VIEW",
-                  payload: { path: `/groups/${group._id}/teams` }
-                }
-              ]
-            });
+      // 8️⃣ Batch Insert Leaderboards
+      await Leaderboard.insertMany(leaderboardsData, { session });
+
+      await session.commitTransaction();
+      session.endSession();
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      throw error;
+    }
+
+    // 9️⃣ NOTIFY TEAMS ABOUT THEIR GROUPS (Optimized - Fix N+1)
+    try {
+      // Null check for req.user
+      if (!req.user || !req.user._id) {
+        logger.warn("Cannot send notifications: req.user is not available");
+      } else {
+        const Notification = mongoose.model("Notification");
+        const Team = mongoose.model("Team");
+
+        // Collect all team IDs from all groups
+        const allTeamIds = createdGroups.flatMap(group => group.teams);
+
+        // Fetch all teams in ONE query (Fix N+1)
+        const teams = await Team.find({ _id: { $in: allTeamIds } }).lean();
+        const teamMap = new Map(teams.map(t => [t._id.toString(), t]));
+
+        // Prepare notifications in bulk
+        const notificationsToCreate = [];
+
+        for (const group of createdGroups) {
+          for (const teamId of group.teams) {
+            const team = teamMap.get(teamId.toString());
+            if (!team) continue;
+
+            const recipientIds = team.teamMembers
+              .filter(m => m.isActive)
+              .map(m => m.user);
+
+            for (const userId of recipientIds) {
+              notificationsToCreate.push({
+                recipient: userId,
+                sender: req.user._id,
+                type: "GROUP_CREATED",
+                content: {
+                  title: "Your Group is Ready!",
+                  message: `You've been assigned to ${group.groupName} in ${round.roundName} for ${round.eventId.eventName}. Match starts at ${new Date(group.matchTime).toISOString()}.`
+                },
+                relatedData: {
+                  eventId: round.eventId._id,
+                  teamId: team._id,
+                  groupId: group._id
+                },
+                actions: [
+                  {
+                    label: "View Team List",
+                    actionType: "VIEW",
+                    payload: { path: `/groups/${group._id}/teams` }
+                  }
+                ]
+              });
+            }
           }
+        }
+
+        // Batch insert notifications
+        if (notificationsToCreate.length > 0) {
+          await Notification.insertMany(notificationsToCreate);
         }
       }
     } catch (notifError) {
@@ -319,6 +348,11 @@ export const updateGroup = async (req, res) => {
     const { groupId } = req.params;
     const { groupName, totalMatch, roomId, roomPassword, totalSelectedTeam, matchTime } = req.body;
 
+    // Validate groupId
+    if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
+      return res.status(400).json({ message: "Invalid Group ID" });
+    }
+
     let group = await Group.findById(groupId);
     if (!group) return res.status(404).json({ message: "Group not found" });
 
@@ -330,14 +364,17 @@ export const updateGroup = async (req, res) => {
     if (totalSelectedTeam !== undefined) group.totalSelectedTeam = totalSelectedTeam;
     if (matchTime) group.matchTime = matchTime;
 
-    // 🔄 Recalibrate Status
-    if (group.matchesPlayed >= group.totalMatch) {
+    // 🔄 Recalibrate Status (Fixed logic for matchesPlayed === 0)
+    if (group.matchesPlayed >= group.totalMatch && group.totalMatch > 0) {
       group.status = "completed";
     } else if (group.matchesPlayed > 0) {
       group.status = "ongoing";
-    } else if (group.status === "completed") {
-      // If it was completed but totalMatch increased
-      group.status = "ongoing";
+    } else if (group.matchesPlayed === 0) {
+      // When no matches played, keep as pending unless explicitly changed
+      if (group.status === "completed") {
+        // If was completed but totalMatch increased and no matches played yet
+        group.status = "pending";
+      }
     }
 
     await group.save();

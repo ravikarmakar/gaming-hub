@@ -1,8 +1,10 @@
 import { transporter } from "../config/mail.js";
 
+import crypto from "crypto";
+
 // Generates a 6-digit numeric OTP.
 export const generateOTP = () => {
-    return String(Math.floor(100000 + Math.random() * 900000));
+    return crypto.randomInt(100000, 1000000).toString();
 };
 
 // Sends a verification OTP email.

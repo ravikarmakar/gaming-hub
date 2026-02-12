@@ -8,7 +8,7 @@ export const createNewUser = async (userData) => {
 };
 
 export const findUserByEmail = async (email) => {
-  const user = await User.findById({ email });
+  const user = await User.findOne({ email });
   if (!user) {
     throw new CustomError("User not found", 404);
   }

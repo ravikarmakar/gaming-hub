@@ -56,53 +56,48 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Invalid team ID format", 400));
   }
 
-  // 1. Check Redis Cache
+  // 1. Check Redis Cache (shared team data only, no user-specific data)
   const cachedTeam = await redis.get(`team_details:${teamId}`);
 
+  let team;
   if (cachedTeam) {
     try {
-      const parsedTeam = typeof cachedTeam === "string" ? JSON.parse(cachedTeam) : cachedTeam;
-
-      // Even if cached, we need to check personal join request status if user logged in
-      if (req.user) {
-        const existingRequest = await JoinRequest.findOne({
-          requester: req.user._id,
-          target: teamId,
-          status: "pending",
-        });
-        parsedTeam.hasPendingRequest = !!existingRequest;
-      }
-
-      return res.status(200).json({
-        success: true,
-        message: "Team details fetched successfully (cached)",
-        data: parsedTeam,
-      });
+      team = typeof cachedTeam === "string" ? JSON.parse(cachedTeam) : cachedTeam;
     } catch (err) {
       logger.error("Redis parse error team details:", err);
+      // Self-heal: Delete the corrupted key
+      await redis.del(`team_details:${teamId}`);
+
+      // Fallback to DB if parse fails
+      team = await getTransformedTeam(teamId);
+      if (!team) {
+        return next(new CustomError("Team not found", 404));
+      }
     }
+  } else {
+    team = await getTransformedTeam(teamId);
+    if (!team) {
+      return next(new CustomError("Team not found", 404));
+    }
+
+    // 2. Set Redis Cache (team data only, no user-specific fields)
+    await redis.set(`team_details:${teamId}`, JSON.stringify(team), { ex: 3600 }); // 1 hour
   }
 
-  const team = await getTransformedTeam(teamId);
-
-  if (!team) {
-    return next(new CustomError("Team not found", 404));
-  }
-
-  // Check if the current user (if logged in) has a pending join request
+  // Compute user-specific data on-demand (not cached)
   let hasPendingRequest = false;
   let pendingRequestsCount = 0;
 
   if (req.user) {
     const existingRequest = await JoinRequest.findOne({
-      requester: req.user._id,
+      requester: req.user.userId,
       target: teamId,
       status: "pending",
     });
     hasPendingRequest = !!existingRequest;
 
     const isMember = team.teamMembers.some(
-      (m) => m.user.toString() === req.user._id.toString()
+      (m) => m.user.toString() === req.user.userId.toString()
     );
     if (isMember) {
       pendingRequestsCount = await JoinRequest.countDocuments({
@@ -117,9 +112,6 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
     hasPendingRequest,
     pendingRequestsCount,
   };
-
-  // 2. Set Redis Cache (Post-transformation)
-  await redis.set(`team_details:${teamId}`, JSON.stringify(responseData), { ex: 3600 }); // 1 hour
 
   res.status(200).json({
     success: true,
@@ -137,7 +129,14 @@ export const fetchAllTeams = TryCatchHandler(async (req, res) => {
     isRecruiting,
     isVerified,
   } = req.query;
-  const skip = (page - 1) * limit;
+
+  // Parse to integers early to prevent type coercion issues
+  const parsedPage = parseInt(page, 10) || 1;
+  const parsedLimit = parseInt(limit, 10) || 10;
+  const skip = (parsedPage - 1) * parsedLimit;
+
+  // Helper to escape regex special characters
+  const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   // Build query filter
   const query = { isDeleted: false };
@@ -145,10 +144,11 @@ export const fetchAllTeams = TryCatchHandler(async (req, res) => {
     if (search.length > 2) {
       query.$text = { $search: search };
     } else {
-      // Fallback for short terms to verify "starts with"
+      // Escape regex to prevent injection
+      const escapedSearch = escapeRegex(search);
       query.$or = [
-        { teamName: { $regex: `^${search}`, $options: "i" } },
-        { tag: { $regex: `^${search}`, $options: "i" } },
+        { teamName: { $regex: `^${escapedSearch}`, $options: "i" } },
+        { tag: { $regex: `^${escapedSearch}`, $options: "i" } },
       ];
     }
   }
@@ -160,8 +160,8 @@ export const fetchAllTeams = TryCatchHandler(async (req, res) => {
   const aggregateQuery = [
     { $match: query },
     { $sort: { createdAt: -1 } },
-    { $skip: parseInt(skip) },
-    { $limit: parseInt(limit) },
+    { $skip: skip },
+    { $limit: parsedLimit },
     {
       $project: {
         teamName: 1,
@@ -192,8 +192,8 @@ export const fetchAllTeams = TryCatchHandler(async (req, res) => {
     data: teams,
     pagination: {
       totalCount,
-      currentPage: parseInt(page),
-      limit: parseInt(limit),
+      currentPage: parsedPage,
+      limit: parsedLimit,
       hasMore: totalCount > skip + teams.length,
     },
   });
@@ -206,12 +206,14 @@ export const addMembers = TryCatchHandler(async (req, res, next) => {
   if (!Array.isArray(members) || members.length < 1)
     throw new CustomError("Please provide at least one team member.", 400);
 
-  // Check Team Limit (Basic check before service call)
+  // Basic pre-check (not atomic, but prevents obvious overruns)
+  // The service layer will do atomic validation
   if (team.teamMembers.length + members.length > 20) {
     throw new CustomError(`Team limit exceeded. Max 20 members allowed.`, 400);
   }
 
   // Use Service Layer for the heavy lifting
+  // Service should ideally verify limit atomically, but for now this is acceptable
   await batchAddMembersToTeam({
     teamId: team._id,
     memberIds: members,

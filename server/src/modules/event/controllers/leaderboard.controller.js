@@ -1,20 +1,28 @@
 import mongoose from "mongoose";
-import LeaderboardTeams from "../models/leaderBoard.model.js";
-import Group from "../models/group.model.js";
 import Leaderboard from "../models/leaderBoard.model.js";
+import Group from "../models/group.model.js";
 import Round from "../models/round.model.js";
 import pointSystem from "../../../shared/config/pointSystem.js";
 import { logger } from "../../../shared/utils/logger.js";
 
 // Create a new leaderboard entry
 export const createLeaderboardEntry = async (req, res) => {
-  const { groupId } = req.params; // Corrected the parameter name
+  const { groupId } = req.params;
   const { teamId, rank, totalPoints, matchesPlayed, kills, wins } = req.body;
 
   try {
-    // Validate ObjectId
+    // Validate required fields
+    if (!teamId) {
+      return res.status(400).json({ message: "Team ID is required" });
+    }
+
+    // Validate ObjectIds
     if (!mongoose.Types.ObjectId.isValid(groupId)) {
       return res.status(400).json({ message: "Invalid Group ID" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(teamId)) {
+      return res.status(400).json({ message: "Invalid Team ID" });
     }
 
     // Find the group to ensure it exists
@@ -24,7 +32,7 @@ export const createLeaderboardEntry = async (req, res) => {
     }
 
     // Create a new leaderboard entry
-    const newEntry = new LeaderboardTeams({
+    const newEntry = new Leaderboard({
       teamId,
       rank,
       totalPoints,
@@ -53,7 +61,7 @@ export const createLeaderboardEntry = async (req, res) => {
 // Get all leaderboard entries
 export const getLeaderboardEntries = async (req, res) => {
   try {
-    const entries = await LeaderboardTeams.find().populate("teamId");
+    const entries = await Leaderboard.find().populate("teamId");
     res.status(200).json(entries);
   } catch (error) {
     logger.error("Error fetching leaderboard entries:", error);
@@ -101,20 +109,34 @@ export const createRoundAllGroupsLeaderboards = async (req, res) => {
         .json({ message: "No groups found for this round!" });
     }
 
-    // return logger.info(groups);
+    // Check for existing leaderboards to prevent duplicates
+    const groupIds = groups.map(g => g._id);
+    const existingLeaderboards = await Leaderboard.find({
+      groupId: { $in: groupIds }
+    }).select('groupId');
 
-    // ✅ Prepare leaderboards for all groups
-    const leaderboards = groups.map((group, i) => ({
-      groupId: group._id,
-      scores: [],
-    }));
+    const existingGroupIds = new Set(
+      existingLeaderboards.map(lb => lb.groupId.toString())
+    );
+
+    // ✅ Prepare leaderboards only for groups that don't have one
+    const leaderboards = groups
+      .filter(group => !existingGroupIds.has(group._id.toString()))
+      .map(group => ({
+        groupId: group._id,
+        scores: [],
+      }));
 
     // ✅ Insert all leaderboards in one go (Bulk insert)
-    await Leaderboard.insertMany(leaderboards);
+    if (leaderboards.length > 0) {
+      await Leaderboard.insertMany(leaderboards);
+    }
 
     return res.status(201).json({
       message: "Leaderboards created successfully for all groups!",
       totalGroups: groups.length,
+      created: leaderboards.length,
+      skipped: existingLeaderboards.length,
     });
   } catch (error) {
     logger.error("Error in createRoundLeaderboards:", error);
@@ -212,7 +234,17 @@ export const createLeaderboardForRoundsGroups = async (req, res) => {
         .json({ message: "No groups found for this round!" });
     }
 
-    // ✅ Create leaderboards for all groups
+    // ✅ Batch fetch existing leaderboards to avoid N+1 queries
+    const groupIds = groups.map(g => g._id);
+    const existingLeaderboards = await Leaderboard.find({
+      groupId: { $in: groupIds }
+    }).select('groupId');
+
+    const existingGroupIds = new Set(
+      existingLeaderboards.map(lb => lb.groupId.toString())
+    );
+
+    // ✅ Create leaderboards for groups that don't have one
     const leaderboards = [];
 
     for (const group of groups) {
@@ -224,17 +256,13 @@ export const createLeaderboardForRoundsGroups = async (req, res) => {
         continue; // Skip this group
       }
 
-      // ✅ Check if leaderboard already exists
-      const existingLeaderboard = await Leaderboard.findOne({
-        groupId: group._id,
-      });
-
-      if (!existingLeaderboard) {
+      // ✅ Check using in-memory Set instead of database query
+      if (!existingGroupIds.has(group._id.toString())) {
         // ✅ Create leaderboard for this group
         const leaderboard = new Leaderboard({
           groupId: group._id,
           teamScore: group.teamIds.map((teamId) => ({
-            teamId: teamId, // Directly use teamId instead of accessing non-existent `team._id`
+            teamId: teamId,
             score: 0,
             position: null,
             totalPoints: 0,
@@ -298,7 +326,12 @@ export const updateGroupResults = async (req, res) => {
       }
     });
 
-    // Sort leaderboard by Total Points BEFORE saving for cleaner pre-save hook data
+    // Calculate totalPoints for each entry before sorting
+    leaderboard.teamScore.forEach(entry => {
+      entry.totalPoints = entry.score + (entry.kills * 2) + (entry.wins * 5);
+    });
+
+    // Sort leaderboard by Total Points after calculation
     leaderboard.teamScore.sort((a, b) => b.totalPoints - a.totalPoints);
 
     // Increment Group matches played
@@ -311,7 +344,7 @@ export const updateGroupResults = async (req, res) => {
       group.status = "completed";
 
       // 🏆 Apply Final Qualification only after ALL matches are done
-      const qualifyingLimit = group.roundId.qualifyingTeams || 0;
+      const qualifyingLimit = group.roundId?.qualifyingTeams || 0;
       leaderboard.teamScore.forEach((entry, index) => {
         if (qualifyingLimit > 0 && index < qualifyingLimit) {
           entry.isQualified = true;

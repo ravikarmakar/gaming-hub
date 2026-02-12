@@ -1,6 +1,5 @@
 import jwt from "jsonwebtoken";
 import { CustomError } from "../utils/CustomError.js";
-import { generateTokens, storeRefreshToken, setCookies } from "../../modules/auth/auth.service.js";
 import { TryCatchHandler } from "./error.middleware.js";
 import { redis } from "../config/redis.js";
 import User from "../../modules/user/user.model.js";
@@ -34,11 +33,13 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
         p.exec(),
         new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 500))
       ]);
+      // Redis pipeline returns [result1, result2, ...] for Upstash
       isBlacklisted = results[0];
       cachedProfile = results[1];
     } catch (redisError) {
-      logger.warn(`>>> [AUTH] Redis check timed out or failed: ${redisError.message}`);
-      // Fallback: don't block auth if Redis is slow
+      logger.error(`>>> [AUTH] Redis check failed: ${redisError.message}`);
+      // SECURITY: Fail-secure - block request if we can't verify blacklist status
+      return next(new CustomError("Authentication service unavailable. Please try again.", 503));
     }
 
     if (isBlacklisted)
@@ -101,6 +102,11 @@ export const optionalAuthenticate = TryCatchHandler(async (req, res, next) => {
 });
 
 export const isVerified = TryCatchHandler(async (req, res, next) => {
+  // Guard: Ensure req.user exists (should be set by isAuthenticated middleware)
+  if (!req.user || !req.user.userId) {
+    return next(new CustomError("Unauthorized: User not authenticated", 401));
+  }
+
   const userId = req.user.userId;
   const cacheKey = `user_profile:${userId}`;
 

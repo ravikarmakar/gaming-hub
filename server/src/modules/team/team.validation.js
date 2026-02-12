@@ -1,5 +1,5 @@
 import { Joi } from "express-validation";
-import { Roles } from "../../shared/constants/roles.js";
+import { VALID_TEAM_MEMBER_ROLES } from "./team.constants.js";
 
 // Common regex or constraints
 const objectId = Joi.string().regex(/^[0-9a-fA-F]{24}$/).message("Invalid ID format");
@@ -9,7 +9,7 @@ export const createTeamValidation = {
         teamName: Joi.string().min(3).max(50).required().messages({
             "string.empty": "Team name is required",
             "string.min": "Team name must be at least 3 characters",
-            "string.max": "Team name must look real",
+            "string.max": "Team name must not exceed 50 characters",
         }),
         bio: Joi.string().max(300).allow("").optional(),
         tag: Joi.string().min(2).max(6).required(),
@@ -43,7 +43,7 @@ export const addMembersValidation = {
 export const manageMemberRoleValidation = {
     body: Joi.object({
         memberId: objectId.required(),
-        role: Joi.string().required().valid("igl", "player", "sniper", "rusher", "support", "coach", "manager", "substitute", "content_creator").messages({
+        role: Joi.string().required().valid(...VALID_TEAM_MEMBER_ROLES).messages({
             "any.only": "Invalid role specified",
         }),
     }).unknown(true),
@@ -60,6 +60,14 @@ export const transferOwnerValidation = {
     body: Joi.object({
         memberId: objectId.required(),
     }).unknown(true),
+};
+
+export const removeMemberValidation = {
+    params: Joi.object({
+        id: objectId.required().messages({
+            "string.pattern.base": "Invalid member ID format",
+        }),
+    }),
 };
 
 export const manageJoinRequestValidation = {

@@ -131,8 +131,7 @@ const invitationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const Invitation = mongoose.model("Invitation", invitationSchema);
-
+// CRITICAL: Indexes must be defined BEFORE creating the model
 // Compound indexes for performance and data integrity
 invitationSchema.index({ receiver: 1, status: 1 }); // Receiver's pending invitations
 invitationSchema.index({ entityId: 1, status: 1 }); // Entity's sent invitations
@@ -141,5 +140,7 @@ invitationSchema.index({ receiver: 1, entityId: 1, status: 1 }, {
   unique: true,
   partialFilterExpression: { status: "pending" }
 });
+
+const Invitation = mongoose.model("Invitation", invitationSchema);
 
 export default Invitation;

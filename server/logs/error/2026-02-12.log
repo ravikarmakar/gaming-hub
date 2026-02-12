@@ -166,3 +166,166 @@ Error: listen EADDRINUSE: address already in use :::4000
     at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rateLimiter.middleware.js:20:62)
     at listOnTimeout (node:internal/timers:608:17)
     at process.processTimers (node:internal/timers:543:7)
+2026-02-12 21:18:41 error: Rate limiter error [global] (falling back):
+2026-02-12 21:18:42 error: Rate limiter error [global] (falling back):
+2026-02-12 21:18:42 error: Rate limiter error [global] (falling back):
+2026-02-12 21:18:42 error: Rate limiter error [global] (falling back):
+2026-02-12 21:18:42 error: Rate limiter error [refreshToken] (falling back):
+2026-02-12 21:18:43 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/cache.middleware.js:33:64)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 21:18:43 error: Error: Redis timeout
+    at Timeout._onTimeout (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/cache.middleware.js:33:64)
+    at listOnTimeout (node:internal/timers:608:17)
+    at process.processTimers (node:internal/timers:543:7)
+2026-02-12 21:42:28 error: CastError: Cast to ObjectId failed for value "invalid-id" (type string) at path "_id" for model "Event"
+    at SchemaObjectId.cast (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/mongoose/lib/schema/objectId.js:251:11)
+    at SchemaObjectId.SchemaType.applySetters (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/mongoose/lib/schemaType.js:1255:12)
+    at SchemaObjectId.SchemaType.castForQuery (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/mongoose/lib/schemaType.js:1673:17)
+    at cast (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/mongoose/lib/cast.js:390:32)
+    at model.Query.Query.cast (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/mongoose/lib/query.js:4907:12)
+    at model.Query.Query._castConditions (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/mongoose/lib/query.js:2325:10)
+    at model.Query._findOne (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/mongoose/lib/query.js:2648:8)
+    at model.Query.exec (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/mongoose/lib/query.js:4456:80)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rbac.middleware.js:78:31
+2026-02-12 21:44:04 error: CastError: Cast to ObjectId failed for value "invalid-id" (type string) at path "_id" for model "Event"
+    at SchemaObjectId.cast (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/mongoose/lib/schema/objectId.js:251:11)
+    at SchemaObjectId.SchemaType.applySetters (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/mongoose/lib/schemaType.js:1255:12)
+    at SchemaObjectId.SchemaType.castForQuery (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/mongoose/lib/schemaType.js:1673:17)
+    at cast (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/mongoose/lib/cast.js:390:32)
+    at model.Query.Query.cast (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/mongoose/lib/query.js:4907:12)
+    at model.Query.Query._castConditions (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/mongoose/lib/query.js:2325:10)
+    at model.Query._findOne (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/mongoose/lib/query.js:2648:8)
+    at model.Query.exec (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/mongoose/lib/query.js:4456:80)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rbac.middleware.js:78:31
+2026-02-12 21:44:44 error: ReferenceError: mongoose is not defined
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rbac.middleware.js:76:13
+    at Layer.handle [as handle_request] (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/express/lib/router/route.js:149:13)
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/auth.middleware.js:63:5
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/error.middleware.js:82:5
+2026-02-12 21:44:44 error: ReferenceError: mongoose is not defined
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rbac.middleware.js:76:13
+    at Layer.handle [as handle_request] (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/express/lib/router/route.js:149:13)
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/auth.middleware.js:63:5
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/error.middleware.js:82:5
+2026-02-12 21:44:44 error: ReferenceError: mongoose is not defined
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rbac.middleware.js:76:13
+    at Layer.handle [as handle_request] (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/express/lib/router/route.js:149:13)
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/auth.middleware.js:63:5
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/error.middleware.js:82:5
+2026-02-12 21:44:44 error: ReferenceError: mongoose is not defined
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rbac.middleware.js:76:13
+    at Layer.handle [as handle_request] (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/express/lib/router/route.js:149:13)
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/auth.middleware.js:63:5
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/error.middleware.js:82:5
+2026-02-12 21:44:45 error: ReferenceError: mongoose is not defined
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/rbac.middleware.js:76:13
+    at Layer.handle [as handle_request] (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/express/lib/router/layer.js:95:5)
+    at next (/home/ravi/Desktop/my-project/gaming-site/server/node_modules/express/lib/router/route.js:149:13)
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/auth.middleware.js:63:5
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at /home/ravi/Desktop/my-project/gaming-site/server/src/shared/middleware/error.middleware.js:82:5
+2026-02-12 22:21:32 error: Rate limiter error [global] (falling back):
+2026-02-12 23:14:07 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:08 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:09 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:09 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:10 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:10 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:10 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:10 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:10 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:10 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:10 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:10 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:10 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:11 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:11 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:11 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:11 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:11 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:11 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:11 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:11 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:47 error: ReferenceError: logger is not defined
+    at connectDB (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/config/db.js:19:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async startServer (file:///home/ravi/Desktop/my-project/gaming-site/server/src/server.js:14:5)
+2026-02-12 23:14:55 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:57 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:57 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:58 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:58 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:58 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:58 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:58 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:58 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:58 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:58 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:59 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:59 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:59 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:59 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:59 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:59 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:59 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:14:59 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:00 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:00 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:32 error: ReferenceError: logger is not defined
+    at connectDB (file:///home/ravi/Desktop/my-project/gaming-site/server/src/shared/config/db.js:19:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async startServer (file:///home/ravi/Desktop/my-project/gaming-site/server/src/server.js:14:5)
+2026-02-12 23:15:47 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:49 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:49 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:49 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:50 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:50 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:50 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:50 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:50 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:50 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:50 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:50 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:50 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:51 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:51 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:51 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:51 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:51 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:51 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:51 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:15:51 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:05 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:05 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:06 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:07 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:07 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:07 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:07 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:07 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:07 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:07 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:08 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:08 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:08 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:08 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:08 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:08 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:08 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:08 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:08 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:09 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')
+2026-02-12 23:16:09 error: >>> [AUTH] Redis check failed: Cannot read properties of null (reading '1')

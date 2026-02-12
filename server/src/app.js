@@ -8,7 +8,6 @@ import morgan from "morgan";
 import { stream } from "./shared/utils/logger.js";
 import helmet from "helmet";
 import mongoSanitize from "express-mongo-sanitize";
-import xss from "xss-clean";
 import hpp from "hpp";
 import { errorHandle } from "./shared/middleware/error.middleware.js";
 import { rateLimiter } from "./shared/middleware/rateLimiter.middleware.js";
@@ -36,8 +35,8 @@ if (process.env.SENTRY_DSN) {
         integrations: [
             nodeProfilingIntegration(),
         ],
-        // Tracing
-        tracesSampleRate: 1.0,
+        // Tracing - Use lower sample rate in production for better performance
+        tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
         // Profiles sample rate is relative to tracesSampleRate. 
         // 1.0 is very heavy, reducing to 0.1 for better performance.
         profilesSampleRate: 0.1,
@@ -55,7 +54,8 @@ app.use(cookieParese());
 if (process.env.NODE_ENV !== "test") {
     app.use(helmet());
     app.use(mongoSanitize());
-    app.use(xss());
+    // Note: xss-clean is deprecated. Helmet provides some XSS protection via CSP.
+    // Consider using express-xss-sanitizer if additional XSS sanitization is needed.
     app.use(hpp());
     app.use(rateLimiter({ limit: 100, timer: 15 * 60, key: "global" }));
 }

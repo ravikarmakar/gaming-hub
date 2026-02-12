@@ -32,11 +32,13 @@ import pointSystem from "../../../shared/config/pointSystem.js";
 
 // 🔹 **Auto-Update `totalPoints` & `matchesPlayed` Before Save**
 leaderboardSchema.pre("save", async function (next) {
-  this.teamScore.forEach((team) => {
+  // Use for...of instead of forEach to properly support async operations
+  // forEach does not await async operations, which would cause issues if uncommented code is enabled
+  for (const team of this.teamScore) {
     // Total Points = Place Points (score) + Kills * Kill Point
     team.totalPoints = (team.score || 0) + (team.kills || 0) * (pointSystem.killPoint || 1);
     // team.matchesPlayed = await mongoose.model("Match").countDocuments({ teamId: team.teamId }); // Match model does not exist yet
-  });
+  }
 
   next();
 });

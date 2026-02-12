@@ -110,6 +110,10 @@ export const handleNotificationAction = TryCatchHandler(async (req, res, next) =
     if (handler) {
         try {
             const resultMessage = await handler(notification, actionType, req);
+            // Ensure content object exists before setting message
+            if (!notification.content) {
+                notification.content = {};
+            }
             notification.content.message = resultMessage;
         } catch (error) {
             return next(error);
@@ -137,10 +141,19 @@ export const handleNotificationAction = TryCatchHandler(async (req, res, next) =
  * @route GET /api/v1/notifications/org/:orgId
  * @access Private
  */
-export const getOrgNotifications = TryCatchHandler(async (req, res) => {
+export const getOrgNotifications = TryCatchHandler(async (req, res, next) => {
     const { orgId } = req.params;
     const { page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
+
+    // Authorization: Check if user has access to this organization
+    const userHasOrgAccess = req.user.roles?.some(
+        (role) => role.scope === "org" && role.scopeId?.toString() === orgId
+    );
+
+    if (!userHasOrgAccess) {
+        return next(new CustomError("You do not have permission to view this organization's notifications", 403));
+    }
 
     const notifications = await Notification.find({ "relatedData.orgId": orgId })
         .sort({ createdAt: -1 })

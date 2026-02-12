@@ -58,7 +58,10 @@ logger.add(
 
 const stream = {
     write: (message) => {
-        logger.info(message.substring(0, message.lastIndexOf("\n")));
+        const trimmedMessage = message.trim();
+        if (trimmedMessage.length > 0) {
+            logger.info(trimmedMessage);
+        }
     },
 };
 

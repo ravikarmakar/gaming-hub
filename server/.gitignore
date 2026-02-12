@@ -3,3 +3,5 @@ node_modules
 public/temp/
 tests/
 scripts/
+logs/
+*-audit.json

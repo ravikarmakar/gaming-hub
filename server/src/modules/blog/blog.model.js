@@ -32,15 +32,7 @@ const BlogSchema = new mongoose.Schema({
     enum: ["user", "organizer"], // Defines whether the blog is for a user or an organizer
     required: true,
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
+}, { timestamps: true }); // Enable automatic createdAt and updatedAt
 
 // Create the Blog model
 const Blog = mongoose.model("Blog", BlogSchema);

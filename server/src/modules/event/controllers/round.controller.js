@@ -7,8 +7,8 @@ import { logger } from "../../../shared/utils/logger.js";
 export const getRounds = async (req, res) => {
   try {
     const { eventId } = req.query;
-    if (!eventId) {
-      return res.status(400).json({ message: "Event ID is required" });
+    if (!eventId || !mongoose.Types.ObjectId.isValid(eventId)) {
+      return res.status(400).json({ message: "Valid Event ID is required" });
     }
 
     // Use aggregation to fetch rounds along with their groups
@@ -46,8 +46,8 @@ export const createRound = async (req, res) => {
     const { eventId, roundName, startTime, dailyStartTime, dailyEndTime, gapMinutes, matchesPerGroup, qualifyingTeams } = req.body;
 
     // Event ID check
-    if (!eventId) {
-      return res.status(400).json({ message: "Event ID is required!" });
+    if (!eventId || !mongoose.Types.ObjectId.isValid(eventId)) {
+      return res.status(400).json({ message: "Valid Event ID is required!" });
     }
 
     // Check if Event exists
@@ -56,12 +56,12 @@ export const createRound = async (req, res) => {
       return res.status(404).json({ message: "Event not found!" });
     }
 
-    // Check if Teams are registered (using EventRegistration)
-    const totalTeams = await EventRegistration.countDocuments({ eventId });
+    // Check if Teams are registered (using EventRegistration) - Only count approved registrations
+    const totalTeams = await EventRegistration.countDocuments({ eventId, status: "approved" });
     if (totalTeams === 0) {
       return res.status(400).json({
         message:
-          "Cannot create a round. No teams have registered in this event!",
+          "Cannot create a round. No teams have approved registrations in this event!",
       });
     }
 
@@ -77,21 +77,43 @@ export const createRound = async (req, res) => {
     }
 
     // Total rounds count (Auto-generate round name if not provided)
-    const roundCount = await Round.countDocuments({ eventId });
+    // We'll use a retry mechanism to handle race conditions on creation
+    let newRound;
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        const roundCount = await Round.countDocuments({ eventId });
 
-    // Create new round
-    const newRound = await Round.create({
-      eventId,
-      roundName: roundName || `Round-${roundCount + 1}`,
-      status: "pending",
-      roundNumber: roundCount + 1,
-      startTime,
-      dailyStartTime,
-      dailyEndTime,
-      gapMinutes,
-      matchesPerGroup,
-      qualifyingTeams
-    });
+        newRound = await Round.create({
+          eventId,
+          roundName: roundName || `Round-${roundCount + 1}`,
+          status: "pending",
+          roundNumber: roundCount + 1,
+          startTime,
+          dailyStartTime,
+          dailyEndTime,
+          gapMinutes,
+          matchesPerGroup,
+          qualifyingTeams
+        });
+
+        // If successful, break the loop
+        break;
+      } catch (createError) {
+        if (createError.code === 11000 && retries > 1) {
+          // Duplicate key error (likely roundNumber or roundName collision)
+          // Wait a random short time before retrying to reduce collision probability
+          await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+          retries--;
+          continue;
+        } else if (createError.code === 11000) {
+          return res.status(400).json({
+            message: "A round with this name or number already exists for this event. Please try again."
+          });
+        }
+        throw createError;
+      }
+    }
 
     // Note: We do not push to event.rounds because Event schema does not have a rounds array
     // The relationship is handled by Round.eventId
@@ -117,7 +139,7 @@ export const createRound = async (req, res) => {
             type: "ROUND_CREATED",
             content: {
               title: "New Round Created!",
-              message: `${event.eventName}: ${newRound.roundName} has been created. Scheduled to start on ${new Date(startTime).toLocaleString()}.`
+              message: `${event.eventName}: ${newRound.roundName} has been created. ${startTime ? `Scheduled to start on ${new Date(startTime).toLocaleString()}.` : 'Schedule is pending.'}`
             },
             relatedData: {
               eventId,
@@ -145,8 +167,8 @@ export const getRoundDetails = async (req, res) => {
     const { roundId } = req.params;
 
     // ✅ 1. Check if Round ID is provided
-    if (!roundId) {
-      return res.status(400).json({ message: "Round ID is required!" });
+    if (!roundId || !mongoose.Types.ObjectId.isValid(roundId)) {
+      return res.status(400).json({ message: "Valid Round ID is required!" });
     }
 
     // ✅ 2. Fetch Round Details with Event & Groups
@@ -182,7 +204,13 @@ export const updateRound = async (req, res) => {
     const { roundId } = req.params;
     const { roundName, startTime, dailyStartTime, dailyEndTime, gapMinutes, matchesPerGroup, qualifyingTeams, status } = req.body;
 
-    if (!roundId) return res.status(400).json({ message: "Round ID required" });
+    if (!roundId || !mongoose.Types.ObjectId.isValid(roundId)) {
+      return res.status(400).json({ message: "Valid Round ID required" });
+    }
+
+    if (status && !["pending", "ongoing", "completed"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
 
     const updateData = {};
     if (roundName) updateData.roundName = roundName;
@@ -217,7 +245,9 @@ export const deleteRound = async (req, res) => {
   try {
     const { roundId } = req.params;
 
-    if (!roundId) return res.status(400).json({ message: "Round ID required" });
+    if (!roundId || !mongoose.Types.ObjectId.isValid(roundId)) {
+      return res.status(400).json({ message: "Valid Round ID required" });
+    }
 
     const round = await Round.findById(roundId);
     if (!round) return res.status(404).json({ message: "Round not found" });

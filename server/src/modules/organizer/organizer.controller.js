@@ -1,6 +1,7 @@
 import Organizer from "../organizer/organizer.model.js";
 import User from "../user/user.model.js";
 import Event from "../event/event.model.js";
+import mongoose from "mongoose";
 import { TryCatchHandler } from "../../shared/middleware/error.middleware.js";
 import { uploadOnImageKit, deleteFromImageKit } from "../../shared/services/imagekit.service.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
@@ -10,28 +11,20 @@ import { generateTokens, storeRefreshToken, setCookies } from "../auth/auth.serv
 import JoinRequest from "../join-request/join-request.model.js";
 import { createNotification } from "../notification/notification.controller.js";
 import { logger } from "../../shared/utils/logger.js";
+import fs from "fs";
+
+const escapeRegex = (string) => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
 
 export const createOrg = TryCatchHandler(async (req, res, next) => {
   const { userId } = req.user;
   const cacheKey = `user_profile:${userId}`;
   const { name, email, description, tag } = req.body;
 
-  const imageFile = req.file;
-  // upload image here
-  let imageUrl = null
+  // upload image logic moved down after user/duplicate checks
+  let imageUrl = null;
   let imageFileId = null;
-
-  if (imageFile) {
-    const uploadRes = await uploadOnImageKit(
-      imageFile.path,
-      `org-logo-${Date.now()}`,
-      "/organizers/logos"
-    );
-    if (uploadRes) {
-      imageUrl = uploadRes.url;
-      imageFileId = uploadRes.fileId;
-    }
-  }
 
   const user = await User.findById(userId);
   if (!user) return next(new CustomError("User not found", 404));
@@ -63,6 +56,25 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
       return next(new CustomError("Organization email is already in use", 400));
     if (existingOrg.tag === tag?.toUpperCase())
       return next(new CustomError("Organization tag is already in use", 400));
+  }
+
+  // Handle image upload after validation
+  if (req.file) {
+    try {
+      const uploadRes = await uploadOnImageKit(
+        req.file.path,
+        `org-logo-${Date.now()}`,
+        "/organizers/logos"
+      );
+      if (uploadRes) {
+        imageUrl = uploadRes.url;
+        imageFileId = uploadRes.fileId;
+      }
+    } finally {
+      if (req.file.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+    }
   }
 
   const newOrg = await Organizer.create({
@@ -108,6 +120,10 @@ export const getOrgDetails = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Organization ID is required", 400));
   }
 
+  if (!mongoose.Types.ObjectId.isValid(orgId)) {
+    return next(new CustomError("Invalid Organization ID format", 400));
+  }
+
   const organization = await Organizer.findOne({ _id: orgId, isDeleted: false }).populate(
     "ownerId",
     "username email"
@@ -124,11 +140,11 @@ export const getOrgDetails = TryCatchHandler(async (req, res, next) => {
   const skip = (page - 1) * limit;
 
   const matchStage = {
-    orgId: organization._id,
+    orgId: new mongoose.Types.ObjectId(orgId),
   };
 
   if (search) {
-    matchStage.username = { $regex: search, $options: "i" };
+    matchStage.username = { $regex: escapeRegex(search), $options: "i" };
   }
 
   const membersResult = await User.aggregate([
@@ -195,6 +211,10 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Organization ID is required", 400));
   }
 
+  if (!mongoose.Types.ObjectId.isValid(orgId)) {
+    return next(new CustomError("Invalid Organization ID format", 400));
+  }
+
   const { name, email, description, tag, isHiring, socialLinks } = req.body;
   const files = req.files;
 
@@ -206,6 +226,7 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
 
   // Handle Image Uploads in Parallel
   const uploadPromises = [];
+  const newlyUploadedFileIds = []; // Track new uploads to clean up if DB save fails
 
   if (files?.image?.[0]) {
     uploadPromises.push(
@@ -216,7 +237,16 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
           "/organizers/logos"
         );
         if (uploadRes) {
-          if (org.imageFileId) await deleteFromImageKit(org.imageFileId);
+          newlyUploadedFileIds.push(uploadRes.fileId); // Track for potential rollback
+
+          // Try to delete old image, but don't block if it fails
+          if (org.imageFileId) {
+            try {
+              await deleteFromImageKit(org.imageFileId);
+            } catch (err) {
+              logger.error(`Failed to delete old org logo ${org.imageFileId}:`, err);
+            }
+          }
           org.imageUrl = uploadRes.url;
           org.imageFileId = uploadRes.fileId;
         }
@@ -233,7 +263,16 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
           "/organizers/banners"
         );
         if (uploadRes) {
-          if (org.bannerFileId) await deleteFromImageKit(org.bannerFileId);
+          newlyUploadedFileIds.push(uploadRes.fileId); // Track for potential rollback
+
+          // Try to delete old banner, but don't block if it fails
+          if (org.bannerFileId) {
+            try {
+              await deleteFromImageKit(org.bannerFileId);
+            } catch (err) {
+              logger.error(`Failed to delete old org banner ${org.bannerFileId}:`, err);
+            }
+          }
           org.bannerUrl = uploadRes.url;
           org.bannerFileId = uploadRes.fileId;
         }
@@ -241,33 +280,46 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
     );
   }
 
-  if (uploadPromises.length > 0) {
-    await Promise.all(uploadPromises);
-  }
+  try {
+    if (uploadPromises.length > 0) {
+      await Promise.all(uploadPromises);
+    }
 
-  // Update fields if provided
-  if (typeof name !== 'undefined') org.name = name;
-  if (typeof email !== 'undefined') org.email = email;
-  if (typeof description !== 'undefined') org.description = description;
-  if (typeof tag !== 'undefined') org.tag = tag;
+    // Update fields if provided
+    if (typeof name !== 'undefined') org.name = name;
+    if (typeof email !== 'undefined') org.email = email;
+    if (typeof description !== 'undefined') org.description = description;
+    if (typeof tag !== 'undefined') org.tag = tag;
 
-  if (typeof isHiring !== 'undefined') {
-    org.isHiring = isHiring === 'true' || isHiring === true;
-  }
+    if (typeof isHiring !== 'undefined') {
+      org.isHiring = isHiring === 'true' || isHiring === true;
+    }
 
-  if (socialLinks) {
-    try {
+    if (socialLinks) {
       const parsedSocial = typeof socialLinks === 'string' ? JSON.parse(socialLinks) : socialLinks;
       org.socialLinks = {
         ...org.socialLinks,
         ...parsedSocial
       };
-    } catch (e) {
-      logger.error("Error parsing socialLinks:", e);
     }
-  }
 
-  await org.save();
+    await org.save();
+  } catch (error) {
+    // Rollback: Delete newly uploaded images if save/logic fails
+    if (newlyUploadedFileIds.length > 0) {
+      logger.info("Rolling back orphaned org images due to update failure...");
+      await Promise.allSettled(newlyUploadedFileIds.map(fid => deleteFromImageKit(fid)));
+    }
+
+    // Re-throw the original error
+    throw error;
+  } finally {
+    // Cleanup local files in all cases
+    const allFiles = [...(files?.image || []), ...(files?.banner || [])];
+    allFiles.forEach(f => {
+      if (f.path && fs.existsSync(f.path)) fs.unlinkSync(f.path);
+    });
+  }
 
   res.status(200).json({
     success: true,
@@ -283,6 +335,10 @@ export const addStaff = TryCatchHandler(async (req, res, next) => {
 
   if (!orgId) {
     return next(new CustomError("Organization ID is required", 400));
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(orgId)) {
+    return next(new CustomError("Invalid Organization ID format", 400));
   }
 
 
@@ -355,10 +411,13 @@ export const addStaff = TryCatchHandler(async (req, res, next) => {
   if (bulkOps.length > 0) {
     await User.bulkWrite(bulkOps);
 
-    // Invalidate cache for updated users (parallel)
-    const pipeline = redis.pipeline();
-    staff.forEach(uid => pipeline.del(`user_profile:${uid}`));
-    await pipeline.exec();
+    // Invalidate cache ONLY for successfully updated users
+    const updatedUserIds = results.filter(r => r.success).map(r => r.userId);
+    if (updatedUserIds.length > 0) {
+      const pipeline = redis.pipeline();
+      updatedUserIds.forEach(uid => pipeline.del(`user_profile:${uid}`));
+      await pipeline.exec();
+    }
   }
 
   res
@@ -371,6 +430,13 @@ export const updateStaffRole = TryCatchHandler(async (req, res, next) => {
   const orgId = req.params.orgId || req.orgContext?.orgId || req.body.orgId;
 
   if (!orgId) return next(new CustomError("Organization ID is required", 400));
+  if (!mongoose.Types.ObjectId.isValid(orgId)) return next(new CustomError("Invalid Organization ID format", 400));
+
+  // Validate newRole to prevent privilege escalation
+  const allowedRoles = [Roles.ORG.MANAGER, Roles.ORG.STAFF, Roles.ORG.PLAYER];
+  if (!allowedRoles.includes(newRole)) {
+    return next(new CustomError("Invalid role or insufficient permissions to assign this role", 400));
+  }
 
 
   const user = await User.findById(userId);
@@ -413,6 +479,7 @@ export const removeStaff = TryCatchHandler(async (req, res, next) => {
   const orgId = req.params.orgId || req.orgContext?.orgId || req.body.orgId;
 
   if (!orgId) return next(new CustomError("Organization ID is required", 400));
+  if (!mongoose.Types.ObjectId.isValid(orgId)) return next(new CustomError("Invalid Organization ID format", 400));
 
 
   const user = await User.findById(userId);
@@ -424,6 +491,12 @@ export const removeStaff = TryCatchHandler(async (req, res, next) => {
 
   if (!hasOrgRole)
     return next(new CustomError("User is not part of this organization", 403));
+
+  // Protection against removing the organization owner
+  const org = await Organizer.findById(orgId);
+  if (org && user._id.toString() === org.ownerId.toString()) {
+    return next(new CustomError("Cannot remove organization owner", 403));
+  }
 
   // Remove the org role
   user.roles = user.roles.filter(
@@ -463,6 +536,10 @@ export const deleteOrg = TryCatchHandler(async (req, res, next) => {
 
   if (!orgId) {
     return next(new CustomError("Organization ID is required", 400));
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(orgId)) {
+    return next(new CustomError("Invalid Organization ID format", 400));
   }
 
   const org = await Organizer.findOne({ _id: orgId, isDeleted: false });
@@ -525,10 +602,10 @@ export const deleteOrg = TryCatchHandler(async (req, res, next) => {
 
   // Cleanup ImageKit assets
   if (org.imageFileId) {
-    deleteFromImageKit(org.imageFileId);
+    await deleteFromImageKit(org.imageFileId);
   }
   if (org.bannerFileId) {
-    deleteFromImageKit(org.bannerFileId);
+    await deleteFromImageKit(org.bannerFileId);
   }
 
   res.status(200).json({
@@ -548,6 +625,10 @@ export const getDashboardStats = TryCatchHandler(async (req, res, next) => {
 
   if (!orgId) {
     return next(new CustomError("Organization ID is required", 400));
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(orgId)) {
+    return next(new CustomError("Invalid Organization ID format", 400));
   }
 
   const organization = await Organizer.findOne({ _id: orgId, isDeleted: false });
@@ -617,6 +698,10 @@ export const transferOwnership = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Organization ID is required", 400));
   }
 
+  if (!mongoose.Types.ObjectId.isValid(orgId)) {
+    return next(new CustomError("Invalid Organization ID format", 400));
+  }
+
 
 
   const org = await Organizer.findOne({ _id: orgId, isDeleted: false });
@@ -678,9 +763,13 @@ export const transferOwnership = TryCatchHandler(async (req, res, next) => {
   await redis.del(`user_profile:${newOwnerId}`);
 
   // Refresh tokens for current user (immediate role update for the demoted previous owner)
-  const { accessToken, refreshToken } = generateTokens(currentUser._id, currentUser.roles);
-  await storeRefreshToken(currentUser._id, refreshToken);
-  setCookies(res, accessToken, refreshToken);
+  const { accessToken: curAT, refreshToken: curRT } = generateTokens(currentUser._id, currentUser.roles);
+  await storeRefreshToken(currentUser._id, curRT);
+  setCookies(res, curAT, curRT);
+
+  // Refresh tokens for the new owner (so role change takes effect immediately)
+  const { refreshToken: newRT } = generateTokens(newOwner._id, newOwner.roles);
+  await storeRefreshToken(newOwner._id, newRT);
 
   // Fetch updated organization with members for the response
   const updatedOrg = await Organizer.findById(orgId);
@@ -712,6 +801,10 @@ export const joinOrg = TryCatchHandler(async (req, res, next) => {
   const { orgId } = req.params;
   const { userId } = req.user;
   const { message } = req.body;
+
+  if (!orgId || !mongoose.Types.ObjectId.isValid(orgId)) {
+    throw new CustomError("Invalid or missing Organization ID", 400);
+  }
 
   const user = await User.findById(userId);
   if (user.orgId) {
@@ -778,6 +871,10 @@ export const getOrgJoinRequests = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Organization ID is required", 400));
   }
 
+  if (!mongoose.Types.ObjectId.isValid(orgId)) {
+    return next(new CustomError("Invalid Organization ID format", 400));
+  }
+
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 20;
   const skip = (page - 1) * limit;
@@ -813,6 +910,10 @@ export const getOrgJoinRequests = TryCatchHandler(async (req, res, next) => {
 export const manageJoinRequest = TryCatchHandler(async (req, res, next) => {
   const { requestId } = req.params;
   const { action } = req.body; // 'accepted' or 'rejected'
+
+  if (!['accepted', 'rejected'].includes(action)) {
+    throw new CustomError("Invalid action. Must be 'accepted' or 'rejected'", 400);
+  }
   const { userId } = req.user;
 
 
@@ -922,6 +1023,11 @@ import Invitation from "../invitation/invitation.model.js";
 
 export const inviteStaffToOrg = TryCatchHandler(async (req, res, next) => {
   const { orgId } = req.params;
+
+  if (!orgId || !mongoose.Types.ObjectId.isValid(orgId)) {
+    throw new CustomError("Invalid or missing Organization ID", 400);
+  }
+
   const { userId } = req.user; // Sender (must be Owner/Manager)
   const { userId: targetUserId, message, role } = req.body; // Target user to invite
 
@@ -988,6 +1094,10 @@ export const inviteStaffToOrg = TryCatchHandler(async (req, res, next) => {
 export const getOrgPendingInvites = TryCatchHandler(async (req, res, next) => {
   const { orgId } = req.params;
 
+  if (!orgId || !mongoose.Types.ObjectId.isValid(orgId)) {
+    throw new CustomError("Invalid or missing Organization ID", 400);
+  }
+
   const invites = await Invitation.find({
     entityId: orgId,
     entityModel: "Organizer",
@@ -1006,6 +1116,10 @@ export const getOrgPendingInvites = TryCatchHandler(async (req, res, next) => {
 
 export const cancelOrgInvite = TryCatchHandler(async (req, res, next) => {
   const { orgId, inviteId } = req.params;
+
+  if (!orgId || !mongoose.Types.ObjectId.isValid(orgId)) {
+    throw new CustomError("Invalid or missing Organization ID", 400);
+  }
 
   const invite = await Invitation.findOne({ _id: inviteId, entityId: orgId });
   if (!invite) throw new CustomError("Invitation not found", 404);
@@ -1027,7 +1141,7 @@ export const getOrganizers = TryCatchHandler(async (req, res, next) => {
 
   const query = { isDeleted: false };
   if (search) {
-    query.name = { $regex: search, $options: "i" };
+    query.name = { $regex: escapeRegex(search), $options: "i" };
   }
 
   const [organizers, total] = await Promise.all([

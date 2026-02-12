@@ -53,6 +53,11 @@ export const notificationHandlers = {
             return "This invitation no longer exists or has been cancelled.";
         }
 
+        // Security: Validate that the invite recipient matches the requesting user
+        if (invite.receiver.toString() !== req.user._id.toString()) {
+            throw new CustomError("Access Denied: You are not the recipient of this invitation", 403);
+        }
+
         const teamId = invite.entityId || notification.relatedData.teamId;
         const team = await Team.findById(teamId);
 
@@ -61,50 +66,82 @@ export const notificationHandlers = {
         }
 
         if (actionType === "ACCEPT") {
-            // Check if user is already in a team
-            const fullUser = await User.findById(req.user._id);
-            if (fullUser.teamId) {
-                throw new CustomError("You are already in a team", 400);
-            }
+            // Use atomic transaction for team join operation
+            const session = await User.startSession();
+            session.startTransaction();
 
-            // Add user to team
-            const alreadyMember = team.teamMembers.some((m) => m.user.toString() === req.user._id.toString());
-            if (!alreadyMember) {
-                await Team.findByIdAndUpdate(teamId, {
-                    $push: {
-                        teamMembers: {
-                            user: req.user._id,
-                            username: fullUser.username,
-                            avatar: fullUser.avatar,
-                            roleInTeam: invite.role === Roles.TEAM.MANAGER ? "manager" : "player",
-                            joinedAt: new Date(),
-                            isActive: true
-                        }
-                    }
-                });
+            try {
+                // Re-fetch team inside transaction to ensure it still exists and lock state if necessary
+                // This prevents TOCTOU (Time-of-Check Time-of-Use) race conditions
+                const teamInTx = await Team.findById(teamId).session(session);
+                if (!teamInTx) {
+                    throw new CustomError("Team no longer exists", 404);
+                }
 
-                // Update user's teamId and roles
-                const teamRole = invite.role === Roles.TEAM.MANAGER ? Roles.TEAM.MANAGER : Roles.TEAM.PLAYER;
-                await User.findByIdAndUpdate(req.user._id, {
-                    $set: { teamId: teamId },
-                    $push: {
-                        roles: {
-                            scope: Scopes.TEAM,
-                            role: teamRole,
-                            scopeId: teamId,
-                            scopeModel: "Team",
+                // Check if user is already in a team
+                const fullUser = await User.findById(req.user._id).session(session);
+                if (fullUser.teamId) {
+                    throw new CustomError("You are already in a team", 400);
+                }
+
+                // Add user to team
+                const alreadyMember = teamInTx.teamMembers.some((m) => m.user.toString() === req.user._id.toString());
+                if (!alreadyMember) {
+                    await Team.findByIdAndUpdate(
+                        teamId,
+                        {
+                            $push: {
+                                teamMembers: {
+                                    user: req.user._id,
+                                    username: fullUser.username,
+                                    avatar: fullUser.avatar,
+                                    roleInTeam: invite.role === Roles.TEAM.MANAGER ? "manager" : "player",
+                                    joinedAt: new Date(),
+                                    isActive: true
+                                }
+                            }
                         },
-                    },
-                });
+                        { session }
+                    );
 
-                // Invalidate Redis cache
-                await redis.del(`user_profile:${req.user._id}`);
-                await redis.del(`team_details:${teamId}`);
-            }
+                    // Update user's teamId and roles
+                    const teamRole = invite.role === Roles.TEAM.MANAGER ? Roles.TEAM.MANAGER : Roles.TEAM.PLAYER;
+                    await User.findByIdAndUpdate(
+                        req.user._id,
+                        {
+                            $set: { teamId: teamId },
+                            $push: {
+                                roles: {
+                                    scope: Scopes.TEAM,
+                                    role: teamRole,
+                                    scopeId: teamId,
+                                    scopeModel: "Team",
+                                },
+                            },
+                        },
+                        { session }
+                    );
+                }
 
-            if (invite) {
-                invite.status = "accepted";
-                await invite.save();
+                if (invite) {
+                    invite.status = "accepted";
+                    await invite.save({ session });
+                }
+
+                await session.commitTransaction();
+
+                // Invalidate Redis cache after successful transaction
+                try {
+                    await redis.del(`user_profile:${req.user._id}`);
+                    await redis.del(`team_details:${teamId}`);
+                } catch (cacheError) {
+                    logger.warn("Cache invalidation failed after team join:", cacheError);
+                }
+            } catch (error) {
+                await session.abortTransaction();
+                throw error;
+            } finally {
+                session.endSession();
             }
 
             return `You have accepted the invite to join ${team.teamName}`;
@@ -130,6 +167,11 @@ export const notificationHandlers = {
             return "This invitation no longer exists or has been cancelled.";
         }
 
+        // Security: Validate that the invite recipient matches the requesting user
+        if (invite.receiver.toString() !== req.user._id.toString()) {
+            throw new CustomError("Access Denied: You are not the recipient of this invitation", 403);
+        }
+
         const orgId = invite.entityId || notification.relatedData.orgId;
         const org = await Organizer.findById(orgId);
 
@@ -138,43 +180,69 @@ export const notificationHandlers = {
         }
 
         if (actionType === "ACCEPT") {
-            const fullUser = await User.findById(req.user._id);
+            // Use atomic transaction for org join operation
+            const session = await User.startSession();
+            session.startTransaction();
 
-            if (fullUser.orgId) {
-                throw new CustomError("You are already in an organization", 400);
-            }
+            try {
+                const fullUser = await User.findById(req.user._id).session(session);
 
-            // Check if user is already a member (redundant but safe)
-            const alreadyMember = fullUser.roles.some(
-                (r) => r.scope === Scopes.ORG && r.scopeId?.toString() === orgId.toString()
-            );
+                if (fullUser.orgId) {
+                    throw new CustomError("You are already in an organization", 400);
+                }
 
-            if (!alreadyMember) {
-                // Update User: Add role and set orgId
-                const invitedRole = invite.role || Roles.ORG.STAFF;
-                await User.findByIdAndUpdate(req.user._id, {
-                    $set: { orgId: orgId },
-                    $push: {
-                        roles: {
-                            scope: Scopes.ORG,
-                            role: invitedRole,
-                            scopeId: orgId,
-                            scopeModel: "Organizer",
+                // Check if user is already a member (redundant but safe)
+                const alreadyMember = fullUser.roles.some(
+                    (r) => r.scope === Scopes.ORG && r.scopeId?.toString() === orgId.toString()
+                );
+
+                if (!alreadyMember) {
+                    // Update User: Add role and set orgId
+                    const invitedRole = invite.role || Roles.ORG.STAFF;
+                    await User.findByIdAndUpdate(
+                        req.user._id,
+                        {
+                            $set: { orgId: orgId },
+                            $push: {
+                                roles: {
+                                    scope: Scopes.ORG,
+                                    role: invitedRole,
+                                    scopeId: orgId,
+                                    scopeModel: "Organizer",
+                                },
+                            },
                         },
-                    },
-                });
+                        { session }
+                    );
 
-                // Update Organizer: Increment member count
-                await Organizer.findByIdAndUpdate(orgId, {
-                    $inc: { "stats.memberCount": 1 }
-                });
+                    // Update Organizer: Increment member count
+                    await Organizer.findByIdAndUpdate(
+                        orgId,
+                        {
+                            $inc: { "stats.memberCount": 1 }
+                        },
+                        { session }
+                    );
+                }
 
-                // Invalidate Redis cache
-                await redis.del(`user_profile:${req.user._id}`);
+                invite.status = "accepted";
+                await invite.save({ session });
+
+                await session.commitTransaction();
+
+                // Invalidate Redis cache after successful transaction
+                try {
+                    await redis.del(`user_profile:${req.user._id}`);
+                    await redis.del(`org_details:${orgId}`);
+                } catch (cacheError) {
+                    logger.warn("Cache invalidation failed after org join:", cacheError);
+                }
+            } catch (error) {
+                await session.abortTransaction();
+                throw error;
+            } finally {
+                session.endSession();
             }
-
-            invite.status = "accepted";
-            await invite.save();
 
             return `You have successfully joined ${org.name}`;
         } else if (actionType === "REJECT") {

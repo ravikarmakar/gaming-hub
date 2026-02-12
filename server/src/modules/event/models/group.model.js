@@ -69,10 +69,11 @@ groupSchema.virtual("isUpcoming").get(function () {
 // **Pre-save hook for Auto Group Name**
 groupSchema.pre("save", async function (next) {
   if (!this.groupName) {
-    const groupCount = await mongoose
-      .model("Group")
-      .countDocuments({ roundId: this.roundId });
-    this.groupName = `Group-${groupCount + 1}`;
+    // Use timestamp to avoid race condition with concurrent group creation
+    // Alternative: Use MongoDB's ObjectId or a more sophisticated counter with atomic operations
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 1000);
+    this.groupName = `Group-${timestamp}-${random}`;
   }
   next();
 });
