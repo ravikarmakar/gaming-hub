@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  createLeaderboardEntry,
   createLeaderboardForRoundsGroups,
   getLeaderboardEntries,
   getLeaderboardByGroup,
@@ -17,6 +18,13 @@ router.post(
   isAuthenticated,
   authorize(Scopes.EVENT, [Roles.ORG.OWNER, Roles.ORG.MANAGER], { parentScope: Scopes.ORG }),
   createLeaderboardForRoundsGroups
+);
+
+router.post(
+  "/:groupId",
+  isAuthenticated,
+  authorize(Scopes.EVENT, [Roles.ORG.OWNER, Roles.ORG.MANAGER], { parentScope: Scopes.ORG }),
+  createLeaderboardEntry
 );
 
 router.get("/", isAuthenticated, authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), getLeaderboardEntries);

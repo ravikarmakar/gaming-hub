@@ -12,7 +12,8 @@ import { logger } from "../../shared/utils/logger.js";
  * @access Private
  */
 export const getMyNotifications = TryCatchHandler(async (req, res) => {
-    const { page = 1, limit = 10 } = req.query;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
     const skip = (page - 1) * limit;
 
     const notifications = await Notification.find({ recipient: req.user._id })
@@ -91,6 +92,10 @@ import { createNotificationWithActions, notificationHandlers } from "./notificat
  */
 export const handleNotificationAction = TryCatchHandler(async (req, res, next) => {
     const { actionType } = req.body;
+
+    if (!["ACCEPT", "REJECT", "VIEW"].includes(actionType)) {
+        return next(new CustomError("Invalid action type", 400));
+    }
     const notification = await Notification.findOne({
         _id: req.params.id,
         recipient: req.user._id,
@@ -143,7 +148,8 @@ export const handleNotificationAction = TryCatchHandler(async (req, res, next) =
  */
 export const getOrgNotifications = TryCatchHandler(async (req, res, next) => {
     const { orgId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
     const skip = (page - 1) * limit;
 
     // Authorization: Check if user has access to this organization
@@ -186,8 +192,9 @@ export const getOrgNotifications = TryCatchHandler(async (req, res, next) => {
  */
 export const createNotification = async (data) => {
     try {
-        await Notification.create(data);
+        return await Notification.create(data);
     } catch (error) {
         logger.error("Error creating notification:", error);
+        throw error;
     }
 };

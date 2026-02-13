@@ -30,16 +30,33 @@ const leaderboardSchema = new mongoose.Schema(
 
 import pointSystem from "../../../shared/config/pointSystem.js";
 
-// 🔹 **Auto-Update `totalPoints` & `matchesPlayed` Before Save**
-leaderboardSchema.pre("save", async function (next) {
-  // Use for...of instead of forEach to properly support async operations
-  // forEach does not await async operations, which would cause issues if uncommented code is enabled
-  for (const team of this.teamScore) {
+// 🔹 **Unified calculation and sorting logic**
+const calculateAndSortScores = (teamScore) => {
+  if (!teamScore || !Array.isArray(teamScore)) return;
+
+  // 1. Calculate totalPoints for each team
+  teamScore.forEach(team => {
     // Total Points = Place Points (score) + Kills * Kill Point
     team.totalPoints = (team.score || 0) + (team.kills || 0) * (pointSystem.killPoint || 1);
-    // team.matchesPlayed = await mongoose.model("Match").countDocuments({ teamId: team.teamId }); // Match model does not exist yet
-  }
+  });
 
+  // 2. Sort teams by totalPoints descending
+  teamScore.sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
+};
+
+leaderboardSchema.pre("save", async function (next) {
+  calculateAndSortScores(this.teamScore);
+  next();
+});
+
+// 🚀 Apply calculation and sorting logic on updates
+leaderboardSchema.pre(["findOneAndUpdate", "updateOne"], function (next) {
+  const update = this.getUpdate();
+  // Check if teamScore is being updated
+  if (update && (update.teamScore || update.$set?.teamScore)) {
+    const teamScore = update.teamScore || update.$set.teamScore;
+    calculateAndSortScores(teamScore);
+  }
   next();
 });
 

@@ -9,6 +9,10 @@ export const generateOTP = () => {
 
 // Sends a verification OTP email.
 export const sendVerificationEmail = async (email, otp) => {
+    if (!process.env.SENDER_EMAIL) {
+        throw new Error("SENDER_EMAIL is not defined in environment variables");
+    }
+
     const mailOptions = {
         from: process.env.SENDER_EMAIL,
         to: email,

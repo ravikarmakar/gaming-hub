@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       match: [
-        /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,})+$/,
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
         "Please provide a valid email address",
       ],
     },
@@ -167,28 +167,40 @@ userSchema.index({ "settings.notifications.email": 1 }); // For notification job
 
 
 userSchema.pre("save", async function (next) {
-  // Only hash if password is modified
-  if (!this.isModified("password")) {
-    return next();
+  // 1. Hash password if modified
+  if (this.isModified("password") && this.password && this.password.trim() !== "") {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
   }
 
-  // Guard against hashing null/undefined/empty passwords
-  if (!this.password || this.password.trim() === "") {
-    // If password is required (non-OAuth users), this will be caught by schema validation
-    // For OAuth users, password is not required, so we skip hashing
-    return next();
+  // 2. Hash verifyOtp if modified
+  if (this.isModified("verifyOtp") && this.verifyOtp && this.verifyOtp.trim() !== "") {
+    const salt = await bcrypt.genSalt(10);
+    this.verifyOtp = await bcrypt.hash(this.verifyOtp, salt);
   }
 
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+  // 3. Hash resetOtp if modified
+  if (this.isModified("resetOtp") && this.resetOtp && this.resetOtp.trim() !== "") {
+    const salt = await bcrypt.genSalt(10);
+    this.resetOtp = await bcrypt.hash(this.resetOtp, salt);
+  }
+
   next();
 });
 
 userSchema.methods.matchPassword = async function (enteredPassword) {
-  if (!this.password) {
-    throw new Error("Password is not set for this user.");
-  }
+  if (!this.password) return false;
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+userSchema.methods.matchVerifyOtp = async function (enteredOtp) {
+  if (!this.verifyOtp) return false;
+  return await bcrypt.compare(enteredOtp, this.verifyOtp);
+};
+
+userSchema.methods.matchResetOtp = async function (enteredOtp) {
+  if (!this.resetOtp) return false;
+  return await bcrypt.compare(enteredOtp, this.resetOtp);
 };
 
 const User = mongoose.models.User || mongoose.model("User", userSchema);

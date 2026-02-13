@@ -40,12 +40,13 @@ export const getPlayers = TryCatchHandler(async (req, res, next) => {
     };
 
     if (username) {
+        const trimmedUsername = username.trim();
         // Escape regex special characters to prevent injection
-        const escapedUsername = escapeRegex(username.trim());
+        const escapedUsername = escapeRegex(trimmedUsername);
 
         // Use text search for performance if > 2 chars, else anchored regex
-        if (username.length > 2) {
-            query.$text = { $search: escapedUsername };
+        if (trimmedUsername.length > 2) {
+            query.$text = { $search: trimmedUsername };
         } else {
             query.username = { $regex: `^${escapedUsername}`, $options: "i" };
         }

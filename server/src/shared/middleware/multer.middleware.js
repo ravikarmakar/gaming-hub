@@ -159,12 +159,18 @@ export const validateUploadedFileContent = (req, res, next) => {
 
   // Validate each file's content
   for (const file of filesToValidate) {
+    let fd;
     try {
-      const buffer = fs.readFileSync(file.path);
-      const isValid = validateFileContent(buffer, file.mimetype);
+      // Read only the first 12 bytes for header validation (12 bytes is enough for WebP check)
+      const buffer = Buffer.alloc(12);
+      fd = fs.openSync(file.path, 'r');
+      const bytesRead = fs.readSync(fd, buffer, 0, 12, 0);
+
+      const isValid = validateFileContent(buffer.slice(0, bytesRead), file.mimetype);
 
       if (!isValid) {
         // Cleanup ALL files (including valid ones) because the request is rejected
+        if (fd) fs.closeSync(fd);
         cleanupAllFiles();
         return res.status(400).json({
           success: false,
@@ -173,11 +179,18 @@ export const validateUploadedFileContent = (req, res, next) => {
       }
     } catch (error) {
       // Clean up ALL files on error
+      if (fd) try { fs.closeSync(fd); } catch (e) { }
       cleanupAllFiles();
       return res.status(500).json({
         success: false,
         message: "Error validating uploaded file."
       });
+    } finally {
+      if (fd) {
+        try { fs.closeSync(fd); } catch (e) {
+          console.error(`Failed to close file descriptor for ${file.path}:`, e);
+        }
+      }
     }
   }
 

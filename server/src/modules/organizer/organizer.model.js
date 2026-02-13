@@ -78,21 +78,43 @@ organizerSchema.index({ slug: 1 }, { unique: true, partialFilterExpression: { is
 
 
 // Auto-generate URL-safe slug from name before saving (only on creation)
-organizerSchema.pre("save", function (next) {
+organizerSchema.pre("save", async function (next) {
   // Only generate slug for new documents to avoid breaking existing URLs
   if (this.isNew && this.name) {
-    this.slug = this.name
+    let baseSlug = this.name
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
       .replace(/\s+/g, "-") // Replace spaces with hyphens
       .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
       .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
-    if (!this.slug || this.slug.length === 0) {
-      // Fallback for names that result in empty slugs (e.g. "!!!" -> "")
-      // Use a timestamp-based slug to ensure uniqueness and validity
-      this.slug = `org-${Date.now()}`;
+
+    if (!baseSlug || baseSlug.length === 0) {
+      baseSlug = "org"; // Fallback base
     }
+
+    let slug = baseSlug;
+    let isUnique = false;
+    let attempts = 0;
+
+    // 🚀 Robust Slug Collision Detection
+    while (!isUnique && attempts < 5) {
+      const existingOrg = await mongoose.models.Organizer.findOne({
+        slug,
+        isDeleted: false
+      }).select("_id");
+
+      if (existingOrg) {
+        // Collision detected: Append random suffix
+        const suffix = Math.random().toString(36).substring(2, 6);
+        slug = `${baseSlug}-${suffix}`;
+        attempts++;
+      } else {
+        isUnique = true;
+      }
+    }
+
+    this.slug = slug;
   }
   next();
 });

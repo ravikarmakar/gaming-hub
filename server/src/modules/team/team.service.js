@@ -10,8 +10,13 @@ import { uploadOnImageKit, deleteFromImageKit } from "../../shared/services/imag
 import { logger } from "../../shared/utils/logger.js";
 
 // Helper to check uniqueness
-export const checkTeamNameUnique = async (teamName) => {
-  const existingTeam = await Team.findOne({ teamName, isDeleted: false });
+export const checkTeamNameUnique = async (teamName, session = null) => {
+  const query = Team.findOne({ teamName, isDeleted: false });
+  if (session) {
+    query.session(session);
+  }
+  const existingTeam = await query;
+
   if (existingTeam) {
     throw new CustomError(
       "Team name already exists. Please choose a different name.",
@@ -32,7 +37,7 @@ export const createTeamService = async (userId, body, file) => {
   let uploadedImageStart = null;
 
   try {
-    await checkTeamNameUnique(teamName);
+    await checkTeamNameUnique(teamName, session);
 
     const user = await User.findById(userId).session(session);
     if (!user) throw new CustomError("User not found", 404);
@@ -139,101 +144,113 @@ export const updateTeamService = async (teamId, body, files) => {
     instagram,
   } = body;
 
-  const team = await Team.findById(teamId);
-  if (!team) throw new CustomError("Team not found", 404);
+  try {
+    const team = await Team.findOne({ _id: teamId, isDeleted: false });
+    if (!team) throw new CustomError("Team not found", 404);
 
-  // Check unique team name if it's being changed
-  if (teamName && teamName !== team.teamName) {
-    await checkTeamNameUnique(teamName);
-    team.teamName = teamName;
-  }
+    // Check unique team name if it's being changed
+    if (teamName && teamName !== team.teamName) {
+      await checkTeamNameUnique(teamName);
+      team.teamName = teamName;
+    }
 
-  // Handle branding assets update (logo and banner) - PARALLEL UPLOAD
-  let oldImageFileId = null;
-  let oldBannerFileId = null;
+    // Handle branding assets update (logo and banner) - PARALLEL UPLOAD
+    let oldImageFileId = null;
+    let oldBannerFileId = null;
 
-  if (files) {
-    const uploadPromises = [];
+    if (files) {
+      const uploadPromises = [];
 
-    if (files.image && files.image[0]) {
-      uploadPromises.push(
-        (async () => {
-          const uploadRes = await uploadOnImageKit(
-            files.image[0].path,
-            `team-logo-${team._id}-${Date.now()}`,
-            "/teams/logos"
-          );
-          if (uploadRes) {
-            oldImageFileId = team.imageFileId; // Store for later deletion
-            team.imageUrl = uploadRes.url;
-            team.imageFileId = uploadRes.fileId;
-          }
-        })()
+      if (files.image && files.image[0]) {
+        uploadPromises.push(
+          (async () => {
+            const uploadRes = await uploadOnImageKit(
+              files.image[0].path,
+              `team-logo-${team._id}-${Date.now()}`,
+              "/teams/logos"
+            );
+            if (uploadRes) {
+              oldImageFileId = team.imageFileId; // Store for later deletion
+              team.imageUrl = uploadRes.url;
+              team.imageFileId = uploadRes.fileId;
+            }
+          })()
+        );
+      }
+
+      if (files.banner && files.banner[0]) {
+        uploadPromises.push(
+          (async () => {
+            const uploadRes = await uploadOnImageKit(
+              files.banner[0].path,
+              `team-banner-${team._id}-${Date.now()}`,
+              "/teams/banners"
+            );
+            if (uploadRes) {
+              oldBannerFileId = team.bannerFileId; // Store for later deletion
+              team.bannerUrl = uploadRes.url;
+              team.bannerFileId = uploadRes.fileId;
+            }
+          })()
+        );
+      }
+
+      if (uploadPromises.length > 0) {
+        await Promise.all(uploadPromises);
+      }
+    }
+
+    // Update text fields
+    if (bio !== undefined) team.bio = bio;
+    if (tag !== undefined) team.tag = tag;
+    if (region !== undefined) team.region = region;
+
+    // Handle boolean string from FormData
+    if (isRecruiting !== undefined) {
+      team.isRecruiting = isRecruiting === "true" || isRecruiting === true;
+    }
+
+    // Update social links
+    if (!team.socialLinks) team.socialLinks = {};
+
+    if (twitter !== undefined) team.socialLinks.twitter = twitter || null;
+    if (discord !== undefined) team.socialLinks.discord = discord || null;
+    if (youtube !== undefined) team.socialLinks.youtube = youtube || null;
+    if (instagram !== undefined) team.socialLinks.instagram = instagram || null;
+
+    await team.save();
+
+    // Invalidate Team Cache
+    await redis.del(`team_details:${team._id}`);
+
+    // Async cleanup of old images AFTER successful save
+    if (oldImageFileId) {
+      deleteFromImageKit(oldImageFileId).catch(err =>
+        logger.error(`Failed to delete old team logo ${oldImageFileId}:`, err)
+      );
+    }
+    if (oldBannerFileId) {
+      deleteFromImageKit(oldBannerFileId).catch(err =>
+        logger.error(`Failed to delete old team banner ${oldBannerFileId}:`, err)
       );
     }
 
-    if (files.banner && files.banner[0]) {
-      uploadPromises.push(
-        (async () => {
-          const uploadRes = await uploadOnImageKit(
-            files.banner[0].path,
-            `team-banner-${team._id}-${Date.now()}`,
-            "/teams/banners"
-          );
-          if (uploadRes) {
-            oldBannerFileId = team.bannerFileId; // Store for later deletion
-            team.bannerUrl = uploadRes.url;
-            team.bannerFileId = uploadRes.fileId;
-          }
-        })()
-      );
-    }
-
-    if (uploadPromises.length > 0) {
-      await Promise.all(uploadPromises);
+    return team;
+  } finally {
+    // Cleanup locally uploaded files
+    if (files) {
+      if (files.image && files.image[0] && fs.existsSync(files.image[0].path)) {
+        try { fs.unlinkSync(files.image[0].path); } catch (e) { logger.error("Failed to delete local file:", e); }
+      }
+      if (files.banner && files.banner[0] && fs.existsSync(files.banner[0].path)) {
+        try { fs.unlinkSync(files.banner[0].path); } catch (e) { logger.error("Failed to delete local file:", e); }
+      }
     }
   }
-
-  // Update text fields
-  if (bio !== undefined) team.bio = bio;
-  if (tag !== undefined) team.tag = tag;
-  if (region !== undefined) team.region = region;
-
-  // Handle boolean string from FormData
-  if (isRecruiting !== undefined) {
-    team.isRecruiting = isRecruiting === "true" || isRecruiting === true;
-  }
-
-  // Update social links
-  if (!team.socialLinks) team.socialLinks = {};
-
-  if (twitter !== undefined) team.socialLinks.twitter = twitter || null;
-  if (discord !== undefined) team.socialLinks.discord = discord || null;
-  if (youtube !== undefined) team.socialLinks.youtube = youtube || null;
-  if (instagram !== undefined) team.socialLinks.instagram = instagram || null;
-
-  await team.save();
-
-  // Invalidate Team Cache
-  await redis.del(`team_details:${team._id}`);
-
-  // Async cleanup of old images AFTER successful save
-  if (oldImageFileId) {
-    deleteFromImageKit(oldImageFileId).catch(err =>
-      logger.error(`Failed to delete old team logo ${oldImageFileId}:`, err)
-    );
-  }
-  if (oldBannerFileId) {
-    deleteFromImageKit(oldBannerFileId).catch(err =>
-      logger.error(`Failed to delete old team banner ${oldBannerFileId}:`, err)
-    );
-  }
-
-  return team;
 };
 
 export const deleteTeamService = async (teamId) => {
-  const team = await Team.findById(teamId);
+  const team = await Team.findOne({ _id: teamId, isDeleted: false });
   if (!team) throw new CustomError("Team not found", 404);
 
   // 1. Set teamId = null and remove team roles for all team members (Atomic)
@@ -264,6 +281,8 @@ export const deleteTeamService = async (teamId) => {
   memberIds.forEach((userId) => {
     pipeline.del(`user_profile:${userId}`);
   });
+  // Also invalidate team details
+  pipeline.del(`team_details:${teamId}`);
   await pipeline.exec();
 
   // 4. Async cleanup of related data
@@ -273,10 +292,10 @@ export const deleteTeamService = async (teamId) => {
 
   // 5. Cleanup images from ImageKit to save costs
   if (team.imageFileId) {
-    deleteFromImageKit(team.imageFileId);
+    deleteFromImageKit(team.imageFileId).catch(err => logger.error(`Failed to delete team logo ${team.imageFileId}`, err));
   }
   if (team.bannerFileId) {
-    deleteFromImageKit(team.bannerFileId);
+    deleteFromImageKit(team.bannerFileId).catch(err => logger.error(`Failed to delete team banner ${team.bannerFileId}`, err));
   }
 
   return true;
@@ -408,98 +427,139 @@ export const transferTeamOwnershipService = async (teamId, currentOwnerId, newOw
 };
 
 export const manageTeamStaffService = async (teamId, memberId, action) => {
-  const team = await Team.findById(teamId);
-  if (!team) throw new CustomError("Team not found", 404);
-
-  // Verify member exists in team
-  const isMember = team.teamMembers.some(
-    (m) => m.user.toString() === memberId.toString()
-  );
-
-  if (!isMember) {
-    throw new CustomError("The specified user is not a member of the team.", 404);
+  if (!['promote', 'demote'].includes(action)) {
+    throw new CustomError("Invalid action. Must be 'promote' or 'demote'.", 400);
   }
 
-  // Prevent modifying the Owner (Captain)
-  if (team.captain.toString() === memberId.toString()) {
-    throw new CustomError("Cannot separate system role for the Team Owner.", 403);
-  }
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  const user = await User.findById(memberId);
-  if (!user) throw new CustomError("User not found", 404);
+  try {
+    const team = await Team.findOne({ _id: teamId, isDeleted: false }).session(session);
+    if (!team) throw new CustomError("Team not found", 404);
 
-  if (action === "promote") {
-    // Check if already manager
-    const alreadyManager = user.roles.some(
-      r => r.scope === Scopes.TEAM &&
-        r.scopeId.toString() === team._id.toString() &&
-        r.role === Roles.TEAM.MANAGER
+    // Verify member exists in team
+    const memberIndex = team.teamMembers.findIndex(
+      (m) => m.user.toString() === memberId.toString()
     );
 
-    if (alreadyManager) {
-      return { message: "Member is already a Manager.", team: await getTransformedTeam(team._id) };
+    if (memberIndex === -1) {
+      throw new CustomError("The specified user is not a member of the team.", 404);
     }
 
-    // Add Manager Role
-    await User.updateOne(
-      { _id: memberId, "roles.scopeId": team._id },
-      { $set: { "roles.$.role": Roles.TEAM.MANAGER } }
-    );
-  } else if (action === "demote") {
-    // Remove Manager Role
-    await User.updateOne(
-      { _id: memberId, "roles.scopeId": team._id },
-      { $set: { "roles.$.role": Roles.TEAM.PLAYER } }
-    );
+    // Prevent modifying the Owner (Captain)
+    if (team.captain.toString() === memberId.toString()) {
+      throw new CustomError("Cannot separate system role for the Team Owner.", 403);
+    }
+
+    const user = await User.findById(memberId).session(session);
+    if (!user) throw new CustomError("User not found", 404);
+
+    if (action === "promote") {
+      // Check if already manager
+      const alreadyManager = user.roles.some(
+        r => r.scope === Scopes.TEAM &&
+          r.scopeId.toString() === team._id.toString() &&
+          r.role === Roles.TEAM.MANAGER
+      );
+
+      if (alreadyManager) {
+        await session.abortTransaction();
+        session.endSession();
+        return { message: "Member is already a Manager.", team: await getTransformedTeam(team._id) };
+      }
+
+      // Add Manager Role to User
+      await User.updateOne(
+        { _id: memberId, "roles.scopeId": team._id },
+        { $set: { "roles.$.role": Roles.TEAM.MANAGER } }
+      ).session(session);
+
+      // Update role in Team Member array
+      // team.teamMembers[memberIndex].roleInTeam = "manager"; // if you want to track it in team array too? 
+      // Based on existing code, keys seemed to be 'igl' or 'player'. 'manager' might not be a standard role key in array.
+      // But looking at manageMemberRoleService, it seems `roleInTeam` IS updated. Let's update it here for consistency if that's the pattern.
+      // However, the original code didn't update teamMembers array for promote/demote, only User roles. 
+      // I will stick to original logic but fix consistency if needed. 
+      // Wait, `manageMemberRoleService` DOES update team.teamMembers. `manageTeamStaffService` previously ONLY updated User roles.
+      // This inconsistency is suspicious. promoting to manager in User roles but not in Team array?
+      // Let's assume the previous logic was partial. But for minimal regression, I'll stick to what it did: updating User roles.
+
+    } else if (action === "demote") {
+      // Remove Manager Role
+      await User.updateOne(
+        { _id: memberId, "roles.scopeId": team._id },
+        { $set: { "roles.$.role": Roles.TEAM.PLAYER } }
+      ).session(session);
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    // Invalidate Redis cache
+    await redis.del(`user_profile:${memberId}`);
+    await redis.del(`team_details:${teamId}`);
+
+    return { message: `Member successfully ${action === "promote" ? "promoted to Manager" : "demoted to Player"}.`, team: await getTransformedTeam(team._id) };
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
   }
-
-  // Invalidate Redis cache
-  await redis.del(`user_profile:${memberId}`);
-  await redis.del(`team_details:${teamId}`);
-
-  return { message: `Member successfully ${action === "promote" ? "promoted to Manager" : "demoted to Player"}.`, team: await getTransformedTeam(team._id) };
 };
 
 export const manageMemberRoleService = async (teamId, memberId, role) => {
-  const team = await Team.findById(teamId);
-  if (!team) throw new CustomError("Team not found", 404);
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  const member = team.teamMembers.find(
-    (m) => m.user.toString() === memberId.toString()
-  );
+  try {
+    const team = await Team.findOne({ _id: teamId, isDeleted: false }).session(session);
+    if (!team) throw new CustomError("Team not found", 404);
 
-  if (!member) {
-    throw new CustomError("The specified user is not a member of the team.", 404);
-  }
+    const member = team.teamMembers.find(
+      (m) => m.user.toString() === memberId.toString()
+    );
 
-  // Backfill missing denormalized fields if any
-  const memberUserIds = team.teamMembers.map(m => m.user);
-  const users = await User.find({ _id: { $in: memberUserIds } }).select("username avatar");
-
-  team.teamMembers.forEach(m => {
-    const user = users.find(u => u._id.toString() === m.user.toString());
-    if (user) {
-      if (!m.username) m.username = user.username;
-      if (!m.avatar) m.avatar = user.avatar;
+    if (!member) {
+      throw new CustomError("The specified user is not a member of the team.", 404);
     }
-  });
 
-  member.roleInTeam = role;
-  await team.save();
+    // Backfill missing denormalized fields if any (Read-only on User, so no lock needed really, but kept in session)
+    const memberUserIds = team.teamMembers.map(m => m.user);
+    const users = await User.find({ _id: { $in: memberUserIds } }).select("username avatar").session(session);
 
-  // Update Cache
-  await redis.del(`team_details:${team._id}`);
+    team.teamMembers.forEach(m => {
+      const user = users.find(u => u._id.toString() === m.user.toString());
+      if (user) {
+        if (!m.username) m.username = user.username;
+        if (!m.avatar) m.avatar = user.avatar;
+      }
+    });
 
-  // Invalidate Redis cache for the member
-  await redis.del(`user_profile:${memberId}`);
+    member.roleInTeam = role;
+    await team.save({ session });
 
-  return { message: `The member's role has been updated to '${role}'.`, team: await getTransformedTeam(team._id) };
+    await session.commitTransaction();
+    session.endSession();
+
+    // Update Cache
+    await redis.del(`team_details:${team._id}`);
+
+    // Invalidate Redis cache for the member
+    await redis.del(`user_profile:${memberId}`);
+
+    return { message: `The member's role has been updated to '${role}'.`, team: await getTransformedTeam(team._id) };
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
 };
 
 // --- Existing Helpers & Services ---
 
 export const findTeamById = async (id) => {
-  const team = await Team.findById(id);
+  const team = await Team.findOne({ _id: id, isDeleted: false });
   if (!team) {
     throw new CustomError("Team not found", 404);
   }
@@ -565,7 +625,7 @@ export const addMemberToTeam = async ({ teamId, userId, roleInTeam = "player", s
   if (!user) throw new CustomError("User not found", 404);
   if (user.teamId) throw new CustomError(`${user.username} is already in a team`, 400);
 
-  const team = await Team.findById(teamId).session(session);
+  const team = await Team.findOne({ _id: teamId, isDeleted: false }).session(session);
   if (!team) throw new CustomError("Team not found", 404);
 
   // 1. Update Team Roster with denormalized data
@@ -614,69 +674,98 @@ export const addMemberToTeam = async ({ teamId, userId, roleInTeam = "player", s
  * Service to batch add members to a team
  */
 export const batchAddMembersToTeam = async ({ teamId, memberIds, session = null }) => {
-  const team = await Team.findById(teamId).session(session);
-  if (!team) throw new CustomError("Team not found", 404);
-
-  // Atomic check: Verify member limit before proceeding
-  if (team.teamMembers.length + memberIds.length > 20) {
-    throw new CustomError("Team limit exceeded. Max 20 members allowed.", 400);
+  let localSession = null;
+  if (!session) {
+    localSession = await mongoose.startSession();
+    localSession.startTransaction();
+    session = localSession;
   }
 
-  const users = await User.find({ _id: { $in: memberIds } }).session(session);
-  if (users.length !== memberIds.length) throw new CustomError("One or more users not found", 404);
+  try {
+    const team = await Team.findOne({ _id: teamId, isDeleted: false }).session(session);
+    if (!team) throw new CustomError("Team not found", 404);
 
-  const bulkOps = [];
-  const teamUpdateOps = [];
+    // Atomic check: Verify member limit before proceeding
+    if (team.teamMembers.length + memberIds.length > 20) {
+      throw new CustomError("Team limit exceeded. Max 20 members allowed.", 400);
+    }
 
-  for (const user of users) {
-    if (user.teamId) throw new CustomError(`${user.username} is already in a team`, 400);
+    const users = await User.find({ _id: { $in: memberIds } }).session(session);
+    if (users.length !== memberIds.length) throw new CustomError("One or more users not found", 404);
 
-    // User Bulk Ops
-    bulkOps.push({
-      updateOne: {
-        filter: { _id: user._id },
-        update: {
-          $set: { teamId: teamId },
-          $push: {
-            roles: {
-              scope: Scopes.TEAM,
-              role: Roles.TEAM.PLAYER,
-              scopeId: teamId,
-              scopeModel: "Team",
+    const bulkOps = [];
+    const teamUpdateOps = [];
+
+    for (const user of users) {
+      if (user.teamId) throw new CustomError(`${user.username} is already in a team`, 400);
+
+      // User Bulk Ops
+      bulkOps.push({
+        updateOne: {
+          filter: { _id: user._id },
+          update: {
+            $set: { teamId: teamId },
+            $push: {
+              roles: {
+                scope: Scopes.TEAM,
+                role: Roles.TEAM.PLAYER,
+                scopeId: teamId,
+                scopeModel: "Team",
+              },
             },
           },
         },
-      },
-    });
+      });
 
-    // Team Roster Ops
-    teamUpdateOps.push({
-      user: user._id,
-      username: user.username,
-      avatar: user.avatar,
-      roleInTeam: "player",
-    });
+      // Team Roster Ops
+      teamUpdateOps.push({
+        user: user._id,
+        username: user.username,
+        avatar: user.avatar,
+        roleInTeam: "player",
+      });
+    }
+
+    // Execute Updates
+    if (bulkOps.length > 0) {
+      await User.bulkWrite(bulkOps, { session });
+
+      // Use Optimistic Concurrency Control
+      const updatedTeam = await Team.findOneAndUpdate(
+        { _id: teamId, __v: team.__v }, // Ensure version hasn't changed
+        {
+          $push: { teamMembers: { $each: teamUpdateOps } },
+          $inc: { __v: 1 } // Manually increment version
+        },
+        { session, new: true }
+      );
+
+      if (!updatedTeam) {
+        throw new CustomError("Concurrent modification detected. Please try again.", 409);
+      }
+    }
+
+    if (localSession) {
+      await localSession.commitTransaction();
+      localSession.endSession();
+    }
+
+    // Cache Invalidation (only if we created the session/transaction, otherwise caller handles)
+    if (localSession) {
+      const pipeline = redis.pipeline();
+      memberIds.forEach((mid) => pipeline.del(`user_profile:${mid}`));
+      pipeline.del(`team_details:${teamId}`);
+      await pipeline.exec();
+    }
+
+    return true;
+  } catch (error) {
+    if (localSession) {
+      await localSession.abortTransaction();
+      localSession.endSession();
+    }
+    throw error;
   }
-
-  // Execute Updates
-  if (bulkOps.length > 0) {
-    await User.bulkWrite(bulkOps, { session });
-    await Team.findByIdAndUpdate(
-      teamId,
-      { $push: { teamMembers: { $each: teamUpdateOps } } },
-      { session }
-    );
-  }
-
-  // Cache Invalidation
-  if (!session) {
-    const pipeline = redis.pipeline();
-    memberIds.forEach((mid) => pipeline.del(`user_profile:${mid}`));
-    pipeline.del(`team_details:${teamId}`);
-    await pipeline.exec();
-  }
-
-  return true;
 };
 
 /**
@@ -700,7 +789,7 @@ export const syncUserInTeams = async (userId, { username, avatar }) => {
  * Service to remove a member from a team
  */
 export const removeMemberFromTeam = async ({ teamId, userId, session = null }) => {
-  const team = await Team.findById(teamId).session(session);
+  const team = await Team.findOne({ _id: teamId, isDeleted: false }).session(session);
   if (!team) throw new CustomError("Team not found", 404);
 
   // Check if trying to remove captain

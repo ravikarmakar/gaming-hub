@@ -56,12 +56,7 @@ const eventSchema = new mongoose.Schema(
       default: "pending",
       index: true,
     },
-
-    status: {
-      type: String,
-      default: "registration-open",
-    },
-
+    roundCount: { type: Number, default: 0 },
     orgId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organizer",

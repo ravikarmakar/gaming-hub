@@ -25,13 +25,21 @@ const SaveEventSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    enum: ["Running", "Completed", "In Progress"],
-    default: "In Progress", // Track event registration status
+    enum: ["Ongoing", "Completed"],
+    default: "Ongoing", // Track event registration status
   },
 
   eventDate: {
     type: Date,
     required: true, // Event date for comparison
+    validate: {
+      validator: function (v) {
+        // Only validate for new documents
+        if (!this.isNew) return true;
+        return v >= Date.now();
+      },
+      message: "Event date cannot be in the past."
+    }
   },
 
   result: {
@@ -46,13 +54,8 @@ const SaveEventSchema = new mongoose.Schema({
   },
 });
 
-SaveEventSchema.pre("save", function (next) {
-  // Only validate event date for new documents, not updates
-  if (this.isNew && this.eventDate < Date.now()) {
-    return next(new Error("Event date cannot be in the past."));
-  }
-  next();
-});
+// Unique index to prevent duplicate team registrations for the same event
+SaveEventSchema.index({ team: 1, event: 1 }, { unique: true });
 
 const SaveEvent = mongoose.model("SaveEvent", SaveEventSchema);
 

@@ -2,6 +2,7 @@ import Invitation from "../invitation/invitation.model.js";
 import Team from "../team/team.model.js";
 import User from "../user/user.model.js";
 import Organizer from "../organizer/organizer.model.js";
+import mongoose from "mongoose";
 import { Notification } from "../notification/notification.model.js";
 import { Roles, Scopes } from "../../shared/constants/roles.js";
 import { createNotification } from "../notification/notification.controller.js";
@@ -46,6 +47,15 @@ export const inviteMember = TryCatchHandler(async (req, res) => {
   }
 
   if (!target) throw new AppError(`${targetModel} not found`, 404);
+
+  // 1.5 Authorization Check: Ensure sender has permission
+  const isAuthorized = targetModel === "Team"
+    ? target.captain?.toString() === userId.toString()
+    : target.ownerId?.toString() === userId.toString();
+
+  if (!isAuthorized) {
+    throw new AppError("You do not have permission to invite members to this " + targetModel, 403);
+  }
 
   // 2. Find Invitee (Support both Email and ID)
   let invitee = null;
@@ -121,11 +131,11 @@ export const respondToInvitation = TryCatchHandler(async (req, res) => {
     throw new AppError("Invalid action. Must be 'accepted' or 'rejected'", 400);
   }
 
-  const invite = await Invitation.findById(invitationId).populate("entityId");
-  if (!invite) throw new AppError("Invitation not found", 404);
+  const invite = req.invitationDoc;
+  const { isReceiver } = req.rbacContext;
 
-  if (invite.receiver.toString() !== userId.toString()) {
-    throw new AppError("Access Denied", 403);
+  if (!isReceiver) {
+    throw new AppError("Access Denied: Only the recipient can respond to this invitation", 403);
   }
 
   if (invite.status !== "pending") {
@@ -134,27 +144,34 @@ export const respondToInvitation = TryCatchHandler(async (req, res) => {
 
   if (action === "accepted") {
     // Use session for atomic updates
-    const session = await User.startSession();
+    const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
       const user = await User.findById(userId).session(session);
 
       if (invite.entityModel === "Team") {
+        const team = await Team.findById(invite.entityId).session(session);
+        if (!team || team.isDeleted) {
+          throw new AppError("The team no longer exists or has been deleted", 404);
+        }
+
         if (user.teamId) throw new AppError("You are already in a team", 400);
 
         // Update User
-        user.teamId = invite.entityId._id;
+        const entityId = invite.entityId;
+
+        user.teamId = entityId;
         user.roles.push({
           scope: Scopes.TEAM,
           role: invite.role,
-          scopeId: invite.entityId._id,
+          scopeId: entityId,
           scopeModel: "Team"
         });
 
         // Update Team Roster atomically
         await Team.findByIdAndUpdate(
-          invite.entityId._id,
+          entityId,
           {
             $push: {
               teamMembers: {
@@ -166,18 +183,29 @@ export const respondToInvitation = TryCatchHandler(async (req, res) => {
           { session }
         );
       } else if (invite.entityModel === "Organizer") {
+        const org = await Organizer.findById(invite.entityId).session(session);
+        if (!org || org.isDeleted) {
+          throw new AppError("The organization no longer exists or has been deleted", 404);
+        }
+
+        const entityId = invite.entityId;
         if (user.orgId) throw new AppError("You are already in an organization", 400);
 
-        user.orgId = invite.entityId._id;
+        user.orgId = entityId;
         user.roles.push({
           scope: Scopes.ORG,
           role: invite.role,
-          scopeId: invite.entityId._id,
+          scopeId: entityId,
           scopeModel: "Organizer"
         });
       }
 
       await user.save({ session });
+
+      // Update Invitation Status ATOMICALLY
+      invite.status = "accepted";
+      await invite.save({ session });
+
       await session.commitTransaction();
     } catch (error) {
       await session.abortTransaction();
@@ -185,10 +213,11 @@ export const respondToInvitation = TryCatchHandler(async (req, res) => {
     } finally {
       session.endSession();
     }
+  } else {
+    // For rejection, no transaction needed but update status
+    invite.status = "rejected";
+    await invite.save();
   }
-
-  invite.status = action === "accepted" ? "accepted" : "rejected";
-  await invite.save();
 
   res.status(200).json({
     success: true,
@@ -235,8 +264,16 @@ export const cancelInvitation = TryCatchHandler(async (req, res) => {
     throw new AppError(`Cannot cancel an invitation that is already ${invitation.status}`, 400);
   }
 
-  // Note: RBAC middleware should handle authorization before reaching here,
-  // ensuring the user has rights to manage this entity's invitations.
+  // ⚡ Security check: Ensure the invitation belongs to the specified entity (IDOR check)
+  const { orgId, teamId } = req.params;
+  const entityId = orgId || teamId;
+
+  if (entityId && invitation.entityId.toString() !== entityId.toString()) {
+    throw new AppError("You do not have permission to cancel this invitation", 403);
+  }
+
+  // Note: RBAC middleware already ensures the user has management rights for the `entityId`.
+  // This check confirms the `inviteId` actually belongs to that `entityId`.
 
   await Invitation.findByIdAndDelete(inviteId);
 

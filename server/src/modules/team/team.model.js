@@ -135,8 +135,12 @@ teamSchema.pre("save", function (next) {
       .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
   }
   // Calculate win rate
-  if (this.stats && this.stats.totalMatches > 0) {
-    this.stats.winRate = Math.round((this.stats.wins / this.stats.totalMatches) * 100);
+  if (this.stats) {
+    if (this.stats.totalMatches > 0) {
+      this.stats.winRate = Math.round((this.stats.wins / this.stats.totalMatches) * 100);
+    } else {
+      this.stats.winRate = 0;
+    }
   }
   next();
 });
@@ -168,28 +172,37 @@ teamSchema.pre(['findOneAndUpdate', 'updateOne'], function (next) {
 
 // Post middleware to calculate winRate after update
 teamSchema.post(['findOneAndUpdate', 'updateOne'], async function (result, next) {
-  // 'result' is the document for findOneAndUpdate (if {new: true}) or the operation result for updateOne
   if (this._calculateWinRate) {
     try {
-      // If the operation was updateOne, we don't have the doc. We need to find the doc using the query filter.
-      // this.getFilter() gives the filter used.
-      // But updateOne might update multiple? No, updateOne updates one.
+      let doc;
+      if (this.op === 'findOneAndUpdate' && result) {
+        doc = result; // For findOneAndUpdate {new: true}, result is the updated doc
+      } else {
+        const filter = this.getFilter();
+        doc = await this.model.findOne(filter);
+      }
 
-      const filter = this.getFilter();
-      const doc = await this.model.findOne(filter); // Fetch the updated document
+      if (doc && doc.stats) {
+        let newWinRate = 0;
+        if (doc.stats.totalMatches > 0) {
+          newWinRate = Math.round((doc.stats.wins / doc.stats.totalMatches) * 100);
+        }
 
-      if (doc && doc.stats && doc.stats.totalMatches > 0) {
-        const newWinRate = Math.round((doc.stats.wins / doc.stats.totalMatches) * 100);
         if (doc.stats.winRate !== newWinRate) {
-          doc.stats.winRate = newWinRate;
-          await doc.save();
+          await this.model.updateOne(
+            { _id: doc._id },
+            { $set: { 'stats.winRate': newWinRate } }
+          );
         }
       }
+      next();
     } catch (err) {
-      console.error("Error calculating winRate in post hook:", err);
+      logger.error("Error calculating winRate in post hook:", err);
+      next(err);
     }
+  } else {
+    next();
   }
-  next();
 });
 
 const Team = mongoose.models.Team || mongoose.model("Team", teamSchema);

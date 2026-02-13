@@ -30,16 +30,33 @@ const purgeDatabase = async () => {
     try {
         await connectDB();
 
-        await Promise.all([
-            User.deleteMany({}),
-            Team.deleteMany({}),
-            Organizer.deleteMany({}),
-            Event.deleteMany({}),
-            JoinRequest.deleteMany({}),
-            Invitation.deleteMany({}),
-            Notification.deleteMany({}),
-            redis.flushall(), // Optional: Clear cache too
-        ]);
+        const operations = [
+            { name: "User", op: User.deleteMany({}) },
+            { name: "Team", op: Team.deleteMany({}) },
+            { name: "Organizer", op: Organizer.deleteMany({}) },
+            { name: "Event", op: Event.deleteMany({}) },
+            { name: "JoinRequest", op: JoinRequest.deleteMany({}) },
+            { name: "Invitation", op: Invitation.deleteMany({}) },
+            { name: "Notification", op: Notification.deleteMany({}) },
+            { name: "Redis", op: redis.flushall() },
+        ];
+
+        const results = await Promise.allSettled(operations.map(o => o.op));
+
+        let anyFailed = false;
+        results.forEach((result, index) => {
+            if (result.status === "rejected") {
+                logger.error(`❌ Failed to purge ${operations[index].name}:`, result.reason);
+                anyFailed = true;
+            } else {
+                logger.info(`✅ Purged ${operations[index].name}`);
+            }
+        });
+
+        if (anyFailed) {
+            logger.warn("⚠️  Some purge operations failed.");
+            process.exit(1);
+        }
 
         logger.info("✅ All collections purged. Redis cache cleared.");
         process.exit(0);

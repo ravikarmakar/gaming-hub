@@ -10,7 +10,7 @@ const handleCastErrorDB = (err) => {
 const handleDuplicateFieldsDB = (err) => {
   const match = err.errmsg?.match(/(["'])(\\?.)*?\1/);
   const value = match ? match[0] : 'unknown';
-  const message = `Duplicate field value: ${value}. Please use another value!`;
+  const message = `Duplicate field value: ${value}. That record already exists. Please use another value!`;
   return new AppError(message, 400);
 };
 
@@ -57,25 +57,26 @@ export const errorHandle = (err, req, res, next) => {
     return res.status(err.statusCode).json({
       success: false,
       message: err.details.body && err.details.body.length > 0 ? err.details.body[0].message : err.message,
-      details: err.details,
+      ...(process.env.NODE_ENV !== "production" && { details: err.details }),
     });
   }
 
+  let error = { ...err };
+  error.message = err.message;
+  error.name = err.name;
+  error.code = err.code; // Ensure code is preserved (e.g. for 11000 errors)
+
+  if (error.name === "CastError") error = handleCastErrorDB(error);
+  if (error.code === 11000) error = handleDuplicateFieldsDB(error);
+  if (error.name === "ValidationError") error = handleValidationErrorDB(error);
+
   if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
-    sendErrorDev(err, res);
+    sendErrorDev(error, res);
   } else if (process.env.NODE_ENV === "production") {
-    let error = { ...err };
-    error.message = err.message;
-    error.name = err.name;
-
-    if (error.name === "CastError") error = handleCastErrorDB(error);
-    if (error.code === 11000) error = handleDuplicateFieldsDB(error);
-    if (error.name === "ValidationError") error = handleValidationErrorDB(error);
-
     sendErrorProd(error, res);
   } else {
-    // Fallback if NODE_ENV is not set properly, default to safe production-like response or generic
-    sendErrorProd(err, res);
+    // Fallback
+    sendErrorProd(error, res);
   }
 };
 

@@ -15,7 +15,12 @@ export const getGroups = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const query = {};
-    if (roundId) query.roundId = roundId;
+    if (roundId) {
+      if (!mongoose.Types.ObjectId.isValid(roundId)) {
+        return res.status(400).json({ message: "Invalid Round ID!" });
+      }
+      query.roundId = roundId;
+    }
 
     // Fetch groups with pagination
     const groups = await Group.find(query)
@@ -52,7 +57,7 @@ export const groupDetails = async (req, res) => {
     const { groupId } = req.params;
 
     // Check if Group ID is valid
-    if (!groupId || groupId.length !== 24) {
+    if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
       return res.status(400).json({ message: "Invalid Group ID!" });
     }
 
@@ -81,6 +86,10 @@ export const createGroups = async (req, res) => {
 
     if (!roundId || !eventId) {
       return res.status(400).json({ message: "Round ID and Event ID are required!" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(roundId) || !mongoose.Types.ObjectId.isValid(eventId)) {
+      return res.status(400).json({ message: "Invalid Round ID or Event ID format!" });
     }
 
     // 1️⃣ Check if round exists
@@ -174,7 +183,7 @@ export const createGroups = async (req, res) => {
       );
 
       const groupName = generateGroupName(i);
-      const tempId = i; // Temporary ID to map teams
+      groupToTeamsMap[groupName] = groupTeams;
 
       groupsData.push({
         roundId,
@@ -183,8 +192,6 @@ export const createGroups = async (req, res) => {
         matchTime: matchTime || new Date(Date.now() + 24 * 60 * 60 * 1000),
         teams: groupTeams, // Adding teams directly to Group model
       });
-
-      groupToTeamsMap[groupName] = groupTeams;
     }
 
     // 5.5 Apply Round Scheduling (Overwrites if manual passed for entire batch, but usually automated)
@@ -193,9 +200,19 @@ export const createGroups = async (req, res) => {
       let currentMatchTime = new Date(round.startTime);
       const gap = round.gapMinutes || 0;
 
+      // Helper to validate time format HH:mm
+      const isValidTimeFormat = (time) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(time);
+
       // Extract daily window times
-      const [startHour, startMin] = (round.dailyStartTime || "13:00").split(":").map(Number);
-      const [endHour, endMin] = (round.dailyEndTime || "21:00").split(":").map(Number);
+      const dailyStart = round.dailyStartTime || "13:00";
+      const dailyEnd = round.dailyEndTime || "21:00";
+
+      if (!isValidTimeFormat(dailyStart) || !isValidTimeFormat(dailyEnd)) {
+        return res.status(400).json({ message: "Invalid daily start/end time format. Expected HH:mm" });
+      }
+
+      const [startHour, startMin] = dailyStart.split(":").map(Number);
+      const [endHour, endMin] = dailyEnd.split(":").map(Number);
 
       // Helper to set time on a date
       const setTime = (date, hours, minutes) => {
@@ -261,20 +278,8 @@ export const createGroups = async (req, res) => {
       // 8️⃣ Batch Insert Leaderboards
       await Leaderboard.insertMany(leaderboardsData, { session });
 
-      await session.commitTransaction();
-      session.endSession();
-    } catch (error) {
-      await session.abortTransaction();
-      session.endSession();
-      throw error;
-    }
-
-    // 9️⃣ NOTIFY TEAMS ABOUT THEIR GROUPS (Optimized - Fix N+1)
-    try {
-      // Null check for req.user
-      if (!req.user || !req.user._id) {
-        logger.warn("Cannot send notifications: req.user is not available");
-      } else {
+      // 9️⃣ NOTIFY TEAMS ABOUT THEIR GROUPS (Inside Transaction)
+      if (req.user && req.user._id) {
         const Notification = mongoose.model("Notification");
         const Team = mongoose.model("Team");
 
@@ -282,7 +287,7 @@ export const createGroups = async (req, res) => {
         const allTeamIds = createdGroups.flatMap(group => group.teams);
 
         // Fetch all teams in ONE query (Fix N+1)
-        const teams = await Team.find({ _id: { $in: allTeamIds } }).lean();
+        const teams = await Team.find({ _id: { $in: allTeamIds } }).session(session).lean();
         const teamMap = new Map(teams.map(t => [t._id.toString(), t]));
 
         // Prepare notifications in bulk
@@ -325,11 +330,18 @@ export const createGroups = async (req, res) => {
 
         // Batch insert notifications
         if (notificationsToCreate.length > 0) {
-          await Notification.insertMany(notificationsToCreate);
+          await Notification.insertMany(notificationsToCreate, { session });
         }
+      } else {
+        logger.warn("Cannot send notifications: req.user is not available");
       }
-    } catch (notifError) {
-      logger.error("Error sending group creation notifications:", notifError);
+
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
 
     return res.status(201).json({

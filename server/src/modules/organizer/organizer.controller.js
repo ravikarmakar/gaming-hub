@@ -12,6 +12,7 @@ import JoinRequest from "../join-request/join-request.model.js";
 import { createNotification } from "../notification/notification.controller.js";
 import { logger } from "../../shared/utils/logger.js";
 import fs from "fs";
+import Invitation from "../invitation/invitation.model.js";
 
 const escapeRegex = (string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -77,40 +78,53 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
     }
   }
 
-  const newOrg = await Organizer.create({
-    ownerId: user._id,
-    imageUrl,
-    imageFileId,
-    name,
-    email,
-    description,
-    tag: tag?.toUpperCase(),
-  });
+  try {
+    const newOrg = await Organizer.create({
+      ownerId: user._id,
+      imageUrl,
+      imageFileId,
+      name,
+      email,
+      description,
+      tag: tag?.toUpperCase(),
+    });
 
-  user.roles.push({
-    scope: Scopes.ORG,
-    role: Roles.ORG.OWNER,
-    scopeId: newOrg._id,
-    scopeModel: "Organizer",
-  });
-  user.canCreateOrg = false;
-  user.orgId = newOrg._id;
+    user.roles.push({
+      scope: Scopes.ORG,
+      role: Roles.ORG.OWNER,
+      scopeId: newOrg._id,
+      scopeModel: "Organizer",
+    });
+    user.canCreateOrg = false;
+    user.orgId = newOrg._id;
 
-  await user.save();
+    await user.save();
 
-  // this will update the accessToken and refresh token jwt payloads
-  const { accessToken, refreshToken } = generateTokens(user._id, user.roles);
+    // this will update the accessToken and refresh token jwt payloads
+    const { accessToken, refreshToken } = generateTokens(user._id, user.roles);
 
-  // store refresh token in redis
-  await storeRefreshToken(user._id, refreshToken);
-  setCookies(res, accessToken, refreshToken);
+    // store refresh token in redis
+    await storeRefreshToken(user._id, refreshToken);
+    setCookies(res, accessToken, refreshToken);
 
-  // Invalidate redis cache
-  await redis.del(cacheKey);
+    // Invalidate redis cache
+    await redis.del(cacheKey);
 
-  res
-    .status(201)
-    .json({ success: true, message: "Org created successfully", data: newOrg });
+    res
+      .status(201)
+      .json({ success: true, message: "Org created successfully", data: newOrg });
+
+  } catch (error) {
+    // 🧹 Cleanup orphaned image if DB save fails
+    if (imageFileId) {
+      try {
+        await deleteFromImageKit(imageFileId);
+      } catch (cleanupError) {
+        logger.error(`Failed to cleanup orphaned image ${imageFileId}:`, cleanupError);
+      }
+    }
+    throw error;
+  }
 });
 
 export const getOrgDetails = TryCatchHandler(async (req, res, next) => {
@@ -296,11 +310,16 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
     }
 
     if (socialLinks) {
-      const parsedSocial = typeof socialLinks === 'string' ? JSON.parse(socialLinks) : socialLinks;
-      org.socialLinks = {
-        ...org.socialLinks,
-        ...parsedSocial
-      };
+      try {
+        const parsedSocial = typeof socialLinks === 'string' ? JSON.parse(socialLinks) : socialLinks;
+        org.socialLinks = {
+          ...org.socialLinks,
+          ...parsedSocial
+        };
+      } catch (err) {
+        logger.warn(`Invalid JSON format for socialLinks: ${socialLinks}`);
+        // Continue or throw? Let's ignore malformed JSON but log warning.
+      }
     }
 
     await org.save();
@@ -339,6 +358,10 @@ export const addStaff = TryCatchHandler(async (req, res, next) => {
 
   if (!mongoose.Types.ObjectId.isValid(orgId)) {
     return next(new CustomError("Invalid Organization ID format", 400));
+  }
+
+  if (!staff || !Array.isArray(staff) || staff.length === 0) {
+    return next(new CustomError("Staff list is required and must be a non-empty array", 400));
   }
 
 
@@ -441,6 +464,15 @@ export const updateStaffRole = TryCatchHandler(async (req, res, next) => {
 
   const user = await User.findById(userId);
   if (!user) return next(new CustomError("User not found", 404));
+
+  // Protection: Ensure we are not modifying the Organization Owner's role via this endpoint
+  // Need to fetch Org to check ownerId
+  const org = await Organizer.findById(orgId);
+  if (!org) return next(new CustomError("Organization not found", 404));
+
+  if (user._id.toString() === org.ownerId.toString()) {
+    return next(new CustomError("Cannot modify the role of the Organization Owner", 403));
+  }
 
   const orgRoleIndex = user.roles.findIndex(
     (r) => r.scope === "org" && r.scopeId?.toString() === orgId.toString()
@@ -586,26 +618,43 @@ export const deleteOrg = TryCatchHandler(async (req, res, next) => {
   );
 
   // Update Owner's permissions to allow creating another org
-  const owner = await User.findById(userId);
-  if (owner) {
-    // Clean up any lingering role in the current owner object
-    owner.roles = owner.roles.filter(r => !(r.scope === Scopes.ORG && r.scopeId?.toString() === orgId.toString()));
-    owner.orgId = null;
-    await owner.save();
+  // Update Owner's permissions to allow creating another org
+  // Fix: Need to find the ACTUAL owner of the org, not just rely on `userId` from request
+  // because a co-owner might be deleting it (if permitted).
 
-    // Refresh tokens for immediate effect
-    const { accessToken, refreshToken } = generateTokens(owner._id, owner.roles);
-    await storeRefreshToken(owner._id, refreshToken);
-    setCookies(res, accessToken, refreshToken);
-    await redis.del(`user_profile:${userId}`);
+  const ownerId = org.ownerId; // Use the ownerId from the deleted org doc
+  if (ownerId) {
+    const owner = await User.findById(ownerId);
+    if (owner) {
+      // Clean up any lingering role in the current owner object
+      // Use orgId string for comparison
+      owner.roles = owner.roles.filter(r => !(r.scope === Scopes.ORG && r.scopeId?.toString() === orgId.toString()));
+      owner.orgId = null;
+      owner.canCreateOrg = true; // explicitly allow again
+      await owner.save();
+
+      // Refresh tokens for immediate effect (if this user is currently logged in, they get new token on refresh)
+      // We can't update cookies for another user (the owner) if the deleter is a co-owner.
+      // But we invalidate cache so next fetch is clean.
+      await redis.del(`user_profile:${ownerId}`);
+    }
   }
 
   // Cleanup ImageKit assets
+  // Cleanup ImageKit assets with safeguard
   if (org.imageFileId) {
-    await deleteFromImageKit(org.imageFileId);
+    try {
+      await deleteFromImageKit(org.imageFileId);
+    } catch (err) {
+      logger.error(`Failed to delete org logo ${org.imageFileId}`, err);
+    }
   }
   if (org.bannerFileId) {
-    await deleteFromImageKit(org.bannerFileId);
+    try {
+      await deleteFromImageKit(org.bannerFileId);
+    } catch (err) {
+      logger.error(`Failed to delete org banner ${org.bannerFileId}`, err);
+    }
   }
 
   res.status(200).json({
@@ -652,11 +701,11 @@ export const getDashboardStats = TryCatchHandler(async (req, res, next) => {
       isDeleted: { $ne: true },
     }),
     Event.aggregate([
-      { $match: { orgId, isDeleted: { $ne: true } } },
+      { $match: { orgId: new mongoose.Types.ObjectId(orgId), isDeleted: { $ne: true } } }, // Fix: Convert to ObjectId
       { $group: { _id: null, total: { $sum: "$joinedSlots" } } },
     ]),
     Event.aggregate([
-      { $match: { orgId, isDeleted: { $ne: true } } },
+      { $match: { orgId: new mongoose.Types.ObjectId(orgId), isDeleted: { $ne: true } } }, // Fix: Convert to ObjectId
       { $group: { _id: null, total: { $sum: "$prizePool" } } },
     ]),
     Event.find({ orgId, isDeleted: { $ne: true } })
@@ -740,15 +789,26 @@ export const transferOwnership = TryCatchHandler(async (req, res, next) => {
   await org.save();
 
   // Demote current owner to Manager
+  // Demote current owner to Manager
+  // Fix: Add null check for currentUser
   const currentUser = await User.findById(userId);
-  const currentOwnerRoleIndex = currentUser.roles.findIndex(
-    (r) => r.scope === "org" && r.scopeId?.toString() === orgId.toString()
-  );
 
-  if (currentOwnerRoleIndex !== -1) {
-    currentUser.roles[currentOwnerRoleIndex].role = Roles.ORG.MANAGER;
-    await currentUser.save();
+  if (currentUser) {
+    const currentOwnerRoleIndex = currentUser.roles.findIndex(
+      (r) => r.scope === "org" && r.scopeId?.toString() === orgId.toString()
+    );
+
+    if (currentOwnerRoleIndex !== -1) {
+      currentUser.roles[currentOwnerRoleIndex].role = Roles.ORG.MANAGER;
+      await currentUser.save();
+    }
+
+    // Refresh tokens for current user
+    const { accessToken: curAT, refreshToken: curRT } = generateTokens(currentUser._id, currentUser.roles);
+    await storeRefreshToken(currentUser._id, curRT);
+    setCookies(res, curAT, curRT);
   }
+
 
   // Promote new owner to Owner
   newOwner.roles[newOwnerOrgRoleIndex].role = Roles.ORG.OWNER;
@@ -762,12 +822,17 @@ export const transferOwnership = TryCatchHandler(async (req, res, next) => {
   await redis.del(`user_profile:${userId}`);
   await redis.del(`user_profile:${newOwnerId}`);
 
-  // Refresh tokens for current user (immediate role update for the demoted previous owner)
-  const { accessToken: curAT, refreshToken: curRT } = generateTokens(currentUser._id, currentUser.roles);
-  await storeRefreshToken(currentUser._id, curRT);
-  setCookies(res, curAT, curRT);
+  // Cleared cache above
+  // await redis.del(`user_profile:${userId}`); // Already done above? No, done at line 762
+  // await redis.del(`user_profile:${newOwnerId}`); // Done at 763
+
+  // Refresh tokens logic for current user moved inside the `if (currentUser)` block to be safe.
 
   // Refresh tokens for the new owner (so role change takes effect immediately)
+  // Note: We cannot set cookies for the new owner (different session).
+  // But we generate and store new refresh token so their current session might be invalidated or updated on next refresh?
+  // Actually, standard practice: we can't force update their cookies. They will need to refresh/re-login or token refresh endpoint handles it.
+  // We can just update the DB token store.
   const { refreshToken: newRT } = generateTokens(newOwner._id, newOwner.roles);
   await storeRefreshToken(newOwner._id, newRT);
 
@@ -807,6 +872,10 @@ export const joinOrg = TryCatchHandler(async (req, res, next) => {
   }
 
   const user = await User.findById(userId);
+  if (!user) { // Fix: Add null check
+    throw new CustomError("User not found", 404);
+  }
+
   if (user.orgId) {
     throw new CustomError("You are already in an organization", 400);
   }
@@ -1019,7 +1088,7 @@ export const manageJoinRequest = TryCatchHandler(async (req, res, next) => {
 });
 
 // Start of Staff/Member Invite Logic
-import Invitation from "../invitation/invitation.model.js";
+// import Invitation removed from here, moved to top
 
 export const inviteStaffToOrg = TryCatchHandler(async (req, res, next) => {
   const { orgId } = req.params;

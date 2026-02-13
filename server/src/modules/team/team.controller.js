@@ -97,7 +97,7 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
     hasPendingRequest = !!existingRequest;
 
     const isMember = team.teamMembers.some(
-      (m) => m.user.toString() === req.user.userId.toString()
+      (m) => m.user?.toString() === req.user.userId.toString()
     );
     if (isMember) {
       pendingRequestsCount = await JoinRequest.countDocuments({
@@ -236,7 +236,7 @@ export const removeMember = TryCatchHandler(async (req, res, next) => {
   }
 
   // Explicit membership check
-  const isMember = team.teamMembers.some((m) => m.user.toString() === memberId.toString());
+  const isMember = team.teamMembers.some((m) => m.user?.toString() === memberId.toString());
   if (!isMember) {
     throw new CustomError("User is not a member of this team.", 404);
   }
@@ -248,18 +248,22 @@ export const removeMember = TryCatchHandler(async (req, res, next) => {
   });
 
   // 4. Notify the removed member
-  await createNotification({
-    recipient: memberId,
-    sender: userId,
-    type: "TEAM_KICK",
-    content: {
-      title: "Kicked from Team",
-      message: `You have been removed from the team ${team.teamName} by the captain.`,
-    },
-    relatedData: {
-      teamId: team._id,
-    },
-  });
+  try {
+    await createNotification({
+      recipient: memberId,
+      sender: userId,
+      type: "TEAM_KICK",
+      content: {
+        title: "Kicked from Team",
+        message: `You have been removed from the team ${team.teamName} by the captain.`,
+      },
+      relatedData: {
+        teamId: team._id,
+      },
+    });
+  } catch (error) {
+    logger.error("Notification failed for team member removal:", error);
+  }
 
   // Fetch updated team roster using helper
   const transformedTeam = await getTransformedTeam(team._id);

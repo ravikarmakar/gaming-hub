@@ -4,6 +4,7 @@ import User from "../user/user.model.js";
 import Event from "../event/event.model.js";
 import EventRegistration from "../event/models/event-registration.model.js";
 import Organizer from "../organizer/organizer.model.js";
+import mongoose from "mongoose";
 import { TryCatchHandler } from "../../shared/middleware/error.middleware.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
 import { createNotification } from "../notification/notification.controller.js";
@@ -76,7 +77,7 @@ export const sendJoinRequest = TryCatchHandler(async (req, res, next) => {
         recipientId = resource.ownerId;
     } else if (targetModel === "Event") {
         // Events may have different ownership fields
-        recipientId = resource.organizerId || resource.createdBy || resource.ownerId;
+        recipientId = resource.orgId ? (await Organizer.findById(resource.orgId))?.ownerId : (resource.organizerId || resource.createdBy || resource.ownerId);
     }
 
     if (recipientId) {
@@ -166,31 +167,33 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
 
     // Access controlled by verifyTeamPermission(TEAM_ACTIONS.manageRoster) middleware
 
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
         if (action === "accepted") {
-            const requester = await User.findById(joinRequest.requester);
+            const requester = await User.findById(joinRequest.requester).session(session);
             if (!requester) throw new CustomError("Requester not found", 404);
 
             if (joinRequest.targetModel === "Team") {
                 const team = joinRequest.target;
 
-                // Re-check recruiting status (could have changed since request was sent)
-                if (!team.isRecruiting) {
+                // Re-check recruiting status
+                if (!team || team.isDeleted || !team.isRecruiting) {
                     throw new CustomError("This team is no longer recruiting", 400);
                 }
 
                 // Re-check requester hasn't joined another team (race condition)
-                const currentRequester = await User.findById(requester._id);
-                if (currentRequester.teamId) {
+                if (requester.teamId) {
                     throw new CustomError("Requester has already joined another team", 400);
                 }
 
-                // Use Service Layer for the heavy lifting (handles roster update, roles, and denormalization)
+                // Use Service Layer (must pass session if supported, otherwise manually)
                 await addMemberToTeam({
                     teamId: team._id,
                     userId: requester._id,
                     roleInTeam: "player"
-                });
+                }, { session });
 
                 await createNotification({
                     recipient: requester._id,
@@ -200,12 +203,13 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                     relatedData: { teamId: team._id },
                 });
 
-                // Fetch updated team for response using helper
+                // Fetch updated team for response
                 responseData = await getTransformedTeam(team._id);
 
             } else if (joinRequest.targetModel === "Organizer") {
                 if (requester.orgId) throw new CustomError("Requester is already in an organization", 400);
                 const org = joinRequest.target;
+                if (!org || org.isDeleted) throw new CustomError("Organization no longer exists", 404);
 
                 await User.findByIdAndUpdate(requester._id, {
                     $set: { orgId: org._id },
@@ -217,7 +221,7 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                             scopeModel: "Organizer",
                         }
                     }
-                });
+                }, { session });
 
                 await createNotification({
                     recipient: requester._id,
@@ -229,15 +233,29 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
 
             } else if (joinRequest.targetModel === "Event") {
                 if (!requester.teamId) throw new CustomError("Requester must have a team to join events", 400);
-                const event = await Event.findById(joinRequest.target);
-                if (!event) throw new CustomError("Event not found", 404);
+                const event = joinRequest.target;
+                if (!event || event.isDeleted) throw new CustomError("Event no longer exists", 404);
 
-                // Check slot availability before processing
-                if (event.maxSlots && event.joinedSlots >= event.maxSlots) {
-                    throw new CustomError("Event is full. No slots available.", 400);
+                // Atomic increment with slot validation first
+                const updatedEvent = await Event.findOneAndUpdate(
+                    {
+                        _id: event._id,
+                        $expr: {
+                            $or: [
+                                { $eq: ["$maxSlots", null] }, // No limit
+                                { $lt: ["$joinedSlots", "$maxSlots"] } // Has available slots
+                            ]
+                        }
+                    },
+                    { $inc: { joinedSlots: 1 } },
+                    { new: true, session }
+                );
+
+                if (!updatedEvent) {
+                    throw new CustomError("Event is full. Registration could not be completed.", 400);
                 }
 
-                const team = await Team.findById(requester.teamId);
+                const team = await Team.findById(requester.teamId).session(session);
                 if (!team) throw new CustomError("Team not found", 404);
 
                 // Identify Core Roles and Substitutes
@@ -262,34 +280,13 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                 }
 
                 // Create EventRegistration
-                await EventRegistration.create({
+                await EventRegistration.create([{
                     eventId: event._id,
                     teamId: requester.teamId,
                     status: "approved",
                     players,
                     substitutes,
-                });
-
-                // Atomic increment with slot validation
-                const updatedEvent = await Event.findOneAndUpdate(
-                    {
-                        _id: event._id,
-                        $expr: {
-                            $or: [
-                                { $eq: ["$maxSlots", null] }, // No limit
-                                { $lt: ["$joinedSlots", "$maxSlots"] } // Has available slots
-                            ]
-                        }
-                    },
-                    { $inc: { joinedSlots: 1 } },
-                    { new: true }
-                );
-
-                if (!updatedEvent) {
-                    // Rollback: delete the registration we just created
-                    await EventRegistration.deleteOne({ eventId: event._id, teamId: requester.teamId });
-                    throw new CustomError("Event is full. Registration could not be completed.", 400);
-                }
+                }], { session });
 
                 await createNotification({
                     recipient: requester._id,
@@ -300,39 +297,40 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                 });
             }
 
-            // Update JoinRequest status common for all
-            await JoinRequest.findByIdAndUpdate(requestId, {
-                status: "accepted",
-                handledBy: userId,
-                handledAt: new Date()
-            });
+            // Update JoinRequest status inside transaction
+            joinRequest.status = "accepted";
+            joinRequest.handledBy = userId;
+            joinRequest.handledAt = new Date();
+            await joinRequest.save({ session });
 
-            // Handle any side effects like rejecting other requests if user joined one
+            // Handle side effects (rejections) inside transaction
             if (["Team", "Organizer"].includes(joinRequest.targetModel)) {
                 await JoinRequest.updateMany(
                     {
                         requester: requester._id,
                         targetModel: joinRequest.targetModel,
                         status: "pending",
-                        _id: { $ne: requestId } // Exclude current request (already updated)
+                        _id: { $ne: requestId }
                     },
                     {
-                        status: "rejected",
-                        message: `User has joined another ${joinRequest.targetModel.toLowerCase()}`,
-                        handledBy: userId,
-                        handledAt: new Date()
-                    }
+                        $set: {
+                            status: "rejected",
+                            message: `User has joined another ${joinRequest.targetModel.toLowerCase()}`,
+                            handledBy: userId,
+                            handledAt: new Date()
+                        }
+                    },
+                    { session }
                 );
                 await redis.del(`user_profile:${requester._id}`);
             }
 
         } else {
             // Rejection logic for all
-            await JoinRequest.findByIdAndUpdate(requestId, {
-                status: "rejected",
-                handledBy: userId,
-                handledAt: new Date()
-            });
+            joinRequest.status = "rejected";
+            joinRequest.handledBy = userId;
+            joinRequest.handledAt = new Date();
+            await joinRequest.save({ session });
 
             await createNotification({
                 recipient: joinRequest.requester,
@@ -346,12 +344,17 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
             });
         }
 
+        await session.commitTransaction();
+
         res.status(200).json({
             success: true,
             message: `Request ${action} successfully`,
             data: responseData
         });
     } catch (error) {
+        await session.abortTransaction();
         next(error);
+    } finally {
+        session.endSession();
     }
 });

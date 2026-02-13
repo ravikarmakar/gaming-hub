@@ -119,8 +119,17 @@ router.put(
   updateProfile
 );
 
-router.delete("/delete-account", deleteAccount);
-router.put("/update-settings", validateRequest(updateSettingsValidation), updateSettings);
+router.delete(
+  "/delete-account",
+  rateLimiter({ limit: 5, timer: 60, key: "deleteAccount" }),
+  deleteAccount
+);
+router.put(
+  "/update-settings",
+  rateLimiter({ limit: 50, timer: 60, key: "updateSettings" }),
+  validateRequest(updateSettingsValidation),
+  updateSettings
+);
 
 router.put(
   "/change-password",

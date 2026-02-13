@@ -122,7 +122,7 @@ export const isVerified = TryCatchHandler(async (req, res, next) => {
   }
 
   if (!user) {
-    user = await User.findById(userId);
+    user = await User.findById(userId).lean();
     if (user) {
       try {
         await redis.set(cacheKey, JSON.stringify(user), { ex: 60 });

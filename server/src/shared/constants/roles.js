@@ -23,4 +23,5 @@ export const Scopes = {
   ORG: "org",
   TEAM: "team",
   EVENT: "event",
+  INVITATION: "invitation",
 };

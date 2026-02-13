@@ -50,35 +50,11 @@ const roundSchema = new mongoose.Schema(
 roundSchema.index({ eventId: 1, roundNumber: 1 }, { unique: true });
 roundSchema.index({ eventId: 1, roundName: 1 }, { unique: true });
 
-// Auto-generate round name and number
+// Auto-generate round name if not provided
 roundSchema.pre("save", async function (next) {
-  // If both are present, we don't need to do anything
-  if (this.roundName && this.roundNumber !== undefined) {
-    return next();
-  }
-
-  // Find the highest round number for this event to determine the next number
-  const lastRound = await mongoose
-    .model("Round")
-    .findOne({ eventId: this.eventId })
-    .sort({ roundNumber: -1 })
-    .select("roundNumber")
-    .lean();
-
-  const nextNumber = lastRound ? lastRound.roundNumber + 1 : 1;
-
-  // Case 1: roundNumber is missing
-  if (this.roundNumber === undefined) {
-    this.roundNumber = nextNumber;
-  }
-
-  // Case 2: roundName is missing
-  if (!this.roundName) {
+  if (!this.roundName && this.roundNumber !== undefined) {
     this.roundName = `Round-${this.roundNumber}`;
   }
-
-  // Case 3: Both were missing (handled by the above two ifs sequentially)
-
   next();
 });
 

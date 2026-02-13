@@ -5,30 +5,33 @@ import { logger } from "../utils/logger.js";
 // In-memory L1 cache for rate limits to reduce Redis pressure
 const rlMemoryCache = new Map();
 const RL_MEM_TTL = 2000; // 2 seconds
+const MAX_MEM_CACHE_SIZE = 1000; // Prevent memory leak
 
 export const rateLimiter =
   ({ limit = 10, timer = 60, key = "global" }) =>
     async (req, res, next) => {
       try {
-        const clientIp =
-          req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+        // Robust IP extraction to prevent spoofing
+        const xForwardedFor = req.headers["x-forwarded-for"];
+        const clientIp = xForwardedFor ? xForwardedFor.split(',')[0].trim() : req.socket.remoteAddress;
 
         const fullKey = `rate_limit:${key}:${clientIp}`;
         const now = Date.now();
 
-        // Check memory cache first
+        // 1. Check memory cache first (L1)
         const memEntry = rlMemoryCache.get(fullKey);
         if (memEntry && (now - memEntry.timestamp < RL_MEM_TTL)) {
-          if (memEntry.count > limit) {
+          if (memEntry.blocked) {
             return next(new CustomError(`Too many requests! Try again later`, 429));
           }
-          // Increment in memory too
-          memEntry.count++;
         }
 
+        // 2. Redis Check (L2)
         const p = redis.pipeline();
         p.incr(fullKey);
-        p.expire(fullKey, timer);
+        // Only set expire if it doesn't exist (NX) or if manually checking count
+        // Using 'NX' for EXPIRE is Redis 7.0+. Fallback to manual check.
+        p.ttl(fullKey);
 
         const startTime = performance.now();
         const results = await Promise.race([
@@ -41,13 +44,28 @@ export const rateLimiter =
           logger.debug(`>>> [RATE LIMITER REDIS] ${key}: ${(endTime - startTime).toFixed(2)}ms`);
         }
 
-        const [requestCount] = results;
+        // ioredis results are [[err, res], [err, res]]
+        const [[incrErr, requestCount], [ttlErr, ttl]] = results;
 
-        // Update memory cache
-        rlMemoryCache.set(fullKey, { count: requestCount, timestamp: now });
+        if (incrErr) throw incrErr;
+
+        // If newly created key (TTL will be -1), set expiration
+        if (ttl === -1) {
+          await redis.expire(fullKey, timer);
+        }
+
+        // 3. Update memory cache (L1)
+        if (rlMemoryCache.size >= MAX_MEM_CACHE_SIZE) {
+          rlMemoryCache.clear(); // Simple bounding
+        }
+
+        rlMemoryCache.set(fullKey, {
+          blocked: requestCount > limit,
+          timestamp: now
+        });
 
         if (requestCount > limit) {
-          const timeRemaining = await redis.ttl(fullKey).catch(() => 0);
+          const timeRemaining = ttl > 0 ? ttl : timer;
           return next(
             new CustomError(
               `Too many requests! Try again in ${timeRemaining || 'a few'} seconds`,

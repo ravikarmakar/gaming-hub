@@ -106,7 +106,7 @@ export const updateProfileValidation = {
         gameIgn: Joi.string().max(30).allow("").optional(),
         gameUid: Joi.string().max(30).allow("").optional(),
         gender: Joi.string().valid("male", "female", "other", "prefer_not_to_say").optional(),
-        dob: Joi.date().iso().optional().allow(null, ""),
+        dob: Joi.date().iso().max("now").optional().allow(null, ""),
         phoneNumber: Joi.string().max(20).allow("").optional(),
     }),
 };

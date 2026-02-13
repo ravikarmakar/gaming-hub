@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { logger } from "../../shared/utils/logger.js";
 import { redis } from "../../shared/config/redis.js";
 import User from "../user/user.model.js";
@@ -24,6 +25,33 @@ import {
   changePasswordService
 } from "./auth.service.js";
 
+/**
+ * Helper to ensure consistent user object serialization
+ */
+const formatUserResponse = (user) => {
+  if (!user) return null;
+  const userObj = user.toObject ? user.toObject() : { ...user };
+  delete userObj.password;
+  delete userObj.__v;
+  // Ensure sensitive internal fields are removed if they exist
+  delete userObj.resetPasswordOtp;
+  delete userObj.resetPasswordExpires;
+  delete userObj.verificationOtp;
+  delete userObj.verificationOtpExpires;
+  return userObj;
+};
+
+/**
+ * Timing-safe string comparison
+ */
+const safeCompare = (a, b) => {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  // Hash both to ensure equal length before timingSafeEqual
+  const hmacA = crypto.createHmac('sha256', 'static-salt').update(a).digest();
+  const hmacB = crypto.createHmac('sha256', 'static-salt').update(b).digest();
+  return crypto.timingSafeEqual(hmacA, hmacB);
+};
+
 export const register = TryCatchHandler(async (req, res, next) => {
   const { user, accessToken, refreshToken } = await registerUser(req.body);
 
@@ -33,7 +61,7 @@ export const register = TryCatchHandler(async (req, res, next) => {
     success: true,
     message: "User registered successfully",
     accessToken,
-    user: user.toObject(),
+    user: formatUserResponse(user),
   });
 });
 
@@ -46,7 +74,7 @@ export const login = TryCatchHandler(async (req, res, next) => {
     success: true,
     message: "Login successful",
     accessToken,
-    user,
+    user: formatUserResponse(user),
   });
 });
 
@@ -115,8 +143,10 @@ export const refreshToken = TryCatchHandler(async (req, res, next) => {
 
   const storedToken = await redis.get(`refresh_token:${decoded.userId}`);
 
-  if (storedToken !== refreshTokenCookie)
+  // Use timing-safe comparison to prevent timing attacks
+  if (!storedToken || !safeCompare(storedToken, refreshTokenCookie)) {
     return next(new CustomError("Invalid refresh token", 401));
+  }
 
   if (decoded) {
     await redis.del(`refresh_token:${decoded.userId}`);
@@ -130,14 +160,11 @@ export const refreshToken = TryCatchHandler(async (req, res, next) => {
   await storeRefreshToken(user._id, refreshToken);
   setCookies(res, accessToken, refreshToken);
 
-  const userObj = user.toObject();
-  delete userObj.password;
-
   res.json({
     success: true,
     message: "Token refreshed successfully",
     accessToken,
-    user: userObj,
+    user: formatUserResponse(user),
   });
 });
 
@@ -147,10 +174,11 @@ export const googleLogin = TryCatchHandler(async (req, res, next) => {
 
   setCookies(res, accessToken, refreshToken);
 
-  res.status(201).json({
+  // Status 200 for consistency with session-based login
+  res.status(200).json({
     success: true,
     message: "User logged in successfully",
-    user,
+    user: formatUserResponse(user),
   });
 });
 
@@ -162,7 +190,7 @@ export const discordLogin = TryCatchHandler(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    user,
+    user: formatUserResponse(user),
   });
 });
 
@@ -170,13 +198,16 @@ export const sendVerifyOtp = TryCatchHandler(async (req, res, next) => {
   const { user, alreadyVerified } = await sendVerifyOtpService(req.user.userId);
 
   if (alreadyVerified) {
-    return res.status(200).json({ success: false, message: "Account already verified" });
+    return res.status(400).json({
+      success: false,
+      message: "Account already verified"
+    });
   }
 
   res.status(200).json({
     success: true,
     message: "Verification OTP sent on Email",
-    user: user.toObject(),
+    user: formatUserResponse(user),
   });
 });
 
@@ -186,14 +217,20 @@ export const verifyEmail = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Your account was verified successfully",
-    user: user.toObject(),
+    user: formatUserResponse(user),
   });
 });
 
 export const getProfile = TryCatchHandler(async (req, res, next) => {
   const { user, unreadCount, cached } = await getUserProfile(req.user.userId, req.user.cachedProfile);
 
-  const response = { success: true, user };
+  // Note: user coming from getUserProfile is already formatted in the service layer usually,
+  // but we apply formatUserResponse here to be safe and consistent.
+  const response = {
+    success: true,
+    user: formatUserResponse(user)
+  };
+
   if (unreadCount !== undefined) response.unreadCount = unreadCount;
   if (cached) response.cached = true;
 
@@ -240,7 +277,7 @@ export const updateProfile = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Profile updated successfully",
-    user,
+    user: formatUserResponse(user),
   });
 });
 
@@ -271,7 +308,7 @@ export const updateSettings = TryCatchHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Settings updated successfully",
-    user,
+    user: formatUserResponse(user),
   });
 });
 

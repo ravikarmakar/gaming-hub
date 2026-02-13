@@ -68,9 +68,9 @@ roleSchema.pre("validate", function (next) {
     if (!platformRoles.includes(role)) {
       return next(new Error(`Role "${role}" is not valid for platform scope`));
     }
-    // Platform scope should not have scopeModel
-    if (scopeModel) {
-      return next(new Error("Platform scope should not have a scopeModel"));
+    // Platform scope should not have scopeModel or scopeId
+    if (scopeModel || this.scopeId) {
+      return next(new Error("Platform scope should not have a scopeModel or scopeId"));
     }
   } else if (scope === "org") {
     const orgRoles = [

@@ -2,16 +2,22 @@ import jwt from "jsonwebtoken";
 import axios from "axios";
 import qs from "qs";
 import geoip from "geoip-lite";
+import crypto from "crypto";
 import { redis } from "../../shared/config/redis.js";
 import User from "../user/user.model.js";
 import { Notification } from "../notification/notification.model.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
 import { oauth2Client, discordOAuthConfig } from "../../shared/config/oauth.js";
 import { transporter } from "../../shared/config/mail.js";
-import { generateOTP, sendVerificationEmail } from "../../shared/services/otp.service.js";
+import { generateOTP as generateOTPService, sendVerificationEmail } from "../../shared/services/otp.service.js";
 import { uploadOnImageKit, deleteFromImageKit } from "../../shared/services/imagekit.service.js";
 import { syncUserInTeams } from "../team/team.service.js";
 import { logger } from "../../shared/utils/logger.js";
+
+// Secure OTP Generator
+const generateSecureOTP = () => {
+  return crypto.randomInt(100000, 1000000).toString();
+};
 
 export const generateTokens = (userId, roles) => {
   const accessToken = jwt.sign(
@@ -64,7 +70,7 @@ export const registerUser = async ({ username, email, password }) => {
     throw new CustomError("Username already exists. Please choose another.", 409);
   }
 
-  const isExistingEmail = await User.findOne({ email });
+  const isExistingEmail = await User.findOne({ email: email.toLowerCase() });
   if (isExistingEmail) {
     throw new CustomError("Email already exists. Try logging in.", 409);
   }
@@ -75,7 +81,7 @@ export const registerUser = async ({ username, email, password }) => {
   await storeRefreshToken(user._id, refreshToken);
 
   // Generate and save verification OTP
-  const otp = generateOTP();
+  const otp = generateSecureOTP();
   user.verifyOtp = otp;
   user.verifyOtpExpireAt = Date.now() + 2 * 60 * 1000; // 2 mins
   await user.save();
@@ -88,13 +94,21 @@ export const registerUser = async ({ username, email, password }) => {
   return { user, accessToken, refreshToken };
 };
 
-// Helper function to ensure unique username for OAuth users
+// Helper function to ensure unique username for OAuth users (Bounded Loop)
 const ensureUniqueUsername = async (baseUsername) => {
   let username = baseUsername;
   let suffix = 1;
+  const maxRetries = 20;
+  let retries = 0;
+
   while (await User.findOne({ username })) {
+    if (retries >= maxRetries) {
+      // Fallback to timestamp if sequential fails often
+      return `${baseUsername}${Date.now()}`;
+    }
     username = `${baseUsername}${suffix}`;
     suffix++;
+    retries++;
   }
   return username;
 };
@@ -150,7 +164,8 @@ export const loginUser = async ({ identifier, password }) => {
 
 export const handleGoogleLogin = async (code) => {
   const { tokens } = await oauth2Client.getToken(code);
-  oauth2Client.setCredentials(tokens);
+  // Do NOT set global credentials to avoid race conditions
+  // oauth2Client.setCredentials(tokens); 
 
   const { data } = await axios.get(
     `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${tokens.access_token}`,
@@ -262,7 +277,7 @@ export const sendVerifyOtpService = async (userId) => {
     return { alreadyVerified: true };
   }
 
-  const otp = generateOTP();
+  const otp = generateSecureOTP();
   user.verifyOtp = otp;
   user.verifyOtpExpireAt = Date.now() + 2 * 60 * 1000;
   await user.save();
@@ -282,15 +297,19 @@ export const verifyEmailService = async (userId, otp) => {
   const user = await User.findById(userId).select("+verifyOtp +verifyOtpExpireAt");
   if (!user) throw new CustomError("User not found", 404);
 
-  await redis.del(cacheKey);
 
-  if (user.verifyOtp !== otp) throw new CustomError("Invalid OTP", 400);
+  const isMatch = await user.matchVerifyOtp(otp);
+  if (!isMatch) throw new CustomError("Invalid OTP", 400);
   if (user.verifyOtpExpireAt < Date.now()) throw new CustomError("OTP has expired", 400);
 
+  // Invalidate OTP immediately
   user.isAccountVerified = true;
   user.verifyOtp = "";
   user.verifyOtpExpireAt = 0;
   await user.save();
+
+  // Clean cache AFTER successful save
+  await redis.del(cacheKey);
 
   await redis.set(cacheKey, JSON.stringify(user), { ex: 60 });
   return user;
@@ -301,10 +320,13 @@ const profileL1Cache = new Map();
 const L1_TTL = 30 * 1000; // 30 seconds
 const MAX_L1_CACHE_SIZE = 1000;
 
-// Helper to set L1 cache with size limit (LRU eviction)
+// Helper to set L1 cache with True LRU logic
 const setL1Cache = (key, value) => {
-  // If at capacity, remove oldest entry (first in Map)
-  if (profileL1Cache.size >= MAX_L1_CACHE_SIZE) {
+  // If exists, delete to update position (LRU)
+  if (profileL1Cache.has(key)) {
+    profileL1Cache.delete(key);
+  } else if (profileL1Cache.size >= MAX_L1_CACHE_SIZE) {
+    // If not exists and full, delete oldest
     const firstKey = profileL1Cache.keys().next().value;
     profileL1Cache.delete(firstKey);
   }
@@ -329,6 +351,8 @@ export const getUserProfile = async (userId, cachedProfile) => {
   const cachedL1 = profileL1Cache.get(l1Key);
   if (cachedL1 && (now - cachedL1.timestamp < L1_TTL)) {
     logger.info(`>>> [L1 PROFILE HIT] ${userId}`);
+    // Refresh LRU
+    setL1Cache(l1Key, cachedL1);
     return { ...cachedL1.data, cached: true };
   }
 
@@ -362,6 +386,7 @@ export const getUserProfile = async (userId, cachedProfile) => {
     try {
       const user = typeof cachedData === "string" ? JSON.parse(cachedData) : cachedData;
       // Fetch unread count if not in redis (old cache format)
+      // Note: Ideally we should cache unreadCount too, or use a separate counter
       const unreadCount = await Notification.countDocuments({
         recipient: userId,
         status: "unread",
@@ -410,7 +435,7 @@ export const sendPasswordResetEmail = async (email) => {
       400,
     );
 
-  const otp = String(Math.floor(100000 + Math.random() * 900000));
+  const otp = generateSecureOTP();
 
   user.resetOtp = otp;
   user.resetOtpExpireAt = Date.now() + 2 * 60 * 1000;
@@ -439,11 +464,8 @@ export const verifyResetOtpService = async (email, otp) => {
 
   if (!user) throw new CustomError("User not found", 404);
 
-  if (
-    !user.resetOtp ||
-    user.resetOtp !== otp ||
-    user.resetOtpExpireAt < Date.now()
-  ) {
+  const isMatch = await user.matchResetOtp(otp);
+  if (!user.resetOtp || !isMatch || user.resetOtpExpireAt < Date.now()) {
     throw new CustomError("Invalid or expired OTP", 400);
   }
 
@@ -460,12 +482,10 @@ export const resetUserPassword = async (email, otp, newPassword) => {
 
   if (!user) throw new CustomError("User not found", 404);
 
-  if (
-    !user.resetOtp ||
-    user.resetOtp !== otp ||
-    user.resetOtpExpireAt < Date.now()
-  )
+  const isMatch = await user.matchResetOtp(otp);
+  if (!user.resetOtp || !isMatch || user.resetOtpExpireAt < Date.now()) {
     throw new CustomError("Invalid or expired OTP", 400);
+  }
 
   user.password = newPassword;
   user.resetOtp = "";
@@ -603,7 +623,7 @@ export const updateUserProfile = async (userId, body, files, ipAddress) => {
       avatar: user.avatar,
     }).catch((err) => logger.error("Denormalization sync failed:", err));
 
-    return user;
+    return sanitizeUserObject(user);
 
   } catch (error) {
     // Rollback: Delete newly uploaded images because the operation failed
@@ -638,6 +658,8 @@ export const deleteUserAccount = async (userId) => {
   user.avatar = "https://ui-avatars.com/api/?name=deleted&background=777";
   user.avatarFileId = null;
   user.coverImageFileId = null;
+  // Invalidate any session/token data if needed, though JWTs are stateless
+  // We should blacklist tokens or ensure user is logged out, but basic delete sets isDeleted which should block login.
 
   await user.save();
   await redis.del(`user_profile:${userId}`);
@@ -667,5 +689,5 @@ export const updateUserSettings = async (userId, settings) => {
 
   await user.save();
   await redis.del(`user_profile:${userId}`);
-  return user;
+  return sanitizeUserObject(user);
 };

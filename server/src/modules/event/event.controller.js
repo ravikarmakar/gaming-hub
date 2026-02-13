@@ -36,108 +36,119 @@ const escapeRegex = (string) => {
 export const createEvent = TryCatchHandler(async (req, res, next) => {
   const { userId, roles } = req.user;
 
-  const handleError = (message, status) => {
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+  try {
+    const user = await findUserById(userId);
+
+    const org = await Organizer.findById(user.orgId);
+    if (!org || org.isDeleted) {
+      throw new CustomError("Organization not found or inactive", 404);
     }
-    return next(new CustomError(message, status));
-  };
 
-  const user = await findUserById(userId);
-
-  const org = await Organizer.findById(user.orgId);
-  if (!org || org.isDeleted) {
-    return handleError("Organization not found or inactive", 404);
-  }
-
-  const hasAuth = roles.some(
-    (r) =>
-      r.scope === "org" &&
-      r.scopeModel === "Organizer" &&
-      (r.role === "org:owner" || r.role === "org:manager") &&
-      r.scopeId.toString() === user.orgId.toString()
-  );
-  if (!hasAuth)
-    return handleError("Not authorized for this organization", 403);
-
-  for (const field of requiredFields) {
-    if (!req.body[field]) {
-      return handleError(`${field} is required`, 400);
-    }
-  }
-
-  const startDate = new Date(req.body.startDate);
-  const registrationEndsAt = new Date(req.body.registrationEndsAt);
-
-
-  const slotsNum = Number(req.body.slots);
-  if (isNaN(slotsNum) || slotsNum <= 0) {
-    return handleError("Slots must be a number greater than 0", 400);
-  }
-
-  if (Number(req.body.prizePool) < 0) {
-    return next(new CustomError("Prize pool cannot be negative", 400));
-  }
-
-  const exists = await Event.findOne({
-    title: req.body.title,
-    orgId: user.orgId,
-  });
-
-  if (exists) {
-    return handleError("Event already exists", 409);
-  }
-
-  // handle image uploading logic here
-  let imageUrl = null;
-  let imageFileId = null;
-
-  if (req.file) {
-    const uploadRes = await uploadOnImageKit(
-      req.file.path,
-      `event-poster-${Date.now()}`,
-      "/events/posters"
+    const hasAuth = roles.some(
+      (r) =>
+        r.scope === "org" &&
+        r.scopeModel === "Organizer" &&
+        (r.role === "org:owner" || r.role === "org:manager") &&
+        r.scopeId.toString() === user.orgId.toString()
     );
-    if (uploadRes) {
-      imageUrl = uploadRes.url;
-      imageFileId = uploadRes.fileId;
+    if (!hasAuth) {
+      throw new CustomError("Not authorized for this organization", 403);
+    }
+
+    for (const field of requiredFields) {
+      if (!req.body[field]) {
+        throw new CustomError(`${field} is required`, 400);
+      }
+    }
+
+    const startDate = new Date(req.body.startDate);
+    const registrationEndsAt = new Date(req.body.registrationEndsAt);
+
+    const slotsNum = Number(req.body.slots);
+    if (isNaN(slotsNum) || slotsNum <= 0) {
+      throw new CustomError("Slots must be a number greater than 0", 400);
+    }
+
+    const prizePool = Number(req.body.prizePool) || 0;
+    if (prizePool < 0) {
+      throw new CustomError("Prize pool cannot be negative", 400);
+    }
+
+    const exists = await Event.findOne({
+      title: req.body.title,
+      orgId: user.orgId,
+    });
+
+    if (exists) {
+      throw new CustomError("Event already exists", 409);
+    }
+
+    // handle image uploading logic here
+    let imageUrl = null;
+    let imageFileId = null;
+
+    if (req.file) {
+      const uploadRes = await uploadOnImageKit(
+        req.file.path,
+        `event-poster-${Date.now()}`,
+        "/events/posters"
+      );
+      if (uploadRes) {
+        imageUrl = uploadRes.url;
+        imageFileId = uploadRes.fileId;
+      }
+    }
+
+    try {
+      const event = await Event.create({
+        title: req.body.title,
+        game: req.body.game,
+        eventType: (req.body.eventType || "tournament").toLowerCase(),
+        category: (req.body.category || "solo").toLowerCase(),
+        startDate,
+        registrationEndsAt,
+        maxSlots: slotsNum,
+        registrationMode: req.body.registrationMode || "open",
+        registrationStatus: "registration-open", // Use primary field
+        orgId: user.orgId,
+        description: req.body.description,
+        prizePool: prizePool,
+        image: imageUrl,
+        imageFileId: imageFileId,
+        eventEndAt: req.body.eventEndAt ? new Date(req.body.eventEndAt) : null,
+        prizeDistribution: (() => {
+          if (!req.body.prizeDistribution) return [];
+          try {
+            return typeof req.body.prizeDistribution === 'string'
+              ? JSON.parse(req.body.prizeDistribution)
+              : req.body.prizeDistribution;
+          } catch (err) {
+            logger.error("Error parsing prizeDistribution in createEvent:", err);
+            return [];
+          }
+        })(),
+      });
+
+      res.status(201).json({
+        success: true,
+        message: "Event created successfully",
+        data: event,
+      });
+    } catch (err) {
+      // Rollback ImageKit if DB failed
+      if (imageFileId) {
+        deleteFromImageKit(imageFileId).catch(deleteErr =>
+          logger.error(`Failed to rollback ImageKit upload ${imageFileId}:`, deleteErr)
+        );
+      }
+      throw err;
+    }
+  } finally {
+    // Always cleanup local file
+    if (req.file && fs.existsSync(req.file.path)) {
+      try { fs.unlinkSync(req.file.path); } catch (e) { logger.error("Failed to delete local file:", e); }
     }
   }
-
-  const event = await Event.create({
-    title: req.body.title,
-    game: req.body.game,
-    eventType: (req.body.eventType || "tournament").toLowerCase(),
-    category: (req.body.category || "solo").toLowerCase(),
-    startDate,
-    registrationEndsAt,
-    maxSlots: slotsNum,
-    registrationMode: req.body.registrationMode || "open",
-    status: req.body.status || "registration-open",
-    orgId: user.orgId,
-    description: req.body.description,
-    prizePool: Number(req.body.prizePool) || 0,
-    image: imageUrl,
-    imageFileId: imageFileId,
-    eventEndAt: req.body.eventEndAt ? new Date(req.body.eventEndAt) : null,
-    prizeDistribution: (() => {
-      if (!req.body.prizeDistribution) return [];
-      try {
-        return typeof req.body.prizeDistribution === 'string'
-          ? JSON.parse(req.body.prizeDistribution)
-          : req.body.prizeDistribution;
-      } catch (err) {
-        logger.error("Error parsing prizeDistribution in createEvent:", err);
-        return [];
-      }
-    })(),
-  });
-
-  res.status(201).json({
-    success: true,
-    message: "Event created successfully",
-    data: event,
-  });
 });
 
 export const fetchEventByOrg = TryCatchHandler(async (req, res, next) => {
@@ -201,7 +212,7 @@ export const fetchAllEvents = TryCatchHandler(async (req, res, next) => {
     query.game = { $regex: `^${escapeRegex(game)}$`, $options: "i" };
   }
   if (category && category !== 'all') query.category = category.toLowerCase();
-  if (status && status !== 'all') query.status = status;
+  if (status && status !== 'all') query.registrationStatus = status;
 
   if (cursor) {
     query._id = { $lt: cursor };
@@ -256,7 +267,7 @@ export const registerEvent = TryCatchHandler(async (req, res, next) => {
   }
 
   // Status check
-  if (event.status !== "registration-open") {
+  if (event.registrationStatus !== "registration-open") {
     return next(new CustomError("Event registration is not open", 400));
   }
 
@@ -473,7 +484,6 @@ export const closeRegistration = TryCatchHandler(async (req, res) => {
 
   // Registration close karna
   event.registrationStatus = "registration-closed";
-  if (event.status) event.status = "registration-closed"; // Keep root status in sync if exists
   await event.save();
 
   res.status(200).json({
@@ -486,31 +496,30 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
   const { eventId } = req.params;
   const { roles } = req.user;
 
-  const event = await Event.findById(eventId);
-  if (!event) {
-    return next(new CustomError("Event not found", 404));
-  }
+  try {
+    const event = await Event.findById(eventId);
+    if (!event) {
+      throw new CustomError("Event not found", 404);
+    }
 
-  // Authorization Check (Defense in depth)
-  const isAuthorized = roles.some(
-    (r) =>
-      (r.scope === Scopes.PLATFORM && r.role === Roles.PLATFORM.SUPER_ADMIN) ||
-      (r.scope === "org" &&
-        r.scopeModel === "Organizer" &&
-        (r.role === "org:owner" || r.role === "org:manager") &&
-        r.scopeId.toString() === event.orgId.toString())
-  );
-  if (!isAuthorized) {
-    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    throw new CustomError("Not authorized to update this event", 403);
-  }
+    // Authorization Check (Defense in depth)
+    const isAuthorized = roles.some(
+      (r) =>
+        (r.scope === Scopes.PLATFORM && r.role === Roles.PLATFORM.SUPER_ADMIN) ||
+        (r.scope === "org" &&
+          r.scopeModel === "Organizer" &&
+          (r.role === "org:owner" || r.role === "org:manager") &&
+          r.scopeId.toString() === event.orgId.toString())
+    );
+    if (!isAuthorized) {
+      throw new CustomError("Not authorized to update this event", 403);
+    }
 
-  // Handle image update if file provided
-  let imageUrl = event.image;
-  let imageFileId = event.imageFileId;
+    // Handle image update if file provided
+    let imageUrl = event.image;
+    let imageFileId = event.imageFileId;
 
-  if (req.file) {
-    try {
+    if (req.file) {
       const uploadRes = await uploadOnImageKit(
         req.file.path,
         `event-poster-${event._id}-${Date.now()}`,
@@ -519,62 +528,80 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
 
       if (uploadRes) {
         if (event.imageFileId) {
-          await deleteFromImageKit(event.imageFileId);
+          deleteFromImageKit(event.imageFileId).catch(err =>
+            logger.error(`Failed to delete old event poster ${event.imageFileId}:`, err)
+          );
         }
         imageUrl = uploadRes.url;
         imageFileId = uploadRes.fileId;
       }
-    } finally {
-      // Always cleanup local file after upload attempt
-      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    }
+
+    // Whitelist allowed fields to prevent mass assignment
+    const allowedFields = [
+      "title", "game", "description", "startDate", "registrationEndsAt",
+      "maxSlots", "registrationMode", "registrationStatus", "eventProgress",
+      "eventEndAt", "prizePool", "category", "eventType", "prizeDistribution"
+    ];
+
+    const updateData = {};
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    });
+
+    if (imageUrl) updateData.image = imageUrl;
+    if (imageFileId) updateData.imageFileId = imageFileId;
+
+    // Custom validations for specific fields
+    if (req.body.slots) {
+      const slotsNum = Number(req.body.slots);
+      if (isNaN(slotsNum) || slotsNum < event.joinedSlots) {
+        throw new CustomError(`Cannot set slots below currently joined: ${event.joinedSlots}`, 400);
+      }
+      updateData.maxSlots = slotsNum;
+      delete updateData.slots; // Handled as maxSlots
+    }
+
+    if (updateData.prizePool !== undefined) {
+      const prizePoolNum = Number(updateData.prizePool);
+      if (isNaN(prizePoolNum) || prizePoolNum < 0) {
+        throw new CustomError("Prize pool cannot be negative", 400);
+      }
+      updateData.prizePool = prizePoolNum;
+    }
+
+    if (updateData.category) updateData.category = updateData.category.toLowerCase();
+    if (updateData.eventType) updateData.eventType = updateData.eventType.toLowerCase();
+
+    if (updateData.prizeDistribution) {
+      try {
+        updateData.prizeDistribution = typeof updateData.prizeDistribution === 'string'
+          ? JSON.parse(updateData.prizeDistribution)
+          : updateData.prizeDistribution;
+      } catch (e) {
+        logger.error("Error parsing prizeDistribution in updateEvent:", e);
+        delete updateData.prizeDistribution; // Don't update with invalid data
+      }
+    }
+
+    const updatedEvent = await Event.findByIdAndUpdate(eventId, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Event updated successfully",
+      data: updatedEvent,
+    });
+  } finally {
+    // Always cleanup local file
+    if (req.file && fs.existsSync(req.file.path)) {
+      try { fs.unlinkSync(req.file.path); } catch (e) { logger.error("Failed to delete local file:", e); }
     }
   }
-
-  const updateData = { ...req.body };
-  if (imageUrl) updateData.image = imageUrl;
-  if (imageFileId) updateData.imageFileId = imageFileId;
-
-  if (req.body.slots) {
-    const slotsNum = Number(req.body.slots);
-    if (isNaN(slotsNum) || slotsNum < event.joinedSlots) {
-      throw new CustomError(`Cannot set slots below currently joined: ${event.joinedSlots}`, 400);
-    }
-    updateData.maxSlots = slotsNum;
-    delete updateData.slots;
-  }
-
-  if (req.body.prizePool) {
-    updateData.prizePool = Number(req.body.prizePool);
-  }
-
-  if (req.body.category) {
-    updateData.category = req.body.category.toLowerCase();
-  }
-
-  if (req.body.eventType) {
-    updateData.eventType = req.body.eventType.toLowerCase();
-  }
-
-  if (req.body.prizeDistribution) {
-    try {
-      updateData.prizeDistribution = typeof req.body.prizeDistribution === 'string'
-        ? JSON.parse(req.body.prizeDistribution)
-        : req.body.prizeDistribution;
-    } catch (e) {
-      logger.error("Error parsing prizeDistribution in updateEvent:", e);
-    }
-  }
-
-  const updatedEvent = await Event.findByIdAndUpdate(eventId, updateData, {
-    new: true,
-    runValidators: true,
-  });
-
-  res.status(200).json({
-    success: true,
-    message: "Event updated successfully",
-    data: updatedEvent,
-  });
 });
 
 export const deleteEvent = TryCatchHandler(async (req, res) => {
@@ -601,7 +628,9 @@ export const deleteEvent = TryCatchHandler(async (req, res) => {
 
   // Cleanup associated assets/data
   if (deletedEvent && deletedEvent.imageFileId) {
-    await deleteFromImageKit(deletedEvent.imageFileId);
+    deleteFromImageKit(deletedEvent.imageFileId).catch(err =>
+      logger.error(`Failed to cleanup event image ${deletedEvent.imageFileId}:`, err)
+    );
   }
 
   // Cascade deletions
@@ -692,11 +721,6 @@ export const startEvent = TryCatchHandler(async (req, res, next) => {
   event.registrationStatus = "registration-closed";
   event.eventProgress = "ongoing";
 
-  // Also updating the legacy/root status field if it exists in schema or is used elsewhere, 
-  // though it seemed undefined in schema. Safest to update registrationStatus primarily.
-  // If 'status' field exists and is used for registration status:
-  if (event.status) event.status = "registration-closed";
-
   await event.save();
 
   res.status(200).json({
@@ -729,7 +753,6 @@ export const finishEvent = TryCatchHandler(async (req, res, next) => {
 
   event.eventProgress = "completed";
   event.registrationStatus = "registration-closed";
-  if (event.status) event.status = "registration-closed";
 
   await event.save();
 
@@ -750,7 +773,7 @@ export const fetchTournamentsByTeam = TryCatchHandler(async (req, res, next) => 
   const registrations = await EventRegistration.find({ teamId })
     .populate({
       path: "eventId",
-      select: "title game startDate status image prizePool eventType category eventProgress registrationStatus",
+      select: "title game startDate image prizePool eventType category eventProgress registrationStatus",
       populate: {
         path: "orgId",
         select: "orgName imageUrl"
