@@ -132,20 +132,20 @@ export const refreshToken = TryCatchHandler(async (req, res, next) => {
   const refreshTokenCookie = req.cookies.refreshToken;
 
   if (!refreshTokenCookie)
-    return next(new CustomError("No refresh token provided", 401));
+    return next(new CustomError("No refresh token provided", 401, AUTH_ERRORS.AUTH_TOKEN_REQUIRED));
 
   let decoded;
   try {
     decoded = jwt.verify(refreshTokenCookie, process.env.REFRESH_TOKEN_SECRET);
   } catch (err) {
-    return next(new CustomError("Invalid refresh token", 401));
+    return next(new CustomError("Invalid refresh token", 401, AUTH_ERRORS.AUTH_INVALID_TOKEN));
   }
 
   const storedToken = await redis.get(`refresh_token:${decoded.userId}`);
 
   // Use timing-safe comparison to prevent timing attacks
   if (!storedToken || !safeCompare(storedToken, refreshTokenCookie)) {
-    return next(new CustomError("Invalid refresh token", 401));
+    return next(new CustomError("Invalid refresh token", 401, AUTH_ERRORS.AUTH_INVALID_TOKEN));
   }
 
   if (decoded) {
@@ -153,7 +153,7 @@ export const refreshToken = TryCatchHandler(async (req, res, next) => {
   }
 
   const user = await User.findById(decoded.userId);
-  if (!user) return next(new CustomError("User not found", 404));
+  if (!user) return next(new CustomError("User not found", 404, AUTH_ERRORS.AUTH_USER_NOT_FOUND));
 
   const { accessToken, refreshToken } = generateTokens(user._id, user.roles);
 

@@ -3,7 +3,7 @@ import { transporter } from "../config/mail.js";
 import crypto from "crypto";
 
 // Generates a 6-digit numeric OTP.
-export const generateOTP = () => {
+export const generateSecureOTP = () => {
     return crypto.randomInt(100000, 1000000).toString();
 };
 

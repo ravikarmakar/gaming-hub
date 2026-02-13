@@ -2,22 +2,17 @@ import jwt from "jsonwebtoken";
 import axios from "axios";
 import qs from "qs";
 import geoip from "geoip-lite";
-import crypto from "crypto";
 import { redis } from "../../shared/config/redis.js";
 import User from "../user/user.model.js";
 import { Notification } from "../notification/notification.model.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
 import { oauth2Client, discordOAuthConfig } from "../../shared/config/oauth.js";
 import { transporter } from "../../shared/config/mail.js";
-import { generateOTP as generateOTPService, sendVerificationEmail } from "../../shared/services/otp.service.js";
+import { generateSecureOTP, sendVerificationEmail } from "../../shared/services/otp.service.js";
 import { uploadOnImageKit, deleteFromImageKit } from "../../shared/services/imagekit.service.js";
 import { syncUserInTeams } from "../team/team.service.js";
 import { logger } from "../../shared/utils/logger.js";
-
-// Secure OTP Generator
-const generateSecureOTP = () => {
-  return crypto.randomInt(100000, 1000000).toString();
-};
+import { AUTH_ERRORS } from "../../shared/constants/errorCodes.js";
 
 export const generateTokens = (userId, roles) => {
   const accessToken = jwt.sign(
@@ -64,18 +59,59 @@ export const setCookies = (res, accessToken, refreshToken) => {
   });
 };
 
+/**
+ * Helper to handle race conditions in OAuth user creation.
+ * If E11000 (duplicate key) occurs on username, retry with a new name.
+ */
+const createUserWithRetry = async (userData, baseName) => {
+  const maxRetries = 3;
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    try {
+      const uniqueUsername = await ensureUniqueUsername(baseName);
+      return await User.create({
+        ...userData,
+        username: uniqueUsername,
+      });
+    } catch (error) {
+      // If duplicate key error on username (index name might vary, but code is 11000)
+      if (error.code === 11000 && error.keyPattern && error.keyPattern.username) {
+        attempt++;
+        logger.warn(`Username race condition detected for ${baseName}. Retrying (${attempt}/${maxRetries})...`);
+        if (attempt >= maxRetries) throw error;
+      } else {
+        throw error;
+      }
+    }
+  }
+};
+
 export const registerUser = async ({ username, email, password }) => {
   const isExistingUsername = await User.findOne({ username });
   if (isExistingUsername) {
-    throw new CustomError("Username already exists. Please choose another.", 409);
+    throw new CustomError("Username already exists. Please choose another.", 409, AUTH_ERRORS.AUTH_DUPLICATE_USERNAME);
   }
 
   const isExistingEmail = await User.findOne({ email: email.toLowerCase() });
   if (isExistingEmail) {
-    throw new CustomError("Email already exists. Try logging in.", 409);
+    throw new CustomError("Email already exists. Try logging in.", 409, AUTH_ERRORS.AUTH_DUPLICATE_EMAIL);
   }
 
-  const user = await User.create({ username, email, password });
+  let user;
+  try {
+    user = await User.create({ username, email, password });
+  } catch (error) {
+    if (error.code === 11000) {
+      if (error.keyPattern?.username) {
+        throw new CustomError("Username already exists. Please choose another.", 409, AUTH_ERRORS.AUTH_DUPLICATE_USERNAME);
+      }
+      if (error.keyPattern?.email) {
+        throw new CustomError("Email already exists. Try logging in.", 409, AUTH_ERRORS.AUTH_DUPLICATE_EMAIL);
+      }
+    }
+    throw error;
+  }
 
   const { accessToken, refreshToken } = generateTokens(user._id, user.roles);
   await storeRefreshToken(user._id, refreshToken);
@@ -126,7 +162,7 @@ const sanitizeUserObject = (user) => {
 
 export const loginUser = async ({ identifier, password }) => {
   if (!identifier || !password) {
-    throw new CustomError("All fields are required", 400);
+    throw new CustomError("All fields are required", 400, AUTH_ERRORS.AUTH_TOKEN_REQUIRED);
   }
 
   const user = await User.findOne({
@@ -134,19 +170,20 @@ export const loginUser = async ({ identifier, password }) => {
   }).select("+password +verifyOtpExpireAt");
 
   if (!user) {
-    throw new CustomError("Invalid credentials", 401);
+    throw new CustomError("Invalid credentials", 401, AUTH_ERRORS.AUTH_INVALID_CREDENTIALS);
   }
 
   if (user.oauthProvider) {
     throw new CustomError(
       `This account uses ${user.oauthProvider} login. Please sign in with ${user.oauthProvider}.`,
       401,
+      AUTH_ERRORS.AUTH_FORBIDDEN
     );
   }
 
   const isMatch = await user.matchPassword(password);
   if (!isMatch) {
-    throw new CustomError("Invalid credentials", 401);
+    throw new CustomError("Invalid credentials", 401, AUTH_ERRORS.AUTH_INVALID_CREDENTIALS);
   }
 
   // Reset OTPs on successful login
@@ -179,23 +216,24 @@ export const handleGoogleLogin = async (code) => {
       throw new CustomError(
         "This email is registered with password. Please login with your password.",
         400,
+        AUTH_ERRORS.AUTH_FORBIDDEN
       );
     }
     if (user.oauthProvider !== "google") {
       throw new CustomError(
         `This email is linked to ${user.oauthProvider}. Please login with ${user.oauthProvider}.`,
         400,
+        AUTH_ERRORS.AUTH_FORBIDDEN
       );
     }
   } else {
-    const uniqueUsername = await ensureUniqueUsername(name);
-    user = await User.create({
-      username: uniqueUsername,
+    // Attempt creation with retry logic for username race conditions
+    user = await createUserWithRetry({
       email,
       avatar: picture,
       oauthProvider: "google",
       isAccountVerified: true,
-    });
+    }, name);
   }
 
   const { accessToken, refreshToken } = generateTokens(user._id, user.roles);
@@ -227,11 +265,11 @@ export const handleDiscordLogin = async (code) => {
 
   const { username, avatar, email, verified } = userRes.data;
   if (!email) {
-    throw new CustomError("No email found with this Discord account.", 400);
+    throw new CustomError("No email found with this Discord account.", 400, AUTH_ERRORS.AUTH_USER_NOT_FOUND);
   }
 
   if (!verified) {
-    throw new CustomError("Email not verified. Please verify your Discord email.", 403);
+    throw new CustomError("Email not verified. Please verify your Discord email.", 403, AUTH_ERRORS.AUTH_ACCOUNT_NOT_VERIFIED);
   }
 
   let user = await User.findOne({ email });
@@ -240,28 +278,29 @@ export const handleDiscordLogin = async (code) => {
       throw new CustomError(
         "This email is registered with password. Please login with your password.",
         400,
+        AUTH_ERRORS.AUTH_FORBIDDEN
       );
     }
     if (user.oauthProvider !== "discord") {
       throw new CustomError(
         `This email is linked to ${user.oauthProvider}. Please login with ${user.oauthProvider}.`,
         400,
+        AUTH_ERRORS.AUTH_FORBIDDEN
       );
     }
   } else {
-    // Discord avatar construction (updated for discriminator deprecation)
+    // Discord avatar construction
     const avatarUrl = avatar
       ? `https://cdn.discordapp.com/avatars/${userRes.data.id}/${avatar}.png`
       : `https://cdn.discordapp.com/embed/avatars/${(BigInt(userRes.data.id) >> 22n) % 6n}.png`;
 
-    const uniqueUsername = await ensureUniqueUsername(username);
-    user = await User.create({
-      username: uniqueUsername,
+    // Attempt creation with retry logic
+    user = await createUserWithRetry({
       avatar: avatarUrl,
       email,
       oauthProvider: "discord",
       isAccountVerified: true,
-    });
+    }, username);
   }
 
   const { accessToken, refreshToken } = generateTokens(user._id, user.roles);
@@ -299,8 +338,8 @@ export const verifyEmailService = async (userId, otp) => {
 
 
   const isMatch = await user.matchVerifyOtp(otp);
-  if (!isMatch) throw new CustomError("Invalid OTP", 400);
-  if (user.verifyOtpExpireAt < Date.now()) throw new CustomError("OTP has expired", 400);
+  if (!isMatch) throw new CustomError("Invalid OTP", 400, AUTH_ERRORS.AUTH_INVALID_OTP);
+  if (user.verifyOtpExpireAt < Date.now()) throw new CustomError("OTP has expired", 400, AUTH_ERRORS.AUTH_OTP_EXPIRED);
 
   // Invalidate OTP immediately
   user.isAccountVerified = true;
@@ -427,12 +466,13 @@ export const sendPasswordResetEmail = async (email) => {
   if (!user) throw new CustomError("User not found", 404);
 
   if (!user.isAccountVerified)
-    throw new CustomError("You first need to verify your email", 401);
+    throw new CustomError("You first need to verify your email", 401, AUTH_ERRORS.AUTH_ACCOUNT_NOT_VERIFIED);
 
   if (user.oauthProvider)
     throw new CustomError(
       `This account uses ${user.oauthProvider} login and has no password. Please sign in with ${user.oauthProvider}.`,
       400,
+      AUTH_ERRORS.AUTH_FORBIDDEN
     );
 
   const otp = generateSecureOTP();
@@ -462,11 +502,11 @@ export const verifyResetOtpService = async (email, otp) => {
     "+resetOtp +resetOtpExpireAt",
   );
 
-  if (!user) throw new CustomError("User not found", 404);
+  if (!user) throw new CustomError("User not found", 404, AUTH_ERRORS.AUTH_USER_NOT_FOUND);
 
   const isMatch = await user.matchResetOtp(otp);
   if (!user.resetOtp || !isMatch || user.resetOtpExpireAt < Date.now()) {
-    throw new CustomError("Invalid or expired OTP", 400);
+    throw new CustomError("Invalid or expired OTP", 400, AUTH_ERRORS.AUTH_INVALID_OTP);
   }
 
   return { message: "OTP verified successfully. You can now reset your password." };
@@ -474,17 +514,17 @@ export const verifyResetOtpService = async (email, otp) => {
 
 export const resetUserPassword = async (email, otp, newPassword) => {
   if (!email || !otp || !newPassword)
-    throw new CustomError("Email, OTP, and new password are required", 400);
+    throw new CustomError("Email, OTP, and new password are required", 400, AUTH_ERRORS.AUTH_INVALID_CREDENTIALS);
 
   const user = await User.findOne({ email }).select(
     "+password +resetOtp +resetOtpExpireAt",
   );
 
-  if (!user) throw new CustomError("User not found", 404);
+  if (!user) throw new CustomError("User not found", 404, AUTH_ERRORS.AUTH_USER_NOT_FOUND);
 
   const isMatch = await user.matchResetOtp(otp);
   if (!user.resetOtp || !isMatch || user.resetOtpExpireAt < Date.now()) {
-    throw new CustomError("Invalid or expired OTP", 400);
+    throw new CustomError("Invalid or expired OTP", 400, AUTH_ERRORS.AUTH_INVALID_OTP);
   }
 
   user.password = newPassword;
@@ -502,13 +542,14 @@ export const changePasswordService = async (userId, currentPassword, newPassword
   if (user.oauthProvider) {
     throw new CustomError(
       `This account uses ${user.oauthProvider} login and has no password to change.`,
-      400
+      400,
+      AUTH_ERRORS.AUTH_FORBIDDEN
     );
   }
 
   const isMatch = await user.matchPassword(currentPassword);
   if (!isMatch) {
-    throw new CustomError("Current password is incorrect", 401);
+    throw new CustomError("Current password is incorrect", 401, AUTH_ERRORS.AUTH_INVALID_CREDENTIALS);
   }
 
   user.password = newPassword;

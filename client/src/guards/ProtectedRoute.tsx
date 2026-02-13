@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
@@ -8,20 +8,23 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 const ProtectedRoute = () => {
   const location = useLocation();
   const { user, checkingAuth, sendVerifyOtp } = useAuthStore();
-  const hasSentOtp = useRef(false);
+
 
 
   useEffect(() => {
-    if (user && !user.isAccountVerified && location.pathname !== AUTH_ROUTES.VERIFY_ACCOUNT && !hasSentOtp.current) {
+    if (user && !user.isAccountVerified && location.pathname !== AUTH_ROUTES.VERIFY_ACCOUNT) {
+      const storageKey = `otp_sent_${user._id}`;
+      const hasSentSession = sessionStorage.getItem(storageKey);
+
       // If OTP was already sent and is still valid (based on backend data), don't send again
       const isOtpActive = user.verifyOtpExpireAt && Date.now() < user.verifyOtpExpireAt;
 
-      if (!isOtpActive) {
-        hasSentOtp.current = true;
+      if (!isOtpActive && !hasSentSession) {
+        sessionStorage.setItem(storageKey, "true");
         sendVerifyOtp();
-      } else {
-        // Mark as sent so we don't keep checking every path change for this mount
-        hasSentOtp.current = true;
+      } else if (!hasSentSession) {
+        // Even if active, mark as sent for this session so we don't spam
+        sessionStorage.setItem(storageKey, "true");
       }
     }
   }, [user, location.pathname, sendVerifyOtp]);
