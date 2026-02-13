@@ -316,6 +316,20 @@ export const changePassword = TryCatchHandler(async (req, res, next) => {
   const { currentPassword, newPassword } = req.body;
   const { message } = await changePasswordService(req.user.userId, currentPassword, newPassword);
 
+  // Invalidate all sessions by blacklisting the current access token
+  // and potentially revoking refresh tokens (optional policy)
+  // For strict security, we should blacklist the current token
+  const accessToken = req.cookies.accessToken || (req.headers.authorization && req.headers.authorization.split(" ")[1]);
+  if (accessToken) {
+    try {
+      await redis.set(`blacklist_token:${accessToken}`, "true", { ex: 15 * 60 });
+      // Also revoke refresh token
+      await redis.del(`refresh_token:${req.user.userId}`);
+    } catch (e) {
+      logger.error("Failed to invalidate tokens on password change:", e);
+    }
+  }
+
   res.status(200).json({
     success: true,
     message,

@@ -112,9 +112,10 @@ export const handleNotificationAction = TryCatchHandler(async (req, res, next) =
     // Use the strategy pattern to handle different types
     const handler = notificationHandlers[notification.type];
 
+    let resultMessage;
     if (handler) {
         try {
-            const resultMessage = await handler(notification, actionType, req);
+            resultMessage = await handler(notification, actionType, req);
             // Ensure content object exists before setting message
             if (!notification.content) {
                 notification.content = {};
@@ -137,7 +138,7 @@ export const handleNotificationAction = TryCatchHandler(async (req, res, next) =
 
     res.status(200).json({
         success: true,
-        message: `Action ${actionType} performed successfully`,
+        message: resultMessage || `Action ${actionType} performed successfully`,
     });
 });
 
@@ -190,9 +191,14 @@ export const getOrgNotifications = TryCatchHandler(async (req, res, next) => {
 /**
  * @desc Create a notification (Internal utility)
  */
-export const createNotification = async (data) => {
+export const createNotification = async (data, options = {}) => {
     try {
-        return await Notification.create(data);
+        if (Array.isArray(data)) {
+            return await Notification.insertMany(data, options);
+        }
+        // Use create with array to support options (session)
+        const [notification] = await Notification.create([data], options);
+        return notification;
     } catch (error) {
         logger.error("Error creating notification:", error);
         throw error;

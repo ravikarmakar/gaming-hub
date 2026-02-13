@@ -27,8 +27,9 @@ export const cache = (duration) => async (req, res, next) => {
     }
 
     try {
-        // Include HTTP method in cache key to differentiate GET/POST/etc
-        const key = `__express__${req.method}:${req.originalUrl || req.url}`;
+        // Include HTTP method and User ID (if authenticated) in cache key
+        const userId = req.user ? req.user._id : "anon";
+        const key = `__express__${req.method}:${req.originalUrl || req.url}:${userId}`;
         const now = Date.now();
 
         // Only cache GET requests
@@ -40,7 +41,8 @@ export const cache = (duration) => async (req, res, next) => {
         const cachedL1 = l1Cache.get(key);
         if (cachedL1 && (now - cachedL1.timestamp < L1_TTL)) {
             logger.info(`>>> [L1 CACHE HIT] ${key}`);
-            return res.json(cachedL1.data);
+            // Return a deep copy to prevent mutation of the cached object
+            return res.json(JSON.parse(JSON.stringify(cachedL1.data)));
         }
 
         // 2. Check L2 Cache (Redis)
@@ -65,8 +67,12 @@ export const cache = (duration) => async (req, res, next) => {
                 // Evict oldest entry if cache is full
                 evictOldestL1Entry();
 
-                // Populating L1 Cache for subsequent hits
-                l1Cache.set(key, { data: responseData, timestamp: now });
+                // L1 Cache: Deep copy to prevent reference mutation
+                // Using JSON.parse/stringify is safest for plain objects here
+                l1Cache.set(key, {
+                    data: JSON.parse(JSON.stringify(responseData)),
+                    timestamp: now
+                });
 
                 return res.json(responseData);
             } catch (parseError) {

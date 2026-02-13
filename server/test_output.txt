@@ -1,101 +1,97 @@
 
 [1m[46m RUN [49m[22m [36mv4.0.18 [39m[90m/home/ravi/Desktop/my-project/gaming-site/server[39m
 
-[90mstdout[2m | src/tests/organizer.test.js[2m > [22m[2mOrganization Integration Tests[2m > [22m[2mshould create an organization
-[22m[39m2026-02-13 00:34:33 [32minfo[39m: [0mPOST /api/v1/organizers/create-org [32m201[0m 36.622 ms - 610[0m
+[90mstdout[2m | src/tests/join_request_complex.test.js[2m > [22m[2mJoinRequest Complex Integration Tests[2m > [22m[2mshould fail to accept join request if Event is full (Transactional check)
+[22m[39mDEBUG: isAuthenticated pipeline start
 
-[90mstdout[2m | src/tests/organizer.test.js[2m > [22m[2mOrganization Integration Tests[2m > [22m[2mshould handle join requests via consolidated logic
-[22m[39m2026-02-13 00:34:34 [32minfo[39m: [0mPOST /api/v1/organizers/698e244180df46df0171397b/join [32m201[0m 29.814 ms - 341[0m
+[90mstdout[2m | src/tests/join_request_complex.test.js[2m > [22m[2mJoinRequest Complex Integration Tests[2m > [22m[2mshould fail to accept join request if Event is full (Transactional check)
+[22m[39mDEBUG: registerEvent called
 
-[90mstdout[2m | src/tests/organizer.test.js[2m > [22m[2mOrganization Integration Tests[2m > [22m[2mshould handle join requests via consolidated logic
-[22m[39m2026-02-13 00:34:34 [32minfo[39m: [0mGET /api/v1/organizers/698e244180df46df0171397b/join-requests [32m200[0m 17.993 ms - 491[0m
+[90mstdout[2m | src/tests/join_request_complex.test.js[2m > [22m[2mJoinRequest Complex Integration Tests[2m > [22m[2mshould fail to accept join request if Event is full (Transactional check)
+[22m[39m2026-02-13 13:16:30 [32minfo[39m: [0mPOST /api/v1/events/register-event/698ed6d6131851491108f57f [31m500[0m 12.848 ms - 214[0m
 
-[90mstdout[2m | src/tests/organizer.test.js[2m > [22m[2mOrganization Integration Tests[2m > [22m[2mshould handle join requests via consolidated logic
-[22m[39m2026-02-13 00:34:34 [32minfo[39m: [0mPUT /api/v1/organizers/698e244180df46df0171397b/join-requests/698e244280df46df01713981 [32m200[0m 33.054 ms - 70[0m
+[90mstderr[2m | src/tests/join_request_complex.test.js[2m > [22m[2mJoinRequest Complex Integration Tests[2m > [22m[2mshould fail to accept join request if Event is full (Transactional check)
+[22m[39mRegister Event Failed: {
+  success: [33mfalse[39m,
+  status: [32m'error'[39m,
+  error: {
+    statusCode: [33m500[39m,
+    status: [32m'error'[39m,
+    message: [32m"Cannot access 'event' before initialization"[39m,
+    name: [32m'ReferenceError'[39m
+  },
+  message: [32m"Cannot access 'event' before initialization"[39m
+}
 
-[90mstdout[2m | src/tests/organizer.test.js[2m > [22m[2mOrganization Integration Tests[2m > [22m[2mshould reject a join request
-[22m[39m2026-02-13 00:34:34 [32minfo[39m: [0mPOST /api/v1/organizers/698e244280df46df017139a4/join [32m201[0m 16.302 ms - 341[0m
+[90mstdout[2m | src/tests/join_request_complex.test.js[2m > [22m[2mJoinRequest Complex Integration Tests[2m > [22m[2mshould successfully accept Event join request and update status atomically
+[22m[39mDEBUG: isAuthenticated pipeline start
 
-[90mstdout[2m | src/tests/organizer.test.js[2m > [22m[2mOrganization Integration Tests[2m > [22m[2mshould reject a join request
-[22m[39m2026-02-13 00:34:34 [32minfo[39m: [0mPUT /api/v1/organizers/698e244280df46df017139a4/join-requests/698e244280df46df017139aa [32m200[0m 19.572 ms - 70[0m
+[90mstdout[2m | src/tests/join_request_complex.test.js[2m > [22m[2mJoinRequest Complex Integration Tests[2m > [22m[2mshould successfully accept Event join request and update status atomically
+[22m[39mDEBUG: registerEvent called
 
-[90mstdout[2m | src/tests/organizer.test.js[2m > [22m[2mOrganization Integration Tests[2m > [22m[2mshould block duplicate join requests
-[22m[39m2026-02-13 00:34:34 [32minfo[39m: [0mPOST /api/v1/organizers/698e244280df46df017139c6/join [32m201[0m 15.996 ms - 332[0m
+[90mstdout[2m | src/tests/join_request_complex.test.js[2m > [22m[2mJoinRequest Complex Integration Tests[2m > [22m[2mshould successfully accept Event join request and update status atomically
+[22m[39m2026-02-13 13:16:30 [32minfo[39m: [0mPOST /api/v1/events/register-event/698ed6d6131851491108f5a4 [31m500[0m 6.148 ms - 214[0m
 
-[90mstdout[2m | src/tests/organizer.test.js[2m > [22m[2mOrganization Integration Tests[2m > [22m[2mshould block duplicate join requests
-[22m[39m2026-02-13 00:34:34 [32minfo[39m: [0mPOST /api/v1/organizers/698e244280df46df017139c6/join [33m400[0m 7.956 ms - 529[0m
+[90mstderr[2m | src/tests/join_request_complex.test.js[2m > [22m[2mJoinRequest Complex Integration Tests[2m > [22m[2mshould successfully accept Event join request and update status atomically
+[22m[39mRegister Event Failed (Test 2): {
+  success: [33mfalse[39m,
+  status: [32m'error'[39m,
+  error: {
+    statusCode: [33m500[39m,
+    status: [32m'error'[39m,
+    message: [32m"Cannot access 'event' before initialization"[39m,
+    name: [32m'ReferenceError'[39m
+  },
+  message: [32m"Cannot access 'event' before initialization"[39m
+}
 
-[90mstdout[2m | src/tests/organizer.test.js[2m > [22m[2mOrganization Integration Tests[2m > [22m[2mshould allow Super Admin to bypass org RBAC
-[22m[39m2026-02-13 00:34:34 [32minfo[39m: [0mPUT /api/v1/organizers/698e244280df46df017139e3/update [32m200[0m 12.765 ms - 622[0m
-
-[90mstdout[2m | src/tests/organizer.test.js[2m > [22m[2mOrganization Integration Tests[2m > [22m[2mshould validate staff list is non-empty array
-[22m[39m2026-02-13 00:34:34 [32minfo[39m: [0mPOST /api/v1/organizers/698e244280df46df017139fa/add-staff [33m404[0m 3.811 ms - 192[0m
-
-[90mstdout[2m | src/tests/organizer.test.js[2m > [22m[2mOrganization Integration Tests[2m > [22m[2mshould validate staff list is non-empty array
-[22m[39mAdd Staff Failed: {}
-
-[90mstdout[2m | src/tests/organizer.test.js[2m > [22m[2mOrganization Integration Tests[2m > [22m[2mshould prevent modifying organization owner role
-[22m[39m2026-02-13 00:34:35 [32minfo[39m: [0mPUT /api/v1/organizers/698e244380df46df01713a0d/update-role [33m404[0m 3.427 ms - 193[0m
-
-[90mstdout[2m | src/tests/organizer.test.js[2m > [22m[2mOrganization Integration Tests[2m > [22m[2mshould prevent modifying organization owner role
-[22m[39mRole Update Failed: {}
-
-[90mstdout[2m | src/tests/organizer.test.js[2m > [22m[2mOrganization Integration Tests[2m > [22m[2mshould clean up owner roles when org is deleted
-[22m[39m2026-02-13 00:34:35 [32minfo[39m: [0mDELETE /api/v1/organizers/698e244380df46df01713a20/delete [32m200[0m 47.650 ms - 62[0m
-
- [31m❯[39m src/tests/organizer.test.js [2m([22m[2m8 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 5623[2mms[22m[39m
-     [32m✓[39m should create an organization[32m 223[2mms[22m[39m
-     [32m✓[39m should handle join requests via consolidated logic[32m 266[2mms[22m[39m
-     [32m✓[39m should reject a join request[32m 226[2mms[22m[39m
-     [32m✓[39m should block duplicate join requests[32m 207[2mms[22m[39m
-     [32m✓[39m should allow Super Admin to bypass org RBAC[32m 265[2mms[22m[39m
-[31m     [31m×[31m should validate staff list is non-empty array[39m[32m 186[2mms[22m[39m
-[31m     [31m×[31m should prevent modifying organization owner role[39m[32m 202[2mms[22m[39m
-     [32m✓[39m should clean up owner roles when org is deleted[32m 230[2mms[22m[39m
+ [31m❯[39m src/tests/join_request_complex.test.js [2m([22m[2m2 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 4414[2mms[22m[39m
+[31m     [31m×[31m should fail to accept join request if Event is full (Transactional check)[39m[32m 246[2mms[22m[39m
+[31m     [31m×[31m should successfully accept Event join request and update status atomically[39m[32m 215[2mms[22m[39m
 
 [31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
 
-[41m[1m FAIL [22m[49m src/tests/organizer.test.js[2m > [22mOrganization Integration Tests[2m > [22mshould validate staff list is non-empty array
-[31m[1mAssertionError[22m: expected 404 to be 400 // Object.is equality[39m
+[41m[1m FAIL [22m[49m src/tests/join_request_complex.test.js[2m > [22mJoinRequest Complex Integration Tests[2m > [22mshould fail to accept join request if Event is full (Transactional check)
+[31m[1mAssertionError[22m: expected 500 to be 200 // Object.is equality[39m
 
 [32m- Expected[39m
 [31m+ Received[39m
 
-[32m- 400[39m
-[31m+ 404[39m
+[32m- 200[39m
+[31m+ 500[39m
 
-[36m [2m❯[22m src/tests/organizer.test.js:[2m223:28[22m[39m
-    [90m221| [39m        if (res.status !== 400) console.log('Add Staff Failed:', res.b…
-    [90m222| [39m
-    [90m223| [39m        [34mexpect[39m(res[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m400[39m)[33m;[39m
-    [90m   | [39m                           [31m^[39m
-    [90m224| [39m        [34mexpect[39m(res[33m.[39mbody[33m.[39mmessage)[33m.[39m[34mtoMatch[39m([36m/non-empty array/i[39m)[33m;[39m
-    [90m225| [39m    })[33m;[39m
+[36m [2m❯[22m src/tests/join_request_complex.test.js:[2m73:36[22m[39m
+    [90m 71| [39m            console[33m.[39m[34merror[39m([32m"Register Event Failed:"[39m[33m,[39m registerRes[33m.[39mbody)[33m;[39m
+    [90m 72| [39m        }
+    [90m 73| [39m        [34mexpect[39m(registerRes[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m 74| [39m
+    [90m 75| [39m        // Wait, event registration returns { message: "..." } if invi…
 
 [31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
 
-[41m[1m FAIL [22m[49m src/tests/organizer.test.js[2m > [22mOrganization Integration Tests[2m > [22mshould prevent modifying organization owner role
-[31m[1mAssertionError[22m: expected 404 to be 403 // Object.is equality[39m
+[41m[1m FAIL [22m[49m src/tests/join_request_complex.test.js[2m > [22mJoinRequest Complex Integration Tests[2m > [22mshould successfully accept Event join request and update status atomically
+[31m[1mAssertionError[22m: expected 500 to be 200 // Object.is equality[39m
 
 [32m- Expected[39m
 [31m+ Received[39m
 
-[32m- 403[39m
-[31m+ 404[39m
+[32m- 200[39m
+[31m+ 500[39m
 
-[36m [2m❯[22m src/tests/organizer.test.js:[2m251:28[22m[39m
-    [90m249| [39m        if (res.status !== 403) console.log('Role Update Failed:', res…
-    [90m250| [39m
-    [90m251| [39m        [34mexpect[39m(res[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m403[39m)[33m;[39m
-    [90m   | [39m                           [31m^[39m
-    [90m252| [39m        expect(res.body.message).toMatch(/Cannot modify the role of th…
-    [90m253| [39m    })[33m;[39m
+[36m [2m❯[22m src/tests/join_request_complex.test.js:[2m110:36[22m[39m
+    [90m108| [39m            console.error("Register Event Failed (Test 2):", registerR…
+    [90m109| [39m        }
+    [90m110| [39m        [34mexpect[39m(registerRes[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                                   [31m^[39m
+    [90m111| [39m
+    [90m112| [39m        const joinReq = await JoinRequest.findOne({ requester: captain…
 
 [31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
 
 
 [2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
-[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m6 passed[39m[22m[90m (8)[39m
-[2m   Start at [22m 00:34:28
-[2m   Duration [22m 7.46s[2m (transform 262ms, setup 296ms, import 1.44s, tests 5.62s, environment 0ms)[22m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[90m (2)[39m
+[2m   Start at [22m 13:16:25
+[2m   Duration [22m 6.32s[2m (transform 288ms, setup 325ms, import 1.47s, tests 4.41s, environment 0ms)[22m
 

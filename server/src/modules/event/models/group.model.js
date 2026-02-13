@@ -55,13 +55,19 @@ const updateStatusIfExpired = (docOrUpdate, isUpdate = false) => {
   const now = new Date();
 
   if (isUpdate) {
-    // For findOneAndUpdate/updateOne, docOrUpdate is the update object
-    const matchTime = docOrUpdate.matchTime;
-    const currentStatus = docOrUpdate.status;
+    // For findOneAndUpdate/updateOne, docOrUpdate is the update object (often has $set)
+    // We need to check both direct properties and $set properties
+    const updateCmd = docOrUpdate.$set || docOrUpdate;
+    const matchTime = updateCmd.matchTime;
+    const currentStatus = updateCmd.status;
 
-    // We only auto-transition from 'pending' (or if status is not provided and assumed pending)
+    // We only auto-transition if we are setting/have a pending status and matchTime is past
     if ((!currentStatus || currentStatus === "pending") && matchTime && new Date(matchTime) <= now) {
-      docOrUpdate.status = "ongoing";
+      if (docOrUpdate.$set) {
+        docOrUpdate.$set.status = "ongoing";
+      } else {
+        docOrUpdate.status = "ongoing";
+      }
     }
   } else {
     // For save, docOrUpdate is the document

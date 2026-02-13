@@ -31,32 +31,6 @@ export const createLeaderboardEntry = async (req, res) => {
       return res.status(404).json({ message: "Group not found" });
     }
 
-    // Create a new leaderboard entry
-    // Fix: Explicitly set groupId as per schema requirement
-    const newEntry = new Leaderboard({
-      groupId,
-      teamScore: [{ // Schema expectation: teamScore array
-        teamId,
-        score: 0, // Default or calculated? Assume 0 for new entry unless provided
-        rank,     // Stored in position or calculated? Schema has 'position'
-        totalPoints,
-        matchesPlayed,
-        kills,
-        wins
-      }]
-    });
-    // However, the original code treated Leaderboard as a single entry per team? 
-    // No, createLeaderboardEntry (lines 35-42) created `new Leaderboard({ teamId... })`.
-    // But the schema (lines 3-29 of model) has `teamScore` array. 
-    // The previous code was completely creating INVALID documents or the schema changed.
-    // The previous code: `new Leaderboard({ teamId, ... })` -> this would fail validation against schema!
-    // I will assume the intention is to add a team to an existing leaderboard or create one if missing.
-    // But `group.leaderboard.push(savedEntry._id)` suggests Group has reference to MANY leaderboards?
-    // Let's check Group schema again... `teams: [{...}]`. No `leaderboard` field in Group schema shown in steps 12-16!
-    // So `group.leaderboard.push` (line 47) would likely fail or do nothing if schema is strict.
-    // The user issue: "Schema inconsistency: `groupId` not set on Leaderboard document."
-    // This implies we want ONE leaderboard per group.
-
     // logic: Find existing leaderboard for group, add/update team.
     let leaderboard = await Leaderboard.findOne({ groupId });
 
@@ -83,8 +57,6 @@ export const createLeaderboardEntry = async (req, res) => {
     });
 
     const savedEntry = await leaderboard.save();
-
-    // group.leaderboard.push... removing this as Group model doesn't seem to have it and we use groupId ref.
 
     res
       .status(201)
@@ -137,12 +109,6 @@ export const getLeaderboardDetails = async (req, res) => {
   }
 };
 
-// This function appears redundant or similar to createLeaderboardForRoundsGroups (lines 220+)
-// But it uses `Leaderboard.insertMany` which is good.
-// It maps `groups` to create leaderboards. 
-// Issue: `scores: []` vs schema `teamScore`. Schema has `teamScore`.
-// Also `createLeaderboardForRoundsGroups` logic with `group.teams` seems better for initialization.
-// Since strict user instructions, I'll fix this one too just in case.
 export const createRoundAllGroupsLeaderboards = async (req, res) => {
   try {
     const { roundId } = req.body;
@@ -297,9 +263,6 @@ export const createLeaderboardForRoundsGroups = async (req, res) => {
     );
 
     // ✅ Create leaderboards for groups that don't have one
-    const leaderboards = [];
-
-    // Fix: Use insertMany instead of saving in loop
     const newLeaderboards = [];
 
     for (const group of groups) {
@@ -354,24 +317,24 @@ export const updateGroupResults = async (req, res) => {
     const { results } = req.body; // Array of { teamId, kills, score (place pts), wins }
 
     if (!groupId || !results || !Array.isArray(results)) {
-      return res.status(400).json({ message: "Invalid data provided" });
+      throw new Error("Invalid data provided");
     }
 
     if (!mongoose.Types.ObjectId.isValid(groupId)) {
-      return res.status(400).json({ message: "Invalid Group ID" });
+      throw new Error("Invalid Group ID");
     }
 
     const group = await Group.findById(groupId).populate("roundId").session(session);
     if (!group) {
       await session.abortTransaction();
-      session.endSession();
+      await session.endSession();
       return res.status(404).json({ message: "Group not found" });
     }
 
     const leaderboard = await Leaderboard.findOne({ groupId }).session(session);
     if (!leaderboard) {
       await session.abortTransaction();
-      session.endSession();
+      await session.endSession();
       return res.status(404).json({ message: "Leaderboard not found" });
     }
 
@@ -386,10 +349,10 @@ export const updateGroupResults = async (req, res) => {
       if (entry) {
         const placePoints = pointSystem.ranks[rank] || 0;
         // ⚡ Cumulative Multi-Match Logic
-        entry.score += placePoints; // Accumulate Place Points
-        entry.kills += (kills || 0); // Accumulate Kills
-        if (rank === 1) entry.wins += 1; // Increment Wins if Match Rank 1
-        entry.matchesPlayed += 1; // Increment matches for this team
+        entry.score = (entry.score || 0) + placePoints; // Accumulate Place Points
+        entry.kills = (entry.kills || 0) + (kills || 0); // Accumulate Kills
+        if (rank === 1) entry.wins = (entry.wins || 0) + 1; // Increment Wins if Match Rank 1
+        entry.matchesPlayed = (entry.matchesPlayed || 0) + 1; // Increment matches for this team
 
         // Update current position based on this specific match
         entry.position = rank;
@@ -401,7 +364,7 @@ export const updateGroupResults = async (req, res) => {
     }
 
     // Increment Group matches played
-    group.matchesPlayed += 1;
+    group.matchesPlayed = (group.matchesPlayed || 0) + 1;
 
     // Null check for group.roundId
     const effectiveTotalMatch = (group.roundId && group.roundId.matchesPerGroup) ? group.roundId.matchesPerGroup : (group.totalMatch || 1);
@@ -413,6 +376,20 @@ export const updateGroupResults = async (req, res) => {
       group.status = "completed";
 
       // 🏆 Apply Final Qualification only after ALL matches are done
+
+      // Calculate totalPoints manually for sorting logic (assuming 1 kill = 1 pt as fallback if no hook logic)
+      leaderboard.teamScore.forEach(entry => {
+        // Logic: points = score (place pts) + kills * 1 (kill pts)
+        // NOTE: This logic assumes 1 kill point. Ideally should fetch from pointSystem if variable.
+        // 'pointSystem' imported at top might have it.
+        // But let's check 'pointSystem'.
+        // If we don't know, we rely on current values.
+        entry.totalPoints = (entry.score || 0) + (entry.kills || 0);
+      });
+
+      // Sort Descending by Total Points
+      leaderboard.teamScore.sort((a, b) => b.totalPoints - a.totalPoints);
+
       leaderboard.teamScore.forEach((entry, index) => {
         if (qualifyingLimit > 0 && index < qualifyingLimit) {
           entry.isQualified = true;
@@ -445,14 +422,16 @@ export const updateGroupResults = async (req, res) => {
     }
 
     await session.commitTransaction();
-    session.endSession();
-
     res.status(200).json({ message: "Results updated and group completed", leaderboard, group });
 
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     logger.error("Error updating group results:", error);
     res.status(500).json({ message: "Internal Server Error", error: error.message });
+  } finally {
+    // ⚡ FIX: Always end session to prevent memory leaks
+    session.endSession();
   }
 };

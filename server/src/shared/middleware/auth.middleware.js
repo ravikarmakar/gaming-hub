@@ -28,14 +28,17 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
     let cachedProfile = null;
 
     try {
-      // Set a strict timeout for the Redis check (e.g., 500ms)
+      // Set a strict timeout for the Redis check (e.g., 1000ms)
       const results = await Promise.race([
         p.exec(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 500))
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 1000))
       ]);
-      // Redis pipeline returns [result1, result2, ...] for Upstash
+
+      // @upstash/redis results are [res, res]
+      // Support both if needed, but since we use @upstash/redis:
       isBlacklisted = results[0];
       cachedProfile = results[1];
+
     } catch (redisError) {
       logger.error(`>>> [AUTH] Redis check failed: ${redisError.message}`);
       // SECURITY: Fail-secure - block request if we can't verify blacklist status

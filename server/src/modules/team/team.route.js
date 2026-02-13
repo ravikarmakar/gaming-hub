@@ -23,6 +23,7 @@ import { authorize } from "../../shared/middleware/rbac.middleware.js";
 import { Scopes, Roles } from "../../shared/constants/roles.js";
 import { upload } from "../../shared/middleware/multer.middleware.js";
 import { validateRequest } from "../../shared/middleware/validate.middleware.js";
+import { cleanupRequestFiles } from "../../shared/middleware/fileCleanup.middleware.js";
 import {
   createTeamValidation,
   updateTeamValidation,
@@ -36,9 +37,22 @@ import {
 
 const router = express.Router();
 
+// Helper wrapper to cleanup files on validation error
+const validateWithCleanup = (schema) => (req, res, next) => {
+  const middleware = validateRequest(schema);
+  middleware(req, res, (err) => {
+    if (err) {
+      cleanupRequestFiles(req);
+      return next(err);
+    }
+    next();
+  });
+};
+
 router.get("/", cache(300), fetchAllTeams);
 
-router.post("/create-team", isAuthenticated, isVerified, upload.single("image"), validateRequest(createTeamValidation), createTeam);
+// Use validateWithCleanup for routes with file uploads
+router.post("/create-team", isAuthenticated, isVerified, upload.single("image"), validateWithCleanup(createTeamValidation), createTeam);
 router.get("/details/:teamId", optionalAuthenticate, cache(300), fetchTeamDetails);
 
 router.put(
@@ -50,7 +64,7 @@ router.put(
     { name: "image", maxCount: 1 },
     { name: "banner", maxCount: 1 },
   ]),
-  validateRequest(updateTeamValidation),
+  validateWithCleanup(updateTeamValidation),
   updateTeam
 );
 

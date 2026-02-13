@@ -60,7 +60,7 @@ router.put("/:orgId/transfer-ownership", authorize(Scopes.ORG, [Roles.ORG.OWNER]
 router.delete("/:orgId/remove-staff/:id", authorize(Scopes.ORG, [Roles.ORG.MANAGER, Roles.ORG.OWNER, Roles.ORG.CO_OWNER], { attachDoc: true }), validateRequest(removeStaffValidation), removeStaff);
 
 // Join Requests Management (Generic)
-router.post("/:orgId/join", validateRequest(joinOrgValidation), sendJoinRequest);
+router.post("/:orgId/join", authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), validateRequest(joinOrgValidation), sendJoinRequest);
 router.get("/:orgId/join-requests", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER], { attachDoc: true }), getJoinRequests);
 router.put("/:orgId/join-requests/:requestId", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER], { attachDoc: true }), validateRequest(manageJoinRequestValidation), handleJoinRequest);
 

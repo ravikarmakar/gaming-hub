@@ -64,7 +64,8 @@ export const errorHandle = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
   error.name = err.name;
-  error.code = err.code; // Ensure code is preserved (e.g. for 11000 errors)
+  error.code = err.code;
+  error.stack = err.stack; // Explicitly copy stack trace
 
   if (error.name === "CastError") error = handleCastErrorDB(error);
   if (error.code === 11000) error = handleDuplicateFieldsDB(error);

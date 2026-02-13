@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema(
     username: {
       type: String,
       required: [true, "Username is required"],
-      unique: true,
+      // unique: true, // Handled by partial index below
       minlength: [3, "Username must be at least 3 characters"],
       maxlength: [30, "Username must be less than 30 characters"],
       trim: true,
@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: [true, "Email is required"],
-      unique: true,
+      // unique: true, // Handled by partial index below
       lowercase: true,
       match: [
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
@@ -164,6 +164,11 @@ userSchema.index({ username: "text", gameIgn: "text" });
 // Compound indexes for common filters
 userSchema.index({ isLookingForTeam: 1, esportsRole: 1, isAccountVerified: 1 });
 userSchema.index({ "settings.notifications.email": 1 }); // For notification jobs
+
+// Partial Unique Indexes (Soft Delete Compatible)
+// Only enforce uniqueness if isDeleted is false
+userSchema.index({ username: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });
+userSchema.index({ email: 1 }, { unique: true, partialFilterExpression: { isDeleted: false } });
 
 
 userSchema.pre("save", async function (next) {

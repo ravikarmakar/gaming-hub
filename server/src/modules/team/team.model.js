@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { logger } from "../../shared/utils/logger.js";
 
 const teamSchema = new mongoose.Schema(
   {
@@ -126,13 +127,17 @@ teamSchema.index({ slug: 1 }, { unique: true, partialFilterExpression: { isDelet
 teamSchema.pre("save", function (next) {
   // Only generate slug for new documents to avoid breaking existing URLs
   if (this.isNew && this.teamName) {
-    this.slug = this.teamName
+    const baseSlug = this.teamName
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
       .replace(/\s+/g, "-") // Replace spaces with hyphens
       .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
       .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
+
+    // Add random suffix to minimize collision probability on similar names
+    // e.g. "team-alpha" -> "team-alpha-x7z2"
+    this.slug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
   }
   // Calculate win rate
   if (this.stats) {
@@ -150,19 +155,15 @@ teamSchema.pre(['findOneAndUpdate', 'updateOne'], function (next) {
   const update = this.getUpdate();
 
   // Check if stats are being updated
-  if (update.$set && (update.$set['stats.wins'] !== undefined || update.$set['stats.totalMatches'] !== undefined) ||
-    update.$inc && (update.$inc['stats.wins'] !== undefined || update.$inc['stats.totalMatches'] !== undefined)) {
+  // FIX: Properly wrap conditions with parentheses to enforce precedence
+  // We check if either set.stats or inc.stats is present
+  const hasSetStats = update.$set && (update.$set['stats.wins'] !== undefined || update.$set['stats.totalMatches'] !== undefined);
+  const hasIncStats = update.$inc && (update.$inc['stats.wins'] !== undefined || update.$inc['stats.totalMatches'] !== undefined);
+
+  if (hasSetStats || hasIncStats) {
 
     // Ensure validators run
     this.setOptions({ runValidators: true });
-
-    // For findOneAndUpdate, we can calculate in post hook if we have the specific document
-    // For updateOne, it's harder because we don't get the document back. 
-    // Best practice is to rely on application logic or use findOneAndUpdate if result is needed.
-    // However, to fix the reported issue "middleware won't work for updateOne", 
-    // we can try to fetch the document in the post hook if possible, or just accept that 
-    // updateOne strictly updates what's passed.
-    // But since winRate is a derived field, we SHOULD update it.
 
     // We mark this query to trigger post-hook logic
     this._calculateWinRate = true;
@@ -174,30 +175,50 @@ teamSchema.pre(['findOneAndUpdate', 'updateOne'], function (next) {
 teamSchema.post(['findOneAndUpdate', 'updateOne'], async function (result, next) {
   if (this._calculateWinRate) {
     try {
-      let doc;
-      if (this.op === 'findOneAndUpdate' && result) {
-        doc = result; // For findOneAndUpdate {new: true}, result is the updated doc
+      let docId;
+
+      // Determine document ID
+      if (result && result._id) {
+        docId = result._id;
       } else {
+        // Fallback for updateOne where result is not the doc
         const filter = this.getFilter();
-        doc = await this.model.findOne(filter);
+        // This might not precise if filter is broad, but for ID-based updates it works
+        const found = await this.model.findOne(filter).select('_id');
+        if (found) docId = found._id;
       }
 
-      if (doc && doc.stats) {
-        let newWinRate = 0;
-        if (doc.stats.totalMatches > 0) {
-          newWinRate = Math.round((doc.stats.wins / doc.stats.totalMatches) * 100);
-        }
+      if (docId) {
+        // Fetch the LATEST document to ensure we have updated stats
+        const doc = await this.model.findById(docId);
 
-        if (doc.stats.winRate !== newWinRate) {
-          await this.model.updateOne(
-            { _id: doc._id },
-            { $set: { 'stats.winRate': newWinRate } }
-          );
+        if (doc && doc.stats) {
+          let newWinRate = 0;
+          if (doc.stats.totalMatches > 0) {
+            newWinRate = Math.round((doc.stats.wins / doc.stats.totalMatches) * 100);
+          }
+
+          // Only update if changed prevents infinite loops if we are careful
+          if (doc.stats.winRate !== newWinRate) {
+            // Use updateOne to avoid triggering pre-save hooks if any, 
+            // BUT we are in post-hook of updateOne.
+            // We must ensure we don't trigger THIS hook again.
+            // We are updating 'stats.winRate', which is NOT in our check above (wins/totalMatches).
+            // So it won't trigger the recalculation loop. Safe.
+            await this.model.updateOne(
+              { _id: doc._id },
+              { $set: { 'stats.winRate': newWinRate } }
+            );
+          }
         }
       }
       next();
     } catch (err) {
-      logger.error("Error calculating winRate in post hook:", err);
+      if (logger) {
+        logger.error("Error calculating winRate in post hook:", err);
+      } else {
+        console.error("Error calculating winRate in post hook:", err);
+      }
       next(err);
     }
   } else {

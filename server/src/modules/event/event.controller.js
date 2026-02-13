@@ -1,5 +1,6 @@
 import fs from "fs";
 import mongoose from "mongoose";
+import { isValidObjectId } from "mongoose";
 
 import Organizer from "../organizer/organizer.model.js";
 import { Roles, Scopes } from "../../shared/constants/roles.js";
@@ -74,6 +75,17 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
       throw new CustomError("Prize pool cannot be negative", 400);
     }
 
+    if (registrationEndsAt >= startDate) {
+      throw new CustomError("Registration must end before the event starts", 400);
+    }
+
+    if (req.body.eventEndAt) {
+      const eventEndAt = new Date(req.body.eventEndAt);
+      if (eventEndAt <= startDate) {
+        throw new CustomError("Event must end after it starts", 400);
+      }
+    }
+
     const exists = await Event.findOne({
       title: req.body.title,
       orgId: user.orgId,
@@ -138,7 +150,7 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
       // Rollback ImageKit if DB failed
       if (imageFileId) {
         deleteFromImageKit(imageFileId).catch(deleteErr =>
-          logger.error(`Failed to rollback ImageKit upload ${imageFileId}:`, deleteErr)
+          logger.error(`Failed to rollback ImageKit upload ${imageFileId} after DB error:`, deleteErr)
         );
       }
       throw err;
@@ -153,6 +165,10 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
 
 export const fetchEventByOrg = TryCatchHandler(async (req, res, next) => {
   const { orgId } = req.params;
+
+  if (!isValidObjectId(orgId)) {
+    return next(new CustomError("Invalid Organization ID", 400));
+  }
 
   const events = await Event.find({ orgId })
     .sort({ createdAt: -1 })
@@ -198,6 +214,7 @@ export const fetchAllEvents = TryCatchHandler(async (req, res, next) => {
   let { cursor, limit = 10, search, game, category, status } = req.query;
 
   limit = parseInt(limit);
+  if (limit > 100) limit = 100;
   let query = {};
 
   if (search) {
@@ -252,14 +269,12 @@ export const registerEvent = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("You are not part of any team", 400));
 
   const team = await findTeamById(user.teamId);
-
-  if (team.teamMembers.length < 4) {
-    return next(
-      new CustomError("Your team must have at least 4 players to register", 400)
-    );
-  }
-
   const event = await findEventById(eventId);
+
+  const minSize = event.category === 'solo' ? 1
+    : event.category === 'duo' ? 2
+      : event.category === 'squad' ? 4
+        : 1;
 
   // Registration deadline check
   if (new Date() > new Date(event.registrationEndsAt)) {
@@ -288,26 +303,19 @@ export const registerEvent = TryCatchHandler(async (req, res, next) => {
   }
 
   if (event.registrationMode === "open") {
-    // 1. Identify Core Roles and Substitutes
-    const coreRoles = ["igl", "rusher", "sniper", "support"];
-    const players = [];
-    const substitutes = [];
+    // 1. Check strict roles ONLY if it's a SQUAD event and game requires it (e.g. PUBG)
+    // For now, removing the hardcoded check for specific role names as per requirement
+    // and just enforcing team size and active status.
 
-    const foundCoreRoles = new Set();
-    team.teamMembers.forEach(member => {
-      if (member.isActive) {
-        if (coreRoles.includes(member.roleInTeam)) {
-          players.push(member.user);
-          foundCoreRoles.add(member.roleInTeam);
-        } else {
-          substitutes.push(member.user);
-        }
-      }
-    });
+    // Filter active members
+    const activeMembers = team.teamMembers.filter(m => m.isActive);
 
-    if (foundCoreRoles.size < 4) {
-      return next(new CustomError("Your team must have an IGL, Rusher, Sniper, and Support to register.", 400));
+    if (activeMembers.length < minSize) {
+      return next(new CustomError(`Your team must have at least ${minSize} active players to register.`, 400));
     }
+
+    const players = activeMembers.slice(0, minSize).map(m => m.user);
+    const substitutes = activeMembers.slice(minSize).map(m => m.user);
 
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -384,6 +392,10 @@ export const registerEvent = TryCatchHandler(async (req, res, next) => {
 export const isTeamRegistered = TryCatchHandler(async (req, res, next) => {
   const { eventId, teamId } = req.params;
 
+  if (!isValidObjectId(eventId) || !isValidObjectId(teamId)) {
+    return next(new CustomError("Invalid Event ID or Team ID", 400));
+  }
+
   // Check approved registration
   const registration = await EventRegistration.findOne({
     eventId,
@@ -410,6 +422,11 @@ export const isTeamRegistered = TryCatchHandler(async (req, res, next) => {
     }
   }
 
+  // Also check if there's an approved registration in EventRegistration (again, just in case)
+  // The first check covers 'approved' status.
+  // We might want to unify 'pending' if we ever store pending in EventRegistration.
+  // For now, this dual check is correct given current architecture.
+
   res.json({
     registered: false,
     status: "none",
@@ -421,7 +438,12 @@ export const fetchAllRegisteredTeams = TryCatchHandler(
     const { eventId } = req.params;
     let { cursor, limit = 10 } = req.query;
 
+    if (!isValidObjectId(eventId)) {
+      return next(new CustomError("Invalid Event ID", 400));
+    }
+
     limit = parseInt(limit);
+    if (limit > 100) limit = 100;
     let query = { eventId };
 
     if (cursor) {
@@ -572,6 +594,30 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
       updateData.prizePool = prizePoolNum;
     }
 
+    if (updateData.registrationEndsAt && event.startDate) {
+      if (new Date(updateData.registrationEndsAt) >= new Date(event.startDate)) {
+        throw new CustomError("Registration must end before the event starts", 400);
+      }
+    }
+    if (updateData.startDate && event.registrationEndsAt && !updateData.registrationEndsAt) {
+      if (new Date(event.registrationEndsAt) >= new Date(updateData.startDate)) {
+        throw new CustomError("Registration must end before the event starts", 400);
+      }
+    }
+    // Note: Comprehensive date checking when both change is implicitly handled if we check against the merged state, 
+    // but here we check individually. For robust check we'd merge `event` and `updateData`.
+    // Let's do a merged check for safety.
+    const newStart = updateData.startDate ? new Date(updateData.startDate) : event.startDate;
+    const newRegEnd = updateData.registrationEndsAt ? new Date(updateData.registrationEndsAt) : event.registrationEndsAt;
+    const newEnd = updateData.eventEndAt ? new Date(updateData.eventEndAt) : event.eventEndAt;
+
+    if (newRegEnd >= newStart) {
+      throw new CustomError("Registration must end before the event starts", 400);
+    }
+    if (newEnd && newEnd <= newStart) {
+      throw new CustomError("Event must end after it starts", 400);
+    }
+
     if (updateData.category) updateData.category = updateData.category.toLowerCase();
     if (updateData.eventType) updateData.eventType = updateData.eventType.toLowerCase();
 
@@ -624,26 +670,46 @@ export const deleteEvent = TryCatchHandler(async (req, res) => {
   );
   if (!isAuthorized) throw new CustomError("Not authorized to delete this event", 403);
 
-  const deletedEvent = await Event.findByIdAndDelete(eventId);
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  // Cleanup associated assets/data
-  if (deletedEvent && deletedEvent.imageFileId) {
-    deleteFromImageKit(deletedEvent.imageFileId).catch(err =>
-      logger.error(`Failed to cleanup event image ${deletedEvent.imageFileId}:`, err)
-    );
+  try {
+    const deletedEvent = await Event.findByIdAndDelete(eventId, { session });
+
+    if (!deletedEvent) {
+      throw new CustomError("Event not found (or already deleted)", 404);
+    }
+
+    // Cleanup associated assets/data
+    // ImageKit cleanup cannot be part of transaction, do it after or log for background job
+    // We will do it after commit.
+
+    // Cascade deletions
+    await Promise.all([
+      EventRegistration.deleteMany({ eventId: eventId }, { session }),
+      Round.deleteMany({ eventId: eventId }, { session }),
+      Group.deleteMany({ eventId: eventId }, { session })
+    ]);
+
+    await session.commitTransaction();
+
+    // Post-transaction cleanup
+    if (deletedEvent.imageFileId) {
+      deleteFromImageKit(deletedEvent.imageFileId).catch(err =>
+        logger.error(`Failed to cleanup event image ${deletedEvent.imageFileId}:`, err)
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Event and associated data deleted successfully"
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
   }
-
-  // Cascade deletions
-  await Promise.all([
-    EventRegistration.deleteMany({ eventId: deletedEvent._id }),
-    Round.deleteMany({ eventId: deletedEvent._id }),
-    Group.deleteMany({ eventId: deletedEvent._id })
-  ]);
-
-  res.status(200).json({
-    success: true,
-    message: "Event and associated data deleted successfully"
-  });
 });
 
 export const unregisterEvent = TryCatchHandler(async (req, res, next) => {
@@ -712,6 +778,9 @@ export const startEvent = TryCatchHandler(async (req, res, next) => {
   if (!isAuthorized) throw new CustomError("Not authorized to start this event", 403);
 
   // 3. Status Check
+  if (event.eventProgress !== "pending") {
+    return next(new CustomError("Event must be in pending state to start", 400));
+  }
   if (event.eventProgress === "ongoing" || event.eventProgress === "completed") {
     return next(new CustomError("Event is already active or completed", 400));
   }
@@ -747,6 +816,9 @@ export const finishEvent = TryCatchHandler(async (req, res, next) => {
   );
   if (!isAuthorized) throw new CustomError("Not authorized to finish this event", 403);
 
+  if (event.eventProgress !== "ongoing") {
+    return next(new CustomError("Event must be ongoing to be finished", 400));
+  }
   if (event.eventProgress === "completed") {
     return next(new CustomError("Event is already completed", 400));
   }

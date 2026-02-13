@@ -41,102 +41,131 @@ export const createRound = TryCatchHandler(async (req, res) => {
     return res.status(400).json({ message: "Valid Event ID is required!" });
   }
 
-  // Check if Event exists
-  const event = await Event.findById(eventId);
-  if (!event) {
-    return res.status(404).json({ message: "Event not found!" });
-  }
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  // Check if Teams are registered (using EventRegistration) - Only count approved registrations
-  const totalTeams = await EventRegistration.countDocuments({ eventId, status: "approved" });
-  if (totalTeams === 0) {
-    return res.status(400).json({
-      message:
-        "Cannot create a round. No teams have approved registrations in this event!",
-    });
-  }
-
-  // Check for ongoing round
-  const existingOngoingRound = await Round.findOne({
-    eventId,
-    status: "ongoing",
-  });
-  if (existingOngoingRound) {
-    return res
-      .status(400)
-      .json({ message: "An ongoing round already exists!" });
-  }
-
-  // 🚀 Atomic round counter increment
-  const updatedEvent = await Event.findByIdAndUpdate(
-    eventId,
-    { $inc: { roundCount: 1 } },
-    { new: true, runValidators: true }
-  );
-
-  const roundNumber = updatedEvent.roundCount;
-
-  // Create the round
-  const newRound = await Round.create({
-    eventId,
-    roundName: roundName || `Round-${roundNumber}`,
-    status: "pending",
-    roundNumber,
-    startTime,
-    dailyStartTime,
-    dailyEndTime,
-    gapMinutes,
-    matchesPerGroup,
-    qualifyingTeams
-  });
-
-  // Note: We do not push to event.rounds because Event schema does not have a rounds array
-  // The relationship is handled by Round.eventId
-
-  // ✅ PUSH NOTIFICATIONS TO ALL REGISTERED TEAMS
   try {
-    // Find all approved registrations for this event to get the teamIds
-    const registrations = await EventRegistration.find({ eventId, status: "approved" }).populate("teamId");
+    // Check if Event exists
+    const event = await Event.findById(eventId).session(session);
+    if (!event) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: "Event not found!" });
+    }
 
-    const notificationsToCreate = [];
-    const Notification = mongoose.model("Notification");
+    // Check if Teams are registered (using EventRegistration) - Only count approved registrations
+    // Note: countDocuments doesn't support session in older mongoose, but likely fine here.
+    // Ideally use find().session(session).count() or assume consistency.
+    const totalTeams = await EventRegistration.countDocuments({ eventId, status: "approved" }).session(session);
+    if (totalTeams === 0) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        message:
+          "Cannot create a round. No teams have approved registrations in this event!",
+      });
+    }
 
-    for (const reg of registrations) {
-      if (!reg.teamId) continue;
+    // Check for ongoing round
+    const existingOngoingRound = await Round.findOne({
+      eventId,
+      status: "ongoing",
+    }).session(session);
 
-      const team = reg.teamId;
-      const recipientIds = team.teamMembers
-        .filter(m => m.isActive)
-        .map(m => m.user);
+    if (existingOngoingRound) {
+      await session.abortTransaction();
+      return res
+        .status(400)
+        .json({ message: "An ongoing round already exists!" });
+    }
 
-      for (const userId of recipientIds) {
-        notificationsToCreate.push({
-          recipient: userId,
-          sender: req.user._id,
-          type: "ROUND_CREATED",
-          content: {
-            title: "New Round Created!",
-            message: `${event.eventName}: ${newRound.roundName} has been created. ${startTime ? `Scheduled to start on ${new Date(startTime).toISOString()}.` : 'Schedule is pending.'}`
-          },
-          relatedData: {
-            eventId,
-            teamId: team._id
-          }
-        });
+    // 🚀 Atomic round counter increment
+    const updatedEvent = await Event.findByIdAndUpdate(
+      eventId,
+      { $inc: { roundCount: 1 } },
+      { new: true, runValidators: true, session }
+    );
+
+    const roundNumber = updatedEvent.roundCount;
+
+    // Create the round
+    // Use array syntax for create with session
+    const [newRound] = await Round.create([{
+      eventId,
+      roundName: roundName || `Round-${roundNumber}`,
+      status: "pending",
+      roundNumber,
+      startTime,
+      dailyStartTime,
+      dailyEndTime,
+      gapMinutes,
+      matchesPerGroup,
+      qualifyingTeams
+    }], { session });
+
+    await session.commitTransaction();
+
+    // Note: We do not push to event.rounds because Event schema does not have a rounds array
+    // The relationship is handled by Round.eventId
+
+    // ✅ PUSH NOTIFICATIONS TO ALL REGISTERED TEAMS
+    // (This can happen outside transaction or asynchronously to not block)
+    // We already committed, so safe to proceed.
+    try {
+      // Find all approved registrations for this event to get the teamIds
+      const registrations = await EventRegistration.find({ eventId, status: "approved" }).populate("teamId");
+
+      const notificationsToCreate = [];
+      const Notification = mongoose.model("Notification");
+
+      for (const reg of registrations) {
+        if (!reg.teamId) continue;
+
+        const team = reg.teamId;
+
+        // Null check for teamMembers
+        if (!team.teamMembers || !Array.isArray(team.teamMembers)) {
+          logger.warn(`Team ${team._id} has invalid teamMembers structure during round creation notification.`);
+          continue;
+        }
+
+        const recipientIds = team.teamMembers
+          .filter(m => m.isActive)
+          .map(m => m.user);
+
+        for (const userId of recipientIds) {
+          notificationsToCreate.push({
+            recipient: userId,
+            sender: req.user._id,
+            type: "ROUND_CREATED",
+            content: {
+              title: "New Round Created!",
+              message: `${event.eventName}: ${newRound.roundName} has been created. ${startTime ? `Scheduled to start on ${new Date(startTime).toISOString()}.` : 'Schedule is pending.'}`
+            },
+            relatedData: {
+              eventId,
+              teamId: team._id
+            }
+          });
+        }
       }
+
+      if (notificationsToCreate.length > 0) {
+        await Notification.insertMany(notificationsToCreate);
+      }
+    } catch (notifError) {
+      logger.error("Error sending round creation notifications:", notifError);
     }
 
-    if (notificationsToCreate.length > 0) {
-      await Notification.insertMany(notificationsToCreate);
-    }
-  } catch (notifError) {
-    logger.error("Error sending round creation notifications:", notifError);
+    return res.status(201).json({
+      message: "New round created successfully!",
+      rounds: newRound,
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
   }
-
-  return res.status(201).json({
-    message: "New round created successfully!",
-    rounds: newRound,
-  });
 });
 
 export const getRoundDetails = TryCatchHandler(async (req, res) => {
@@ -189,7 +218,7 @@ export const updateRound = TryCatchHandler(async (req, res) => {
   const round = await Round.findByIdAndUpdate(
     roundId,
     updateData,
-    { new: true }
+    { new: true, runValidators: true }
   );
 
   if (!round) return res.status(404).json({ message: "Round not found" });

@@ -2,8 +2,8 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// Use absolute path for the uploads directory
-const uploadDir = path.join(process.cwd(), "public", "temp");
+// Use absolute path for the uploads directory - PRIVATE directory, not public
+const uploadDir = path.join(process.cwd(), "uploads", "temp");
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -68,6 +68,22 @@ const storage = multer.diskStorage({
     // Generate a clean, unique filename
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     const ext = path.extname(file.originalname).toLowerCase();
+
+    // START: Extension Validation
+    // Ensure the extension matches the mimetype to prevent spoofing
+    const mimeToExt = {
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/png": [".png"],
+      "image/webp": [".webp"],
+      "application/pdf": [".pdf"]
+    };
+
+    const validExts = mimeToExt[file.mimetype];
+    if (!validExts || !validExts.includes(ext)) {
+      return cb(new Error("Invalid file extension for declared MIME type"));
+    }
+    // END: Extension Validation
+
     let baseName = path.basename(file.originalname, ext)
       .replace(/[^a-z0-9]/gi, "-") // Replace non-alphanumeric with hyphens
       .replace(/-+/g, "-")         // Remove duplicate hyphens
@@ -166,11 +182,14 @@ export const validateUploadedFileContent = (req, res, next) => {
       fd = fs.openSync(file.path, 'r');
       const bytesRead = fs.readSync(fd, buffer, 0, 12, 0);
 
+      // Close file descriptor immediately after reading to prevent descriptor leaks
+      fs.closeSync(fd);
+      fd = null; // Clear fd so finally block doesn't try to close it again
+
       const isValid = validateFileContent(buffer.slice(0, bytesRead), file.mimetype);
 
       if (!isValid) {
         // Cleanup ALL files (including valid ones) because the request is rejected
-        if (fd) fs.closeSync(fd);
         cleanupAllFiles();
         return res.status(400).json({
           success: false,

@@ -12,8 +12,8 @@ export const rateLimiter =
     async (req, res, next) => {
       try {
         // Robust IP extraction to prevent spoofing
-        const xForwardedFor = req.headers["x-forwarded-for"];
-        const clientIp = xForwardedFor ? xForwardedFor.split(',')[0].trim() : req.socket.remoteAddress;
+        // Trust proxy should be enabled in app.js for req.ip to be correct behind proxy
+        const clientIp = req.ip || req.socket.remoteAddress;
 
         const fullKey = `rate_limit:${key}:${clientIp}`;
         const now = Date.now();
@@ -22,21 +22,25 @@ export const rateLimiter =
         const memEntry = rlMemoryCache.get(fullKey);
         if (memEntry && (now - memEntry.timestamp < RL_MEM_TTL)) {
           if (memEntry.blocked) {
-            return next(new CustomError(`Too many requests! Try again later`, 429));
+            return next(
+              new CustomError(
+                `Too many requests! Try again later`,
+                429
+              )
+            );
           }
         }
 
         // 2. Redis Check (L2)
         const p = redis.pipeline();
         p.incr(fullKey);
-        // Only set expire if it doesn't exist (NX) or if manually checking count
-        // Using 'NX' for EXPIRE is Redis 7.0+. Fallback to manual check.
         p.ttl(fullKey);
 
         const startTime = performance.now();
+
         const results = await Promise.race([
           p.exec(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 500))
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 1000))
         ]);
         const endTime = performance.now();
 
@@ -44,10 +48,8 @@ export const rateLimiter =
           logger.debug(`>>> [RATE LIMITER REDIS] ${key}: ${(endTime - startTime).toFixed(2)}ms`);
         }
 
-        // ioredis results are [[err, res], [err, res]]
-        const [[incrErr, requestCount], [ttlErr, ttl]] = results;
-
-        if (incrErr) throw incrErr;
+        // @upstash/redis results are [res, res]
+        const [requestCount, ttl] = results;
 
         // If newly created key (TTL will be -1), set expiration
         if (ttl === -1) {

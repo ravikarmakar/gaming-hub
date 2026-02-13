@@ -29,8 +29,10 @@ describe('Rate Limiter Middleware', () => {
         vi.clearAllMocks();
     });
 
-    it('should prevent IP spoofing by using the first address in X-Forwarded-For', async () => {
-        mockReq.headers['x-forwarded-for'] = '1.1.1.1, 2.2.2.2';
+    it('should prevent IP spoofing by using req.ip (trust proxy)', async () => {
+        // We now rely on req.ip which express populates based on 'trust proxy' setting
+        mockReq.ip = '1.1.1.1';
+        mockReq.headers['x-forwarded-for'] = '1.1.1.1, 2.2.2.2'; // Should be ignored if we use req.ip directly
 
         const mockPipeline = {
             incr: vi.fn(),
@@ -71,7 +73,8 @@ describe('Rate Limiter Middleware', () => {
         const middleware = rateLimiter({ limit: 10, timer: 60, key: 'test' });
         await middleware(mockReq, mockRes, mockNext);
 
-        expect(redis.expire).toHaveBeenCalledWith(expect.any(String), 60);
+        // redis.expire is called when ttl is -1
+        expect(redis.expire).toHaveBeenCalledWith(expect.stringContaining('rate_limit:test'), 60);
     });
 
     it('should block requests when limit is exceeded', async () => {

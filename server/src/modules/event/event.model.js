@@ -32,8 +32,21 @@ const eventSchema = new mongoose.Schema(
     startDate: { type: Date, required: true },
     registrationEndsAt: { type: Date, required: true },
 
-    maxSlots: { type: Number, required: true },
-    joinedSlots: { type: Number, default: 0 },
+    maxSlots: { type: Number, required: true, min: [1, "Max slots must be at least 1"] },
+    joinedSlots: {
+      type: Number,
+      default: 0,
+      validate: {
+        validator: function (v) {
+          // 'this' refers to the document being validated
+          if (this.maxSlots !== undefined) {
+            return v <= this.maxSlots;
+          }
+          return true;
+        },
+        message: "Joined slots cannot exceed max slots"
+      }
+    },
 
     registrationMode: {
       type: String,

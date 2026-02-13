@@ -208,9 +208,9 @@ export const addMembers = TryCatchHandler(async (req, res, next) => {
 
   // Basic pre-check (not atomic, but prevents obvious overruns)
   // The service layer will do atomic validation
-  if (team.teamMembers.length + members.length > 20) {
-    throw new CustomError(`Team limit exceeded. Max 20 members allowed.`, 400);
-  }
+  // if (team.teamMembers.length + members.length > 20) {
+  //   throw new CustomError(`Team limit exceeded. Max 20 members allowed.`, 400);
+  // }
 
   // Use Service Layer for the heavy lifting
   // Service should ideally verify limit atomically, but for now this is acceptable

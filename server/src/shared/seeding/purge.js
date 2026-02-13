@@ -59,6 +59,11 @@ const purgeDatabase = async () => {
         }
 
         logger.info("✅ All collections purged. Redis cache cleared.");
+
+        // Graceful shutdown
+        await mongoose.disconnect();
+        // Upstash Redis is stateless (HTTP), no need to quit/disconnect
+
         process.exit(0);
     } catch (error) {
         logger.error("❌ Error during purge:", error);

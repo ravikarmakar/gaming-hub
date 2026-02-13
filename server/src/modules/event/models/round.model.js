@@ -47,8 +47,16 @@ const roundSchema = new mongoose.Schema(
 );
 
 // Indexes to prevent duplicate round numbers/names per event (and race conditions during creation)
-roundSchema.index({ eventId: 1, roundNumber: 1 }, { unique: true });
-roundSchema.index({ eventId: 1, roundName: 1 }, { unique: true });
+// Indexes to prevent duplicate round numbers/names per event
+// Use partialFilterExpression to allow multiple documents to have these fields missing
+roundSchema.index({ eventId: 1, roundNumber: 1 }, {
+  unique: true,
+  partialFilterExpression: { roundNumber: { $exists: true } }
+});
+roundSchema.index({ eventId: 1, roundName: 1 }, {
+  unique: true,
+  partialFilterExpression: { roundName: { $exists: true } }
+});
 
 // Auto-generate round name if not provided
 roundSchema.pre("save", async function (next) {

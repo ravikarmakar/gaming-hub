@@ -80,9 +80,13 @@ export const authorize = (scope, requiredRoles = [], options = {}) => {
 
             // 6.1 Invitation Basic Authorization (Receiver/Sender check)
             if (scope === Scopes.INVITATION && resourceDoc) {
-                const currentUserId = req.user.userId.toString();
-                const isReceiver = resourceDoc.receiver.toString() === currentUserId;
-                const isSender = resourceDoc.sender.toString() === currentUserId;
+                const currentUserId = req.user?.userId?.toString();
+                if (!currentUserId) {
+                    return next(new CustomError("Access Denied: specific user ID required", 403));
+                }
+
+                const isReceiver = resourceDoc.receiver?.toString() === currentUserId;
+                const isSender = resourceDoc.sender?.toString() === currentUserId;
 
                 if (!isReceiver && !isSender) {
                     return next(new CustomError("Access Denied: You are not authorized for this invitation", 403));

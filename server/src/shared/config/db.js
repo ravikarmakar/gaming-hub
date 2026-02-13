@@ -17,7 +17,9 @@ const connectDB = async () => {
     const conn = await mongoose.connect(DATABASE_URI);
     logger.info(`MongoDB Connected: ${conn.connection.host} `);
   } catch (error) {
-    logger.error("MongoDB Connection Error:", error);
+    // Sanitize error message to avoid leaking credentials (e.g., in connection string)
+    const sanitizedError = { ...error, message: error.message?.replace(/:[^@]+@/, ":****@") };
+    logger.error("MongoDB Connection Error:", sanitizedError);
     throw error;
   }
 };

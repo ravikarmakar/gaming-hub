@@ -97,24 +97,36 @@ organizerSchema.pre("save", async function (next) {
     let isUnique = false;
     let attempts = 0;
 
-    // 🚀 Robust Slug Collision Detection
+    // Retry loop for slug generation
     while (!isUnique && attempts < 5) {
-      const existingOrg = await mongoose.models.Organizer.findOne({
-        slug,
-        isDeleted: false
-      }).select("_id");
+      try {
+        // Optimistic check (still useful to reduce collisions)
+        const existingOrg = await mongoose.models.Organizer.findOne({
+          slug,
+          isDeleted: false
+        }).select("_id");
 
-      if (existingOrg) {
-        // Collision detected: Append random suffix
+        if (existingOrg) {
+          throw new Error("Slug collision detected");
+        }
+
+        // If we get here, it seems unique. 
+        // We will rely on the unique index constraint to catch race conditions during actual save.
+        // But for this pre-save hook, we just assign it.
+        this.slug = slug;
+        isUnique = true;
+      } catch (err) {
+        // Collision or error, try next suffix
         const suffix = Math.random().toString(36).substring(2, 6);
         slug = `${baseSlug}-${suffix}`;
         attempts++;
-      } else {
-        isUnique = true;
       }
     }
 
-    this.slug = slug;
+    // Fallback if loop exhausts (though unlikely given random suffix)
+    if (!isUnique) {
+      this.slug = `${baseSlug}-${Date.now()}`;
+    }
   }
   next();
 });

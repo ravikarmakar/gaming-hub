@@ -1,7 +1,6 @@
 import User from "../user/user.model.js";
 import { TryCatchHandler } from "../../shared/middleware/error.middleware.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
-import { generateTokens, storeRefreshToken, setCookies } from "../auth/auth.service.js";
 
 /**
  * Escape special regex characters to prevent injection
@@ -53,7 +52,10 @@ export const getPlayers = TryCatchHandler(async (req, res, next) => {
     }
 
     if (esportsRole) {
-        query.esportsRole = esportsRole;
+        // Sanitize to ensure it's a string and doesn't contain mongo operators
+        if (typeof esportsRole === 'string') {
+            query.esportsRole = esportsRole;
+        }
     }
 
     if (isAccountVerified !== undefined) {
@@ -129,5 +131,78 @@ export const getPlayerById = TryCatchHandler(async (req, res, next) => {
     res.status(200).json({
         success: true,
         player
+    });
+});
+
+/**
+ * @desc    Update player esports role
+ * @route   PUT /api/v1/players/:id/update-role
+ * @access  Private (Admin/Self)
+ */
+export const updatePlayerRole = TryCatchHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const { esportsRole } = req.body;
+
+    if (!esportsRole) {
+        throw new CustomError("Esports role is required", 400);
+    }
+
+    // Authorization: Allow Admin or Self
+    // Check if user has platform super_admin or staff role (assuming staff can also update)
+    const isPlatformAdmin = req.user.roles.some(r =>
+        r.scope === 'platform' && (r.role === 'platform:super_admin' || r.role === 'platform:staff')
+    );
+
+    if (req.user.userId !== id && !isPlatformAdmin) {
+        throw new CustomError("Unauthorized", 403);
+    }
+
+    const player = await User.findByIdAndUpdate(
+        id,
+        { esportsRole },
+        { new: true, runValidators: true }
+    );
+
+    if (!player) {
+        throw new CustomError("Player not found", 404);
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "Role updated successfully",
+        player
+    });
+});
+
+/**
+ * @desc    Add staff role to user
+ * @route   POST /api/v1/players/add-staff
+ * @access  Private (Platform Admin only)
+ */
+export const addStaff = TryCatchHandler(async (req, res, next) => {
+    const { email, role, scope } = req.body;
+
+    if (!email || !role || !scope) {
+        throw new CustomError("Email, role, and scope are required", 400);
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+        throw new CustomError("User not found", 404);
+    }
+
+    // Check if role already exists
+    const roleExists = user.roles.some(r => r.role === role && r.scope === scope);
+    if (roleExists) {
+        return res.status(200).json({ success: true, message: "User already has this role" });
+    }
+
+    user.roles.push({ role, scope });
+    await user.save();
+
+    res.status(200).json({
+        success: true,
+        message: "Staff role added successfully",
+        user: { _id: user._id, roles: user.roles }
     });
 });
