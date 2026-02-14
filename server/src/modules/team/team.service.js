@@ -9,6 +9,94 @@ import { redis } from "../../shared/config/redis.js";
 import { uploadOnImageKit, deleteFromImageKit } from "../../shared/services/imagekit.service.js";
 import { logger } from "../../shared/utils/logger.js";
 
+// --- Cache Helpers (Risk Mitigation) ---
+
+/**
+ * Resilient cache invalidation with retry logic and fallback
+ * Addresses Risk: Stale Cache from redis.del failures
+ */
+const invalidateCacheWithRetry = async (keys, options = {}) => {
+  const { maxRetries = 3, retryDelay = 100 } = options;
+  const keysArray = Array.isArray(keys) ? keys : [keys];
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      if (keysArray.length === 1) {
+        await redis.del(keysArray[0]);
+      } else {
+        // Use pipeline for multiple keys
+        const pipeline = redis.pipeline();
+        keysArray.forEach(key => pipeline.del(key));
+        await pipeline.exec();
+      }
+
+      if (attempt > 1) {
+        logger.info(`Cache invalidation succeeded on attempt ${attempt} for keys: ${keysArray.join(', ')}`);
+      }
+      return true;
+    } catch (error) {
+      logger.error(`Cache invalidation attempt ${attempt}/${maxRetries} failed for keys: ${keysArray.join(', ')}`, error);
+
+      if (attempt === maxRetries) {
+        // Final fallback: Set very short TTL (1 second) to force near-immediate expiration
+        logger.warn(`All cache deletion attempts failed. Setting 1-second TTL as fallback for keys: ${keysArray.join(', ')}`);
+        try {
+          const pipeline = redis.pipeline();
+          keysArray.forEach(key => pipeline.expire(key, 1));
+          await pipeline.exec();
+        } catch (fallbackError) {
+          logger.error('Fallback TTL update also failed:', fallbackError);
+        }
+        return false;
+      }
+
+      // Exponential backoff
+      await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
+    }
+  }
+  return false;
+};
+
+/**
+ * Sync user denormalized data in team rosters with retry logic
+ * Addresses Risk: Data Consistency from sync failures
+ */
+const syncUserInTeamsWithRetry = async (userId, { username, avatar }, options = {}) => {
+  const { maxRetries = 3, retryDelay = 200 } = options;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const updateData = {};
+      if (username) updateData["teamMembers.$[elem].username"] = username;
+      if (avatar) updateData["teamMembers.$[elem].avatar"] = avatar;
+
+      if (Object.keys(updateData).length === 0) return true;
+
+      await Team.updateMany(
+        { "teamMembers.user": userId },
+        { $set: updateData },
+        { arrayFilters: [{ "elem.user": userId }] }
+      );
+
+      if (attempt > 1) {
+        logger.info(`Team denormalization sync succeeded on attempt ${attempt} for user ${userId}`);
+      }
+      return true;
+    } catch (error) {
+      logger.error(`Team sync attempt ${attempt}/${maxRetries} failed for user ${userId}:`, error);
+
+      if (attempt === maxRetries) {
+        // Log critical failure but don't block the main operation
+        logger.error(`CRITICAL: Team denormalization sync failed after ${maxRetries} attempts for user ${userId}. Manual intervention may be needed.`);
+        return false;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
+    }
+  }
+  return false;
+};
+
 // Helper to check uniqueness (Initial check, relies on DB unique index for strict guarantee)
 export const checkTeamNameUnique = async (teamName, session = null) => {
   const query = Team.findOne({ teamName, isDeleted: false });
@@ -111,8 +199,8 @@ export const createTeamService = async (userId, body, file) => {
     await session.commitTransaction();
     session.endSession();
 
-    // 4. Invalidate user profile cache
-    await redis.del(`user_profile:${userId}`);
+    // 4. Invalidate user profile cache (with retry logic)
+    await invalidateCacheWithRetry(`user_profile:${userId}`);
 
     // Clean up local file only after success (or failure)
     if (file && fs.existsSync(file.path)) {
@@ -240,8 +328,8 @@ export const updateTeamService = async (teamId, body, files) => {
 
     await team.save();
 
-    // Invalidate Team Cache
-    await redis.del(`team_details:${team._id}`);
+    // Invalidate Team Cache (with retry logic)
+    await invalidateCacheWithRetry(`team_details:${team._id}`);
 
     // Async cleanup of old images AFTER successful save
     if (oldImageFileId) {
@@ -518,9 +606,8 @@ export const manageTeamStaffService = async (teamId, memberId, action) => {
     await session.commitTransaction();
     session.endSession();
 
-    // Invalidate Redis cache
-    await redis.del(`user_profile:${memberId}`);
-    await redis.del(`team_details:${teamId}`);
+    // Invalidate Redis cache (with retry logic)
+    await invalidateCacheWithRetry([`user_profile:${memberId}`, `team_details:${teamId}`]);
 
     return { message: `Member successfully ${action === "promote" ? "promoted to Manager" : "demoted to Player"}.`, team: await getTransformedTeam(team._id) };
   } catch (error) {
@@ -569,11 +656,8 @@ export const manageMemberRoleService = async (teamId, memberId, role) => {
     await session.commitTransaction();
     session.endSession();
 
-    // Update Cache
-    await redis.del(`team_details:${team._id}`);
-
-    // Invalidate Redis cache for the member
-    await redis.del(`user_profile:${memberId}`);
+    // Update Cache (with retry logic)
+    await invalidateCacheWithRetry([`team_details:${team._id}`, `user_profile:${memberId}`]);
 
     return { message: `The member's role has been updated to '${role}'.`, team: await getTransformedTeam(team._id) };
   } catch (error) {
@@ -812,12 +896,20 @@ export const batchAddMembersToTeam = async ({ teamId, memberIds, session = null 
       );
 
       if (!updatedTeam) {
-        // Distinguish errors
+        // Distinguish errors - concurrent operations detected
         const freshTeam = await Team.findById(teamId).session(session);
         if (freshTeam && freshTeam.teamMembers.length + teamUpdateOps.length > 20) {
-          throw new CustomError("Team limit exceeded. Max 20 members allowed.", 400);
+          throw new CustomError(
+            `Cannot add ${memberIds.length} member(s). Team currently has ${freshTeam.teamMembers.length} members. Maximum limit is 20 members.`,
+            400,
+            "TEAM_LIMIT_EXCEEDED"
+          );
         }
-        throw new CustomError("Concurrent modification or team full. Please try again.", 409);
+        throw new CustomError(
+          "Team roster is being updated by another manager. Please refresh and try again.",
+          409,
+          "CONCURRENT_MODIFICATION"
+        );
       }
     }
 
@@ -846,19 +938,10 @@ export const batchAddMembersToTeam = async ({ teamId, memberIds, session = null 
 
 /**
  * Sync team rosters when a user updates their profile (Scalability Hook)
+ * Now uses retry logic for reliability (addresses Data Consistency risk)
  */
 export const syncUserInTeams = async (userId, { username, avatar }) => {
-  const updateData = {};
-  if (username) updateData["teamMembers.$[elem].username"] = username;
-  if (avatar) updateData["teamMembers.$[elem].avatar"] = avatar;
-
-  if (Object.keys(updateData).length === 0) return;
-
-  await Team.updateMany(
-    { "teamMembers.user": userId },
-    { $set: updateData },
-    { arrayFilters: [{ "elem.user": userId }] }
-  );
+  return await syncUserInTeamsWithRetry(userId, { username, avatar });
 };
 
 /**
@@ -895,10 +978,9 @@ export const removeMemberFromTeam = async ({ teamId, userId, session = null }) =
     { session }
   );
 
-  // 3. Cache Invalidation
+  // 3. Cache Invalidation (with retry logic)
   if (!session) {
-    await redis.del(`user_profile:${userId}`);
-    await redis.del(`team_details:${teamId}`);
+    await invalidateCacheWithRetry([`user_profile:${userId}`, `team_details:${teamId}`]);
   }
 
   return true;

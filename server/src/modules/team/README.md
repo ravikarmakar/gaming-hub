@@ -57,14 +57,29 @@ The frontend uses **Zustand** (`useTeamStore.ts`) to manage team state globally.
   - **L2-L1 Sync**: User profile updates in the Auth service trigger a `syncUserInTeams` helper to keep denormalized `username`/`avatar` fields fresh in the Team model.
 - **Self-Healing**: If a JSON parse error occurs during Redis retrieval, the key is automatically deleted, and data is refetched from the DB.
 
-## Known Risks
-- **Data Consistency**: The `teamMembers` array contains denormalized data (`username`, `avatar`). While `syncUserInTeams` handles updates, a failure mid-sync could lead to stale display data in list views.
-- **Stale Cache**: If `redis.del` fails during a mutation, users might see stale team details for up to 1 hour.
-- **Multi-User Sync**: Two managers accepting requests simultaneously could hit the 20-member limit. This is mitigated by an atomic `$expr` check in `team.service.js`.
-- **Tight Coupling**: The `team.route.js` imports controllers directly from the `join-request` module, creating a cross-module dependency.
+## Known Risks & Mitigation
+
+### ✅ Fixed Risks
+
+- **~~Data Consistency~~**: FIXED - The `teamMembers` array contains denormalized data (`username`, `avatar`). Previously, `syncUserInTeams` failures could lead to stale display data.
+  - **Mitigation**: Implemented retry logic (max 3 attempts with exponential backoff) in `syncUserInTeamsWithRetry`. Critical failures are logged for manual intervention, but don't block the main operation.
+
+- **~~Stale Cache~~**: FIXED - Previously, if `redis.del` failed during a mutation, users might see stale team details for up to 1 hour.
+  - **Mitigation**: Implemented `invalidateCacheWithRetry` with 3 retry attempts and exponential backoff. Final fallback sets 1-second TTL to force near-immediate expiration if deletion fails.
+
+- **~~Multi-User Sync~~**: IMPROVED - Two managers accepting requests simultaneously could hit the 20-member limit. Atomic `$expr` check mitigates this.
+  - **Mitigation**: Added descriptive error messages with current team size and error codes (`TEAM_LIMIT_EXCEEDED`, `CONCURRENT_MODIFICATION`) for better frontend handling and user feedback.
+
+- **~~Tight Coupling~~**: FIXED - `team.route.js` previously imported controllers directly from the `join-request` module.
+  - **Mitigation**: Created dedicated `join-request.route.js` router. All join-request routes are now registered separately in `app.js` at the same `/api/v1/teams/:teamId/join-request` base path.
+
+### Remaining Considerations
+
+- **Network Partitions**: In rare cases where Redis is completely unavailable, the 1-second TTL fallback may also fail. Users would see stale data until cache naturally expires (1 hour).
+- **Denormalization Lag**: If all 3 retry attempts fail for `syncUserInTeams`, team roster displays may show outdated username/avatar until the next profile update or manual intervention.
 
 ## Improvement Opportunities
-- **Decoupling**: Move Join Request routes out of `team.route.js` into their own dedicated router to improve modularity.
 - **Audit Logging**: Implement a history collection to track member changes (join/leave/kick/promote) for transparency.
 - **Cache Resilience**: Implement a background "refresh-ahead" for popular teams to reduce cold-start latency.
-- **Event-Driven Sync**: Replace the `syncUserInTeams` service call with an event-driven approach (e.g., EventEmitter or Message Queue) to decouple Auth from Teams.
+- **Event-Driven Sync**: Replace the `syncUserInTeams` service call with an event-driven approach (e.g., EventEmitter or Message Queue) to further decouple Auth from Teams.
+- **Observability**: Add metrics tracking for cache hit/miss rates, retry success rates, and sync failures to monitor system health.

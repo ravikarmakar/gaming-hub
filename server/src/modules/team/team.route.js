@@ -13,12 +13,6 @@ import {
   manageStaffRole,
 } from "./team.controller.js";
 import { cache } from "../../shared/middleware/cache.middleware.js";
-import {
-  sendJoinRequest,
-  getJoinRequests,
-  handleJoinRequest,
-  bulkRejectJoinRequests,
-} from "../join-request/join-request.controller.js";
 import { isAuthenticated, isVerified, optionalAuthenticate } from "../../shared/middleware/auth.middleware.js";
 import { authorize } from "../../shared/middleware/rbac.middleware.js";
 import { Scopes, Roles } from "../../shared/constants/roles.js";
@@ -33,8 +27,6 @@ import {
   manageMemberRoleValidation,
   manageStaffRoleValidation,
   transferOwnerValidation,
-  manageJoinRequestValidation,
-  bulkRejectJoinRequestsValidation,
 } from "./team.validation.js";
 
 const router = express.Router();
@@ -78,10 +70,8 @@ router.put("/manage-member-role", isAuthenticated, isVerified, authorize(Scopes.
 router.put("/manage-staff-role", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER], { attachDoc: true }), validateRequest(manageStaffRoleValidation), manageStaffRole);
 router.delete("/delete-team", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER], { attachDoc: true }), deleteTeam);
 
-// Join Request Routes
-router.post("/:teamId/join-request", isAuthenticated, isVerified, sendJoinRequest);
-router.get("/:teamId/join-requests/all", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), getJoinRequests);
-router.put("/:teamId/join-requests/:requestId", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), validateRequest(manageJoinRequestValidation), handleJoinRequest);
-router.delete("/:teamId/join-requests/clear-all", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), validateRequest(bulkRejectJoinRequestsValidation), bulkRejectJoinRequests);
+// NOTE: Join Request routes have been moved to a dedicated router
+// See: server/src/modules/join-request/join-request.route.js
+// Routes are still accessible at /api/v1/teams/:teamId/join-request(s)
 
 export default router;

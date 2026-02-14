@@ -71,22 +71,16 @@ const TeamLayout = () => {
 
   useEffect(() => {
     if (user?.teamId) {
-      // Force refresh on initial load and navigation
+      // Initial load
       getTeamById(user.teamId, true);
 
-      // Periodic refetch every 15s as a fallback for real-time updates
-      const interval = setInterval(() => {
-        getTeamById(user.teamId, true);
-      }, 15000);
-
-      // Immediate refetch when user returns to the tab
+      // Refetch when user returns to the tab (event-driven)
       const handleFocus = () => {
         getTeamById(user.teamId, true);
       };
       window.addEventListener("focus", handleFocus);
 
       return () => {
-        clearInterval(interval);
         window.removeEventListener("focus", handleFocus);
         clearError();
       };
