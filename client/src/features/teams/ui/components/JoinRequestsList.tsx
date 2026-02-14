@@ -23,11 +23,12 @@ export const JoinRequestsList: React.FC = () => {
     const { joinRequests, fetchJoinRequests, handleJoinRequest, clearAllJoinRequests, isLoading, currentTeam } = useTeamStore();
     const [isClearing, setIsClearing] = useState(false);
 
+    // Fetch join requests whenever the team changes
     useEffect(() => {
-        if (currentTeam?._id && currentTeam.pendingRequestsCount && currentTeam.pendingRequestsCount > 0) {
+        if (currentTeam?._id) {
             fetchJoinRequests(currentTeam._id);
         }
-    }, [fetchJoinRequests, currentTeam?._id, currentTeam?.pendingRequestsCount]);
+    }, [currentTeam?._id, fetchJoinRequests]);
 
     const onHandle = async (requestId: string, action: 'accepted' | 'rejected') => {
         const res = await handleJoinRequest(requestId, action);

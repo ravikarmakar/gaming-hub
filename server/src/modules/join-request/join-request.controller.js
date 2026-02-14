@@ -11,6 +11,7 @@ import { createNotification } from "../notification/notification.controller.js";
 import { Roles, Scopes } from "../../shared/constants/roles.js";
 import { redis } from "../../shared/config/redis.js";
 import { addMemberToTeam, getTransformedTeam } from "../team/team.service.js";
+import { emitMemberJoined } from "../team/team.socket.js";
 
 // @desc    Send a request to join a Team, Organization, or Event
 // @route   POST /api/v1/teams/:teamId/join-request
@@ -165,6 +166,7 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
     const { action } = req.body; // 'accepted' or 'rejected'
     const { userId } = req.user;
     let responseData = null;
+    let socketEventData = null;
 
     if (!["accepted", "rejected"].includes(action)) {
         throw new CustomError("Invalid action. Use 'accepted' or 'rejected'", 400);
@@ -219,6 +221,17 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
 
                 // Fetch updated team for response
                 responseData = await getTransformedTeam(team._id);
+
+                // Store data for socket emission after transaction commits
+                socketEventData = {
+                    teamId: team._id,
+                    memberData: {
+                        userId: requester._id,
+                        username: requester.username,
+                        avatar: requester.avatar,
+                        role: "player",
+                    }
+                };
 
             } else if (joinRequest.targetModel === "Organizer") {
                 if (requester.orgId) throw new CustomError("Requester is already in an organization", 400);
@@ -366,6 +379,11 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
         }
 
         await session.commitTransaction();
+
+        // Emit socket event after successful transaction commit
+        if (socketEventData) {
+            emitMemberJoined(socketEventData.teamId, socketEventData.memberData);
+        }
 
         res.status(200).json({
             success: true,

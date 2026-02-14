@@ -99,6 +99,9 @@ const TeamSettings = () => {
         const result = await updateTeam(currentTeam._id, formData);
         if (result) {
             toast.success("Team settings updated successfully!");
+            // Force refresh team data to ensure UI is in sync
+            const { getTeamById } = useTeamStore.getState();
+            await getTeamById(currentTeam._id, true);
         } else {
             toast.error("Failed to update team settings");
         }

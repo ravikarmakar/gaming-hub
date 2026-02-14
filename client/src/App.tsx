@@ -6,6 +6,9 @@ import { ErrorBoundary } from "react-error-boundary";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useCheckingAuth } from "@/features/auth/store/authSelectors";
 
+// Contexts
+import { SocketProvider } from "@/contexts/SocketContext";
+
 // Components
 import { ErrorFallback } from "@/components/ErrorFallback";
 import CreateOrgDialog from "@/features/organizer/ui/components/CreateOrgDialog";
@@ -33,7 +36,7 @@ const App = () => {
   }
 
   return (
-    <>
+    <SocketProvider>
       <Toaster position="top-center" />
       <CreateOrgDialog />
       <CreateTeamModal />
@@ -41,7 +44,7 @@ const App = () => {
         <ScrollToTop />
         <AppRoutes />
       </ErrorBoundary>
-    </>
+    </SocketProvider>
   );
 };
 

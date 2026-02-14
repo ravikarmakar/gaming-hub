@@ -10,7 +10,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
@@ -122,6 +122,12 @@ export const PlayerSearchCommand = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="overflow-hidden p-0 bg-[#0B0C1A] border-purple-500/20 shadow-2xl sm:max-w-[500px] max-w-[95vw]">
+        {/* Accessibility: Hidden title and description for screen readers */}
+        <DialogTitle className="sr-only">Search and Invite Players</DialogTitle>
+        <DialogDescription className="sr-only">
+          Search for players by username and invite them to join your team
+        </DialogDescription>
+
         <Command
           className="rounded-lg bg-transparent"
           onKeyDown={(e) => {

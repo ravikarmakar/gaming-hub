@@ -50,15 +50,12 @@ const TeamMembersPage = () => {
     async (role: string, memberId: string) => {
       const result = await updateMemberRole(role, memberId);
       if (result) {
-        if (user?.teamId) {
-          await getTeamById(user.teamId);
-        }
         toast.success("Member role updated successfully");
       } else {
         toast.error("Failed to update member role");
       }
     },
-    [updateMemberRole, user?.teamId, getTeamById]
+    [updateMemberRole]
   );
 
   const handleViewProfile = useCallback((id: string) => {

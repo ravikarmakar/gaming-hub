@@ -1,9 +1,6 @@
 import axios from "axios";
 
 export const axiosInstance = axios.create({
-  baseURL:
-    import.meta.env.VITE_MODE === "production"
-      ? import.meta.env.VITE_PRODUCTION_BASE_URL
-      : import.meta.env.VITE_DEVELOPMENT_BASE_URL,
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:4000/api/v1",
   withCredentials: true,
 });

@@ -1,8 +1,10 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+import { createServer } from "http";
 import app from "./app.js";
 import connectDB from "./shared/config/db.js";
+import { initializeSocket } from "./shared/config/socket.config.js";
 
 const PORT = process.env.PORT || 4000;
 
@@ -14,13 +16,20 @@ const startServer = async () => {
     await connectDB();
     logger.info("Database connected successfully");
 
-    const server = app.listen(PORT, () => {
-      logger.info(`Server is running on port http://localhost:${PORT}`);
-    });
+    // Create HTTP server
+    const httpServer = createServer(app);
 
-    server.on("error", (error) => {
+    // Initialize Socket.IO
+    initializeSocket(httpServer);
+
+    httpServer.on("error", (error) => {
       logger.error("Server startup error:", error);
       process.exit(1);
+    });
+
+    httpServer.listen(PORT, () => {
+      logger.info(`Server is running on port http://localhost:${PORT}`);
+      logger.info("Socket.IO enabled for real-time updates");
     });
   } catch (error) {
     logger.error("Failed to start server:", error);

@@ -20,6 +20,13 @@ import { createNotification } from "../notification/notification.controller.js";
 import JoinRequest from "../join-request/join-request.model.js";
 import { redis } from "../../shared/config/redis.js";
 import { logger } from "../../shared/utils/logger.js";
+import {
+  emitMemberJoined,
+  emitMemberLeft,
+  emitRoleUpdated,
+  emitOwnerTransferred,
+  emitTeamUpdated
+} from "./team.socket.js";
 
 export const createTeam = TryCatchHandler(async (req, res, next) => {
   const newTeam = await createTeamService(req.user.userId, req.body, req.file);
@@ -33,6 +40,9 @@ export const createTeam = TryCatchHandler(async (req, res, next) => {
 
 export const updateTeam = TryCatchHandler(async (req, res, next) => {
   const team = await updateTeamService(req.teamDoc._id, req.body, req.files);
+
+  // Emit socket event for team update (e.g., recruiting status changed)
+  emitTeamUpdated(team._id, "settings", team);
 
   res.status(200).json({
     success: true,
@@ -239,6 +249,9 @@ export const removeMember = TryCatchHandler(async (req, res, next) => {
     userId: memberId,
   });
 
+  // Emit socket event for member removal
+  emitMemberLeft(team._id, memberId, "removed");
+
   // 4. Notify the removed member
   try {
     await createNotification({
@@ -299,6 +312,9 @@ export const leaveMember = TryCatchHandler(async (req, res, next) => {
     userId: userId,
   });
 
+  // Emit socket event for member leaving
+  emitMemberLeft(team._id, userId, "left");
+
   // 3. Notify the captain
   try {
     await createNotification({
@@ -331,6 +347,9 @@ export const transferTeamOwnerShip = TryCatchHandler(async (req, res, next) => {
 
   const transformedTeam = await transferTeamOwnershipService(team._id, user.userId, memberId);
 
+  // Emit socket event for ownership transfer
+  emitOwnerTransferred(team._id, memberId, user.userId);
+
   res.status(200).json({
     success: true,
     message: "Team ownership transferred successfully.",
@@ -343,6 +362,12 @@ export const manageMemberRole = TryCatchHandler(async (req, res, next) => {
   const team = req.teamDoc;
 
   const { message, team: transformedTeam } = await manageMemberRoleService(team._id, memberId, role);
+
+  // Get old role for logging/sync purposes
+  const oldRole = team.teamMembers.find(m => m.user?.toString() === memberId.toString())?.roleInTeam;
+
+  // Emit socket event for role update
+  emitRoleUpdated(team._id, memberId, role, oldRole);
 
   res.status(200).json({
     success: true,
@@ -368,6 +393,14 @@ export const manageStaffRole = TryCatchHandler(async (req, res, next) => {
   const team = req.teamDoc;
 
   const { message, team: transformedTeam } = await manageTeamStaffService(team._id, memberId, action);
+
+  // Find the member in the updated team to get their new actual role
+  const updatedMember = transformedTeam.teamMembers?.find(m => (m.user?._id || m.user)?.toString() === memberId.toString());
+  const newRole = updatedMember?.roleInTeam || (action === "promote" ? "manager" : "player");
+  const oldRole = team.teamMembers.find(m => m.user?.toString() === memberId.toString())?.roleInTeam;
+
+  // Emit socket event for staff role update
+  emitRoleUpdated(team._id, memberId, newRole, oldRole);
 
   res.status(200).json({
     success: true,

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import {
   Users,
   UserPlus,
@@ -20,6 +20,7 @@ import { useTeamStore } from "@/features/teams/store/useTeamStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { TeamLoading } from "../components/TeamLoading";
 import { TeamError } from "../components/TeamError";
+import { useTeamRoom, useSocketEvent } from "@/hooks/useSocket";
 
 const teamSidebarLinks = [
   {
@@ -64,14 +65,52 @@ const teamSidebarLinks = [
 ];
 
 const TeamLayout = () => {
-  const location = useLocation();
   const filteredLinks = useFilteredNavigation(teamSidebarLinks);
   const { user } = useAuthStore();
   const { getTeamById, isLoading, error, currentTeam, clearError } = useTeamStore();
 
+  // Join team room via WebSocket
+  useTeamRoom(user?.teamId);
+
+  // Listen for real-time team updates
+  useSocketEvent("team:member:joined", () => {
+    console.log("🔔 New member joined, refreshing team data...");
+    if (user?.teamId) {
+      getTeamById(user.teamId, true);
+    }
+  });
+
+  useSocketEvent("team:member:left", () => {
+    console.log("🔔 Member left, refreshing team data...");
+    if (user?.teamId) {
+      getTeamById(user.teamId, true);
+    }
+  });
+
+  useSocketEvent("team:role:updated", () => {
+    console.log("🔔 Role updated, refreshing team data...");
+    if (user?.teamId) {
+      getTeamById(user.teamId, true);
+    }
+  });
+
+  useSocketEvent("team:owner:transferred", () => {
+    console.log("🔔 Ownership transferred, refreshing team data...");
+    if (user?.teamId) {
+      getTeamById(user.teamId, true);
+    }
+  });
+
+  useSocketEvent("team:updated", () => {
+    console.log("🔔 Team updated, refreshing team data...");
+    if (user?.teamId) {
+      getTeamById(user.teamId, true);
+    }
+  });
+
   useEffect(() => {
     if (user?.teamId) {
-      // Initial load
+      // Initial load only - Socket.IO handles real-time updates
       getTeamById(user.teamId, true);
 
       // Refetch when user returns to the tab (event-driven)
@@ -85,7 +124,8 @@ const TeamLayout = () => {
         clearError();
       };
     }
-  }, [user?.teamId, getTeamById, clearError, location.pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.teamId]); // Only refetch when teamId changes, not on every navigation
 
   return (
     <SidebarProvider>
