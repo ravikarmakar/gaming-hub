@@ -26,12 +26,14 @@ export const TEAM_ENDPOINTS = {
 
     // Invitations
     INVITE_MEMBER: `${INVITATIONS_BASE}/invite-member`,
+    GET_PENDING_INVITES: (teamId: string) => `${INVITATIONS_BASE}/team/${teamId}/pending`,
     RESPOND_INVITE: `${INVITATIONS_BASE}/response-invite`,
 
     // Join Requests
     SEND_JOIN_REQUEST: (teamId: string) =>
         `${TEAMS_BASE}/${teamId}/join-request`,
-    FETCH_JOIN_REQUESTS: `${TEAMS_BASE}/join-requests/all`,
-    HANDLE_JOIN_REQUEST: (requestId: string) =>
-        `${TEAMS_BASE}/join-requests/${requestId}`,
+    FETCH_JOIN_REQUESTS: (teamId: string) => `${TEAMS_BASE}/${teamId}/join-requests/all`,
+    HANDLE_JOIN_REQUEST: (teamId: string, requestId: string) =>
+        `${TEAMS_BASE}/${teamId}/join-requests/${requestId}`,
+    CLEAR_ALL_JOIN_REQUESTS: (teamId: string) => `${TEAMS_BASE}/${teamId}/join-requests/clear-all`,
 } as const;

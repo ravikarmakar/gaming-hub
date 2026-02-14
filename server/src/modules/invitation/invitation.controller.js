@@ -2,10 +2,8 @@ import Invitation from "../invitation/invitation.model.js";
 import Team from "../team/team.model.js";
 import User from "../user/user.model.js";
 import Organizer from "../organizer/organizer.model.js";
-import mongoose from "mongoose";
 import { Notification } from "../notification/notification.model.js";
-import { Roles, Scopes } from "../../shared/constants/roles.js";
-import { createNotification } from "../notification/notification.controller.js";
+import { Roles } from "../../shared/constants/roles.js";
 import { createNotificationWithActions } from "../notification/notification.service.js";
 import { TryCatchHandler } from "../../shared/middleware/error.middleware.js";
 import AppError from "../../shared/utils/AppError.js";
@@ -86,7 +84,7 @@ export const inviteMember = TryCatchHandler(async (req, res) => {
   if (existingInvite) throw new AppError("Invitation already sent to this user", 400);
 
   // 5. Create Invitation
-  const invitedRole = role || (targetModel === "Team" ? Roles.TEAM.MEMBER : Roles.ORG.STAFF);
+  const invitedRole = role || (targetModel === "Team" ? Roles.TEAM.PLAYER : Roles.ORG.STAFF);
 
   const invitation = await Invitation.create({
     sender: userId,
@@ -101,10 +99,13 @@ export const inviteMember = TryCatchHandler(async (req, res) => {
   await createNotificationWithActions({
     recipient: invitee._id,
     sender: userId,
-    type: targetModel === "Team" ? "TEAM_INVITE" : "ORG_INVITE",
+    type: targetModel === "Team" ? "TEAM_INVITE" : "ORGANIZATION_INVITE",
     title: `New Invitation`,
     message: `You have been invited to join ${target.name || target.teamName} as ${invitedRole}.`,
-    relatedData: { inviteId: invitation._id, targetId },
+    relatedData: {
+      inviteId: invitation._id,
+      [targetModel === "Team" ? "teamId" : "orgId"]: targetId
+    },
     actions: [
       { label: "Accept", actionType: "ACCEPT", payload: { inviteId: invitation._id } },
       { label: "Reject", actionType: "REJECT", payload: { inviteId: invitation._id } }
@@ -143,75 +144,16 @@ export const respondToInvitation = TryCatchHandler(async (req, res) => {
   }
 
   if (action === "accepted") {
-    // Use session for atomic updates
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
-      const user = await User.findById(userId).session(session);
+      const { acceptInvitationService } = await import("./invitation.service.js");
+      const message = await acceptInvitationService(invitationId, userId);
 
-      if (invite.entityModel === "Team") {
-        const team = await Team.findById(invite.entityId).session(session);
-        if (!team || team.isDeleted) {
-          throw new AppError("The team no longer exists or has been deleted", 404);
-        }
-
-        if (user.teamId) throw new AppError("You are already in a team", 400);
-
-        // Update User
-        const entityId = invite.entityId;
-
-        user.teamId = entityId;
-        user.roles.push({
-          scope: Scopes.TEAM,
-          role: invite.role,
-          scopeId: entityId,
-          scopeModel: "Team"
-        });
-
-        // Update Team Roster atomically
-        await Team.findByIdAndUpdate(
-          entityId,
-          {
-            $push: {
-              teamMembers: {
-                user: user._id,
-                roleInTeam: invite.role === "team:captain" ? "igl" : "player"
-              }
-            }
-          },
-          { session }
-        );
-      } else if (invite.entityModel === "Organizer") {
-        const org = await Organizer.findById(invite.entityId).session(session);
-        if (!org || org.isDeleted) {
-          throw new AppError("The organization no longer exists or has been deleted", 404);
-        }
-
-        const entityId = invite.entityId;
-        if (user.orgId) throw new AppError("You are already in an organization", 400);
-
-        user.orgId = entityId;
-        user.roles.push({
-          scope: Scopes.ORG,
-          role: invite.role,
-          scopeId: entityId,
-          scopeModel: "Organizer"
-        });
-      }
-
-      await user.save({ session });
-
-      // Update Invitation Status ATOMICALLY
-      invite.status = "accepted";
-      await invite.save({ session });
-
-      await session.commitTransaction();
+      return res.status(200).json({
+        success: true,
+        message,
+      });
     } catch (error) {
-      await session.abortTransaction();
       throw error;
-    } finally {
-      session.endSession();
     }
   } else {
     // For rejection, no transaction needed but update status

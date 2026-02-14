@@ -17,6 +17,7 @@ import {
   sendJoinRequest,
   getJoinRequests,
   handleJoinRequest,
+  bulkRejectJoinRequests,
 } from "../join-request/join-request.controller.js";
 import { isAuthenticated, isVerified, optionalAuthenticate } from "../../shared/middleware/auth.middleware.js";
 import { authorize } from "../../shared/middleware/rbac.middleware.js";
@@ -33,6 +34,7 @@ import {
   manageStaffRoleValidation,
   transferOwnerValidation,
   manageJoinRequestValidation,
+  bulkRejectJoinRequestsValidation,
 } from "./team.validation.js";
 
 const router = express.Router();
@@ -78,7 +80,8 @@ router.delete("/delete-team", isAuthenticated, isVerified, authorize(Scopes.TEAM
 
 // Join Request Routes
 router.post("/:teamId/join-request", isAuthenticated, isVerified, sendJoinRequest);
-router.get("/join-requests/all", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), getJoinRequests);
-router.put("/join-requests/:requestId", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), validateRequest(manageJoinRequestValidation), handleJoinRequest);
+router.get("/:teamId/join-requests/all", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), getJoinRequests);
+router.put("/:teamId/join-requests/:requestId", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), validateRequest(manageJoinRequestValidation), handleJoinRequest);
+router.delete("/:teamId/join-requests/clear-all", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), validateRequest(bulkRejectJoinRequestsValidation), bulkRejectJoinRequests);
 
 export default router;

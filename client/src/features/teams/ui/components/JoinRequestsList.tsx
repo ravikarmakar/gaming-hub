@@ -1,21 +1,33 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { User, Check, X, MessageSquare, Clock } from 'lucide-react';
+import { User, Check, X, MessageSquare, Clock, Trash2, AlertTriangle } from 'lucide-react';
 
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 import { useTeamStore } from '../../store/useTeamStore';
 import { TeamLoading } from './TeamLoading';
 
 export const JoinRequestsList: React.FC = () => {
-    const { joinRequests, fetchJoinRequests, handleJoinRequest, isLoading, currentTeam } = useTeamStore();
+    const { joinRequests, fetchJoinRequests, handleJoinRequest, clearAllJoinRequests, isLoading, currentTeam } = useTeamStore();
+    const [isClearing, setIsClearing] = useState(false);
 
     useEffect(() => {
-        if (currentTeam?.pendingRequestsCount && currentTeam.pendingRequestsCount > 0) {
-            fetchJoinRequests();
+        if (currentTeam?._id && currentTeam.pendingRequestsCount && currentTeam.pendingRequestsCount > 0) {
+            fetchJoinRequests(currentTeam._id);
         }
-    }, [fetchJoinRequests, currentTeam?.pendingRequestsCount]);
+    }, [fetchJoinRequests, currentTeam?._id, currentTeam?.pendingRequestsCount]);
 
     const onHandle = async (requestId: string, action: 'accepted' | 'rejected') => {
         const res = await handleJoinRequest(requestId, action);
@@ -23,6 +35,20 @@ export const JoinRequestsList: React.FC = () => {
             toast.success(res.message);
         } else {
             toast.error(res.message);
+        }
+    };
+
+    const handleClearAll = async () => {
+        setIsClearing(true);
+        try {
+            const res = await clearAllJoinRequests();
+            if (res.success) {
+                toast.success(res.message);
+            } else {
+                toast.error(res.message);
+            }
+        } finally {
+            setIsClearing(false);
         }
     };
 
@@ -52,6 +78,42 @@ export const JoinRequestsList: React.FC = () => {
                         <p className="text-xs text-gray-400">Review and manage pending applications ({joinRequests.length})</p>
                     </div>
                 </div>
+
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isLoading || isClearing}
+                            className="border-red-500/30 bg-red-500/5 hover:bg-red-500/10 text-red-400 hover:text-red-300 transition-all gap-2"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            <span className="hidden sm:inline">Clear All</span>
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="bg-[#0F111A] border-white/10 text-white backdrop-blur-xl">
+                        <AlertDialogHeader>
+                            <AlertDialogTitle className="flex items-center gap-3 text-red-400">
+                                <AlertTriangle className="w-5 h-5" />
+                                Confirm Bulk Rejection
+                            </AlertDialogTitle>
+                            <AlertDialogDescription className="text-gray-400">
+                                This action will permanently reject all {joinRequests.length} pending applications. Every applicant will be notified that their request was declined. This action cannot be undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 transition-colors">
+                                Cancel
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={handleClearAll}
+                                className="bg-red-600 hover:bg-red-500 text-white border-0 transition-colors shadow-lg shadow-red-900/20"
+                            >
+                                Decline All Requests
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">

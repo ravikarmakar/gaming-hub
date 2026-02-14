@@ -72,9 +72,16 @@ export const removeMemberValidation = {
 
 export const manageJoinRequestValidation = {
     params: Joi.object({
+        teamId: objectId.required(),
         requestId: objectId.required(),
     }),
     body: Joi.object({
         action: Joi.string().valid("accepted", "rejected").required(),
     }).unknown(true),
+};
+
+export const bulkRejectJoinRequestsValidation = {
+    params: Joi.object({
+        teamId: objectId.required(),
+    }),
 };

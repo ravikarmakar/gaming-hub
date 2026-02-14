@@ -79,8 +79,10 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         set({ isLoading: true, error: null });
         try {
             const response = await axiosInstance.get(`/notifications?page=${page}`);
+            const newNotifications: Notification[] = response.data.notifications;
+
             set({
-                notifications: response.data.notifications,
+                notifications: newNotifications,
                 unreadCount: response.data.pagination.unreadCount,
                 pagination: {
                     currentPage: response.data.pagination.currentPage,
@@ -89,6 +91,21 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
                 },
                 isLoading: false,
             });
+
+            // Trigger team refetch if any team-related notifications are received 
+            // and they are new (unread or recently created)
+            const hasTeamUpdate = newNotifications.some(n =>
+                ["TEAM_LEAVE", "TEAM_KICK", "TEAM_JOIN_SUCCESS", "TEAM_JOIN_REQUEST"].includes(n.type) &&
+                n.status === "unread"
+            );
+
+            if (hasTeamUpdate) {
+                const { useTeamStore } = await import("@/features/teams/store/useTeamStore");
+                const teamId = useTeamStore.getState().currentTeam?._id;
+                if (teamId) {
+                    await useTeamStore.getState().getTeamById(teamId, true);
+                }
+            }
         } catch (error) {
             set({
                 error: getErrorMessage(error, "Failed to fetch notifications"),
@@ -128,16 +145,43 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         try {
             await axiosInstance.post(`/notifications/${id}/action`, { actionType });
 
-            // Update the notification in the list or remove it/archive it
+            // Refresh notifications if it was unread to get updated count
+            const notification = get().notifications.find(n => n._id === id);
+
+            // Handle immediate UI updates for team/org invites
+            if (actionType === "ACCEPT" && notification) {
+                if (notification.type === "TEAM_INVITE") {
+                    const { useAuthStore } = await import("@/features/auth/store/useAuthStore");
+                    const { useTeamStore } = await import("@/features/teams/store/useTeamStore");
+
+                    // Sync user roles and teamId
+                    await useAuthStore.getState().checkAuth();
+
+                    // Fetch team details immediately to update dashboard
+                    const teamId = notification.relatedData?.teamId;
+                    if (teamId) {
+                        await useTeamStore.getState().getTeamById(teamId, true);
+                    }
+                } else if (notification.type === "ORGANIZATION_INVITE") {
+                    const { useAuthStore } = await import("@/features/auth/store/useAuthStore");
+                    const { useOrganizerStore } = await import("@/features/organizer/store/useOrganizerStore");
+
+                    await useAuthStore.getState().checkAuth();
+
+                    const orgId = notification.relatedData?.orgId;
+                    if (orgId) {
+                        await useOrganizerStore.getState().getOrgById(orgId);
+                    }
+                }
+            }
+
+            // Update the notification in the list
             set((state) => ({
                 notifications: state.notifications.map((n) =>
                     n._id === id ? { ...n, status: "archived" } : n
                 ),
                 isLoading: false,
             }));
-
-            // Refresh notifications if it was unread to get updated count
-            const notification = get().notifications.find(n => n._id === id);
             if (notification?.status === "unread") {
                 set(state => ({ unreadCount: Math.max(0, state.unreadCount - 1) }));
             }

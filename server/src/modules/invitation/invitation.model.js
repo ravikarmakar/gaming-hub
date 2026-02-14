@@ -119,7 +119,7 @@ const invitationSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      default: "member", // or use specific roles like 'org:staff', 'team:player'
+      default: null, // or use specific roles like 'org:staff', 'team:player'
     },
     expiresAt: {
       type: Date,

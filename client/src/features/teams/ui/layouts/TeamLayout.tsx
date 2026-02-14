@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import {
   Users,
   UserPlus,
@@ -64,19 +64,34 @@ const teamSidebarLinks = [
 ];
 
 const TeamLayout = () => {
+  const location = useLocation();
   const filteredLinks = useFilteredNavigation(teamSidebarLinks);
   const { user } = useAuthStore();
   const { getTeamById, isLoading, error, currentTeam, clearError } = useTeamStore();
 
   useEffect(() => {
     if (user?.teamId) {
-      getTeamById(user.teamId);
-    }
-    return () => {
-      clearError();
-    }
-  }, [user?.teamId, getTeamById, clearError]);
+      // Force refresh on initial load and navigation
+      getTeamById(user.teamId, true);
 
+      // Periodic refetch every 15s as a fallback for real-time updates
+      const interval = setInterval(() => {
+        getTeamById(user.teamId, true);
+      }, 15000);
+
+      // Immediate refetch when user returns to the tab
+      const handleFocus = () => {
+        getTeamById(user.teamId, true);
+      };
+      window.addEventListener("focus", handleFocus);
+
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener("focus", handleFocus);
+        clearError();
+      };
+    }
+  }, [user?.teamId, getTeamById, clearError, location.pathname]);
 
   return (
     <SidebarProvider>

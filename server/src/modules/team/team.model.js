@@ -41,6 +41,7 @@ const teamSchema = new mongoose.Schema(
             "coach",
             "analyst",
             "substitute",
+            "manager",
           ],
           required: true,
         },

@@ -44,259 +44,50 @@ export const createNotificationWithActions = async ({
  */
 export const notificationHandlers = {
     TEAM_INVITE: async (notification, actionType, req) => {
-        // 1. Basic Validation
         const inviteId = notification.relatedData.inviteId;
         if (!inviteId) throw new CustomError("Invalid notification data: missing inviteId", 400);
 
-        // 2. Transaction for Atomicity & TOCTOU Prevention
-        const session = await mongoose.startSession();
-        session.startTransaction();
+        if (actionType === "ACCEPT") {
+            const { acceptInvitationService } = await import("../invitation/invitation.service.js");
+            return await acceptInvitationService(inviteId, req.user._id);
+        } else if (actionType === "REJECT") {
+            const invite = await Invitation.findById(inviteId);
+            if (!invite) return "Invitation no longer exists.";
 
-        try {
-            // 3. Re-fetch Invite INSIDE Transaction (Lock if needed, but atomic findAndUpdate is better)
-            // We use findById to check status first
-            const invite = await Invitation.findById(inviteId).session(session);
+            invite.status = "rejected";
+            await invite.save();
 
-            if (!invite) {
-                // If invite is gone, archive notification immediately
-                notification.status = "archived";
-                notification.actions = []; // Remove actions
-                await notification.save({ session });
+            notification.status = "archived";
+            notification.actions = [];
+            await notification.save();
 
-                await session.commitTransaction();
-                return "This invitation no longer exists.";
-            }
-
-            // 4. Validate Status - Prevent double processing
-            if (invite.status !== 'pending') {
-                notification.status = "archived";
-                notification.actions = [];
-                await notification.save({ session });
-
-                await session.commitTransaction();
-                return `This invitation has already been ${invite.status}.`;
-            }
-
-            // 5. Security: Validate Recipient
-            if (invite.receiver.toString() !== req.user._id.toString()) {
-                throw new CustomError("Access Denied: You are not the recipient of this invitation", 403);
-            }
-
-            const teamId = invite.entityId || notification.relatedData.teamId;
-            const team = await Team.findById(teamId).session(session);
-
-            if (!team) {
-                throw new CustomError("Team no longer exists", 404);
-            }
-
-            // 6. Handle Actions
-            if (actionType === "ACCEPT") {
-                // Check if user is already in a team
-                const fullUser = await User.findById(req.user._id).session(session);
-                if (fullUser.teamId) {
-                    throw new CustomError("You are already in a team", 400);
-                }
-
-                // Add user to team if not already member
-                const alreadyMember = team.teamMembers.some((m) => m.user.toString() === req.user._id.toString());
-                if (!alreadyMember) {
-                    // Check Member Limit (Max 20)
-                    if (team.teamMembers.length >= 20) {
-                        throw new CustomError("Team has reached its member limit (20).", 400);
-                    }
-
-                    const teamRole = invite.role === Roles.TEAM.MANAGER ? "manager" : "player";
-
-                    await Team.findByIdAndUpdate(
-                        teamId,
-                        {
-                            $push: {
-                                teamMembers: {
-                                    user: req.user._id,
-                                    username: fullUser.username,
-                                    avatar: fullUser.avatar,
-                                    roleInTeam: teamRole,
-                                    joinedAt: new Date(),
-                                    isActive: true
-                                }
-                            }
-                        },
-                        { session }
-                    );
-
-                    // Update User
-                    const userRole = invite.role === Roles.TEAM.MANAGER ? Roles.TEAM.MANAGER : Roles.TEAM.PLAYER;
-                    await User.findByIdAndUpdate(
-                        req.user._id,
-                        {
-                            $set: { teamId: teamId },
-                            $push: {
-                                roles: {
-                                    scope: Scopes.TEAM,
-                                    role: userRole,
-                                    scopeId: teamId,
-                                    scopeModel: "Team",
-                                },
-                            },
-                        },
-                        { session }
-                    );
-                }
-
-                invite.status = "accepted";
-                await invite.save({ session });
-
-                // 7. Archive Notification on Success
-                notification.status = "archived";
-                notification.actions = [];
-                await notification.save({ session });
-
-                await session.commitTransaction();
-
-                // Invalidate Cache
-                try {
-                    await redis.del(`user_profile:${req.user._id}`);
-                    await redis.del(`team_details:${teamId}`);
-                } catch (e) {
-                    logger.warn("Cache invalidation failed", e);
-                }
-
-                return `You have accepted the invite to join ${team.teamName}`;
-
-            } else if (actionType === "REJECT") {
-                invite.status = "rejected";
-                await invite.save({ session });
-
-                // Archive Notification
-                notification.status = "archived";
-                notification.actions = [];
-                await notification.save({ session });
-
-                await session.commitTransaction();
-                return `You have declined the invite to join ${team.teamName}`;
-            } else {
-                throw new CustomError("Invalid action type", 400);
-            }
-
-        } catch (error) {
-            await session.abortTransaction();
-            throw error;
-        } finally {
-            session.endSession();
+            return `You have declined the invite to join the team.`;
+        } else {
+            throw new CustomError("Invalid action type", 400);
         }
     },
 
-    ORG_INVITE: async (notification, actionType, req) => {
+    ORGANIZATION_INVITE: async (notification, actionType, req) => {
         const inviteId = notification.relatedData.inviteId;
         if (!inviteId) throw new CustomError("Invalid notification data: missing inviteId", 400);
 
-        const session = await mongoose.startSession();
-        session.startTransaction();
+        if (actionType === "ACCEPT") {
+            const { acceptInvitationService } = await import("../invitation/invitation.service.js");
+            return await acceptInvitationService(inviteId, req.user._id);
+        } else if (actionType === "REJECT") {
+            const invite = await Invitation.findById(inviteId);
+            if (!invite) return "Invitation no longer exists.";
 
-        try {
-            const invite = await Invitation.findById(inviteId).session(session);
+            invite.status = "rejected";
+            await invite.save();
 
-            if (!invite) {
-                notification.status = "archived";
-                notification.actions = [];
-                await notification.save({ session });
-                await session.commitTransaction();
-                return "This invitation no longer exists.";
-            }
+            notification.status = "archived";
+            notification.actions = [];
+            await notification.save();
 
-            if (invite.status !== 'pending') {
-                notification.status = "archived";
-                notification.actions = [];
-                await notification.save({ session });
-                await session.commitTransaction();
-                return `This invitation has already been ${invite.status}.`;
-            }
-
-            if (invite.receiver.toString() !== req.user._id.toString()) {
-                throw new CustomError("Access Denied: You are not the recipient of this invitation", 403);
-            }
-
-            const orgId = invite.entityId || notification.relatedData.orgId;
-            const org = await Organizer.findById(orgId).session(session);
-
-            if (!org) {
-                throw new CustomError("Organization no longer exists", 404);
-            }
-
-            if (actionType === "ACCEPT") {
-                const fullUser = await User.findById(req.user._id).session(session);
-
-                if (fullUser.orgId) {
-                    throw new CustomError("You are already in an organization", 400);
-                }
-
-                const alreadyMember = fullUser.roles.some(
-                    (r) => r.scope === Scopes.ORG && r.scopeId?.toString() === orgId.toString()
-                );
-
-                if (!alreadyMember) {
-                    // Update User
-                    const invitedRole = invite.role || Roles.ORG.STAFF;
-                    await User.findByIdAndUpdate(
-                        req.user._id,
-                        {
-                            $set: { orgId: orgId },
-                            $push: {
-                                roles: {
-                                    scope: Scopes.ORG,
-                                    role: invitedRole,
-                                    scopeId: orgId,
-                                    scopeModel: "Organizer",
-                                },
-                            },
-                        },
-                        { session }
-                    );
-
-                    // Update Organizer
-                    await Organizer.findByIdAndUpdate(
-                        orgId,
-                        { $inc: { "stats.memberCount": 1 } },
-                        { session }
-                    );
-                }
-
-                invite.status = "accepted";
-                await invite.save({ session });
-
-                notification.status = "archived";
-                notification.actions = [];
-                await notification.save({ session });
-
-                await session.commitTransaction();
-
-                try {
-                    await redis.del(`user_profile:${req.user._id}`);
-                    await redis.del(`org_details:${orgId}`);
-                } catch (e) {
-                    logger.warn("Cache invalidation failed ", e);
-                }
-
-                return `You have successfully joined ${org.name}`;
-
-            } else if (actionType === "REJECT") {
-                invite.status = "rejected";
-                await invite.save({ session });
-
-                notification.status = "archived";
-                notification.actions = [];
-                await notification.save({ session });
-
-                await session.commitTransaction();
-                return `You have declined the invite to join ${org.name}`;
-            } else {
-                throw new CustomError("Invalid action type", 400);
-            }
-        } catch (error) {
-            await session.abortTransaction();
-            throw error;
-        } finally {
-            session.endSession();
+            return `You have declined the invite to join the organization.`;
+        } else {
+            throw new CustomError("Invalid action type", 400);
         }
     },
 };

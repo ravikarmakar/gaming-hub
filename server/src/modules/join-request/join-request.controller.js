@@ -379,3 +379,73 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
         session.endSession();
     }
 });
+
+// @desc    Bulk reject all pending join requests for a resource
+// @route   DELETE /api/v1/teams/:teamId/join-requests/clear-all
+export const bulkRejectJoinRequests = TryCatchHandler(async (req, res, next) => {
+    const { teamId } = req.params;
+    const { userId } = req.user;
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        // 1. Find all pending requests for this team
+        const pendingRequests = await JoinRequest.find({
+            target: teamId,
+            status: "pending",
+        }).session(session);
+
+        if (pendingRequests.length === 0) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(200).json({
+                success: true,
+                message: "No pending requests to clear",
+                data: []
+            });
+        }
+
+        // 2. Update all to rejected
+        await JoinRequest.updateMany(
+            { target: teamId, status: "pending" },
+            {
+                $set: {
+                    status: "rejected",
+                    handledBy: userId,
+                    handledAt: new Date(),
+                    message: "Bulk rejected by team management"
+                }
+            },
+            { session }
+        );
+
+        // 3. Notify all requesters (Best effort)
+        const notificationPromises = pendingRequests.map(req =>
+            createNotification({
+                recipient: req.requester,
+                sender: userId,
+                type: "REQUEST_DECLINED",
+                content: {
+                    title: "Request Declined",
+                    message: `Your request was declined during a bulk operation.`,
+                },
+                relatedData: { targetId: teamId, model: "Team" },
+            }, { session }).catch(err => console.error("Bulk notification failed for user:", req.requester, err))
+        );
+
+        await Promise.all(notificationPromises);
+
+        await session.commitTransaction();
+
+        res.status(200).json({
+            success: true,
+            message: `Cleared ${pendingRequests.length} join requests successfully`,
+        });
+    } catch (error) {
+        await session.abortTransaction();
+        next(error);
+    } finally {
+        session.endSession();
+    }
+});

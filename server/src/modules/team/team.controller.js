@@ -5,10 +5,7 @@ import Team from "../team/team.model.js";
 import User from "../user/user.model.js";
 import { TryCatchHandler } from "../../shared/middleware/error.middleware.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
-import { findUserById } from "../user/user.service.js";
-import { Roles, Scopes } from "../../shared/constants/roles.js";
 import {
-  checkTeamNameUnique,
   getTransformedTeam,
   batchAddMembersToTeam,
   removeMemberFromTeam,
@@ -19,15 +16,10 @@ import {
   manageTeamStaffService,
   manageMemberRoleService
 } from "../team/team.service.js";
-import { uploadOnImageKit, deleteFromImageKit } from "../../shared/services/imagekit.service.js";
 import { createNotification } from "../notification/notification.controller.js";
 import JoinRequest from "../join-request/join-request.model.js";
 import { redis } from "../../shared/config/redis.js";
 import { logger } from "../../shared/utils/logger.js";
-
-// Helper to remove imports that are no longer needed
-// Actually, I kept many imports above because some methods in controller MIGHT stil use them
-// But I will strip down the controller heavily.
 
 export const createTeam = TryCatchHandler(async (req, res, next) => {
   const newTeam = await createTeamService(req.user.userId, req.body, req.file);

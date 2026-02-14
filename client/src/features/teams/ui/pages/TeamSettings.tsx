@@ -4,12 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import toast from "react-hot-toast";
 import {
-    Globe,
-    Twitter,
-    Instagram,
-    Youtube,
     Settings,
-    Image as ImageIcon,
     LayoutDashboard,
     Save,
     Loader2,
@@ -18,9 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Select,
     SelectContent,
@@ -38,15 +31,15 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 
-import FileUpload from "@/components/FileUpload";
 import { useTeamStore } from "@/features/teams/store/useTeamStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { TEAM_ACCESS } from "@/features/teams/lib/access";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { DeleteTeamSection } from "../components/DeleteTeamSection";
-import { teamSchema, MAX_FILE_SIZE, TeamForm } from "@/features/teams/lib/teamSchema";
-
+import { teamSchema, TeamForm } from "@/features/teams/lib/teamSchema";
+import { BrandingForm } from "../components/settings/BrandingForm";
+import { SocialsForm } from "../components/settings/SocialsForm";
 
 const TeamSettings = () => {
     const { updateTeam, isLoading, currentTeam } = useTeamStore();
@@ -102,7 +95,8 @@ const TeamSettings = () => {
         if (data.image instanceof File) formData.append("image", data.image);
         if (data.banner instanceof File) formData.append("banner", data.banner);
 
-        const result = await updateTeam(formData);
+        if (!currentTeam) return;
+        const result = await updateTeam(currentTeam._id, formData);
         if (result) {
             toast.success("Team settings updated successfully!");
         } else {
@@ -183,60 +177,7 @@ const TeamSettings = () => {
                         )}
                     </div>
 
-                    {/* Branding Section */}
-                    <Card className="bg-[#0F111A]/60 border-white/10 backdrop-blur-xl shadow-2xl shadow-purple-500/5">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-white">
-                                <ImageIcon className="w-5 h-5 text-purple-400" />
-                                Branding & Visuals
-                            </CardTitle>
-                            <CardDescription className="text-gray-400">
-                                Update your team logo and banner to stand out
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                <FormField
-                                    control={form.control}
-                                    name="image"
-                                    render={({ field }) => (
-                                        <div className="space-y-4">
-                                            <Label className="text-gray-300">Team Logo</Label>
-                                            <FormControl>
-                                                <FileUpload
-                                                    variant="avatar"
-                                                    value={field.value || currentTeam?.imageUrl}
-                                                    onChange={field.onChange}
-                                                    maxSize={MAX_FILE_SIZE}
-                                                    fallbackText={currentTeam?.teamName?.[0]}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </div>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="banner"
-                                    render={({ field }) => (
-                                        <div className="space-y-4">
-                                            <Label className="text-gray-300">Team Banner</Label>
-                                            <FormControl>
-                                                <FileUpload
-                                                    variant="banner"
-                                                    value={field.value || currentTeam?.bannerUrl}
-                                                    onChange={field.onChange}
-                                                    maxSize={MAX_FILE_SIZE}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </div>
-                                    )}
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <BrandingForm control={form.control} currentTeam={currentTeam} />
 
                     {/* General Information */}
                     <Card className="bg-[#0F111A]/60 border-white/10 backdrop-blur-xl shadow-2xl shadow-purple-500/5">
@@ -349,92 +290,7 @@ const TeamSettings = () => {
                         </CardContent>
                     </Card>
 
-                    {/* Social Links */}
-                    <Card className="bg-[#0F111A]/60 border-white/10 backdrop-blur-xl shadow-2xl shadow-purple-500/5">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-white">
-                                <Globe className="w-5 h-5 text-purple-400" />
-                                Social Presence
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                <FormField
-                                    control={form.control}
-                                    name="twitter"
-                                    render={({ field }) => (
-                                        <FormItem className="relative">
-                                            <Twitter className="absolute w-4 h-4 text-gray-500 left-3 top-3" />
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    placeholder="Twitter URL"
-                                                    className="pl-10 text-white bg-black/20 border-purple-500/20"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="discord"
-                                    render={({ field }) => (
-                                        <FormItem className="relative">
-                                            <Badge variant="outline" className="mr-2 border-purple-500/20 text-gray-400 absolute left-1 top-2.5 h-6 scale-75">
-                                                #
-                                            </Badge>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    placeholder="Discord Invite Link"
-                                                    className="pl-10 text-white bg-black/20 border-purple-500/20"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="youtube"
-                                    render={({ field }) => (
-                                        <FormItem className="relative">
-                                            <Youtube className="absolute w-4 h-4 text-gray-500 left-3 top-3" />
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    placeholder="YouTube Channel"
-                                                    className="pl-10 text-white bg-black/20 border-purple-500/20"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="instagram"
-                                    render={({ field }) => (
-                                        <FormItem className="relative">
-                                            <Instagram className="absolute w-4 h-4 text-gray-500 left-3 top-3" />
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    placeholder="Instagram Profile"
-                                                    className="pl-10 text-white bg-black/20 border-purple-500/20"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <SocialsForm control={form.control} />
                 </form>
             </Form>
 

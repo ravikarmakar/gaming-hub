@@ -14,9 +14,9 @@ export const useNotificationManager = () => {
             return;
         }
 
-        if (user && !hasFetched.current) {
-            const platformNotificationsEnabled = user.settings?.notifications?.platform !== false;
+        const platformNotificationsEnabled = user.settings?.notifications?.platform !== false;
 
+        if (user && !hasFetched.current) {
             if (platformNotificationsEnabled) {
                 // Always fetch on mount if enabled, regardless of unreadCount (which starts at 0)
                 fetchNotifications();

@@ -7,7 +7,6 @@ import { EVENT_ENDPOINTS } from "@/features/events/lib/endpoints";
 import { getErrorMessage } from "@/lib/utils";
 import { Team } from "../lib/types";
 
-
 interface TeamStateTypes {
   teams: Team[];
   paginatedTeams: Team[];
@@ -48,12 +47,17 @@ interface TeamStateTypes {
     isVerified?: boolean;
     append?: boolean;
   }) => Promise<void>;
-  updateTeam: (teamData: FormData) => Promise<Team | null>;
+  updateTeam: (teamId: string, teamData: FormData) => Promise<Team | null>;
   inviteMember: (playerId: string, message?: string) => Promise<{ success: boolean; message: string }>;
   sendJoinRequest: (teamId: string, message?: string) => Promise<{ success: boolean; message: string }>;
-  fetchJoinRequests: () => Promise<void>;
+  fetchJoinRequests: (teamId: string) => Promise<void>;
   handleJoinRequest: (requestId: string, action: 'accepted' | 'rejected') => Promise<{ success: boolean; message: string }>;
+  clearAllJoinRequests: () => Promise<{ success: boolean; message: string }>;
   fetchTeamTournaments: (teamId: string) => Promise<void>;
+
+  sentInvitations: any[];
+  fetchSentInvitations: (teamId: string) => Promise<void>;
+
   clearError: () => void;
 }
 
@@ -74,6 +78,7 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
   joinRequests: [],
   teamTournaments: [],
   isCreateTeamOpen: false,
+  sentInvitations: [],
 
   setIsCreateTeamOpen: (isOpen) => set({ isCreateTeamOpen: isOpen }),
 
@@ -115,8 +120,20 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
 
   removeMember: async (id) => {
     set({ isLoading: true });
+
+    // Ensure we have currentTeam loaded
+    const currentTeam = get().currentTeam;
+    if (!currentTeam) {
+      set({ isLoading: false, error: "No active team found." });
+      return { success: false, message: "No active team found." };
+    }
+
     try {
-      const response = await axiosInstance.put(TEAM_ENDPOINTS.REMOVE_MEMBER(id));
+      // Send teamId in body for middleware authorization
+      const response = await axiosInstance.put(TEAM_ENDPOINTS.REMOVE_MEMBER(id), {
+        teamId: currentTeam._id
+      });
+
       if (response.data.success) {
         set({ currentTeam: response.data.data, isLoading: false });
       } else {
@@ -133,8 +150,18 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
 
   updateMemberRole: async (role, memberId) => {
     set({ isLoading: true, error: null });
+
+    // Validate current team
+    const currentTeam = get().currentTeam;
+    if (!currentTeam) {
+      set({ isLoading: false, error: "No active team found." });
+      return null;
+    }
+
     try {
+      // Include teamId for middleware
       const response = await axiosInstance.put(TEAM_ENDPOINTS.UPDATE_MEMBER_ROLE, {
+        teamId: currentTeam._id,
         role,
         memberId,
       });
@@ -155,8 +182,16 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
 
   promoteMember: async (memberId) => {
     set({ isLoading: true, error: null });
+
+    const currentTeam = get().currentTeam;
+    if (!currentTeam) {
+      set({ isLoading: false, error: "No active team found." });
+      return { success: false, message: "No active team found." };
+    }
+
     try {
       const response = await axiosInstance.put(TEAM_ENDPOINTS.MANAGE_STAFF, {
+        teamId: currentTeam._id,
         memberId,
         action: "promote"
       });
@@ -178,8 +213,16 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
 
   demoteMember: async (memberId) => {
     set({ isLoading: true, error: null });
+
+    const currentTeam = get().currentTeam;
+    if (!currentTeam) {
+      set({ isLoading: false, error: "No active team found." });
+      return { success: false, message: "No active team found." };
+    }
+
     try {
       const response = await axiosInstance.put(TEAM_ENDPOINTS.MANAGE_STAFF, {
+        teamId: currentTeam._id,
         memberId,
         action: "demote"
       });
@@ -201,8 +244,19 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
 
   leaveMember: async () => {
     set({ isLoading: true });
+
+    // Validate current team
+    const currentTeam = get().currentTeam;
+    if (!currentTeam) {
+      set({ isLoading: false, error: "No active team found." });
+      return null;
+    }
+
     try {
-      const response = await axiosInstance.put(TEAM_ENDPOINTS.LEAVE_TEAM);
+      // Pass teamId for authorization
+      const response = await axiosInstance.put(TEAM_ENDPOINTS.LEAVE_TEAM, {
+        teamId: currentTeam._id
+      });
 
       // Update Auth Store to reflect that user no longer has a team
       const authUser = useAuthStore.getState().user;
@@ -336,10 +390,10 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
     }
   },
 
-  updateTeam: async (teamData) => {
+  updateTeam: async (teamId, teamData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.put(TEAM_ENDPOINTS.UPDATE, teamData);
+      const response = await axiosInstance.put(`${TEAM_ENDPOINTS.UPDATE}?teamId=${teamId}`, teamData);
       set({ currentTeam: response.data.data, isLoading: false });
       return response.data.data;
     } catch (error) {
@@ -390,10 +444,11 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
     }
   },
 
-  fetchJoinRequests: async () => {
+  fetchJoinRequests: async (teamId) => {
+    if (!teamId) return;
     set({ isLoading: true });
     try {
-      const response = await axiosInstance.get(TEAM_ENDPOINTS.FETCH_JOIN_REQUESTS);
+      const response = await axiosInstance.get(TEAM_ENDPOINTS.FETCH_JOIN_REQUESTS(teamId));
       set({ joinRequests: response.data.data || [], isLoading: false });
     } catch (error) {
       console.error("Failed to fetch join requests:", error);
@@ -402,9 +457,12 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
   },
 
   handleJoinRequest: async (requestId, action) => {
+    const currentTeam = get().currentTeam;
+    if (!currentTeam) return { success: false, message: "No active team found" };
+
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.put(TEAM_ENDPOINTS.HANDLE_JOIN_REQUEST(requestId), { action });
+      const response = await axiosInstance.put(TEAM_ENDPOINTS.HANDLE_JOIN_REQUEST(currentTeam._id, requestId), { action });
 
       // Update local state
       set((state) => {
@@ -427,14 +485,42 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
     }
   },
 
-  fetchTeamTournaments: async (teamId) => {
+  clearAllJoinRequests: async () => {
+    const currentTeam = get().currentTeam;
+    if (!currentTeam) return { success: false, message: "No active team found" };
+
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get(EVENT_ENDPOINTS.TEAM_EVENTS(teamId));
-      set({ teamTournaments: response.data.data || [], isLoading: false });
+      const response = await axiosInstance.delete(TEAM_ENDPOINTS.CLEAR_ALL_JOIN_REQUESTS(currentTeam._id));
+      if (response.data.success) {
+        set({ joinRequests: [], isLoading: false });
+        // Refresh team count
+        await get().getTeamById(currentTeam._id, true);
+      }
+      return { success: true, message: response.data.message };
     } catch (error) {
-      const errMsg = getErrorMessage(error, "Failed to fetch team tournaments");
+      const errMsg = getErrorMessage(error, "Failed to clear join requests");
       set({ error: errMsg, isLoading: false });
+      return { success: false, message: errMsg };
+    }
+  },
+
+  fetchTeamTournaments: async (teamId) => {
+    if (!teamId) return;
+    try {
+      const response = await axiosInstance.get(EVENT_ENDPOINTS.TEAM_EVENTS(teamId));
+      set({ teamTournaments: response.data.data });
+    } catch (error) {
+      console.error("Error fetching team tournaments:", error);
+    }
+  },
+
+  fetchSentInvitations: async (teamId) => {
+    try {
+      const response = await axiosInstance.get(TEAM_ENDPOINTS.GET_PENDING_INVITES(teamId));
+      set({ sentInvitations: response.data.data });
+    } catch (error) {
+      console.error("Error fetching sent invitations:", error);
     }
   },
 }));

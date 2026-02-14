@@ -9,7 +9,6 @@ import { redis } from "../../shared/config/redis.js";
 import { uploadOnImageKit, deleteFromImageKit } from "../../shared/services/imagekit.service.js";
 import { logger } from "../../shared/utils/logger.js";
 
-// Helper to check uniqueness
 // Helper to check uniqueness (Initial check, relies on DB unique index for strict guarantee)
 export const checkTeamNameUnique = async (teamName, session = null) => {
   const query = Team.findOne({ teamName, isDeleted: false });
@@ -32,35 +31,43 @@ export const checkTeamNameUnique = async (teamName, session = null) => {
 export const createTeamService = async (userId, body, file) => {
   const { teamName, bio, tag, region } = body;
 
+  // 0. Pre-validation (Fail early to avoid unnecessary upload)
+  await checkTeamNameUnique(teamName);
+
+  const userPreCheck = await User.findById(userId);
+  if (!userPreCheck) throw new CustomError("User not found", 404);
+  if (userPreCheck.teamId) throw new CustomError("You are already in a team", 400);
+  if (!userPreCheck.isAccountVerified)
+    throw new CustomError("Account is not verified yet", 401);
+
+  // 1. Image handling (External Service - Outside Transaction)
+  let imageUrl;
+  let imageFileId = null;
+  let uploadedImageStart = null;
+
+  if (file) {
+    const uploadRes = await uploadOnImageKit(
+      file.path,
+      `team-logo-${Date.now()}`,
+      "/teams/logos"
+    );
+    if (uploadRes) {
+      imageUrl = uploadRes.url;
+      imageFileId = uploadRes.fileId;
+      uploadedImageStart = imageFileId; // Track for cleanup
+    }
+  }
+
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  let uploadedImageStart = null;
-
   try {
-    await checkTeamNameUnique(teamName, session);
+    // Re-check unique name inside transaction (or rely on E11000) happens at save()
 
+    // Lock the user to ensure they haven't joined a team in the meantime
     const user = await User.findById(userId).session(session);
     if (!user) throw new CustomError("User not found", 404);
-    if (user.teamId) throw new CustomError("You are already in a team", 400);
-    if (!user.isAccountVerified)
-      throw new CustomError("Account is not verified yet", 401);
-
-    // 1. Image handling
-    let imageUrl;
-    let imageFileId = null;
-    if (file) {
-      const uploadRes = await uploadOnImageKit(
-        file.path,
-        `team-logo-${Date.now()}`,
-        "/teams/logos"
-      );
-      if (uploadRes) {
-        imageUrl = uploadRes.url;
-        imageFileId = uploadRes.fileId;
-        uploadedImageStart = imageFileId; // Track for cleanup
-      }
-    }
+    if (user.teamId) throw new CustomError("You are already in a team", 400); // Race condition check
 
     const teamData = {
       teamName,
@@ -81,7 +88,7 @@ export const createTeamService = async (userId, body, file) => {
     };
 
     // 2. Create Team
-    const newTeam = new Team(teamData); // Pass session to save? No, pass to save options
+    const newTeam = new Team(teamData);
     await newTeam.save({ session });
 
     // 3. Update User
@@ -248,7 +255,7 @@ export const updateTeamService = async (teamId, body, files) => {
       );
     }
 
-    return team;
+    return await getTransformedTeam(team._id);
   } catch (err) {
     // Cleanup locally uploaded files first
     if (files) {
@@ -614,6 +621,13 @@ export const getTransformedTeam = async (teamId) => {
 
   if (!team) return null;
 
+  // Add pending requests count for frontend synchronization
+  const { default: JoinRequest } = await import("../join-request/join-request.model.js");
+  const pendingRequestsCount = await JoinRequest.countDocuments({
+    target: teamId,
+    status: "pending"
+  });
+
   const userIds = team.teamMembers.map((m) => m.user);
   const users = await User.find({ _id: { $in: userIds } })
     .select("roles _id username avatar")
@@ -621,6 +635,7 @@ export const getTransformedTeam = async (teamId) => {
 
   return {
     ...team,
+    pendingRequestsCount,
     teamMembers: team.teamMembers.map((m) => {
       const userObj = users.find((u) => u._id.toString() === m.user.toString());
       return {
@@ -653,17 +668,13 @@ export const addMemberToTeam = async ({ teamId, userId, roleInTeam = "player", s
     if (!user) throw new CustomError("User not found", 404);
     if (user.teamId) throw new CustomError(`${user.username} is already in a team`, 400);
 
-    const team = await Team.findOne({ _id: teamId, isDeleted: false }).session(session);
-    if (!team) throw new CustomError("Team not found", 404);
-
-    // Atomic check: Verify member limit before proceeding
-    if (team.teamMembers.length >= 20) {
-      throw new CustomError("Team limit exceeded. Max 20 members allowed.", 400);
-    }
-
-    // 1. Update Team Roster with denormalized data
-    await Team.findByIdAndUpdate(
-      teamId,
+    // Atomic Update: Checks if team exists AND has fewer than 20 members (index 19 doesn't exist)
+    const updatedTeam = await Team.findOneAndUpdate(
+      {
+        _id: teamId,
+        isDeleted: false,
+        "teamMembers.19": { $exists: false } // Ensures < 20 members
+      },
       {
         $push: {
           teamMembers: {
@@ -674,8 +685,15 @@ export const addMemberToTeam = async ({ teamId, userId, roleInTeam = "player", s
           },
         },
       },
-      { session }
+      { session, new: true }
     );
+
+    if (!updatedTeam) {
+      // Check if team exists to give specific error
+      const teamExists = await Team.exists({ _id: teamId, isDeleted: false }).session(session);
+      if (!teamExists) throw new CustomError("Team not found", 404);
+      throw new CustomError("Team limit exceeded. Max 20 members allowed.", 400);
+    }
 
     // 2. Update User Roles & Team ID
     await User.findByIdAndUpdate(
@@ -732,10 +750,7 @@ export const batchAddMembersToTeam = async ({ teamId, memberIds, session = null 
     const team = await Team.findOne({ _id: teamId, isDeleted: false }).session(session);
     if (!team) throw new CustomError("Team not found", 404);
 
-    // Atomic check: Verify member limit before proceeding
-    if (team.teamMembers.length + memberIds.length > 20) {
-      throw new CustomError("Team limit exceeded. Max 20 members allowed.", 400);
-    }
+    // Atomic limit check handled in findOneAndUpdate below
 
     const users = await User.find({ _id: { $in: memberIds } }).session(session);
     if (users.length !== memberIds.length) throw new CustomError("One or more users not found", 404);
@@ -777,18 +792,32 @@ export const batchAddMembersToTeam = async ({ teamId, memberIds, session = null 
     if (bulkOps.length > 0) {
       await User.bulkWrite(bulkOps, { session });
 
-      // Use Optimistic Concurrency Control
+      // Atomic Update: Checks version AND member limit using $expr
       const updatedTeam = await Team.findOneAndUpdate(
-        { _id: teamId, __v: team.__v }, // Ensure version hasn't changed
+        {
+          _id: teamId,
+          __v: team.__v, // Optimistic concurrency for other fields
+          $expr: {
+            $lte: [
+              { $add: [{ $size: "$teamMembers" }, teamUpdateOps.length] },
+              20
+            ]
+          }
+        },
         {
           $push: { teamMembers: { $each: teamUpdateOps } },
-          $inc: { __v: 1 } // Manually increment version
+          $inc: { __v: 1 }
         },
         { session, new: true }
       );
 
       if (!updatedTeam) {
-        throw new CustomError("Concurrent modification detected. Please try again.", 409);
+        // Distinguish errors
+        const freshTeam = await Team.findById(teamId).session(session);
+        if (freshTeam && freshTeam.teamMembers.length + teamUpdateOps.length > 20) {
+          throw new CustomError("Team limit exceeded. Max 20 members allowed.", 400);
+        }
+        throw new CustomError("Concurrent modification or team full. Please try again.", 409);
       }
     }
 
