@@ -1,5 +1,4 @@
 import fs from "fs";
-import mongoose from "mongoose";
 import Team from "./team.model.js";
 import User from "../user/user.model.js";
 import JoinRequest from "../join-request/join-request.model.js";
@@ -339,7 +338,7 @@ export const updateTeamService = async (teamId, body, files) => {
       );
     }
 
-    return await getTransformedTeam(team._id);
+    return await buildTransformedTeamFromDoc(team);
   } catch (err) {
     // Cleanup locally uploaded files first
     if (files) {
@@ -452,7 +451,7 @@ export const transferTeamOwnershipService = async (teamId, currentOwnerId, newOw
       return member.toObject();
     });
 
-    await Team.findByIdAndUpdate(
+    const updatedTeam = await Team.findByIdAndUpdate(
       team._id,
       {
         $set: {
@@ -460,7 +459,7 @@ export const transferTeamOwnershipService = async (teamId, currentOwnerId, newOw
           teamMembers: updatedMembers,
         },
       },
-      { session }
+      { session, new: true, lean: true }
     );
 
     // 3. Update User document (roles) - Old Owner becomes Player
@@ -508,6 +507,7 @@ export const transferTeamOwnershipService = async (teamId, currentOwnerId, newOw
       },
       { session }
     );
+    return updatedTeam;
   });
 
   // 5. Clear Redis cache
@@ -517,7 +517,7 @@ export const transferTeamOwnershipService = async (teamId, currentOwnerId, newOw
   pipeline.del(`team_details:${teamId}`);
   await pipeline.exec();
 
-  return await getTransformedTeam(teamId);
+  return await buildTransformedTeamFromDoc(updatedTeam);
 };
 
 export const manageTeamStaffService = async (teamId, memberId, action) => {
@@ -559,7 +559,7 @@ export const manageTeamStaffService = async (teamId, memberId, action) => {
       );
 
       if (alreadyManager) {
-        return { earlyReturn: true, message: "Member is already a Manager.", teamId: team._id };
+        return { earlyReturn: true, message: "Member is already a Manager.", teamId: team._id, team };
       }
 
       // Add Manager Role to User
@@ -580,22 +580,22 @@ export const manageTeamStaffService = async (teamId, memberId, action) => {
       await updateQuery;
     }
 
-    return { earlyReturn: false, teamId: team._id };
+    return { earlyReturn: false, teamId: team._id, team };
   });
 
   if (result.earlyReturn) {
-    return { message: result.message, team: await getTransformedTeam(result.teamId) };
+    return { message: result.message, team: await buildTransformedTeamFromDoc(result.team) };
   }
 
   // Invalidate Redis cache (with retry logic)
   await invalidateCacheWithRetry([`user_profile:${memberId}`, `team_details:${teamId}`]);
 
-  return { message: `Member successfully ${action === "promote" ? "promoted to Manager" : "demoted to Player"}.`, team: await getTransformedTeam(result.teamId) };
+  return { message: `Member successfully ${action === "promote" ? "promoted to Manager" : "demoted to Player"}.`, team: await buildTransformedTeamFromDoc(result.team) };
 };
 
 export const manageMemberRoleService = async (teamId, memberId, role) => {
   const teamId_saved = teamId;
-  await withOptionalTransaction(async (session) => {
+  const savedTeam = await withOptionalTransaction(async (session) => {
     const teamQuery = Team.findOne({ _id: teamId, isDeleted: false });
     if (session) teamQuery.session(session);
     const team = await teamQuery;
@@ -630,12 +630,13 @@ export const manageMemberRoleService = async (teamId, memberId, role) => {
 
     member.roleInTeam = role;
     await team.save({ session });
+    return team;
   });
 
   // Update Cache (with retry logic)
   await invalidateCacheWithRetry([`team_details:${teamId_saved}`, `user_profile:${memberId}`]);
 
-  return { message: `The member's role has been updated to '${role}'.`, team: await getTransformedTeam(teamId_saved) };
+  return { message: `The member's role has been updated to '${role}'.`, team: await buildTransformedTeamFromDoc(savedTeam) };
 };
 
 // --- Existing Helpers & Services ---
@@ -676,27 +677,41 @@ export const getTransformedTeam = async (teamId) => {
 
   if (!team) return null;
 
-  // Add pending requests count for frontend synchronization
-  const { default: JoinRequest } = await import("../join-request/join-request.model.js");
-  const pendingRequestsCount = await JoinRequest.countDocuments({
-    target: teamId,
-    status: "pending"
-  });
+  return await buildTransformedTeamFromDoc(team);
+};
 
+/**
+ * Build a transformed team response from an already-loaded team document.
+ * Reduces 3 DB queries to 1 (just JoinRequest.countDocuments + User.find).
+ * Used after mutations where the team doc is already in memory.
+ * @param {Object} teamDoc - A team document (Mongoose doc or plain object)
+ */
+export const buildTransformedTeamFromDoc = async (teamDoc) => {
+  const team = teamDoc.toObject ? teamDoc.toObject() : teamDoc;
+  const teamId = team._id;
+
+  // Run the two remaining queries in parallel (instead of sequentially)
   const userIds = team.teamMembers.map((m) => m.user);
-  const users = await User.find({ _id: { $in: userIds } })
-    .select("roles _id username avatar")
-    .lean();
+  const [pendingRequestsCount, users] = await Promise.all([
+    JoinRequest.countDocuments({ target: teamId, status: "pending" }),
+    User.find({ _id: { $in: userIds } })
+      .select("roles _id username avatar")
+      .lean(),
+  ]);
+
+  // Strip __v if present
+  const { __v, ...teamData } = team;
 
   return {
-    ...team,
+    ...teamData,
     pendingRequestsCount,
     teamMembers: team.teamMembers.map((m) => {
-      const userObj = users.find((u) => u._id.toString() === m.user.toString());
+      const memberData = m.toObject ? m.toObject() : m;
+      const userObj = users.find((u) => u._id.toString() === memberData.user.toString());
       return {
-        ...m,
-        username: m.username || userObj?.username || "Unknown",
-        avatar: m.avatar || userObj?.avatar || "",
+        ...memberData,
+        username: memberData.username || userObj?.username || "Unknown",
+        avatar: memberData.avatar || userObj?.avatar || "",
         systemRole:
           userObj?.roles.find(
             (r) =>
@@ -937,6 +952,9 @@ export const removeMemberFromTeam = async ({ teamId, userId, session = null }) =
   // 3. Cache Invalidation (with retry logic)
   if (!session) {
     await invalidateCacheWithRetry([`user_profile:${userId}`, `team_details:${teamId}`]);
+    // Invalidate socket membership cache so next join:team re-checks DB
+    redis.del(`socket_member:${userId}:${teamId}`)
+      .catch(err => logger.error(`Failed to invalidate socket membership cache:`, err.message));
   }
 
   return true;

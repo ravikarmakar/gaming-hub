@@ -1,20 +1,12 @@
 import { redis } from "../config/redis.js";
 import { logger } from "../utils/logger.js";
+import { LRUCache } from "lru-cache";
 
-// In-memory L1 Cache with LRU eviction
-const l1Cache = new Map();
-const L1_TTL = 30 * 1000; // 30 seconds
-const L1_MAX_SIZE = 100; // Maximum entries to prevent memory leak
-
-/**
- * Evict oldest entry from L1 cache (LRU)
- */
-const evictOldestL1Entry = () => {
-    if (l1Cache.size >= L1_MAX_SIZE) {
-        const firstKey = l1Cache.keys().next().value;
-        l1Cache.delete(firstKey);
-    }
-};
+// In-memory L1 Cache with proper LRU eviction
+const l1Cache = new LRUCache({
+    max: 10_000,           // 10k entries (up from 100)
+    ttl: 30 * 1000,        // 30 seconds auto-expiry
+});
 
 /**
  * Caching middleware using Redis
@@ -30,19 +22,18 @@ export const cache = (duration) => async (req, res, next) => {
         // Include HTTP method and User ID (if authenticated) in cache key
         const userId = req.user ? req.user._id : "anon";
         const key = `__express__${req.method}:${req.originalUrl || req.url}:${userId}`;
-        const now = Date.now();
 
         // Only cache GET requests
         if (req.method !== "GET") {
             return next();
         }
 
-        // 1. Check L1 Cache (Memory)
+        // 1. Check L1 Cache (Memory) — LRU handles TTL automatically
         const cachedL1 = l1Cache.get(key);
-        if (cachedL1 && (now - cachedL1.timestamp < L1_TTL)) {
+        if (cachedL1 !== undefined) {
             logger.info(`>>> [L1 CACHE HIT] ${key}`);
             // Return a deep copy to prevent mutation of the cached object
-            return res.json(JSON.parse(JSON.stringify(cachedL1.data)));
+            return res.json(JSON.parse(JSON.stringify(cachedL1)));
         }
 
         // 2. Check L2 Cache (Redis)
@@ -64,15 +55,9 @@ export const cache = (duration) => async (req, res, next) => {
             try {
                 const responseData = typeof cachedBody === 'string' ? JSON.parse(cachedBody) : cachedBody;
 
-                // Evict oldest entry if cache is full
-                evictOldestL1Entry();
-
                 // L1 Cache: Deep copy to prevent reference mutation
-                // Using JSON.parse/stringify is safest for plain objects here
-                l1Cache.set(key, {
-                    data: JSON.parse(JSON.stringify(responseData)),
-                    timestamp: now
-                });
+                // LRU handles eviction and TTL automatically
+                l1Cache.set(key, JSON.parse(JSON.stringify(responseData)));
 
                 return res.json(responseData);
             } catch (parseError) {
@@ -89,11 +74,8 @@ export const cache = (duration) => async (req, res, next) => {
         res.json = (body) => {
             if (res.statusCode === 200) {
                 try {
-                    // Evict oldest entry if cache is full
-                    evictOldestL1Entry();
-
-                    // Update L1
-                    l1Cache.set(key, { data: body, timestamp: Date.now() });
+                    // Update L1 — LRU handles eviction automatically
+                    l1Cache.set(key, body);
 
                     // Update L2 (Redis) - Handle circular references or serialization errors safely
                     const stringifiedBody = JSON.stringify(body);

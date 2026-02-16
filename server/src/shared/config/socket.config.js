@@ -6,6 +6,7 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import Team from "../../modules/team/team.model.js";
 import { logger } from "../utils/logger.js";
 import { initializeIORedis } from "./ioredis.js";
+import { redis } from "./redis.js";
 
 let io;
 
@@ -90,17 +91,39 @@ export const initializeSocket = async (httpServer) => {
             }
 
             try {
-                // 2. Authorization check: User must be a member of the team
-                const isMember = await Team.exists({
-                    _id: teamId,
-                    "teamMembers.user": socket.userId,
-                    isDeleted: false
-                });
+                const cacheKey = `socket_member:${socket.userId}:${teamId}`;
 
+                // 2. Check Redis cache for membership (avoids DB query on reconnections)
+                let isMember = false;
+                try {
+                    const cached = await redis.get(cacheKey);
+                    if (cached === "1" || cached === 1) {
+                        isMember = true;
+                    }
+                } catch (cacheErr) {
+                    logger.error(`Redis cache check failed for socket membership:`, cacheErr.message);
+                    // Fall through to DB check
+                }
+
+                // 3. Fall back to DB if not cached
                 if (!isMember) {
-                    logger.warn(`Unauthorized join:team attempt: User ${maskId(socket.userId)} tried to join team ${maskId(teamId)}`);
-                    socket.emit("error", { message: "Unauthorized to join this team room" });
-                    return;
+                    const dbResult = await Team.exists({
+                        _id: teamId,
+                        "teamMembers.user": socket.userId,
+                        isDeleted: false
+                    });
+
+                    if (!dbResult) {
+                        logger.warn(`Unauthorized join:team attempt: User ${maskId(socket.userId)} tried to join team ${maskId(teamId)}`);
+                        socket.emit("error", { message: "Unauthorized to join this team room" });
+                        return;
+                    }
+
+                    isMember = true;
+
+                    // Cache the membership for 5 minutes
+                    redis.set(cacheKey, "1", { ex: 300 })
+                        .catch(err => logger.error(`Failed to cache socket membership:`, err.message));
                 }
 
                 socket.join(`team:${teamId}`);
@@ -118,6 +141,11 @@ export const initializeSocket = async (httpServer) => {
             if (!mongoose.Types.ObjectId.isValid(teamId)) return;
 
             socket.leave(`team:${teamId}`);
+
+            // Invalidate membership cache on explicit leave
+            redis.del(`socket_member:${socket.userId}:${teamId}`)
+                .catch(err => logger.error(`Failed to invalidate socket membership cache:`, err.message));
+
             logger.info(`User ${maskId(socket.userId)} left team room: ${maskId(teamId)}`);
         });
 

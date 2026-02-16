@@ -1,11 +1,13 @@
 import { redis } from "../config/redis.js";
 import { CustomError } from "../utils/CustomError.js";
 import { logger } from "../utils/logger.js";
+import { LRUCache } from "lru-cache";
 
 // In-memory L1 cache for rate limits to reduce Redis pressure
-const rlMemoryCache = new Map();
-const RL_MEM_TTL = 2000; // 2 seconds
-const MAX_MEM_CACHE_SIZE = 1000; // Prevent memory leak
+const rlMemoryCache = new LRUCache({
+  max: 10_000,    // 10k entries (up from 1000) with proper LRU eviction
+  ttl: 2000,      // 2 seconds auto-expiry
+});
 
 export const rateLimiter =
   ({ limit = 10, timer = 60, key = "global" }) =>
@@ -18,17 +20,15 @@ export const rateLimiter =
         const fullKey = `rate_limit:${key}:${clientIp}`;
         const now = Date.now();
 
-        // 1. Check memory cache first (L1)
+        // 1. Check memory cache first (L1) — LRU handles TTL automatically
         const memEntry = rlMemoryCache.get(fullKey);
-        if (memEntry && (now - memEntry.timestamp < RL_MEM_TTL)) {
-          if (memEntry.blocked) {
-            return next(
-              new CustomError(
-                `Too many requests! Try again later`,
-                429
-              )
-            );
-          }
+        if (memEntry?.blocked) {
+          return next(
+            new CustomError(
+              `Too many requests! Try again later`,
+              429
+            )
+          );
         }
 
         // 2. Redis Check (L2)
@@ -56,14 +56,9 @@ export const rateLimiter =
           await redis.expire(fullKey, timer);
         }
 
-        // 3. Update memory cache (L1)
-        if (rlMemoryCache.size >= MAX_MEM_CACHE_SIZE) {
-          rlMemoryCache.clear(); // Simple bounding
-        }
-
+        // 3. Update memory cache (L1) — LRU handles eviction automatically
         rlMemoryCache.set(fullKey, {
           blocked: requestCount > limit,
-          timestamp: now
         });
 
         if (requestCount > limit) {

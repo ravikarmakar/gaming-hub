@@ -68,18 +68,35 @@ export const withOptionalTransaction = async (callback) => {
         return await callback(null);
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    // Retry loop for TransientTransactionError (up to 3 retries)
+    const MAX_RETRIES = 3;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        const session = await mongoose.startSession();
+        session.startTransaction();
 
-    try {
-        const result = await callback(session);
-        await session.commitTransaction();
-        session.endSession();
-        return result;
-    } catch (error) {
-        await session.abortTransaction();
-        session.endSession();
-        throw error;
+        try {
+            const result = await callback(session);
+            await session.commitTransaction();
+            session.endSession();
+            return result;
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+
+            // Check for TransientTransactionError (retryable)
+            const isTransient = error.hasErrorLabel?.("TransientTransactionError");
+
+            if (isTransient && attempt < MAX_RETRIES) {
+                const delay = 100 * Math.pow(2, attempt); // 100ms, 200ms, 400ms
+                logger.warn(
+                    `[Transaction] TransientTransactionError — retry ${attempt + 1}/${MAX_RETRIES} in ${delay}ms`
+                );
+                await new Promise((resolve) => setTimeout(resolve, delay));
+                continue; // Retry with a fresh session
+            }
+
+            throw error;
+        }
     }
 };
 
