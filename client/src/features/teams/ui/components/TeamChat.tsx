@@ -31,8 +31,18 @@ export const TeamChat = ({ teamId, teamName }: TeamChatProps) => {
                 addMessage(message);
             });
 
+            socket.on("chat:update", (message: ChatMessage) => {
+                useChatStore.getState().handleRemoteUpdate(message);
+            });
+
+            socket.on("chat:delete", ({ messageId }: { messageId: string }) => {
+                useChatStore.getState().handleRemoteDelete(messageId);
+            });
+
             return () => {
                 socket.off("chat:message");
+                socket.off("chat:update");
+                socket.off("chat:delete");
                 socket.emit("leave:team", teamId);
             };
         }
@@ -85,39 +95,43 @@ export const TeamChat = ({ teamId, teamName }: TeamChatProps) => {
                 </div>
             </div>
 
-            {/* Messages Area - Borderless integration */}
-            <div
-                ref={scrollRef}
-                className="flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent"
-            >
-                <AnimatePresence initial={false}>
-                    {messages.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                                <MessageSquare className="w-6 h-6 text-gray-500" />
+            {/* Messages Area - Edge-to-edge to match header */}
+            <div className="flex-1 overflow-hidden flex flex-col w-full">
+                <div
+                    ref={scrollRef}
+                    className="w-full flex-1 overflow-y-auto pr-0 md:pr-2 scrollbar-hide md:scrollbar-thin md:scrollbar-thumb-purple-500/20 md:scrollbar-track-transparent"
+                >
+                    <AnimatePresence initial={false}>
+                        {messages.length === 0 ? (
+                            <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                                    <MessageSquare className="w-6 h-6 text-gray-500" />
+                                </div>
+                                <p className="text-gray-400 text-sm">No messages yet. Start the conversation!</p>
                             </div>
-                            <p className="text-gray-400 text-sm">No messages yet. Start the conversation!</p>
-                        </div>
-                    ) : (
-                        messages.map((msg) => (
-                            <motion.div
-                                key={msg._id}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                layout
-                            >
-                                <MessageItem
-                                    message={msg}
-                                    isOwnMessage={msg.sender === user?._id}
-                                />
-                            </motion.div>
-                        ))
-                    )}
-                </AnimatePresence>
+                        ) : (
+                            messages.map((msg) => (
+                                <motion.div
+                                    key={msg._id}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    layout
+                                >
+                                    <MessageItem
+                                        message={msg}
+                                        isOwnMessage={msg.sender === user?._id}
+                                    />
+                                </motion.div>
+                            ))
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
 
-            {/* Input */}
-            <MessageInput onSendMessage={handleSendMessage} isLoading={!isConnected} />
+            {/* Input - Full width container */}
+            <div className="w-full">
+                <MessageInput onSendMessage={handleSendMessage} isLoading={!isConnected} />
+            </div>
         </motion.div>
     );
 };

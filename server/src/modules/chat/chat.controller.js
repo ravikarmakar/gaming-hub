@@ -39,6 +39,45 @@ export const getTeamChatHistory = TryCatchHandler(async (req, res, next) => {
 });
 
 /**
+ * Update a chat message
+ * PATCH /api/v1/teams/:teamId/chat/:messageId
+ */
+export const updateChatMessage = TryCatchHandler(async (req, res, next) => {
+    const { teamId, messageId } = req.params;
+    const { content } = req.body;
+    const userId = req.user._id;
+
+    if (!content || content.trim().length === 0) {
+        return next(new CustomError("Message content is required", 400));
+    }
+
+    const message = await Chat.findOne({
+        _id: messageId,
+        team: teamId,
+        sender: userId,
+        isDeleted: false,
+    });
+
+    if (!message) {
+        return next(new CustomError("Message not found or you are not the sender", 404));
+    }
+
+    message.content = content.trim().substring(0, 1000);
+    message.isEdited = true;
+    await message.save();
+
+    // Broadcast update via Socket.IO
+    const { getIO } = await import("../../shared/config/socket.config.js");
+    const io = getIO();
+    io.to(`team:${teamId}`).emit("chat:update", message);
+
+    res.status(200).json({
+        status: "success",
+        data: message,
+    });
+});
+
+/**
  * Delete a chat message (soft delete)
  * DELETE /api/v1/teams/:teamId/chat/:messageId
  */
@@ -49,15 +88,39 @@ export const deleteChatMessage = TryCatchHandler(async (req, res, next) => {
     const message = await Chat.findOne({
         _id: messageId,
         team: teamId,
-        sender: userId,
     });
 
     if (!message) {
-        return next(new CustomError("Message not found or you are not the sender", 404));
+        return next(new CustomError("Message not found", 404));
+    }
+
+    // Authorization: Sender can delete their own, Owner/Manager can delete any
+    let canDelete = message.sender.toString() === userId.toString();
+
+    if (!canDelete) {
+        const team = await Team.findById(teamId).select("captain teamMembers").lean();
+        if (team) {
+            const isOwner = team.captain.toString() === userId.toString();
+            const member = team.teamMembers.find(m => m.user.toString() === userId.toString());
+            const isManager = member && member.roleInTeam === "manager";
+
+            if (isOwner || isManager) {
+                canDelete = true;
+            }
+        }
+    }
+
+    if (!canDelete) {
+        return next(new CustomError("You are not authorized to delete this message", 403));
     }
 
     message.isDeleted = true;
     await message.save();
+
+    // Broadcast delete via Socket.IO
+    const { getIO } = await import("../../shared/config/socket.config.js");
+    const io = getIO();
+    io.to(`team:${teamId}`).emit("chat:delete", { messageId, teamId });
 
     res.status(200).json({
         status: "success",

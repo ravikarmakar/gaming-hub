@@ -4,6 +4,7 @@ import cookie from "cookie";
 import mongoose from "mongoose";
 import { createAdapter } from "@socket.io/redis-adapter";
 import Team from "../../modules/team/team.model.js";
+import User from "../../modules/user/user.model.js";
 import { logger } from "../utils/logger.js";
 import { initializeIORedis } from "./ioredis.js";
 import { redis } from "./redis.js";
@@ -158,23 +159,57 @@ export const initializeSocket = async (httpServer) => {
                 // 1. Basic validation
                 if (!mongoose.Types.ObjectId.isValid(teamId)) return;
 
-                // 2. Fetch user profile from Redis (already verified in middleware)
-                let userProfile = {};
+                // 2. Fetch user profile from Redis with simple DB fallback
+                let userProfile = null;
                 try {
                     const cached = await redis.get(`user_profile:${socket.userId}`);
                     if (cached) {
                         userProfile = typeof cached === "string" ? JSON.parse(cached) : cached;
                     }
                 } catch (err) {
-                    logger.error("Failed to get user profile for chat:", err.message);
+                    logger.error("Failed to get user profile from Redis for chat:", err.message);
                 }
 
-                // 3. Persist message to database
+                // fallback to DB if cache miss
+                if (!userProfile || !userProfile.username) {
+                    try {
+                        const user = await User.findById(socket.userId).lean();
+                        if (user) {
+                            userProfile = user;
+                            // Optionally re-cache for 1 min to help performance
+                            redis.set(`user_profile:${socket.userId}`, JSON.stringify(user), { ex: 60 })
+                                .catch(e => logger.error("Failed to re-cache profile in socket handler:", e.message));
+                        }
+                    } catch (dbErr) {
+                        logger.error("Failed to fetch user profile from DB for chat:", dbErr.message);
+                    }
+                }
+
+                // 3. Determine sender role in the team
+                let senderRole = "member";
+                try {
+                    const team = await Team.findById(teamId).select("captain teamMembers").lean();
+                    if (team) {
+                        if (team.captain.toString() === socket.userId.toString()) {
+                            senderRole = "owner";
+                        } else {
+                            const member = team.teamMembers.find(m => m.user.toString() === socket.userId.toString());
+                            if (member && member.roleInTeam === "manager") {
+                                senderRole = "manager";
+                            }
+                        }
+                    }
+                } catch (teamErr) {
+                    logger.error("Failed to fetch team for role check in chat:", teamErr.message);
+                }
+
+                // 4. Persist message to database
                 const newMessage = await (await import("../../modules/chat/chat.model.js")).default.create({
                     team: teamId,
                     sender: socket.userId,
-                    senderName: userProfile.username || "Team Member",
-                    senderAvatar: userProfile.avatar || "",
+                    senderName: userProfile?.username || "Team Member",
+                    senderAvatar: userProfile?.avatar || "",
+                    senderRole,
                     content: content.trim().substring(0, 1000),
                 });
 

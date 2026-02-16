@@ -21,6 +21,11 @@ const chatSchema = new mongoose.Schema(
             type: String,
             default: "",
         },
+        senderRole: {
+            type: String,
+            enum: ["owner", "manager", "member"],
+            default: "member",
+        },
         content: {
             type: String,
             required: true,
@@ -28,6 +33,10 @@ const chatSchema = new mongoose.Schema(
             maxlength: 1000,
         },
         isDeleted: {
+            type: Boolean,
+            default: false,
+        },
+        isEdited: {
             type: Boolean,
             default: false,
         },

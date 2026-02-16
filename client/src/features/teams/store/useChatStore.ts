@@ -9,10 +9,12 @@ export interface ChatMessage {
     sender: string;
     senderName: string;
     senderAvatar: string;
+    senderRole: "owner" | "manager" | "member";
     content: string;
     createdAt: string;
     updatedAt: string;
     isDeleted: boolean;
+    isEdited: boolean;
 }
 
 interface ChatState {
@@ -20,9 +22,18 @@ interface ChatState {
     isLoading: boolean;
     error: string | null;
 
+    editingMessage: ChatMessage | null;
+    setEditingMessage: (message: ChatMessage | null) => void;
+
     fetchHistory: (teamId: string) => Promise<void>;
     addMessage: (message: ChatMessage) => void;
+    updateMessage: (teamId: string, messageId: string, content: string) => Promise<void>;
     deleteMessage: (teamId: string, messageId: string) => Promise<void>;
+
+    // Real-time synchronization methods
+    handleRemoteUpdate: (updatedMessage: ChatMessage) => void;
+    handleRemoteDelete: (messageId: string) => void;
+
     clearMessages: () => void;
 }
 
@@ -30,6 +41,9 @@ export const useChatStore = create<ChatState>((set) => ({
     messages: [],
     isLoading: false,
     error: null,
+    editingMessage: null,
+
+    setEditingMessage: (message) => set({ editingMessage: message }),
 
     fetchHistory: async (teamId) => {
         set({ isLoading: true, error: null });
@@ -48,15 +62,38 @@ export const useChatStore = create<ChatState>((set) => ({
         }));
     },
 
+    updateMessage: async (teamId, messageId, content) => {
+        try {
+            await axiosInstance.patch(TEAM_ENDPOINTS.CHAT_MESSAGE_ACTION(teamId, messageId), { content });
+            // Local update is handled by socket event chat:update
+        } catch (error) {
+            console.error("Failed to update message:", error);
+            throw error;
+        }
+    },
+
     deleteMessage: async (teamId, messageId) => {
         try {
-            await axiosInstance.delete(TEAM_ENDPOINTS.DELETE_MESSAGE(teamId, messageId));
-            set((state) => ({
-                messages: state.messages.filter((m) => m._id !== messageId),
-            }));
+            await axiosInstance.delete(TEAM_ENDPOINTS.CHAT_MESSAGE_ACTION(teamId, messageId));
+            // Local update is handled by socket event chat:delete
         } catch (error) {
             console.error("Failed to delete message:", error);
+            throw error;
         }
+    },
+
+    handleRemoteUpdate: (updatedMessage) => {
+        set((state) => ({
+            messages: state.messages.map((m) =>
+                m._id === updatedMessage._id ? updatedMessage : m
+            ),
+        }));
+    },
+
+    handleRemoteDelete: (messageId) => {
+        set((state) => ({
+            messages: state.messages.filter((m) => m._id !== messageId),
+        }));
     },
 
     clearMessages: () => set({ messages: [] }),
