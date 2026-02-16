@@ -2,22 +2,21 @@ import Team from "../team/team.model.js";
 import User from "../user/user.model.js";
 import Organizer from "../organizer/organizer.model.js";
 import Invitation from "./invitation.model.js";
-import mongoose from "mongoose";
 import { Roles, Scopes } from "../../shared/constants/roles.js";
 import { redis } from "../../shared/config/redis.js";
 import { logger } from "../../shared/utils/logger.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
 import { createNotification } from "../notification/notification.controller.js";
+import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
 
 /**
  * Atomic service to accept a Team or Organization invitation
  */
 export const acceptInvitationService = async (invitationId, userId) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-        const invite = await Invitation.findById(invitationId).session(session);
+    const { resultMessage, entityModel, entityId } = await withOptionalTransaction(async (session) => {
+        const inviteQuery = Invitation.findById(invitationId);
+        if (session) inviteQuery.session(session);
+        const invite = await inviteQuery;
         if (!invite) throw new CustomError("Invitation not found", 404);
         if (invite.status !== "pending") throw new CustomError(`Invitation already ${invite.status}`, 400);
 
@@ -26,14 +25,18 @@ export const acceptInvitationService = async (invitationId, userId) => {
             throw new CustomError("Access Denied: You are not the recipient of this invitation", 403);
         }
 
-        const user = await User.findById(userId).session(session);
+        const userQuery = User.findById(userId);
+        if (session) userQuery.session(session);
+        const user = await userQuery;
         if (!user) throw new CustomError("User not found", 404);
 
         let resultMessage = "";
 
         if (invite.entityModel === "Team") {
             const teamId = invite.entityId;
-            const team = await Team.findById(teamId).session(session);
+            const teamQuery = Team.findById(teamId);
+            if (session) teamQuery.session(session);
+            const team = await teamQuery;
             if (!team || team.isDeleted) throw new CustomError("Team not found or deleted", 404);
             if (user.teamId) throw new CustomError("You are already in a team", 400);
 
@@ -82,7 +85,9 @@ export const acceptInvitationService = async (invitationId, userId) => {
 
         } else if (invite.entityModel === "Organizer") {
             const orgId = invite.entityId;
-            const org = await Organizer.findById(orgId).session(session);
+            const orgQuery = Organizer.findById(orgId);
+            if (session) orgQuery.session(session);
+            const org = await orgQuery;
             if (!org || org.isDeleted) throw new CustomError("Organization not found or deleted", 404);
             if (user.orgId) throw new CustomError("You are already in an organization", 400);
 
@@ -128,28 +133,22 @@ export const acceptInvitationService = async (invitationId, userId) => {
             },
         }, { session });
 
-        await session.commitTransaction();
+        return { resultMessage, entityModel: invite.entityModel, entityId: invite.entityId };
+    });
 
-        // Invalidate Redis Caches
-        try {
-            const pipeline = redis.pipeline();
-            pipeline.del(`user_profile:${userId}`);
-            if (invite.entityModel === "Team") {
-                pipeline.del(`team_details:${invite.entityId}`);
-            } else if (invite.entityModel === "Organizer") {
-                pipeline.del(`org_details:${invite.entityId}`);
-            }
-            await pipeline.exec();
-        } catch (e) {
-            logger.warn("Cache invalidation failed in acceptInvitationService", e);
+    // Invalidate Redis Caches (post-commit)
+    try {
+        const pipeline = redis.pipeline();
+        pipeline.del(`user_profile:${userId}`);
+        if (entityModel === "Team") {
+            pipeline.del(`team_details:${entityId}`);
+        } else if (entityModel === "Organizer") {
+            pipeline.del(`org_details:${entityId}`);
         }
-
-        return resultMessage;
-
-    } catch (error) {
-        await session.abortTransaction();
-        throw error;
-    } finally {
-        session.endSession();
+        await pipeline.exec();
+    } catch (e) {
+        logger.warn("Cache invalidation failed in acceptInvitationService", e);
     }
+
+    return resultMessage;
 };

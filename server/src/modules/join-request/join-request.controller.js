@@ -4,7 +4,6 @@ import User from "../user/user.model.js";
 import Event from "../event/event.model.js";
 import EventRegistration from "../event/models/event-registration.model.js";
 import Organizer from "../organizer/organizer.model.js";
-import mongoose from "mongoose";
 import { TryCatchHandler } from "../../shared/middleware/error.middleware.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
 import { createNotification } from "../notification/notification.controller.js";
@@ -12,6 +11,7 @@ import { Roles, Scopes } from "../../shared/constants/roles.js";
 import { redis } from "../../shared/config/redis.js";
 import { addMemberToTeam, getTransformedTeam } from "../team/team.service.js";
 import { emitMemberJoined } from "../team/team.socket.js";
+import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
 
 // @desc    Send a request to join a Team, Organization, or Event
 // @route   POST /api/v1/teams/:teamId/join-request
@@ -28,11 +28,10 @@ export const sendJoinRequest = TryCatchHandler(async (req, res, next) => {
         throw new CustomError("Target ID is required", 400);
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-        const user = await User.findById(userId).session(session);
+    const joinRequest = await withOptionalTransaction(async (session) => {
+        const userQuery = User.findById(userId);
+        if (session) userQuery.session(session);
+        const user = await userQuery;
         if (!user) throw new CustomError("User not found", 404);
 
         // 1. Target Model Specific Checks
@@ -45,20 +44,25 @@ export const sendJoinRequest = TryCatchHandler(async (req, res, next) => {
         // 2. Resource Existence and Status Checks
         let resource;
         if (targetModel === "Team") {
-            resource = await Team.findById(targetId).session(session);
+            const q = Team.findById(targetId);
+            if (session) q.session(session);
+            resource = await q;
             if (!resource || resource.isDeleted) throw new CustomError("Team not found", 404);
             if (!resource.isRecruiting) throw new CustomError("This team is not currently recruiting", 400);
         } else if (targetModel === "Organizer") {
-            resource = await Organizer.findById(targetId).session(session);
+            const q = Organizer.findById(targetId);
+            if (session) q.session(session);
+            resource = await q;
             if (!resource || resource.isDeleted) throw new CustomError("Organization not found", 404);
             if (!resource.isHiring) throw new CustomError("This organization is not currently recruiting", 400);
         } else if (targetModel === "Event") {
-            resource = await Event.findById(targetId).session(session);
+            const q = Event.findById(targetId);
+            if (session) q.session(session);
+            resource = await q;
             if (!resource || resource.isDeleted) throw new CustomError("Event not found", 404);
         }
 
         // 3. Create Request (unique index prevents duplicates)
-        // Use array syntax for transactional creation
         let joinRequest;
         try {
             const [createdRequest] = await JoinRequest.create([{
@@ -69,7 +73,6 @@ export const sendJoinRequest = TryCatchHandler(async (req, res, next) => {
             }], { session });
             joinRequest = createdRequest;
         } catch (error) {
-            // Handle duplicate key error from unique index
             if (error.code === 11000) {
                 throw new CustomError(`You already have a pending request for this ${targetModel.toLowerCase()}`, 400);
             }
@@ -83,8 +86,9 @@ export const sendJoinRequest = TryCatchHandler(async (req, res, next) => {
         } else if (targetModel === "Organizer") {
             recipientId = resource.ownerId;
         } else if (targetModel === "Event") {
-            // Events may have different ownership fields
-            recipientId = resource.orgId ? (await Organizer.findById(resource.orgId).session(session))?.ownerId : (resource.organizerId || resource.createdBy || resource.ownerId);
+            const orgQuery = resource.orgId ? Organizer.findById(resource.orgId) : null;
+            if (orgQuery && session) orgQuery.session(session);
+            recipientId = orgQuery ? (await orgQuery)?.ownerId : (resource.organizerId || resource.createdBy || resource.ownerId);
         }
 
         if (recipientId) {
@@ -103,19 +107,14 @@ export const sendJoinRequest = TryCatchHandler(async (req, res, next) => {
             }, { session });
         }
 
-        await session.commitTransaction();
+        return joinRequest;
+    });
 
-        res.status(201).json({
-            success: true,
-            message: "Join request sent successfully",
-            joinRequest,
-        });
-    } catch (error) {
-        await session.abortTransaction();
-        throw error;
-    } finally {
-        session.endSession();
-    }
+    res.status(201).json({
+        success: true,
+        message: "Join request sent successfully",
+        joinRequest,
+    });
 });
 
 // @desc    Get all pending join requests for a resource (Team or Org)
@@ -172,11 +171,10 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
         throw new CustomError("Invalid action. Use 'accepted' or 'rejected'", 400);
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
-        const joinRequest = await JoinRequest.findById(requestId).populate("target").session(session);
+    ({ responseData, socketEventData } = await withOptionalTransaction(async (session) => {
+        const jrQuery = JoinRequest.findById(requestId).populate("target");
+        if (session) jrQuery.session(session);
+        const joinRequest = await jrQuery;
         if (!joinRequest) {
             throw new CustomError("Join request not found", 404);
         }
@@ -185,31 +183,32 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
             throw new CustomError(`Request has already been ${joinRequest.status}`, 400);
         }
 
-        // Access controlled by verifyTeamPermission(TEAM_ACTIONS.manageRoster) middleware
+        let responseData = null;
+        let socketEventData = null;
 
         if (action === "accepted") {
-            const requester = await User.findById(joinRequest.requester).session(session);
+            const requesterQuery = User.findById(joinRequest.requester);
+            if (session) requesterQuery.session(session);
+            const requester = await requesterQuery;
             if (!requester) throw new CustomError("Requester not found", 404);
 
             if (joinRequest.targetModel === "Team") {
                 const team = joinRequest.target;
 
-                // Re-check recruiting status
                 if (!team || team.isDeleted || !team.isRecruiting) {
                     throw new CustomError("This team is no longer recruiting", 400);
                 }
 
-                // Re-check requester hasn't joined another team (race condition)
                 if (requester.teamId) {
                     throw new CustomError("Requester has already joined another team", 400);
                 }
 
-                // Use Service Layer (must pass session if supported, otherwise manually)
                 await addMemberToTeam({
                     teamId: team._id,
                     userId: requester._id,
-                    roleInTeam: "player"
-                }, { session });
+                    roleInTeam: "player",
+                    session,
+                });
 
                 await createNotification({
                     recipient: requester._id,
@@ -219,10 +218,8 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                     relatedData: { teamId: team._id },
                 }, { session });
 
-                // Fetch updated team for response
                 responseData = await getTransformedTeam(team._id);
 
-                // Store data for socket emission after transaction commits
                 socketEventData = {
                     teamId: team._id,
                     memberData: {
@@ -263,18 +260,18 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                 const event = joinRequest.target;
                 if (!event || event.isDeleted) throw new CustomError("Event no longer exists", 404);
 
-                // Fail Fast: Check Team Validity
-                const team = await Team.findById(requester.teamId).session(session);
+                const teamQuery = Team.findById(requester.teamId);
+                if (session) teamQuery.session(session);
+                const team = await teamQuery;
                 if (!team) throw new CustomError("Team not found", 404);
 
-                // Atomic increment with slot validation first
                 const updatedEvent = await Event.findOneAndUpdate(
                     {
                         _id: event._id,
                         $expr: {
                             $or: [
-                                { $eq: ["$maxSlots", null] }, // No limit
-                                { $lt: ["$joinedSlots", "$maxSlots"] } // Has available slots
+                                { $eq: ["$maxSlots", null] },
+                                { $lt: ["$joinedSlots", "$maxSlots"] }
                             ]
                         }
                     },
@@ -286,7 +283,6 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                     throw new CustomError("Event is full. Registration could not be completed.", 400);
                 }
 
-                // Identify Core Roles and Substitutes
                 const coreRoles = ["igl", "rusher", "sniper", "support"];
                 const players = [];
                 const substitutes = [];
@@ -307,7 +303,6 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                     throw new CustomError("Team must have an IGL, Rusher, Sniper, and Support to join.", 400);
                 }
 
-                // Create EventRegistration
                 await EventRegistration.create([{
                     eventId: event._id,
                     teamId: requester.teamId,
@@ -325,13 +320,11 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                 }, { session });
             }
 
-            // Update JoinRequest status inside transaction
             joinRequest.status = "accepted";
             joinRequest.handledBy = userId;
             joinRequest.handledAt = new Date();
             await joinRequest.save({ session });
 
-            // Handle side effects (rejections of other requests) inside transaction
             if (["Team", "Organizer"].includes(joinRequest.targetModel)) {
                 await JoinRequest.updateMany(
                     {
@@ -354,13 +347,11 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                 try {
                     await redis.del(`user_profile:${requester._id}`);
                 } catch (cacheErr) {
-                    // Log but don't fail transaction
                     console.warn(`Failed to invalidate cache for user ${requester._id}:`, cacheErr);
                 }
             }
 
         } else {
-            // Rejection logic for all
             joinRequest.status = "rejected";
             joinRequest.handledBy = userId;
             joinRequest.handledAt = new Date();
@@ -378,24 +369,19 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
             }, { session });
         }
 
-        await session.commitTransaction();
+        return { responseData, socketEventData };
+    }));
 
-        // Emit socket event after successful transaction commit
-        if (socketEventData) {
-            emitMemberJoined(socketEventData.teamId, socketEventData.memberData);
-        }
-
-        res.status(200).json({
-            success: true,
-            message: `Request ${action} successfully`,
-            data: responseData
-        });
-    } catch (error) {
-        await session.abortTransaction();
-        next(error);
-    } finally {
-        session.endSession();
+    // Emit socket event after successful transaction commit
+    if (socketEventData) {
+        emitMemberJoined(socketEventData.teamId, socketEventData.memberData);
     }
+
+    res.status(200).json({
+        success: true,
+        message: `Request ${action} successfully`,
+        data: responseData
+    });
 });
 
 // @desc    Bulk reject all pending join requests for a resource
@@ -404,24 +390,17 @@ export const bulkRejectJoinRequests = TryCatchHandler(async (req, res, next) => 
     const { teamId } = req.params;
     const { userId } = req.user;
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
+    const pendingCount = await withOptionalTransaction(async (session) => {
         // 1. Find all pending requests for this team
-        const pendingRequests = await JoinRequest.find({
+        const pendingQuery = JoinRequest.find({
             target: teamId,
             status: "pending",
-        }).session(session);
+        });
+        if (session) pendingQuery.session(session);
+        const pendingRequests = await pendingQuery;
 
         if (pendingRequests.length === 0) {
-            await session.abortTransaction();
-            session.endSession();
-            return res.status(200).json({
-                success: true,
-                message: "No pending requests to clear",
-                data: []
-            });
+            return 0;
         }
 
         // 2. Update all to rejected
@@ -454,16 +433,19 @@ export const bulkRejectJoinRequests = TryCatchHandler(async (req, res, next) => 
 
         await Promise.all(notificationPromises);
 
-        await session.commitTransaction();
+        return pendingRequests.length;
+    });
 
-        res.status(200).json({
+    if (pendingCount === 0) {
+        return res.status(200).json({
             success: true,
-            message: `Cleared ${pendingRequests.length} join requests successfully`,
+            message: "No pending requests to clear",
+            data: []
         });
-    } catch (error) {
-        await session.abortTransaction();
-        next(error);
-    } finally {
-        session.endSession();
     }
+
+    res.status(200).json({
+        success: true,
+        message: `Cleared ${pendingCount} join requests successfully`,
+    });
 });

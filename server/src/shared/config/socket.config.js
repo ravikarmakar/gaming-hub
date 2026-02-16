@@ -2,8 +2,10 @@ import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import cookie from "cookie";
 import mongoose from "mongoose";
+import { createAdapter } from "@socket.io/redis-adapter";
 import Team from "../../modules/team/team.model.js";
 import { logger } from "../utils/logger.js";
+import { initializeIORedis } from "./ioredis.js";
 
 let io;
 
@@ -22,7 +24,7 @@ const maskId = (id) => {
 /**
  * Initialize Socket.IO server with authentication
  */
-export const initializeSocket = (httpServer) => {
+export const initializeSocket = async (httpServer) => {
     if (!process.env.ACCESS_TOKEN_SECRET) {
         logger.error("CRITICAL: ACCESS_TOKEN_SECRET is not defined in environment variables");
         throw new Error("ACCESS_TOKEN_SECRET is required for Socket.IO authentication");
@@ -37,6 +39,15 @@ export const initializeSocket = (httpServer) => {
         pingTimeout: 60000,
         pingInterval: 25000,
     });
+
+    // Attach Redis adapter for horizontal scaling (multi-process)
+    const { pubClient, subClient } = await initializeIORedis();
+    if (pubClient && subClient) {
+        io.adapter(createAdapter(pubClient, subClient));
+        logger.info("Socket.IO Redis adapter attached — horizontal scaling enabled.");
+    } else {
+        logger.warn("Socket.IO running without Redis adapter — single-process mode only.");
+    }
 
     // Authentication middleware - use cookies like the rest of the app
     io.use((socket, next) => {
