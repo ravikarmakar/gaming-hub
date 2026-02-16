@@ -7,6 +7,7 @@ import {
   Settings,
   BarChart2,
   Bell,
+  MessageSquare,
 } from "lucide-react";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -55,6 +56,11 @@ const teamSidebarLinks = [
     label: "Team Notifications",
     icon: Bell,
     href: TEAM_ROUTES.NOTIFICATIONS,
+  },
+  {
+    label: "Team Chat",
+    icon: MessageSquare,
+    href: TEAM_ROUTES.CHAT,
   },
   {
     label: "Team Settings",

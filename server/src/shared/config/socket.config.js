@@ -149,6 +149,45 @@ export const initializeSocket = async (httpServer) => {
             logger.info(`User ${maskId(socket.userId)} left team room: ${maskId(teamId)}`);
         });
 
+        // Chat message handler
+        socket.on("chat:message", async (data) => {
+            const { teamId, content } = data;
+            if (!teamId || !content) return;
+
+            try {
+                // 1. Basic validation
+                if (!mongoose.Types.ObjectId.isValid(teamId)) return;
+
+                // 2. Fetch user profile from Redis (already verified in middleware)
+                let userProfile = {};
+                try {
+                    const cached = await redis.get(`user_profile:${socket.userId}`);
+                    if (cached) {
+                        userProfile = typeof cached === "string" ? JSON.parse(cached) : cached;
+                    }
+                } catch (err) {
+                    logger.error("Failed to get user profile for chat:", err.message);
+                }
+
+                // 3. Persist message to database
+                const newMessage = await (await import("../../modules/chat/chat.model.js")).default.create({
+                    team: teamId,
+                    sender: socket.userId,
+                    senderName: userProfile.username || "Team Member",
+                    senderAvatar: userProfile.avatar || "",
+                    content: content.trim().substring(0, 1000),
+                });
+
+                // 4. Broadcast to the team room
+                io.to(`team:${teamId}`).emit("chat:message", newMessage);
+
+                logger.info(`Chat message sent by ${maskId(socket.userId)} to team ${maskId(teamId)}`);
+            } catch (error) {
+                logger.error(`Error in chat:message for team ${maskId(teamId)}:`, error.message);
+                socket.emit("error", { message: "Failed to send message" });
+            }
+        });
+
         // Disconnect handler
         socket.on("disconnect", (reason) => {
             logger.info(`Client disconnected: ${socket.id} (Reason: ${reason})`);

@@ -21,6 +21,7 @@ import teamRouter from "./modules/team/team.route.js";
 import joinRequestRouter from "./modules/join-request/join-request.route.js";
 import notificationRouter from "./modules/notification/notification.route.js";
 import invitationRouter from "./modules/invitation/invitation.route.js";
+import chatRouter from "./modules/chat/chat.route.js";
 
 // Event Imports
 import eventRouter from "./modules/event/event.route.js";
@@ -71,6 +72,7 @@ const v1Router = express.Router();
 v1Router.use("/auth", authRouter);
 v1Router.use("/teams", teamRouter);
 v1Router.use("/teams", joinRequestRouter); // Join request routes (decoupled from team router)
+v1Router.use("/teams", chatRouter);
 v1Router.use("/notifications", notificationRouter);
 v1Router.use("/organizers", organizerRouter);
 v1Router.use("/invitations", invitationRouter);
