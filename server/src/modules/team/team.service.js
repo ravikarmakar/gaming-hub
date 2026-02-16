@@ -8,54 +8,9 @@ import { redis } from "../../shared/config/redis.js";
 import { uploadOnImageKit, deleteFromImageKit } from "../../shared/services/imagekit.service.js";
 import { logger } from "../../shared/utils/logger.js";
 import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
+import { invalidateCacheWithRetry } from "../../shared/utils/cache.js";
 
 // --- Cache Helpers (Risk Mitigation) ---
-
-/**
- * Resilient cache invalidation with retry logic and fallback
- * Addresses Risk: Stale Cache from redis.del failures
- */
-const invalidateCacheWithRetry = async (keys, options = {}) => {
-  const { maxRetries = 3, retryDelay = 100 } = options;
-  const keysArray = Array.isArray(keys) ? keys : [keys];
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      if (keysArray.length === 1) {
-        await redis.del(keysArray[0]);
-      } else {
-        // Use pipeline for multiple keys
-        const pipeline = redis.pipeline();
-        keysArray.forEach(key => pipeline.del(key));
-        await pipeline.exec();
-      }
-
-      if (attempt > 1) {
-        logger.info(`Cache invalidation succeeded on attempt ${attempt} for keys: ${keysArray.join(', ')}`);
-      }
-      return true;
-    } catch (error) {
-      logger.error(`Cache invalidation attempt ${attempt}/${maxRetries} failed for keys: ${keysArray.join(', ')}`, error);
-
-      if (attempt === maxRetries) {
-        // Final fallback: Set very short TTL (1 second) to force near-immediate expiration
-        logger.warn(`All cache deletion attempts failed. Setting 1-second TTL as fallback for keys: ${keysArray.join(', ')}`);
-        try {
-          const pipeline = redis.pipeline();
-          keysArray.forEach(key => pipeline.expire(key, 1));
-          await pipeline.exec();
-        } catch (fallbackError) {
-          logger.error('Fallback TTL update also failed:', fallbackError);
-        }
-        return false;
-      }
-
-      // Exponential backoff
-      await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
-    }
-  }
-  return false;
-};
 
 /**
  * Sync user denormalized data in team rosters with retry logic
@@ -431,7 +386,7 @@ export const transferTeamOwnershipService = async (teamId, currentOwnerId, newOw
     throw new CustomError("The selected member is not part of your team.", 400);
   }
 
-  await withOptionalTransaction(async (session) => {
+  const updatedTeam = await withOptionalTransaction(async (session) => {
     const userQuery = User.findById(currentOwnerId);
     if (session) userQuery.session(session);
     const user = await userQuery; // Old owner
@@ -669,15 +624,17 @@ export const teamExists = async (id) => {
 /**
  * Helper to fetch a fully populated and transformed team
  * used by multiple members/staff management controllers.
+ * @param {string} teamId
+ * @param {Object} session - Optional MongoDB session
  */
-export const getTransformedTeam = async (teamId) => {
-  const team = await Team.findOne({ _id: teamId, isDeleted: false })
-    .select("-__v")
-    .lean();
+export const getTransformedTeam = async (teamId, session = null) => {
+  const query = Team.findOne({ _id: teamId, isDeleted: false }).select("-__v").lean();
+  if (session) query.session(session);
+  const team = await query;
 
   if (!team) return null;
 
-  return await buildTransformedTeamFromDoc(team);
+  return await buildTransformedTeamFromDoc(team, session);
 };
 
 /**
@@ -685,18 +642,24 @@ export const getTransformedTeam = async (teamId) => {
  * Reduces 3 DB queries to 1 (just JoinRequest.countDocuments + User.find).
  * Used after mutations where the team doc is already in memory.
  * @param {Object} teamDoc - A team document (Mongoose doc or plain object)
+ * @param {Object} session - Optional MongoDB session
  */
-export const buildTransformedTeamFromDoc = async (teamDoc) => {
+export const buildTransformedTeamFromDoc = async (teamDoc, session = null) => {
   const team = teamDoc.toObject ? teamDoc.toObject() : teamDoc;
   const teamId = team._id;
 
   // Run the two remaining queries in parallel (instead of sequentially)
   const userIds = team.teamMembers.map((m) => m.user);
+
+  const pendingRequestsQuery = JoinRequest.countDocuments({ target: teamId, status: "pending" });
+  if (session) pendingRequestsQuery.session(session);
+
+  const usersQuery = User.find({ _id: { $in: userIds } }).select("roles _id username avatar").lean();
+  if (session) usersQuery.session(session);
+
   const [pendingRequestsCount, users] = await Promise.all([
-    JoinRequest.countDocuments({ target: teamId, status: "pending" }),
-    User.find({ _id: { $in: userIds } })
-      .select("roles _id username avatar")
-      .lean(),
+    pendingRequestsQuery,
+    usersQuery,
   ]);
 
   // Strip __v if present
@@ -736,11 +699,10 @@ export const addMemberToTeam = async ({ teamId, userId, roleInTeam = "player", s
     await _addMemberToTeamOps({ teamId, userId, roleInTeam, session });
   });
 
-  // Cache Invalidation (post-commit)
-  const pipeline = redis.pipeline();
-  pipeline.del(`user_profile:${userId}`);
-  pipeline.del(`team_details:${teamId}`);
-  await pipeline.exec();
+  // Cache Invalidation (always runs, post-commit/standalone)
+  if (!session) {
+    await invalidateCacheWithRetry([`user_profile:${userId}`, `team_details:${teamId}`]);
+  }
 
   return true;
 };
@@ -814,11 +776,12 @@ export const batchAddMembersToTeam = async ({ teamId, memberIds, session = null 
     await _batchAddMembersOps({ teamId, memberIds, session });
   });
 
-  // Cache Invalidation (post-commit)
-  const pipeline = redis.pipeline();
-  memberIds.forEach((mid) => pipeline.del(`user_profile:${mid}`));
-  pipeline.del(`team_details:${teamId}`);
-  await pipeline.exec();
+  // Cache Invalidation (always runs, post-commit/standalone)
+  if (!session) {
+    const keys = memberIds.map((mid) => `user_profile:${mid}`);
+    keys.push(`team_details:${teamId}`);
+    await invalidateCacheWithRetry(keys);
+  }
 
   return true;
 };

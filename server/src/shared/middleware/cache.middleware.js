@@ -18,6 +18,12 @@ export const cache = (duration) => async (req, res, next) => {
         return next();
     }
 
+    // Skip caching if explicit skipCache query param is set
+    // Used by socket-triggered re-fetches that need fresh data
+    if (req.query.skipCache === "true") {
+        return next();
+    }
+
     try {
         // Include HTTP method and User ID (if authenticated) in cache key
         const userId = req.user ? req.user._id : "anon";
@@ -75,7 +81,8 @@ export const cache = (duration) => async (req, res, next) => {
             if (res.statusCode === 200) {
                 try {
                     // Update L1 — LRU handles eviction automatically
-                    l1Cache.set(key, body);
+                    // Deep copy to prevent mutation of cached object by downstream code
+                    l1Cache.set(key, JSON.parse(JSON.stringify(body)));
 
                     // Update L2 (Redis) - Handle circular references or serialization errors safely
                     const stringifiedBody = JSON.stringify(body);

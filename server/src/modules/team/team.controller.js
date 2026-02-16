@@ -53,13 +53,15 @@ export const updateTeam = TryCatchHandler(async (req, res, next) => {
 
 export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
   const { teamId } = req.params;
+  const skipCache = req.query.skipCache === "true";
 
   if (!mongoose.Types.ObjectId.isValid(teamId)) {
     return next(new CustomError("Invalid team ID format", 400));
   }
 
   // 1. Check Redis Cache (shared team data only, no user-specific data)
-  const cachedTeam = await redis.get(`team_details:${teamId}`);
+  // skipCache allows socket-triggered re-fetches to bypass stale cache
+  const cachedTeam = skipCache ? null : await redis.get(`team_details:${teamId}`);
 
   let team;
   if (cachedTeam) {
@@ -85,6 +87,9 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
     // 2. Set Redis Cache (team data only, no user-specific fields)
     await redis.set(`team_details:${teamId}`, JSON.stringify(team), { ex: 3600 }); // 1 hour
   }
+
+  // Diagnostic log for cache consistency debugging
+  logger.info(`[TEAM-FETCH] team=${teamId} members=${team.teamMembers?.length} source=${cachedTeam ? 'REDIS' : 'DB'} skipCache=${skipCache} user=${req.user?.userId || 'anon'}`);
 
   // Compute user-specific data on-demand (not cached)
   let hasPendingRequest = false;
@@ -220,6 +225,21 @@ export const addMembers = TryCatchHandler(async (req, res, next) => {
     teamId: team._id,
     memberIds: members,
   });
+
+  // Emit socket event for each added member
+  try {
+    const addedUsers = await User.find({ _id: { $in: members } }).select("username avatar");
+    addedUsers.forEach(user => {
+      emitMemberJoined(team._id, {
+        userId: user._id,
+        username: user.username,
+        avatar: user.avatar,
+        role: "player",
+      });
+    });
+  } catch (socketErr) {
+    logger.warn("Failed to emit socket events for batch added members:", socketErr.message);
+  }
 
   res.status(200).json({
     success: true,

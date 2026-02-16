@@ -158,9 +158,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
                     await useAuthStore.getState().checkAuth();
 
                     // Fetch team details immediately to update dashboard
-                    const teamId = notification.relatedData?.teamId;
+                    // relatedData.teamId may be a populated object {_id, teamName, ...} or a raw string
+                    const rawTeamId = notification.relatedData?.teamId;
+                    const teamId = rawTeamId?._id ? String(rawTeamId._id) : rawTeamId ? String(rawTeamId) : null;
                     if (teamId) {
-                        await useTeamStore.getState().getTeamById(teamId, true);
+                        await useTeamStore.getState().getTeamById(teamId, true, true);
                     }
                 } else if (notification.type === "ORGANIZATION_INVITE") {
                     const { useAuthStore } = await import("@/features/auth/store/useAuthStore");
@@ -168,7 +170,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
                     await useAuthStore.getState().checkAuth();
 
-                    const orgId = notification.relatedData?.orgId;
+                    const rawOrgId = notification.relatedData?.orgId;
+                    const orgId = rawOrgId?._id ? String(rawOrgId._id) : rawOrgId ? String(rawOrgId) : null;
                     if (orgId) {
                         await useOrganizerStore.getState().getOrgById(orgId);
                     }

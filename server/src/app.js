@@ -58,7 +58,8 @@ if (process.env.NODE_ENV !== "test") {
     // Note: xss-clean is deprecated. Helmet provides some XSS protection via CSP.
     // Consider using express-xss-sanitizer if additional XSS sanitization is needed.
     app.use(hpp());
-    app.use(rateLimiter({ limit: 100, timer: 15 * 60, key: "global" }));
+    // TODO: Uncomment before production
+    // app.use(rateLimiter({ limit: 100, timer: 15 * 60, key: "global" }));
 }
 
 app.get("/", (req, res) => {

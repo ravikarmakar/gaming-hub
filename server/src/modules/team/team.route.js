@@ -47,7 +47,7 @@ router.get("/", cache(300), fetchAllTeams);
 
 // Use validateWithCleanup for routes with file uploads
 router.post("/create-team", isAuthenticated, isVerified, upload.single("image"), validateWithCleanup(createTeamValidation), createTeam);
-router.get("/details/:teamId", optionalAuthenticate, cache(300), fetchTeamDetails);
+router.get("/details/:teamId", optionalAuthenticate, fetchTeamDetails);
 
 router.put(
   "/update-team",

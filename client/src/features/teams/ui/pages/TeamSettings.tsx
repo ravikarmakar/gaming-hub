@@ -62,6 +62,8 @@ const TeamSettings = () => {
     });
 
     // Sync form with currentTeam data
+    // keepDirtyValues: true preserves user edits (e.g., selected image/banner files)
+    // when currentTeam updates from socket events or refetches
     useEffect(() => {
         if (currentTeam) {
             form.reset({
@@ -74,7 +76,7 @@ const TeamSettings = () => {
                 discord: currentTeam.socialLinks?.discord || "",
                 youtube: currentTeam.socialLinks?.youtube || "",
                 instagram: currentTeam.socialLinks?.instagram || "",
-            });
+            }, { keepDirtyValues: true });
         }
     }, [currentTeam, form]);
 
@@ -102,6 +104,8 @@ const TeamSettings = () => {
             // Force refresh team data to ensure UI is in sync
             const { getTeamById } = useTeamStore.getState();
             await getTeamById(currentTeam._id, true);
+            // Mark current values as clean baseline so Save/Reset buttons hide
+            form.reset(undefined, { keepValues: true });
         } else {
             toast.error("Failed to update team settings");
         }

@@ -92,11 +92,16 @@ const createUnifiedRedis = () => {
       if (n) {
         const p = n.pipeline();
         const wrapper = {
+          get: (key) => { p.get(key); return wrapper; },
           incr: (key) => { p.incr(key); return wrapper; },
           ttl: (key) => { p.ttl(key); return wrapper; },
           del: (key) => { p.del(key); return wrapper; },
           set: (key, value, ...args) => { p.set(key, value, ...args); return wrapper; },
           expire: (key, seconds) => { p.expire(key, seconds); return wrapper; },
+          hget: (key, field) => { p.hget(key, field); return wrapper; },
+          hset: (key, field, value) => { p.hset(key, field, value); return wrapper; },
+          exists: (key) => { p.exists(key); return wrapper; },
+          hexists: (key, field) => { p.hexists(key, field); return wrapper; },
           exec: async () => {
             const results = await p.exec();
             // Normalize: ioredis returns [[err, val], ...], Upstash returns [val, ...]

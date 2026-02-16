@@ -8,12 +8,13 @@ import { logger } from "../../shared/utils/logger.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
 import { createNotification } from "../notification/notification.controller.js";
 import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
+import { invalidateCacheWithRetry } from "../../shared/utils/cache.js";
 
 /**
  * Atomic service to accept a Team or Organization invitation
  */
 export const acceptInvitationService = async (invitationId, userId) => {
-    const { resultMessage, entityModel, entityId } = await withOptionalTransaction(async (session) => {
+    const { resultMessage, entityModel, entityId, username, avatar } = await withOptionalTransaction(async (session) => {
         const inviteQuery = Invitation.findById(invitationId);
         if (session) inviteQuery.session(session);
         const invite = await inviteQuery;
@@ -133,21 +134,31 @@ export const acceptInvitationService = async (invitationId, userId) => {
             },
         }, { session });
 
-        return { resultMessage, entityModel: invite.entityModel, entityId: invite.entityId };
+        return { resultMessage, entityModel: invite.entityModel, entityId: invite.entityId, username: user.username, avatar: user.avatar };
     });
 
     // Invalidate Redis Caches (post-commit)
     try {
-        const pipeline = redis.pipeline();
-        pipeline.del(`user_profile:${userId}`);
+        const keys = [`user_profile:${userId}`];
         if (entityModel === "Team") {
-            pipeline.del(`team_details:${entityId}`);
+            keys.push(`team_details:${entityId}`);
         } else if (entityModel === "Organizer") {
-            pipeline.del(`org_details:${entityId}`);
+            keys.push(`org_details:${entityId}`);
         }
-        await pipeline.exec();
+        await invalidateCacheWithRetry(keys);
+
+        // Socket Emission (post-commit)
+        if (entityModel === "Team") {
+            const { emitMemberJoined } = await import("../team/team.socket.js");
+            emitMemberJoined(entityId, {
+                userId,
+                username,
+                avatar,
+                role: "player"
+            });
+        }
     } catch (e) {
-        logger.warn("Cache invalidation failed in acceptInvitationService", e);
+        logger.warn("Post-commit operations failed in acceptInvitationService", e);
     }
 
     return resultMessage;

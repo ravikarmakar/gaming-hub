@@ -72,39 +72,46 @@ const TeamLayout = () => {
   // Join team room via WebSocket
   useTeamRoom(user?.teamId);
 
+  console.log("currentTeam", currentTeam);
+
   // Listen for real-time team updates
   useSocketEvent("team:member:joined", () => {
     console.log("🔔 New member joined, refreshing team data...");
     if (user?.teamId) {
-      getTeamById(user.teamId, true);
+      getTeamById(user.teamId, true, true);
     }
   });
 
   useSocketEvent("team:member:left", () => {
     console.log("🔔 Member left, refreshing team data...");
-    if (user?.teamId) {
-      getTeamById(user.teamId, true);
+    // Check current store state (not stale closure) — if user just left,
+    // currentTeam will be null and we should NOT re-fetch
+    const currentTeam = useTeamStore.getState().currentTeam;
+    if (user?.teamId && currentTeam) {
+      getTeamById(user.teamId, true, true);
     }
   });
 
   useSocketEvent("team:role:updated", () => {
     console.log("🔔 Role updated, refreshing team data...");
     if (user?.teamId) {
-      getTeamById(user.teamId, true);
+      getTeamById(user.teamId, true, true);
     }
   });
 
   useSocketEvent("team:owner:transferred", () => {
     console.log("🔔 Ownership transferred, refreshing team data...");
-    if (user?.teamId) {
-      getTeamById(user.teamId, true);
+    // Check current store state — user may have lost their team in transfer
+    const currentTeam = useTeamStore.getState().currentTeam;
+    if (user?.teamId && currentTeam) {
+      getTeamById(user.teamId, true, true);
     }
   });
 
   useSocketEvent("team:updated", () => {
     console.log("🔔 Team updated, refreshing team data...");
     if (user?.teamId) {
-      getTeamById(user.teamId, true);
+      getTeamById(user.teamId, true, true);
     }
   });
 

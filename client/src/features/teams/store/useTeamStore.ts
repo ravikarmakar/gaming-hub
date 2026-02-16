@@ -26,7 +26,7 @@ interface TeamStateTypes {
   setIsCreateTeamOpen: (isOpen: boolean) => void; // Added action
 
   createTeam: (teamData: FormData) => Promise<Team | null>;
-  getTeamById: (id: string, forceRefresh?: boolean) => Promise<Team | null>;
+  getTeamById: (id: string, forceRefresh?: boolean, skipServerCache?: boolean) => Promise<Team | null>;
   updateMemberRole: (role: string, memberId: string) => Promise<Team | null>;
 
   // Staff Management
@@ -98,7 +98,7 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
     }
   },
 
-  getTeamById: async (id, forceRefresh = false) => {
+  getTeamById: async (id, forceRefresh = false, skipServerCache = false) => {
     // Check if team is already in store and matches requested id
     const state = get();
     if (!forceRefresh && state.currentTeam && state.currentTeam._id === id) {
@@ -107,7 +107,10 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
 
     set({ isLoading: true, error: null });
     try {
-      const response = await axiosInstance.get(TEAM_ENDPOINTS.GET_BY_ID(id));
+      const url = skipServerCache
+        ? `${TEAM_ENDPOINTS.GET_BY_ID(id)}?skipCache=true`
+        : TEAM_ENDPOINTS.GET_BY_ID(id);
+      const response = await axiosInstance.get(url);
       const team = response.data.data;
       set({ currentTeam: team, isLoading: false });
       return team;
@@ -285,10 +288,16 @@ export const useTeamStore = create<TeamStateTypes>((set, get) => ({
   },
 
   transferTeamOwnerShip: async (memberId: string) => {
+    const currentTeam = get().currentTeam;
+    if (!currentTeam) {
+      return { success: false, message: "No active team found" };
+    }
+
     set({ isLoading: true });
     try {
       const response = await axiosInstance.put(TEAM_ENDPOINTS.TRANSFER_OWNERSHIP, {
         memberId,
+        teamId: currentTeam._id,
       });
 
       if (response.data.success) {

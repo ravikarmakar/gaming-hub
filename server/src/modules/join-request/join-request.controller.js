@@ -12,6 +12,7 @@ import { redis } from "../../shared/config/redis.js";
 import { addMemberToTeam, getTransformedTeam } from "../team/team.service.js";
 import { emitMemberJoined } from "../team/team.socket.js";
 import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
+import { invalidateCacheWithRetry } from "../../shared/utils/cache.js";
 
 // @desc    Send a request to join a Team, Organization, or Event
 // @route   POST /api/v1/teams/:teamId/join-request
@@ -164,14 +165,14 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
     const { requestId } = req.params;
     const { action } = req.body; // 'accepted' or 'rejected'
     const { userId } = req.user;
-    let responseData = null;
-    let socketEventData = null;
+    let requesterId = null;
+    let teamId = null;
 
     if (!["accepted", "rejected"].includes(action)) {
         throw new CustomError("Invalid action. Use 'accepted' or 'rejected'", 400);
     }
 
-    ({ responseData, socketEventData } = await withOptionalTransaction(async (session) => {
+    const result = await withOptionalTransaction(async (session) => {
         const jrQuery = JoinRequest.findById(requestId).populate("target");
         if (session) jrQuery.session(session);
         const joinRequest = await jrQuery;
@@ -183,8 +184,10 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
             throw new CustomError(`Request has already been ${joinRequest.status}`, 400);
         }
 
-        let responseData = null;
-        let socketEventData = null;
+        let internalResponseData = null;
+        let internalSocketEventData = null;
+        let requesterId = joinRequest.requester;
+        let teamId = null;
 
         if (action === "accepted") {
             const requesterQuery = User.findById(joinRequest.requester);
@@ -194,6 +197,7 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
 
             if (joinRequest.targetModel === "Team") {
                 const team = joinRequest.target;
+                teamId = team._id;
 
                 if (!team || team.isDeleted || !team.isRecruiting) {
                     throw new CustomError("This team is no longer recruiting", 400);
@@ -218,9 +222,9 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                     relatedData: { teamId: team._id },
                 }, { session });
 
-                responseData = await getTransformedTeam(team._id);
+                internalResponseData = await getTransformedTeam(team._id, session);
 
-                socketEventData = {
+                internalSocketEventData = {
                     teamId: team._id,
                     memberData: {
                         userId: requester._id,
@@ -343,12 +347,6 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
                     },
                     { session }
                 );
-
-                try {
-                    await redis.del(`user_profile:${requester._id}`);
-                } catch (cacheErr) {
-                    console.warn(`Failed to invalidate cache for user ${requester._id}:`, cacheErr);
-                }
             }
 
         } else {
@@ -369,12 +367,24 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
             }, { session });
         }
 
-        return { responseData, socketEventData };
-    }));
+        return { responseData: internalResponseData, socketEventData: internalSocketEventData, requesterId, teamId };
+    });
 
-    // Emit socket event after successful transaction commit
-    if (socketEventData) {
-        emitMemberJoined(socketEventData.teamId, socketEventData.memberData);
+    const { responseData, socketEventData, requesterId: finalRequesterId, teamId: finalTeamId } = result;
+
+    // Post-transaction consistency operations
+    if (action === "accepted") {
+        try {
+            const keys = [`user_profile:${finalRequesterId}`];
+            if (finalTeamId) keys.push(`team_details:${finalTeamId}`);
+            await invalidateCacheWithRetry(keys);
+        } catch (cacheErr) {
+            logger.warn(`Failed to invalidate cache after accepting join request:`, cacheErr.message);
+        }
+
+        if (socketEventData) {
+            emitMemberJoined(socketEventData.teamId, socketEventData.memberData);
+        }
     }
 
     res.status(200).json({
