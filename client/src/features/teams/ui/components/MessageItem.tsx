@@ -36,8 +36,10 @@ export const MessageItem = ({ message, isOwnMessage }: MessageItemProps) => {
 
     // No local state needed for editing as it's handled by global store
 
-    const isOwner = currentTeam?.captain === user?._id;
-    const isManager = currentTeam?.teamMembers?.find(m => m.user === user?._id)?.roleInTeam === "manager";
+    const isOwner = (typeof currentTeam?.captain === 'string' ? currentTeam?.captain : (currentTeam?.captain as any)?._id) === user?._id;
+    const isManager = currentTeam?.teamMembers?.find(m =>
+        (typeof m.user === 'string' ? m.user : (m.user as any)?._id) === user?._id
+    )?.roleInTeam === "manager";
     const canDelete = isOwnMessage || isOwner || isManager;
 
 
@@ -175,7 +177,7 @@ export const MessageItem = ({ message, isOwnMessage }: MessageItemProps) => {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Delete Message?</AlertDialogTitle>
                         <AlertDialogDescription className="text-gray-400">
-                            This action cannot be undone. This will permanently delete your message from the team chat.
+                            This action cannot be undone. This will permanently delete this message from the team chat.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

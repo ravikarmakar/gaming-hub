@@ -47,8 +47,23 @@ export const updateChatMessage = TryCatchHandler(async (req, res, next) => {
     const { content } = req.body;
     const userId = req.user._id;
 
+    // 1. Verify user is a member of the team
+    const isMember = await Team.exists({
+        _id: teamId,
+        "teamMembers.user": userId,
+        isDeleted: false,
+    });
+
+    if (!isMember) {
+        return next(new CustomError("You are not a member of this team", 403));
+    }
+
     if (!content || content.trim().length === 0) {
         return next(new CustomError("Message content is required", 400));
+    }
+
+    if (content.length > 1000) {
+        return next(new CustomError("Message content too long (max 1000 characters)", 400));
     }
 
     const message = await Chat.findOne({
@@ -62,7 +77,7 @@ export const updateChatMessage = TryCatchHandler(async (req, res, next) => {
         return next(new CustomError("Message not found or you are not the sender", 404));
     }
 
-    message.content = content.trim().substring(0, 1000);
+    message.content = content.trim();
     message.isEdited = true;
     await message.save();
 
@@ -88,6 +103,7 @@ export const deleteChatMessage = TryCatchHandler(async (req, res, next) => {
     const message = await Chat.findOne({
         _id: messageId,
         team: teamId,
+        isDeleted: false,
     });
 
     if (!message) {
@@ -95,13 +111,13 @@ export const deleteChatMessage = TryCatchHandler(async (req, res, next) => {
     }
 
     // Authorization: Sender can delete their own, Owner/Manager can delete any
-    let canDelete = message.sender.toString() === userId.toString();
+    let canDelete = message.sender && message.sender.toString() === userId.toString();
 
     if (!canDelete) {
         const team = await Team.findById(teamId).select("captain teamMembers").lean();
         if (team) {
-            const isOwner = team.captain.toString() === userId.toString();
-            const member = team.teamMembers.find(m => m.user.toString() === userId.toString());
+            const isOwner = team.captain && team.captain.toString() === userId.toString();
+            const member = team.teamMembers?.find(m => m.user && m.user.toString() === userId.toString());
             const isManager = member && member.roleInTeam === "manager";
 
             if (isOwner || isManager) {

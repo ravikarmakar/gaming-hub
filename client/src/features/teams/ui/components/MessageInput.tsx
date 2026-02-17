@@ -17,7 +17,7 @@ const messageSchema = z.object({
 type MessageValues = z.infer<typeof messageSchema>;
 
 interface MessageInputProps {
-    onSendMessage: (content: string) => void;
+    onSendMessage: (content: string) => void | Promise<void>;
     isLoading?: boolean;
 }
 
@@ -87,7 +87,7 @@ export const MessageInput = ({ onSendMessage, isLoading }: MessageInputProps) =>
                 await updateMessage(currentTeam._id, editingMessage._id, trimmedContent);
                 setEditingMessage(null);
             } else {
-                onSendMessage(trimmedContent);
+                await onSendMessage(trimmedContent);
                 reset();
             }
             if (textareaRef.current) {
@@ -125,6 +125,7 @@ export const MessageInput = ({ onSendMessage, isLoading }: MessageInputProps) =>
                         <button
                             type="button"
                             onClick={() => setEditingMessage(null)}
+                            aria-label="Cancel editing"
                             className="p-1 hover:bg-purple-500/10 rounded-full transition-colors"
                         >
                             <X className="w-4 h-4" />

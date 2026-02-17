@@ -24,6 +24,39 @@ const maskId = (id) => {
 };
 
 /**
+ * Helper to check if a user is a member of a team
+ */
+const checkMembership = async (userId, teamId) => {
+    const cacheKey = `socket_member:${userId}:${teamId}`;
+    let isMember = false;
+
+    try {
+        const cached = await redis.get(cacheKey);
+        if (cached === "1" || cached === 1) {
+            isMember = true;
+        }
+    } catch (cacheErr) {
+        logger.error(`Redis cache check failed for socket membership:`, cacheErr.message);
+    }
+
+    if (!isMember) {
+        const dbResult = await Team.exists({
+            _id: teamId,
+            "teamMembers.user": userId,
+            isDeleted: false
+        });
+
+        if (dbResult) {
+            isMember = true;
+            redis.set(cacheKey, "1", { ex: 300 })
+                .catch(err => logger.error(`Failed to cache socket membership:`, err.message));
+        }
+    }
+
+    return isMember;
+};
+
+/**
  * Initialize Socket.IO server with authentication
  */
 export const initializeSocket = async (httpServer) => {
@@ -85,46 +118,18 @@ export const initializeSocket = async (httpServer) => {
         socket.on("join:team", async (teamId) => {
             if (!teamId) return;
 
-            // 1. Validate teamId format to prevent room name injection
             if (!mongoose.Types.ObjectId.isValid(teamId)) {
                 logger.warn(`Invalid teamId format for join:team: ${maskId(teamId)} from user ${maskId(socket.userId)}`);
                 return;
             }
 
             try {
-                const cacheKey = `socket_member:${socket.userId}:${teamId}`;
+                const isMember = await checkMembership(socket.userId, teamId);
 
-                // 2. Check Redis cache for membership (avoids DB query on reconnections)
-                let isMember = false;
-                try {
-                    const cached = await redis.get(cacheKey);
-                    if (cached === "1" || cached === 1) {
-                        isMember = true;
-                    }
-                } catch (cacheErr) {
-                    logger.error(`Redis cache check failed for socket membership:`, cacheErr.message);
-                    // Fall through to DB check
-                }
-
-                // 3. Fall back to DB if not cached
                 if (!isMember) {
-                    const dbResult = await Team.exists({
-                        _id: teamId,
-                        "teamMembers.user": socket.userId,
-                        isDeleted: false
-                    });
-
-                    if (!dbResult) {
-                        logger.warn(`Unauthorized join:team attempt: User ${maskId(socket.userId)} tried to join team ${maskId(teamId)}`);
-                        socket.emit("error", { message: "Unauthorized to join this team room" });
-                        return;
-                    }
-
-                    isMember = true;
-
-                    // Cache the membership for 5 minutes
-                    redis.set(cacheKey, "1", { ex: 300 })
-                        .catch(err => logger.error(`Failed to cache socket membership:`, err.message));
+                    logger.warn(`Unauthorized join:team attempt: User ${maskId(socket.userId)} tried to join team ${maskId(teamId)}`);
+                    socket.emit("error", { message: "Unauthorized to join this team room" });
+                    return;
                 }
 
                 socket.join(`team:${teamId}`);
@@ -138,12 +143,9 @@ export const initializeSocket = async (httpServer) => {
         socket.on("leave:team", (teamId) => {
             if (!teamId) return;
 
-            // Validate teamId format
             if (!mongoose.Types.ObjectId.isValid(teamId)) return;
 
             socket.leave(`team:${teamId}`);
-
-            // Invalidate membership cache on explicit leave
             redis.del(`socket_member:${socket.userId}:${teamId}`)
                 .catch(err => logger.error(`Failed to invalidate socket membership cache:`, err.message));
 
@@ -156,10 +158,16 @@ export const initializeSocket = async (httpServer) => {
             if (!teamId || !content) return;
 
             try {
-                // 1. Basic validation
                 if (!mongoose.Types.ObjectId.isValid(teamId)) return;
 
-                // 2. Fetch user profile from Redis with simple DB fallback
+                // 1. Authorization: Check membership
+                const isMember = await checkMembership(socket.userId, teamId);
+                if (!isMember) {
+                    logger.warn(`Unauthorized chat attempt: User ${maskId(socket.userId)} tried to message team ${maskId(teamId)}`);
+                    return;
+                }
+
+                // 2. Fetch user profile
                 let userProfile = null;
                 try {
                     const cached = await redis.get(`user_profile:${socket.userId}`);
@@ -170,13 +178,11 @@ export const initializeSocket = async (httpServer) => {
                     logger.error("Failed to get user profile from Redis for chat:", err.message);
                 }
 
-                // fallback to DB if cache miss
                 if (!userProfile || !userProfile.username) {
                     try {
                         const user = await User.findById(socket.userId).lean();
                         if (user) {
                             userProfile = user;
-                            // Optionally re-cache for 1 min to help performance
                             redis.set(`user_profile:${socket.userId}`, JSON.stringify(user), { ex: 60 })
                                 .catch(e => logger.error("Failed to re-cache profile in socket handler:", e.message));
                         }
@@ -190,10 +196,10 @@ export const initializeSocket = async (httpServer) => {
                 try {
                     const team = await Team.findById(teamId).select("captain teamMembers").lean();
                     if (team) {
-                        if (team.captain.toString() === socket.userId.toString()) {
+                        if (team.captain && team.captain.toString() === socket.userId.toString()) {
                             senderRole = "owner";
-                        } else {
-                            const member = team.teamMembers.find(m => m.user.toString() === socket.userId.toString());
+                        } else if (team.teamMembers) {
+                            const member = team.teamMembers.find(m => m.user && m.user.toString() === socket.userId.toString());
                             if (member && member.roleInTeam === "manager") {
                                 senderRole = "manager";
                             }
@@ -213,7 +219,7 @@ export const initializeSocket = async (httpServer) => {
                     content: content.trim().substring(0, 1000),
                 });
 
-                // 4. Broadcast to the team room
+                // 5. Broadcast to the team room
                 io.to(`team:${teamId}`).emit("chat:message", newMessage);
 
                 logger.info(`Chat message sent by ${maskId(socket.userId)} to team ${maskId(teamId)}`);
@@ -257,7 +263,6 @@ export const emitToTeam = (teamId, event, data) => {
         return;
     }
 
-    // Validate teamId format before emitting
     if (!mongoose.Types.ObjectId.isValid(teamId)) {
         logger.warn(`Invalid teamId for emitToTeam: ${maskId(teamId)}`);
         return;

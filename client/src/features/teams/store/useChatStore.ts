@@ -87,12 +87,18 @@ export const useChatStore = create<ChatState>((set) => ({
             messages: state.messages.map((m) =>
                 m._id === updatedMessage._id ? updatedMessage : m
             ),
+            editingMessage: state.editingMessage?._id === updatedMessage._id
+                ? updatedMessage
+                : state.editingMessage
         }));
     },
 
     handleRemoteDelete: (messageId) => {
         set((state) => ({
             messages: state.messages.filter((m) => m._id !== messageId),
+            editingMessage: state.editingMessage?._id === messageId
+                ? null
+                : state.editingMessage
         }));
     },
 
