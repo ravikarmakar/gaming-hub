@@ -158,6 +158,10 @@ export const initializeSocket = async (httpServer) => {
     io.on("connection", (socket) => {
         logger.info(`Client connected: ${socket.id} (User: ${maskId(socket.userId)})`);
 
+        // Join personal user room for private updates (e.g., profile/membership changes)
+        socket.join(`user:${socket.userId}`);
+        logger.info(`User ${maskId(socket.userId)} joined personal room: user:${maskId(socket.userId)}`);
+
         // Join team room
         socket.on("join:team", async (teamId) => {
             if (!teamId) return;
@@ -309,4 +313,22 @@ export const emitToTeam = (teamId, event, data) => {
 
     io.to(`team:${teamId}`).emit(event, data);
     logger.info(`Emitted ${event} to team:${maskId(teamId)}`);
+};
+
+/**
+ * Emit event to a specific user room
+ */
+export const emitToUser = (userId, event, data) => {
+    if (!io) {
+        logger.warn("Socket.IO not initialized. Cannot emit event.");
+        return;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+        logger.warn(`Invalid userId for emitToUser: ${maskId(userId)}`);
+        return;
+    }
+
+    io.to(`user:${userId}`).emit(event, data);
+    logger.info(`Emitted ${event} to user:${maskId(userId)}`);
 };

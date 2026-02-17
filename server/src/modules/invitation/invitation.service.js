@@ -61,6 +61,10 @@ export const acceptInvitationService = async (invitationId, userId) => {
         if (socketData && entityModel === "Team") {
             const { emitMemberJoined } = await import("../team/team.socket.js");
             emitMemberJoined(socketData.teamId, socketData.memberData);
+
+            // Also notify the joining user to update their own profile/dashboard
+            const { emitProfileUpdate } = await import("../user/user.socket.js");
+            emitProfileUpdate(userId, { teamId: socketData.teamId, action: "joined" });
         }
     } catch (e) {
         logger.warn("Post-commit operations failed in acceptInvitationService", e);

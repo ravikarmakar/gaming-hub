@@ -4,10 +4,10 @@ import { Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
-import { MemberCard, roleIcons, formatJoinedDate } from "./MemberCard";
-import { TeamMembersTypes } from "../../lib/types";
-import { roleColors } from "../../lib/constants";
-import { TEAM_ROLES } from "../../lib/access";
+import { MemberCard, roleIcons, formatJoinedDate } from "@/features/teams/ui/components/MemberCard";
+import { TeamMembersTypes } from "@/features/teams/lib/types";
+import { roleColors } from "@/features/teams/lib/constants";
+import { TEAM_ROLES } from "@/features/teams/lib/access";
 
 interface TeamMembersProps {
   members: TeamMembersTypes[];

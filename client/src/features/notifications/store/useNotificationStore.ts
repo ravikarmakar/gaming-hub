@@ -49,6 +49,7 @@ interface NotificationState {
     markAllAsRead: () => Promise<void>;
     setUnreadCount: (count: number) => void;
     performAction: (id: string, actionType: string) => Promise<void>;
+    fetchTeamNotifications: (teamId: string, page?: number) => Promise<void>;
     clearError: () => void;
 }
 
@@ -191,6 +192,31 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         } catch (error) {
             set({
                 error: getErrorMessage(error, "Failed to perform notification action"),
+                isLoading: false,
+            });
+        }
+    },
+
+    fetchTeamNotifications: async (teamId, page = 1) => {
+        if (get().isLoading) return;
+        set({ isLoading: true, error: null });
+        try {
+            const response = await axiosInstance.get(`/notifications/team/${teamId}?page=${page}`);
+            const newNotifications: Notification[] = response.data.notifications;
+
+            set({
+                notifications: newNotifications,
+                unreadCount: response.data.pagination.unreadCount,
+                pagination: {
+                    currentPage: response.data.pagination.currentPage,
+                    totalPages: response.data.pagination.totalPages,
+                    totalCount: response.data.pagination.totalCount,
+                },
+                isLoading: false,
+            });
+        } catch (error) {
+            set({
+                error: getErrorMessage(error, "Failed to fetch team notifications"),
                 isLoading: false,
             });
         }

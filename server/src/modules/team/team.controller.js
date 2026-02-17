@@ -59,8 +59,7 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Invalid team ID format", 400));
   }
 
-  // 1. Check Redis Cache (shared team data only, no user-specific data)
-  // skipCache allows socket-triggered re-fetches to bypass stale cache
+  // 1. Check Redis Cache
   const cachedTeam = skipCache ? null : await redis.get(`team_details:${teamId}`);
 
   let team;
@@ -88,8 +87,7 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
     await redis.set(`team_details:${teamId}`, JSON.stringify(team), { ex: 3600 }); // 1 hour
   }
 
-  // Diagnostic log for cache consistency debugging
-  logger.info(`[TEAM-FETCH] team=${teamId} members=${team.teamMembers?.length} source=${cachedTeam ? 'REDIS' : 'DB'} skipCache=${skipCache} user=${req.user?.userId || 'anon'}`);
+
 
   // Compute user-specific data on-demand (not cached)
   let hasPendingRequest = false;
@@ -213,12 +211,6 @@ export const addMembers = TryCatchHandler(async (req, res, next) => {
   if (!Array.isArray(members) || members.length < 1)
     throw new CustomError("Please provide at least one team member.", 400);
 
-  // Basic pre-check (not atomic, but prevents obvious overruns)
-  // The service layer will do atomic validation
-  // if (team.teamMembers.length + members.length > 20) {
-  //   throw new CustomError(`Team limit exceeded. Max 20 members allowed.`, 400);
-  // }
-
   // Use Service Layer for the heavy lifting
   // Service should ideally verify limit atomically, but for now this is acceptable
   await batchAddMembersToTeam({
@@ -248,7 +240,7 @@ export const addMembers = TryCatchHandler(async (req, res, next) => {
 });
 
 export const removeMember = TryCatchHandler(async (req, res, next) => {
-  logger.info("REMOVE MEMBER REQUEST: " + req.params.id);
+
   const memberId = req.params.id;
   const { userId } = req.user;
   const team = req.teamDoc;
@@ -310,7 +302,7 @@ export const removeMember = TryCatchHandler(async (req, res, next) => {
   // Fetch updated team roster using helper
   const transformedTeam = await getTransformedTeam(team._id);
 
-  logger.info("REMOVE MEMBER SUCCESS, Sending response.");
+
 
   res.status(200).json({
     success: true,

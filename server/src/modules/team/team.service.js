@@ -10,9 +10,7 @@ import { uploadOnImageKit, deleteFromImageKit } from "../../shared/services/imag
 import { logger } from "../../shared/utils/logger.js";
 import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
 import { invalidateCacheWithRetry } from "../../shared/utils/cache.js";
-import { VALID_TEAM_MEMBER_ROLES } from "./team.constants.js";
-
-// --- Cache Helpers (Risk Mitigation) ---
+import { VALID_TEAM_MEMBER_ROLES, UNIQUE_ROLES } from "./team.constants.js";
 
 /**
  * Sync user denormalized data in team rosters with retry logic
@@ -35,9 +33,6 @@ const syncUserInTeamsWithRetry = async (userId, { username, avatar }, options = 
         { arrayFilters: [{ "elem.user": userId }] }
       );
 
-      if (attempt > 1) {
-        logger.info(`Team denormalization sync succeeded on attempt ${attempt} for user ${userId}`);
-      }
       return true;
     } catch (error) {
       logger.error(`Team sync attempt ${attempt}/${maxRetries} failed for user ${userId}:`, error);
@@ -70,8 +65,6 @@ export const checkTeamNameUnique = async (teamName, session = null) => {
   }
   return true;
 };
-
-// --- CRUD Services ---
 
 export const createTeamService = async (userId, body, file) => {
   const { teamName, bio, tag, region } = body;
@@ -154,7 +147,7 @@ export const createTeamService = async (userId, body, file) => {
       return newTeam;
     });
 
-    // 4. Invalidate user profile cache (with retry logic)
+    // 4. Invalidate user profile cache
     await invalidateCacheWithRetry(`user_profile:${userId}`);
 
     // Clean up local file only after success
@@ -280,7 +273,7 @@ export const updateTeamService = async (teamId, body, files) => {
 
     await team.save();
 
-    // Invalidate Team Cache (with retry logic)
+    // Invalidate Team Cache
     await invalidateCacheWithRetry(`team_details:${team._id}`);
 
     // Async cleanup of old images AFTER successful save
@@ -322,7 +315,7 @@ export const deleteTeamService = async (teamId) => {
   const team = await Team.findOne({ _id: teamId, isDeleted: false });
   if (!team) throw new CustomError("Team not found", 404);
 
-  // 1. Set teamId = null and remove team roles for all team members (Atomic)
+  // 1. Set teamId = null and remove team roles for all team members
   const memberIds = team.teamMembers.map((member) => member.user);
   await User.updateMany(
     { _id: { $in: memberIds } },
@@ -337,7 +330,7 @@ export const deleteTeamService = async (teamId) => {
     }
   );
 
-  // 2. Soft delete the team (Atomic)
+  // 2. Soft delete the team
   await Team.findByIdAndUpdate(team._id, {
     $set: {
       isDeleted: true,
@@ -345,7 +338,7 @@ export const deleteTeamService = async (teamId) => {
     }
   });
 
-  // 3. Invalidate Redis cache for all members (Pipeline for efficiency)
+  // 3. Invalidate Redis cache for all members
   const pipeline = redis.pipeline();
   memberIds.forEach((userId) => {
     pipeline.del(`user_profile:${userId}`);
@@ -382,7 +375,7 @@ export const transferTeamOwnershipService = async (teamId, currentOwnerId, newOw
     throw new CustomError("You are not the captain of this team", 403);
   }
 
-  // 1 Check: member team ka hissa hai ya nahi
+  // Check: member team ka hissa hai ya nahi
   const isMember = team.teamMembers.some(
     (m) => m.user.toString() === newOwnerId.toString()
   );
@@ -396,7 +389,7 @@ export const transferTeamOwnershipService = async (teamId, currentOwnerId, newOw
     if (session) userQuery.session(session);
     const user = await userQuery; // Old owner
 
-    // 2 Update Team document (captain + teamMembers)
+    // Update Team document (captain + teamMembers)
     const updatedMembers = team.teamMembers.map((member) => {
       const uid = member.user.toString();
 
@@ -547,8 +540,16 @@ export const manageTeamStaffService = async (teamId, memberId, action) => {
     return { message: result.message, team: await buildTransformedTeamFromDoc(result.team) };
   }
 
-  // Invalidate Redis cache (with retry logic)
+  // Invalidate Redis cache
   await invalidateCacheWithRetry([`user_profile:${memberId}`, `team_details:${teamId}`]);
+
+  // Emit profile update to the affected user
+  try {
+    const { emitProfileUpdate } = await import("../user/user.socket.js");
+    emitProfileUpdate(memberId, { teamId, action: "role_changed" });
+  } catch (err) {
+    logger.warn("Failed to emit profile update for member role change:", err.message);
+  }
 
   return { message: `Member successfully ${action === "promote" ? "promoted to Manager" : "demoted to Player"}.`, team: await buildTransformedTeamFromDoc(result.team) };
 };
@@ -587,8 +588,7 @@ export const manageMemberRoleService = async (teamId, memberId, role) => {
       throw new CustomError("Invalid role specified.", 400);
     }
 
-    // Role Uniqueness Check: Prevent duplicate core esports roles
-    const UNIQUE_ROLES = ["igl", "rusher", "sniper", "support"];
+    // Role Uniqueness Check
     if (UNIQUE_ROLES.includes(role)) {
       const alreadyExists = team.teamMembers.some(
         (m) => m.roleInTeam === role && m.user.toString() !== memberId.toString()
@@ -598,7 +598,7 @@ export const manageMemberRoleService = async (teamId, memberId, role) => {
       }
     }
 
-    // Role Limit Check: Prevent more than 2 substitutes
+    // Role Limit Check
     if (role === "substitute") {
       const substituteCount = team.teamMembers.filter(
         (m) => m.roleInTeam === "substitute" && m.user.toString() !== memberId.toString()
@@ -613,7 +613,7 @@ export const manageMemberRoleService = async (teamId, memberId, role) => {
     return team;
   });
 
-  // Update Cache (with retry logic)
+  // Update Cache
   await invalidateCacheWithRetry([`team_details:${teamId_saved}`, `user_profile:${memberId}`]);
 
   return { message: `The member's role has been updated to '${role}'.`, team: await buildTransformedTeamFromDoc(savedTeam) };
@@ -727,6 +727,14 @@ export const addMemberToTeam = async ({ teamId, userId, roleInTeam = "player", s
   // Cache Invalidation (always runs, post-commit/standalone)
   if (!session) {
     await invalidateCacheWithRetry([`user_profile:${userId}`, `team_details:${teamId}`]);
+
+    // Emit profile update to the joining user
+    try {
+      const { emitProfileUpdate } = await import("../user/user.socket.js");
+      emitProfileUpdate(userId, { teamId, action: "joined" });
+    } catch (err) {
+      logger.warn("Failed to emit profile update for new member:", err.message);
+    }
   }
 
   return true;
@@ -746,7 +754,6 @@ const _addMemberToTeamOps = async ({ teamId, userId, roleInTeam, session }) => {
     "teamMembers.19": { $exists: false }
   };
 
-  const UNIQUE_ROLES = ["igl", "rusher", "sniper", "support"];
   if (UNIQUE_ROLES.includes(roleInTeam)) {
     query["teamMembers.roleInTeam"] = { $ne: roleInTeam };
   }
@@ -847,6 +854,14 @@ export const batchAddMembersToTeam = async ({ teamId, memberIds, session = null 
     const keys = memberIds.map((mid) => `user_profile:${mid}`);
     keys.push(`team_details:${teamId}`);
     await invalidateCacheWithRetry(keys);
+
+    // Emit profile updates to all batch-added users
+    try {
+      const { emitProfileUpdate } = await import("../user/user.socket.js");
+      memberIds.forEach((mid) => emitProfileUpdate(mid, { teamId, action: "joined" }));
+    } catch (err) {
+      logger.warn("Failed to emit profile updates for batch added members:", err.message);
+    }
   }
 
   return true;
@@ -987,6 +1002,15 @@ export const removeMemberFromTeam = async ({ teamId, userId, session = null }) =
   // 3. Cache Invalidation (with retry logic)
   if (!session) {
     await invalidateCacheWithRetry([`user_profile:${userId}`, `team_details:${teamId}`]);
+
+    // Emit profile update to the removed user
+    try {
+      const { emitProfileUpdate } = await import("../user/user.socket.js");
+      emitProfileUpdate(userId, { teamId, action: "left" });
+    } catch (err) {
+      logger.warn("Failed to emit profile update for removed member:", err.message);
+    }
+
     // Invalidate socket membership cache so next join:team re-checks DB
     redis.del(`socket_member:${userId}:${teamId}`)
       .catch(err => logger.error(`Failed to invalidate socket membership cache:`, err.message));

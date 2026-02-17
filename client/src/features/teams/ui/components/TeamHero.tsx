@@ -7,7 +7,7 @@ import { UnifiedProfileHeader } from '@/components/shared/UnifiedProfileHeader';
 
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { useJoinRequestStore } from '@/features/teams/store/useJoinRequestStore';
-import { Team } from '../../lib/types';
+import { Team } from '@/features/teams/lib/types';
 
 interface TeamHeroProps {
     team: Team;

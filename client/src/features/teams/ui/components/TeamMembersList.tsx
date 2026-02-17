@@ -1,8 +1,10 @@
 import React from 'react';
 import { User, Shield, Gamepad2 } from 'lucide-react';
+
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TeamMembersTypes } from '../../lib/types';
+
+import { TeamMembersTypes } from '@/features/teams/lib/types';
 
 interface TeamMembersListProps {
     members: TeamMembersTypes[];

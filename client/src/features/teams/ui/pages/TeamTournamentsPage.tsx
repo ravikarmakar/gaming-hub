@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 import { Trophy, Search, Filter } from "lucide-react";
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
-import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { MemberHeader } from "../components/MemberHeader";
-import { TournamentItem } from "../components/TournamentItem";
+
 import { Input } from "@/components/ui/input";
 import {
     Select,
@@ -14,6 +10,13 @@ import {
     SelectValue
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+
+import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { MemberHeader } from "../components/MemberHeader";
+import { TournamentItem } from "../components/TournamentItem";
+
 
 const TeamTournamentsPage = () => {
     const { user } = useAuthStore();
@@ -107,12 +110,12 @@ const TeamTournamentsPage = () => {
                     ))}
                 </div>
             ) : (
-                <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-[#0F111A]/60 rounded-2xl border border-dashed border-white/10 backdrop-blur-xl shadow-2xl shadow-purple-500/5">
-                    <div className="p-4 rounded-full bg-white/[0.03] mb-4">
-                        <Trophy className="w-12 h-12 text-gray-400" />
+                <div className="flex flex-col items-center justify-center py-32 px-4 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <div className="p-6 rounded-3xl bg-white/[0.02] border border-white/5 mb-6 shadow-2xl">
+                        <Trophy className="w-12 h-12 text-gray-500 opacity-50" />
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">No Tournaments Found</h3>
-                    <p className="text-gray-400 max-w-md">
+                    <h3 className="text-2xl font-bold text-white mb-3 tracking-tight">No Tournaments Found</h3>
+                    <p className="text-gray-500 max-w-sm mx-auto leading-relaxed">
                         {searchTerm || statusFilter !== "all"
                             ? "Try adjusting your search or filters to find what you're looking for."
                             : "Your team hasn't participated in any tournaments yet. Join one today and start your journey!"}

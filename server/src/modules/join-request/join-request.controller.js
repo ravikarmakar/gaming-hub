@@ -211,6 +211,17 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
 
         if (strategyResult.socketEventData) {
             emitMemberJoined(strategyResult.socketEventData.teamId, strategyResult.socketEventData.memberData);
+
+            // Notify the requester to update their own profile/dashboard
+            try {
+                const { emitProfileUpdate } = await import("../user/user.socket.js");
+                emitProfileUpdate(notification.sender, {
+                    teamId: strategyResult.socketEventData.teamId,
+                    action: "joined"
+                });
+            } catch (err) {
+                logger.warn("Failed to emit profile update for join request requester:", err.message);
+            }
         }
     }
 

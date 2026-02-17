@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState } from "react";
+import { format } from "date-fns";
 import {
     Crown,
     User,
@@ -10,7 +11,6 @@ import {
     Trash,
     MoreVertical,
 } from "lucide-react";
-import { format } from "date-fns";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -30,7 +30,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { roles } from "../../lib/constants";
+
+import { roles } from "@/features/teams/lib/constants";
 
 // Context for Compound Components
 interface MemberCardContextType {

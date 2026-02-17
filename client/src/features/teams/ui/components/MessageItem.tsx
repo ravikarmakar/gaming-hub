@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { format } from "date-fns";
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     DropdownMenu,
@@ -8,19 +9,11 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { ChatMessage, useChatStore } from "../../store/useChatStore";
-import { useTeamManagementStore } from "../../store/useTeamManagementStore";
+
+import { ChatMessage, useChatStore } from "@/features/teams/store/useChatStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmActionDialog } from "@/features/teams/ui/components/ConfirmActionDialog";
 import { cn } from "@/lib/utils";
 
 interface MessageItemProps {
@@ -171,28 +164,15 @@ export const MessageItem = ({ message, isOwnMessage }: MessageItemProps) => {
                 </div>
             </div>
 
-            {/* Delete Confirmation Dialog */}
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent className="bg-[#1A1D2D] border-white/10 text-white">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Message?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-gray-400">
-                            This action cannot be undone. This will permanently delete this message from the team chat.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10">
-                            Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleDelete}
-                            className="bg-red-600 hover:bg-red-500 text-white border-none"
-                        >
-                            Delete Message
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <ConfirmActionDialog
+                open={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
+                title="Delete Message?"
+                description="This action cannot be undone. This will permanently delete this message from the team chat."
+                actionLabel="Delete Message"
+                onConfirm={handleDelete}
+                variant="danger"
+            />
         </>
     );
 };

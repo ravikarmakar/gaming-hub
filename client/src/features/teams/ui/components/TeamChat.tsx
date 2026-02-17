@@ -1,11 +1,12 @@
 import { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare, Loader2 } from "lucide-react";
+
 import { useSocket } from "@/contexts/SocketContext";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { useChatStore, ChatMessage } from "../../store/useChatStore";
-import { MessageItem } from "./MessageItem";
-import { MessageInput } from "./MessageInput";
+import { useChatStore, ChatMessage } from "@/features/teams/store/useChatStore";
+import { MessageItem } from "@/features/teams/ui/components/MessageItem";
+import { MessageInput } from "@/features/teams/ui/components/MessageInput";
 
 interface TeamChatProps {
     teamId: string;

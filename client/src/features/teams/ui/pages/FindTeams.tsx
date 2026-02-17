@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { useTeamListStore } from "../../store/useTeamListStore";
+import { useEffect, useState, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
+
+import { useTeamListStore } from "../../store/useTeamListStore";
 import TeamCard from "../components/TeamCard";
 import TeamFilters from "../components/TeamFilters";
 import { ResourceGridWrapper } from "@/components/shared/ResourceGridWrapper";

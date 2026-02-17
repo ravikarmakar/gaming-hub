@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trophy, Crown, TrendingUp, Zap } from 'lucide-react';
+
 import { Card } from '@/components/ui/card';
 
 interface TeamStatsGridProps {

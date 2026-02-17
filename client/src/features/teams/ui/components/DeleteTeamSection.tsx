@@ -1,21 +1,13 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { Trash2, AlertTriangle, Loader2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
+import { ConfirmActionDialog } from "./ConfirmActionDialog";
 
 export const DeleteTeamSection = () => {
     const navigate = useNavigate();
@@ -37,36 +29,21 @@ export const DeleteTeamSection = () => {
 
     return (
         <>
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent className="bg-[#0F0720]/95 border-white/10 backdrop-blur-xl shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                            <AlertTriangle className="text-red-500" />
-                            Disband Team?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription className="text-gray-400 font-medium leading-relaxed">
-                            Are you sure you want to disband this team? This action is <span className="text-red-500 font-black uppercase">permanent</span> and cannot be undone.
-                            All members will be removed and the team profile will be deleted forever.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter className="gap-3 sm:gap-0 mt-4">
-                        <AlertDialogCancel className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:text-white transition-all">
-                            Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleDeleteTeam}
-                            disabled={isLoading}
-                            className="bg-red-600 hover:bg-red-500 text-white border-0 shadow-[0_0_20px_rgba(220,38,38,0.3)] transition-all font-bold"
-                        >
-                            {isLoading ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                                "Yes, Disband Team"
-                            )}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <ConfirmActionDialog
+                open={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
+                title="Disband Team?"
+                description={
+                    <>
+                        Are you sure you want to disband this team? This action is <span className="text-red-500 font-black uppercase">permanent</span> and cannot be undone.
+                        All members will be removed and the team profile will be deleted forever.
+                    </>
+                }
+                actionLabel="Yes, Disband Team"
+                onConfirm={handleDeleteTeam}
+                isLoading={isLoading}
+                variant="danger"
+            />
 
             <Card className="bg-red-500/5 border-red-500/20 overflow-hidden relative">
                 <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">

@@ -1,14 +1,15 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Check, Pencil, Send, X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useChatStore } from "../../store/useChatStore";
-import { useTeamManagementStore } from "../../store/useTeamManagementStore";
-import { useState } from "react";
+
 import { cn } from "@/lib/utils";
+import { useChatStore } from "@/features/teams/store/useChatStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 
 const messageSchema = z.object({
     content: z.string().min(1).max(1000),

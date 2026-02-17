@@ -6,12 +6,12 @@ import { AnimatePresence, motion } from "framer-motion";
 
 import { TeamMembers } from "../components/TeamMembers";
 import { MemberHeader } from "../components/MemberHeader";
-import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
+import { useAccess } from "@/features/auth/hooks/useAccess";
+import { PLAYER_ROUTES } from "@/features/player/lib/routes";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { JoinRequestsList } from "../components/JoinRequestsList";
-import { useAccess } from "@/features/auth/hooks/useAccess";
-import { TEAM_ACTIONS, TEAM_ACTIONS_ACCESS } from "../../lib/access";
-import { PLAYER_ROUTES } from "@/features/player/lib/routes";
+import { TEAM_ACTIONS, TEAM_ACTIONS_ACCESS } from "@/features/teams/lib/access";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 
 const TeamMembersPage = () => {
   const navigate = useNavigate();
@@ -89,22 +89,22 @@ const TeamMembersPage = () => {
               transition={{ duration: 0.3, ease: "easeInOut" }}
               className="overflow-hidden"
             >
-              <div className="relative group overflow-hidden rounded-xl border border-blue-500/30 bg-[#0F111A]/40 px-4 py-3.5 backdrop-blur-xl flex items-center justify-between gap-4 shadow-xl shadow-blue-500/5">
-                <div className="flex items-center gap-3 text-sm text-blue-200/90 w-full">
-                  <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400 shrink-0">
+              <div className="relative group overflow-hidden rounded-xl border border-blue-500/30 bg-[#0F111A]/40 px-4 py-3.5 backdrop-blur-xl flex items-start justify-between gap-3 shadow-xl shadow-blue-500/5">
+                <div className="flex items-start gap-3 text-sm text-blue-200/90 w-full">
+                  <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400 shrink-0 mt-0.5">
                     <Info className="w-4 h-4" />
                   </div>
-                  <div className="flex-1">
-                    <p className="line-clamp-1 sm:line-clamp-none leading-relaxed">
-                      <span className="font-bold text-blue-100 mr-1.5 underline decoration-blue-500/30 underline-offset-4">Tournament Policy:</span>
+                  <div className="flex-1 pt-1">
+                    <p className="leading-relaxed">
+                      <span className="font-bold text-blue-100 block mb-1 sm:inline sm:mr-1.5 underline decoration-blue-500/30 underline-offset-4">Tournament Policy:</span>
                       Only <span className="text-white font-bold bg-white/5 px-1.5 py-0.5 rounded">IGL, Rusher, Sniper, Support</span> roles are auto-registered.
-                      <span className="ml-1 text-blue-300/80 italic">Others are listed as substitutes.</span>
+                      <span className="block sm:inline sm:ml-1 text-blue-300/80 italic">Others are listed as substitutes.</span>
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowPolicy(false)}
-                  className="p-1.5 rounded-lg hover:bg-white/10 text-blue-400 hover:text-white transition-all shrink-0"
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-blue-400 hover:text-white transition-all shrink-0 mt-0.5"
                 >
                   <X className="w-4 h-4" />
                 </button>

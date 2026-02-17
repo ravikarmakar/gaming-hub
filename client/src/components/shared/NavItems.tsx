@@ -38,7 +38,11 @@ const navItems = [
   },
 ];
 
-const NavItems = () => {
+interface NavItemsProps {
+  onItemClick?: () => void;
+}
+
+const NavItems = ({ onItemClick }: NavItemsProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
@@ -95,6 +99,7 @@ const NavItems = () => {
                             to={drop.href}
                             onClick={() => {
                               setOpenCollapsible(null);
+                              onItemClick?.();
                             }}
                             className={cn(
                               "flex items-center py-2.5 text-sm font-medium transition-colors group",
@@ -132,7 +137,10 @@ const NavItems = () => {
                     {item.dropdownItems?.map((drop) => (
                       <DropdownMenuItem
                         key={drop.name}
-                        onClick={() => navigate(drop.href)}
+                        onClick={() => {
+                          navigate(drop.href);
+                          onItemClick?.();
+                        }}
                         className={cn(
                           "flex items-center gap-2 p-2.5 cursor-pointer rounded-lg transition-colors focus:bg-purple-500/10 focus:text-white",
                           location.pathname === drop.href ? "bg-purple-500/10 text-white" : "text-purple-200/60"
@@ -148,6 +156,7 @@ const NavItems = () => {
             ) : (
               <Link
                 to={item.href || "/"}
+                onClick={onItemClick}
                 className={cn(
                   "relative flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-all rounded-full group",
                   isMobile

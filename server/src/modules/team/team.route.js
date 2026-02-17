@@ -27,6 +27,7 @@ import {
   manageMemberRoleValidation,
   manageStaffRoleValidation,
   transferOwnerValidation,
+  deleteTeamValidation,
 } from "./team.validation.js";
 
 const router = express.Router();
@@ -68,7 +69,7 @@ router.put("/leave-member", isAuthenticated, isVerified, authorize(Scopes.TEAM, 
 router.put("/transfer-owner", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER], { attachDoc: true }), validateRequest(transferOwnerValidation), transferTeamOwnerShip);
 router.put("/manage-member-role", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), validateRequest(manageMemberRoleValidation), manageMemberRole);
 router.put("/manage-staff-role", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER], { attachDoc: true }), validateRequest(manageStaffRoleValidation), manageStaffRole);
-router.delete("/delete-team", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER], { attachDoc: true }), deleteTeam);
+router.delete("/delete-team", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER], { attachDoc: true }), validateRequest(deleteTeamValidation), deleteTeam);
 
 // NOTE: Join Request routes have been moved to a dedicated router
 // See: server/src/modules/join-request/join-request.route.js

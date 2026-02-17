@@ -96,7 +96,7 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
 
         set({ isLoading: true });
         try {
-            const response = await axiosInstance.delete(TEAM_ENDPOINTS.DELETE);
+            const response = await axiosInstance.delete(`${TEAM_ENDPOINTS.DELETE}?teamId=${currentTeam._id}`);
             if (response.data.success) {
                 const authUser = useAuthStore.getState().user;
                 if (authUser) {

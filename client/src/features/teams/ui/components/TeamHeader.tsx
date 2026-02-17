@@ -6,7 +6,7 @@ import {
     Trophy,
 } from "lucide-react";
 
-import { Team } from "../../lib/types";
+import { Team } from "@/features/teams/lib/types";
 
 
 interface Props {

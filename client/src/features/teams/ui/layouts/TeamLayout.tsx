@@ -5,7 +5,6 @@ import {
   UserPlus,
   Trophy,
   Settings,
-  BarChart2,
   Bell,
   MessageSquare,
 } from "lucide-react";
@@ -25,13 +24,13 @@ import { useTeamRoom, useSocketEvent } from "@/hooks/useSocket";
 
 const teamSidebarLinks = [
   {
-    label: "Team Overview",
+    label: "Overview",
     icon: Users,
     href: TEAM_ROUTES.DASHBOARD,
     access: TEAM_ACCESS.dashboard,
   },
   {
-    label: "Team Members",
+    label: "Active Roster",
     icon: UserPlus,
     href: TEAM_ROUTES.MEMBERS,
     access: TEAM_ACCESS.members,
@@ -48,22 +47,17 @@ const teamSidebarLinks = [
     href: TEAM_ROUTES.TOURNAMENTS,
   },
   {
-    label: "Team Performance",
-    icon: BarChart2,
-    href: TEAM_ROUTES.PERFORMANCE,
-  },
-  {
-    label: "Team Notifications",
+    label: "Notifications",
     icon: Bell,
     href: TEAM_ROUTES.NOTIFICATIONS,
   },
   {
-    label: "Team Chat",
+    label: "Chat",
     icon: MessageSquare,
     href: TEAM_ROUTES.CHAT,
   },
   {
-    label: "Team Settings",
+    label: "Settings",
     icon: Settings,
     href: TEAM_ROUTES.SETTINGS,
     access: TEAM_ACCESS.settings,
@@ -78,44 +72,43 @@ const TeamLayout = () => {
   // Join team room via WebSocket
   useTeamRoom(user?.teamId);
 
-  console.log("currentTeam", currentTeam);
+
 
   // Listen for real-time team updates
   useSocketEvent("team:member:joined", () => {
-    console.log("🔔 New member joined, refreshing team data...");
     if (user?.teamId) {
       getTeamById(user.teamId, true, true);
+      useAuthStore.getState().checkAuth();
     }
   });
 
   useSocketEvent("team:member:left", () => {
-    console.log("🔔 Member left, refreshing team data...");
     // Check current store state (not stale closure) — if user just left,
     // currentTeam will be null and we should NOT re-fetch
     const currentTeam = useTeamManagementStore.getState().currentTeam;
     if (user?.teamId && currentTeam) {
       getTeamById(user.teamId, true, true);
+      useAuthStore.getState().checkAuth();
     }
   });
 
   useSocketEvent("team:role:updated", () => {
-    console.log("🔔 Role updated, refreshing team data...");
     if (user?.teamId) {
       getTeamById(user.teamId, true, true);
+      useAuthStore.getState().checkAuth();
     }
   });
 
   useSocketEvent("team:owner:transferred", () => {
-    console.log("🔔 Ownership transferred, refreshing team data...");
     // Check current store state — user may have lost their team in transfer
     const currentTeam = useTeamManagementStore.getState().currentTeam;
     if (user?.teamId && currentTeam) {
       getTeamById(user.teamId, true, true);
+      useAuthStore.getState().checkAuth();
     }
   });
 
   useSocketEvent("team:updated", () => {
-    console.log("🔔 Team updated, refreshing team data...");
     if (user?.teamId) {
       getTeamById(user.teamId, true, true);
     }

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,7 +37,6 @@ import { useTeamManagementStore } from "@/features/teams/store/useTeamManagement
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { MAX_FILE_SIZE, teamSchema, TeamForm } from "@/features/teams/lib/teamSchema";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
-import { useNavigate } from "react-router-dom";
 
 const CreateTeamModal = () => {
   const navigate = useNavigate();

@@ -189,6 +189,57 @@ export const getOrgNotifications = TryCatchHandler(async (req, res, next) => {
 });
 
 /**
+ * @desc Get notifications for a specific team
+ * @route GET /api/v1/notifications/team/:teamId
+ * @access Private
+ */
+export const getTeamNotifications = TryCatchHandler(async (req, res, next) => {
+    const { teamId } = req.params;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    const notifications = await Notification.find({
+        "relatedData.teamId": teamId,
+        $or: [
+            { recipient: req.user._id },
+            { recipient: null }
+        ]
+    })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("sender", "username avatar")
+        .populate("relatedData.teamId", "teamName imageUrl")
+        .populate("relatedData.eventId", "eventName banner");
+
+    const totalCount = await Notification.countDocuments({
+        "relatedData.teamId": teamId,
+        $or: [
+            { recipient: req.user._id },
+            { recipient: null }
+        ]
+    });
+
+    const unreadCount = await Notification.countDocuments({
+        "relatedData.teamId": teamId,
+        recipient: req.user._id,
+        status: "unread",
+    });
+
+    res.status(200).json({
+        success: true,
+        notifications,
+        pagination: {
+            currentPage: Number(page),
+            totalPages: Math.ceil(totalCount / limit),
+            totalCount,
+            unreadCount,
+        },
+    });
+});
+
+/**
  * @desc Create a notification (Internal utility)
  */
 export const createNotification = async (data, options = {}) => {

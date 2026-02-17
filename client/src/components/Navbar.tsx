@@ -9,6 +9,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -87,7 +88,7 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex md:items-center md:gap-1">
-            <NavItems />
+            <NavItems onItemClick={() => setIsMobileMenuOpen(false)} />
           </div>
 
           {/* Right side Actions */}
@@ -143,6 +144,9 @@ const Navbar = () => {
                         <Gamepad2 className="w-8 h-8 text-purple-500" />
                         {brand.name}
                       </SheetTitle>
+                      <SheetDescription className="sr-only">
+                        Mobile navigation menu for {brand.name}.
+                      </SheetDescription>
                     </SheetHeader>
 
                     <div className="flex flex-col h-full p-6 space-y-8 relative z-10">
@@ -167,7 +171,7 @@ const Navbar = () => {
                       )}
 
                       <nav className="flex flex-col gap-2">
-                        <NavItems />
+                        <NavItems onItemClick={() => setIsMobileMenuOpen(false)} />
                       </nav>
 
                       <div className="flex flex-col gap-3 pt-4 border-t border-purple-500/10">
