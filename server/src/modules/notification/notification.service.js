@@ -47,13 +47,13 @@ export const notificationHandlers = {
         const inviteId = notification.relatedData.inviteId;
         if (!inviteId) throw new CustomError("Invalid notification data: missing inviteId", 400);
 
+        const invite = await Invitation.findById(inviteId);
+        if (!invite) return "Invitation no longer exists.";
+
         if (actionType === "ACCEPT") {
             const { acceptInvitationService } = await import("../invitation/invitation.service.js");
             return await acceptInvitationService(inviteId, req.user._id);
         } else if (actionType === "REJECT") {
-            const invite = await Invitation.findById(inviteId);
-            if (!invite) return "Invitation no longer exists.";
-
             invite.status = "rejected";
             await invite.save();
 
@@ -71,13 +71,13 @@ export const notificationHandlers = {
         const inviteId = notification.relatedData.inviteId;
         if (!inviteId) throw new CustomError("Invalid notification data: missing inviteId", 400);
 
+        const invite = await Invitation.findById(inviteId);
+        if (!invite) return "Invitation no longer exists.";
+
         if (actionType === "ACCEPT") {
             const { acceptInvitationService } = await import("../invitation/invitation.service.js");
             return await acceptInvitationService(inviteId, req.user._id);
         } else if (actionType === "REJECT") {
-            const invite = await Invitation.findById(inviteId);
-            if (!invite) return "Invitation no longer exists.";
-
             invite.status = "rejected";
             await invite.save();
 
@@ -90,4 +90,10 @@ export const notificationHandlers = {
             throw new CustomError("Invalid action type", 400);
         }
     },
+
+    // Alias for tests/compatibility
+    ORG_INVITE: async (notification, actionType, req) => {
+        return notificationHandlers.ORGANIZATION_INVITE(notification, actionType, req);
+    },
 };
+

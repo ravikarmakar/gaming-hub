@@ -9,6 +9,7 @@ import { uploadOnImageKit, deleteFromImageKit } from "../../shared/services/imag
 import { logger } from "../../shared/utils/logger.js";
 import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
 import { invalidateCacheWithRetry } from "../../shared/utils/cache.js";
+import { VALID_TEAM_MEMBER_ROLES } from "./team.constants.js";
 
 // --- Cache Helpers (Risk Mitigation) ---
 
@@ -348,8 +349,11 @@ export const deleteTeamService = async (teamId) => {
   memberIds.forEach((userId) => {
     pipeline.del(`user_profile:${userId}`);
   });
-  // Also invalidate team details
+  // Also invalidate team details and socket memberships
   pipeline.del(`team_details:${teamId}`);
+  memberIds.forEach((userId) => {
+    pipeline.del(`socket_member:${userId}:${teamId}`);
+  });
   await pipeline.exec();
 
   // 4. Async cleanup of related data
@@ -578,9 +582,29 @@ export const manageMemberRoleService = async (teamId, memberId, role) => {
       }
     });
 
-    const VALID_ROLES = ["igl", "rusher", "sniper", "support", "player", "coach", "analyst", "substitute"];
-    if (!VALID_ROLES.includes(role)) {
+    if (!VALID_TEAM_MEMBER_ROLES.includes(role)) {
       throw new CustomError("Invalid role specified.", 400);
+    }
+
+    // Role Uniqueness Check: Prevent duplicate core esports roles
+    const UNIQUE_ROLES = ["igl", "rusher", "sniper", "support"];
+    if (UNIQUE_ROLES.includes(role)) {
+      const alreadyExists = team.teamMembers.some(
+        (m) => m.roleInTeam === role && m.user.toString() !== memberId.toString()
+      );
+      if (alreadyExists) {
+        throw new CustomError(`The role '${role.toUpperCase()}' is already assigned to another member. Each team can have only one member in this role.`, 400);
+      }
+    }
+
+    // Role Limit Check: Prevent more than 2 substitutes
+    if (role === "substitute") {
+      const substituteCount = team.teamMembers.filter(
+        (m) => m.roleInTeam === "substitute" && m.user.toString() !== memberId.toString()
+      ).length;
+      if (substituteCount >= 2) {
+        throw new CustomError("A team can have a maximum of 2 substitutes.", 400);
+      }
     }
 
     member.roleInTeam = role;
@@ -715,13 +739,27 @@ const _addMemberToTeamOps = async ({ teamId, userId, roleInTeam, session }) => {
   if (!user) throw new CustomError("User not found", 404);
   if (user.teamId) throw new CustomError(`${user.username} is already in a team`, 400);
 
-  // Atomic Update: Checks if team exists AND has fewer than 20 members
+  const query = {
+    _id: teamId,
+    isDeleted: false,
+    "teamMembers.19": { $exists: false }
+  };
+
+  const UNIQUE_ROLES = ["igl", "rusher", "sniper", "support"];
+  if (UNIQUE_ROLES.includes(roleInTeam)) {
+    query["teamMembers.roleInTeam"] = { $ne: roleInTeam };
+  }
+
+  if (roleInTeam === "substitute") {
+    // This is a bit tricky for atomic update with $ne as we need count. 
+    // We'll perform a pre-check since this is a relatively low-concurrency event compared to joins.
+    // However, to stay atomic, we can count the substitutes in the query if we was using aggregation, 
+    // but findOneAndUpdate limited. We'll use the pre-check + post-check pattern like team limit.
+  }
+
+  // Atomic Update: Checks if team exists, has capacity, and role is unique (if required)
   const updatedTeam = await Team.findOneAndUpdate(
-    {
-      _id: teamId,
-      isDeleted: false,
-      "teamMembers.19": { $exists: false }
-    },
+    query,
     {
       $push: {
         teamMembers: {
@@ -736,11 +774,29 @@ const _addMemberToTeamOps = async ({ teamId, userId, roleInTeam, session }) => {
   );
 
   if (!updatedTeam) {
-    const existsQuery = Team.exists({ _id: teamId, isDeleted: false });
-    if (session) existsQuery.session(session);
-    const teamExists = await existsQuery;
-    if (!teamExists) throw new CustomError("Team not found", 404);
-    throw new CustomError("Team limit exceeded. Max 20 members allowed.", 400);
+    const freshQuery = Team.findOne({ _id: teamId, isDeleted: false });
+    if (session) freshQuery.session(session);
+    const freshTeam = await freshQuery;
+
+    if (!freshTeam) throw new CustomError("Team not found", 404);
+    if (freshTeam.teamMembers.length >= 20) {
+      throw new CustomError("Team limit exceeded. Max 20 members allowed.", 400);
+    }
+    if (UNIQUE_ROLES.includes(roleInTeam) && freshTeam.teamMembers.some(m => m.roleInTeam === roleInTeam)) {
+      throw new CustomError(`The role '${roleInTeam.toUpperCase()}' is already assigned to another member.`, 400);
+    }
+    // No specific substitute check here because it's handled by post-check if we can't do it atomically
+    // But wait, if it failed it might be because of UNIQUE_ROLES or 20 members limit.
+    throw new CustomError("Could not add member to team. Concurrent update detected or role occupied.", 400);
+  }
+
+  // Post-check for substitute limit if roleInTeam is substitute
+  if (roleInTeam === "substitute") {
+    const substituteCount = updatedTeam.teamMembers.filter(m => m.roleInTeam === "substitute").length;
+    if (substituteCount > 2) {
+      // Rollback manually since we are in a transaction (hopefully)
+      throw new CustomError("A team can have a maximum of 2 substitutes.", 400);
+    }
   }
 
   await User.findByIdAndUpdate(
@@ -922,3 +978,168 @@ export const removeMemberFromTeam = async ({ teamId, userId, session = null }) =
 
   return true;
 };
+
+/**
+ * Strategy methods for Join Requests and Invitations
+ */
+
+export const validateJoinRequest = async (userId, teamId, session = null) => {
+  const userQuery = User.findById(userId);
+  if (session) userQuery.session(session);
+  const user = await userQuery;
+  if (!user) throw new CustomError("User not found", 404);
+
+  if (user.teamId) throw new CustomError("You are already in a team", 400);
+
+  const q = Team.findById(teamId);
+  if (session) q.session(session);
+  const resource = await q;
+
+  if (!resource || resource.isDeleted) throw new CustomError("Team not found", 404);
+  if (!resource.isRecruiting) throw new CustomError("This team is not currently recruiting", 400);
+
+  return { resource, recipientId: resource.captain };
+};
+
+export const acceptJoinRequest = async (requesterId, teamId, handledBy, session = null) => {
+  const requesterQuery = User.findById(requesterId);
+  if (session) requesterQuery.session(session);
+  const requester = await requesterQuery;
+  if (!requester) throw new CustomError("Requester not found", 404);
+
+  const teamQuery = Team.findById(teamId);
+  if (session) teamQuery.session(session);
+  const team = await teamQuery;
+
+  if (!team || team.isDeleted || !team.isRecruiting) {
+    throw new CustomError("This team is no longer recruiting", 400);
+  }
+
+  if (requester.teamId) {
+    throw new CustomError("Requester has already joined another team", 400);
+  }
+
+  await addMemberToTeam({
+    teamId,
+    userId: requesterId,
+    roleInTeam: "player",
+    session,
+  });
+
+  await createNotification({
+    recipient: requesterId,
+    sender: handledBy,
+    type: "TEAM_JOIN_SUCCESS",
+    content: { title: "Request Accepted!", message: `You joined ${team.teamName}.` },
+    relatedData: { teamId },
+  }, { session });
+
+  const responseData = await getTransformedTeam(teamId, session);
+
+  const socketEventData = {
+    teamId,
+    memberData: {
+      userId: requesterId,
+      username: requester.username,
+      avatar: requester.avatar,
+      role: "player",
+    }
+  };
+
+  return {
+    responseData,
+    socketEventData,
+    requesterId,
+    teamId,
+    cacheKeys: [`user_profile:${requesterId}`, `team_details:${teamId}`]
+  };
+};
+
+export const validateInvitation = async (senderId, inviteeId, teamId) => {
+  const target = await Team.findById(teamId);
+  if (!target || target.isDeleted) throw new CustomError("Team not found", 404);
+
+  const isAuthorized = target.captain?.toString() === senderId.toString();
+  if (!isAuthorized) {
+    throw new CustomError("You do not have permission to invite members to this team", 403);
+  }
+
+  const invitee = await User.findById(inviteeId);
+  if (!invitee) throw new CustomError("User not found to invite", 404);
+
+  if (invitee.teamId?.toString() === teamId.toString()) {
+    throw new CustomError("User is already a member of this team", 400);
+  }
+
+  return { resource: target, invitee };
+};
+
+export const acceptInvitation = async (inviteeId, teamId, role, session = null) => {
+  const userQuery = User.findById(inviteeId);
+  if (session) userQuery.session(session);
+  const user = await userQuery;
+  if (!user) throw new CustomError("User not found", 404);
+
+  const teamQuery = Team.findById(teamId);
+  if (session) teamQuery.session(session);
+  const team = await teamQuery;
+  if (!team || team.isDeleted) throw new CustomError("Team not found or deleted", 404);
+
+  if (user.teamId) throw new CustomError("You are already in a team", 400);
+
+  // Check Member Limit (Max 20)
+  if (team.teamMembers.length >= 20) throw new CustomError("Team has reached its member limit (20).", 400);
+
+  // Standardize roleInTeam
+  const roleInTeam = role === Roles.TEAM.MANAGER ? "manager" : "player";
+
+  // Update Team Roster
+  await Team.findByIdAndUpdate(
+    teamId,
+    {
+      $push: {
+        teamMembers: {
+          user: inviteeId,
+          username: user.username,
+          avatar: user.avatar,
+          roleInTeam: roleInTeam,
+          joinedAt: new Date(),
+          isActive: true
+        }
+      }
+    },
+    { session }
+  );
+
+  // Update User
+  await User.findByIdAndUpdate(
+    inviteeId,
+    {
+      $set: { teamId: teamId },
+      $push: {
+        roles: {
+          scope: Scopes.TEAM,
+          role: role || Roles.TEAM.PLAYER,
+          scopeId: teamId,
+          scopeModel: "Team",
+        },
+      },
+    },
+    { session }
+  );
+
+  return {
+    resultMessage: `You have successfully joined ${team.teamName}`,
+    cacheKeys: [`user_profile:${inviteeId}`, `team_details:${teamId}`],
+    socketData: {
+      teamId,
+      memberData: {
+        userId: inviteeId,
+        username: user.username,
+        avatar: user.avatar,
+        role: "player"
+      }
+    }
+  };
+};
+

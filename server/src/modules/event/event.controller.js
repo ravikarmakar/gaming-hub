@@ -21,6 +21,8 @@ import { uploadOnImageKit, deleteFromImageKit } from "../../shared/services/imag
 import { logger } from "../../shared/utils/logger.js";
 import Team from "../team/team.model.js";
 import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
+import { getTournamentRegistrants } from "../../shared/utils/tournament.js";
+
 
 const requiredFields = [
   "title",
@@ -315,8 +317,21 @@ export const registerEvent = TryCatchHandler(async (req, res, next) => {
       return next(new CustomError(`Your team must have at least ${minSize} active players to register.`, 400));
     }
 
-    const players = activeMembers.slice(0, minSize).map(m => m.user);
-    const substitutes = activeMembers.slice(minSize).map(m => m.user);
+    let players = [];
+    let substitutes = [];
+
+    if (event.category === 'squad') {
+      const registrants = getTournamentRegistrants(team.teamMembers);
+      players = registrants.players;
+      substitutes = registrants.substitutes;
+
+      if (players.length < 4) {
+        return next(new CustomError("Your team must have an IGL, Rusher, Sniper, and Support to join a squad tournament.", 400));
+      }
+    } else {
+      players = activeMembers.slice(0, minSize).map(m => m.user);
+      substitutes = activeMembers.slice(minSize).map(m => m.user);
+    }
 
     await withOptionalTransaction(async (session) => {
       // Atomic Slot Increment with condition check

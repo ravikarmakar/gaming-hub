@@ -13,10 +13,15 @@ export const initializeIORedis = async () => {
     const redisUrl = process.env.REDIS_URL;
 
     if (!redisUrl) {
-        logger.warn(
-            "[IORedis] REDIS_URL not set. Socket.IO will run in single-process mode. " +
-            "Set REDIS_URL for horizontal scaling (e.g., redis://localhost:6379)."
-        );
+        const msg = "[IORedis] REDIS_URL not set. Socket.IO will run in single-process mode. " +
+            "Set REDIS_URL for horizontal scaling (e.g., redis://localhost:6379).";
+
+        if (process.env.NODE_ENV === "production") {
+            logger.error(`CRITICAL: ${msg}`);
+            throw new Error("REDIS_URL is required for Socket.IO horizontal scaling in production.");
+        }
+
+        logger.warn(msg);
         return { pubClient: null, subClient: null };
     }
 

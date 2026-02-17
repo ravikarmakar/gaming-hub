@@ -46,6 +46,7 @@ interface MemberCardProps {
     onViewProfile: (id: string) => void;
     onTransferRequest?: (member: TeamMembersTypes) => void;
     isLoading: boolean;
+    allMembers: TeamMembersTypes[];
 }
 
 const roleIcons: Record<string, typeof Crown> = {
@@ -68,6 +69,7 @@ export const MemberCard = ({
     onEditRole,
     onViewProfile,
     isLoading,
+    allMembers,
 }: MemberCardProps) => {
     const [isEditingRole, setIsEditingRole] = useState(false);
     const [selectedRole, setSelectedRole] = useState<string>(member.roleInTeam);
@@ -209,11 +211,44 @@ export const MemberCard = ({
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="bg-zinc-900 border-white/10">
-                                {roles.map((role) => (
-                                    <SelectItem key={role.value} value={role.value} className="text-gray-300 focus:text-white focus:bg-white/10 cursor-pointer">
-                                        {role.label}
-                                    </SelectItem>
-                                ))}
+                                {roles.map((role) => {
+                                    const UNIQUE_ROLES = ["igl", "rusher", "sniper", "support"];
+                                    const isUniqueRole = UNIQUE_ROLES.includes(role.value);
+                                    const isAlreadyTaken = isUniqueRole && allMembers.some(
+                                        (m) => m.roleInTeam === role.value && m.user !== member.user
+                                    );
+
+                                    const isSubstituteRole = role.value === "substitute";
+                                    const substituteLimitReached = isSubstituteRole && allMembers.filter(
+                                        (m) => m.roleInTeam === "substitute" && m.user !== member.user
+                                    ).length >= 2;
+
+                                    const isDisabled = isAlreadyTaken || substituteLimitReached;
+
+                                    return (
+                                        <SelectItem
+                                            key={role.value}
+                                            value={role.value}
+                                            disabled={isDisabled}
+                                            className={`text-gray-300 focus:text-white focus:bg-white/10 cursor-pointer ${isDisabled ? "opacity-50 cursor-not-allowed" : ""
+                                                }`}
+                                        >
+                                            <div className="flex items-center justify-between w-full gap-2">
+                                                <span>{role.label}</span>
+                                                {isAlreadyTaken && (
+                                                    <Badge variant="outline" className="text-[10px] h-4 border-red-500/50 text-red-400 px-1">
+                                                        Occupied
+                                                    </Badge>
+                                                )}
+                                                {substituteLimitReached && (
+                                                    <Badge variant="outline" className="text-[10px] h-4 border-red-500/50 text-red-400 px-1">
+                                                        Limit Reached
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </SelectItem>
+                                    );
+                                })}
                             </SelectContent>
                         </Select>
                         <Button

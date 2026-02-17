@@ -1,13 +1,12 @@
 import Invitation from "../invitation/invitation.model.js";
-import Team from "../team/team.model.js";
 import User from "../user/user.model.js";
-import Organizer from "../organizer/organizer.model.js";
 import { Notification } from "../notification/notification.model.js";
 import { Roles } from "../../shared/constants/roles.js";
 import { createNotificationWithActions } from "../notification/notification.service.js";
 import { TryCatchHandler } from "../../shared/middleware/error.middleware.js";
 import AppError from "../../shared/utils/AppError.js";
 import { logger } from "../../shared/utils/logger.js";
+import { getStrategy } from "../join-request/target.strategy.js";
 
 /**
  * @desc Get all invitations for the logged-in user
@@ -32,53 +31,29 @@ export const inviteMember = TryCatchHandler(async (req, res) => {
   const { email, role, targetId, targetModel, playerId, userId: inputUserId } = req.body;
   const { userId } = req.user;
 
-  // 1. Validate and Identify Target
-  if (!targetModel || (targetModel !== "Team" && targetModel !== "Organizer")) {
-    throw new AppError("Invalid targetModel. Must be 'Team' or 'Organizer'", 400);
-  }
-
-  let target = null;
-  if (targetModel === "Team") {
-    target = await Team.findById(targetId);
-  } else if (targetModel === "Organizer") {
-    target = await Organizer.findById(targetId);
-  }
-
-  if (!target) throw new AppError(`${targetModel} not found`, 404);
-
-  // 1.5 Authorization Check: Ensure sender has permission
-  const isAuthorized = targetModel === "Team"
-    ? target.captain?.toString() === userId.toString()
-    : target.ownerId?.toString() === userId.toString();
-
-  if (!isAuthorized) {
-    throw new AppError("You do not have permission to invite members to this " + targetModel, 403);
-  }
+  // 1. Resolve Strategy
+  const strategy = getStrategy(targetModel);
 
   // 2. Find Invitee (Support both Email and ID)
+  let inviteeId = playerId || inputUserId;
   let invitee = null;
-  const lookupId = playerId || inputUserId;
 
-  if (lookupId) {
-    invitee = await User.findById(lookupId);
+  if (inviteeId) {
+    invitee = await User.findById(inviteeId);
   } else if (email) {
     invitee = await User.findOne({ email: email.toLowerCase() });
   }
 
   if (!invitee) throw new AppError("User not found to invite", 404);
+  inviteeId = invitee._id;
 
-  // 3. Check for existing membership
-  if (targetModel === "Team" && invitee.teamId?.toString() === targetId.toString()) {
-    throw new AppError("User is already a member of this team", 400);
-  }
-  if (targetModel === "Organizer" && invitee.orgId?.toString() === targetId.toString()) {
-    throw new AppError("User is already a member of this organization", 400);
-  }
+  // 3. Delegate specific checks to Strategy
+  const { resource } = await strategy.validateInvitation(userId, inviteeId, targetId);
 
-  // 4. Check for duplicate invitation
+  // 4. Check for duplicate invitation (Generic logic)
   const existingInvite = await Invitation.findOne({
     entityId: targetId,
-    receiver: invitee._id,
+    receiver: inviteeId,
     status: "pending"
   });
   if (existingInvite) throw new AppError("Invitation already sent to this user", 400);
@@ -88,7 +63,7 @@ export const inviteMember = TryCatchHandler(async (req, res) => {
 
   const invitation = await Invitation.create({
     sender: userId,
-    receiver: invitee._id,
+    receiver: inviteeId,
     receiverModel: "User",
     entityId: targetId,
     entityModel: targetModel,
@@ -97,11 +72,11 @@ export const inviteMember = TryCatchHandler(async (req, res) => {
 
   // 6. Notify Invitee
   await createNotificationWithActions({
-    recipient: invitee._id,
+    recipient: inviteeId,
     sender: userId,
     type: targetModel === "Team" ? "TEAM_INVITE" : "ORGANIZATION_INVITE",
     title: `New Invitation`,
-    message: `You have been invited to join ${target.name || target.teamName} as ${invitedRole}.`,
+    message: `You have been invited to join ${resource.name || resource.teamName} as ${invitedRole}.`,
     relatedData: {
       inviteId: invitation._id,
       [targetModel === "Team" ? "teamId" : "orgId"]: targetId
@@ -127,7 +102,6 @@ export const respondToInvitation = TryCatchHandler(async (req, res) => {
   const { action } = req.body; // 'accepted' or 'rejected'
   const { userId } = req.user;
 
-  // Validate action parameter
   if (!action || (action !== "accepted" && action !== "rejected")) {
     throw new AppError("Invalid action. Must be 'accepted' or 'rejected'", 400);
   }
@@ -144,19 +118,14 @@ export const respondToInvitation = TryCatchHandler(async (req, res) => {
   }
 
   if (action === "accepted") {
-    try {
-      const { acceptInvitationService } = await import("./invitation.service.js");
-      const message = await acceptInvitationService(invitationId, userId);
+    const { acceptInvitationService } = await import("./invitation.service.js");
+    const message = await acceptInvitationService(invitationId, userId);
 
-      return res.status(200).json({
-        success: true,
-        message,
-      });
-    } catch (error) {
-      throw error;
-    }
+    return res.status(200).json({
+      success: true,
+      message,
+    });
   } else {
-    // For rejection, no transaction needed but update status
     invite.status = "rejected";
     await invite.save();
   }
@@ -206,7 +175,6 @@ export const cancelInvitation = TryCatchHandler(async (req, res) => {
     throw new AppError(`Cannot cancel an invitation that is already ${invitation.status}`, 400);
   }
 
-  // ⚡ Security check: Ensure the invitation belongs to the specified entity (IDOR check)
   const { orgId, teamId } = req.params;
   const entityId = orgId || teamId;
 
@@ -214,12 +182,8 @@ export const cancelInvitation = TryCatchHandler(async (req, res) => {
     throw new AppError("You do not have permission to cancel this invitation", 403);
   }
 
-  // Note: RBAC middleware already ensures the user has management rights for the `entityId`.
-  // This check confirms the `inviteId` actually belongs to that `entityId`.
-
   await Invitation.findByIdAndDelete(inviteId);
 
-  // Synchronize with notifications: Archive the related notification
   try {
     await Notification.updateMany(
       { "relatedData.inviteId": inviteId },
@@ -228,12 +192,11 @@ export const cancelInvitation = TryCatchHandler(async (req, res) => {
           status: "archived",
           "content.message": "This invitation has been cancelled by the sender."
         },
-        $unset: { actions: "" } // Remove actions so user can't click them
+        $unset: { actions: "" }
       }
     );
   } catch (notifyError) {
     logger.error("[CancelInvite Notification Sync Error]:", notifyError);
-    // We don't fail the request if notification sync fails
   }
 
   res.status(200).json({

@@ -48,7 +48,7 @@ const checkMembership = async (userId, teamId) => {
 
         if (dbResult) {
             isMember = true;
-            redis.set(cacheKey, "1", { ex: 300 })
+            redis.set(cacheKey, "1", { ex: 60 })
                 .catch(err => logger.error(`Failed to cache socket membership:`, err.message));
         }
     }

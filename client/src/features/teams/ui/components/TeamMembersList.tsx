@@ -12,10 +12,16 @@ export const TeamMembersList: React.FC<TeamMembersListProps> = React.memo(({ mem
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Gamepad2 className="w-5 h-5 text-purple-400" />
-                    Active Roster
-                </h2>
+                <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <Gamepad2 className="w-5 h-5 text-purple-400" />
+                        Active Roster
+                    </h2>
+                    <p className="text-xs text-gray-400 mt-1 max-w-md">
+                        Tournament Policy: Core roles (IGL, Rusher, Sniper, Support) are auto-registered.
+                        Up to 2 additional active members join as substitutes.
+                    </p>
+                </div>
                 <Badge variant="outline" className="border-white/10 text-gray-400">
                     {members.length} Players
                 </Badge>

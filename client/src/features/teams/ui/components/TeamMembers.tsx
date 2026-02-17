@@ -87,6 +87,7 @@ export const TeamMembers = ({
             onEditRole={onEditRole}
             onViewProfile={onViewProfile}
             isLoading={isLoading || false}
+            allMembers={members}
           />
         ))}
       </div>
