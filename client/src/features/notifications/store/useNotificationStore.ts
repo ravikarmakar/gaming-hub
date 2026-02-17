@@ -100,10 +100,10 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             );
 
             if (hasTeamUpdate) {
-                const { useTeamStore } = await import("@/features/teams/store/useTeamStore");
-                const teamId = useTeamStore.getState().currentTeam?._id;
+                const { useTeamManagementStore } = await import("@/features/teams/store/useTeamManagementStore");
+                const teamId = useTeamManagementStore.getState().currentTeam?._id;
                 if (teamId) {
-                    await useTeamStore.getState().getTeamById(teamId, true);
+                    await useTeamManagementStore.getState().getTeamById(teamId, true);
                 }
             }
         } catch (error) {
@@ -152,7 +152,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             if (actionType === "ACCEPT" && notification) {
                 if (notification.type === "TEAM_INVITE") {
                     const { useAuthStore } = await import("@/features/auth/store/useAuthStore");
-                    const { useTeamStore } = await import("@/features/teams/store/useTeamStore");
+                    const { useTeamManagementStore } = await import("@/features/teams/store/useTeamManagementStore");
 
                     // Sync user roles and teamId
                     await useAuthStore.getState().checkAuth();
@@ -162,7 +162,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
                     const rawTeamId = notification.relatedData?.teamId;
                     const teamId = rawTeamId?._id ? String(rawTeamId._id) : rawTeamId ? String(rawTeamId) : null;
                     if (teamId) {
-                        await useTeamStore.getState().getTeamById(teamId, true, true);
+                        await useTeamManagementStore.getState().getTeamById(teamId, true, true);
                     }
                 } else if (notification.type === "ORGANIZATION_INVITE") {
                     const { useAuthStore } = await import("@/features/auth/store/useAuthStore");

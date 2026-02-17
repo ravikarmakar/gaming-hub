@@ -6,10 +6,54 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import Team from "../../modules/team/team.model.js";
 import User from "../../modules/user/user.model.js";
 import { logger } from "../utils/logger.js";
+import { Roles, Scopes } from "../constants/roles.js";
 import { initializeIORedis } from "./ioredis.js";
 import { redis } from "./redis.js";
 
 let io;
+
+/**
+ * Determine the user's role in a team using their profile.
+ */
+export const determineRoleFromProfile = (userProfile, teamId) => {
+    if (!userProfile || !userProfile.roles) return null;
+
+    const teamRoleObj = userProfile.roles.find(
+        (r) => r.scope === Scopes.TEAM && r.scopeId?.toString() === teamId.toString()
+    );
+
+    if (!teamRoleObj) return null;
+
+    if (teamRoleObj.role === Roles.TEAM.OWNER) return "owner";
+    if (teamRoleObj.role === Roles.TEAM.MANAGER) return "manager";
+    return "member";
+};
+
+/**
+ * Fallback to DB to determine user's role in a team.
+ */
+export const determineRoleFromDB = async (userId, teamId) => {
+    try {
+        const team = await Team.findById(teamId).select("captain teamMembers").lean();
+        if (!team) return null;
+
+        if (team.captain && team.captain.toString() === userId.toString()) {
+            return "owner";
+        }
+
+        const member = team.teamMembers?.find(
+            (m) => m.user?.toString() === userId.toString()
+        );
+
+        if (member?.roleInTeam === "manager") return "manager";
+        if (member) return "member";
+
+        return null;
+    } catch (err) {
+        logger.error(`Failed to determine role from DB for team ${teamId}:`, err.message);
+        return null;
+    }
+};
 
 /**
  * Mask PII (IDs) for logs to balance security and debuggability.
@@ -160,14 +204,7 @@ export const initializeSocket = async (httpServer) => {
             try {
                 if (!mongoose.Types.ObjectId.isValid(teamId)) return;
 
-                // 1. Authorization: Check membership
-                const isMember = await checkMembership(socket.userId, teamId);
-                if (!isMember) {
-                    logger.warn(`Unauthorized chat attempt: User ${maskId(socket.userId)} tried to message team ${maskId(teamId)}`);
-                    return;
-                }
-
-                // 2. Fetch user profile
+                // 1. Fetch user profile (cached in Redis)
                 let userProfile = null;
                 try {
                     const cached = await redis.get(`user_profile:${socket.userId}`);
@@ -191,22 +228,24 @@ export const initializeSocket = async (httpServer) => {
                     }
                 }
 
-                // 3. Determine sender role in the team
-                let senderRole = "member";
-                try {
-                    const team = await Team.findById(teamId).select("captain teamMembers").lean();
-                    if (team) {
-                        if (team.captain && team.captain.toString() === socket.userId.toString()) {
-                            senderRole = "owner";
-                        } else if (team.teamMembers) {
-                            const member = team.teamMembers.find(m => m.user && m.user.toString() === socket.userId.toString());
-                            if (member && member.roleInTeam === "manager") {
-                                senderRole = "manager";
-                            }
-                        }
+                if (!userProfile) {
+                    logger.warn(`Unauthorized chat attempt: Profile not found for user ${maskId(socket.userId)}`);
+                    return;
+                }
+
+                // 2. Authorization & Role Determination (Optimized)
+                let senderRole = determineRoleFromProfile(userProfile, teamId);
+
+                if (!senderRole) {
+                    // Fallback to fresh DB membership check (stale profile cache?)
+                    const isMember = await checkMembership(socket.userId, teamId);
+                    if (!isMember) {
+                        logger.warn(`Unauthorized chat attempt: User ${maskId(socket.userId)} not in team ${maskId(teamId)}`);
+                        return;
                     }
-                } catch (teamErr) {
-                    logger.error("Failed to fetch team for role check in chat:", teamErr.message);
+
+                    // They are a member but profile roles were missing, find role from DB
+                    senderRole = await determineRoleFromDB(socket.userId, teamId) || "member";
                 }
 
                 // 4. Persist message to database

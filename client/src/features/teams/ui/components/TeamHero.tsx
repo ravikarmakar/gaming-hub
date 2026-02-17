@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { UnifiedProfileHeader } from '@/components/shared/UnifiedProfileHeader';
 
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
-import { useTeamStore } from '@/features/teams/store/useTeamStore';
+import { useJoinRequestStore } from '@/features/teams/store/useJoinRequestStore';
 import { Team } from '../../lib/types';
 
 interface TeamHeroProps {
@@ -15,7 +15,7 @@ interface TeamHeroProps {
 
 export const TeamHero: React.FC<TeamHeroProps> = ({ team }) => {
     const { user } = useAuthStore();
-    const { sendJoinRequest, isRequestingJoin } = useTeamStore();
+    const { sendJoinRequest, isRequestingJoin } = useJoinRequestStore();
     const [isApplied, setIsApplied] = React.useState(false);
 
     // Check if the current user is already a member of ANY team

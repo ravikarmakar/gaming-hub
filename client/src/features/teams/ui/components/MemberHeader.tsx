@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { PlayerSearchCommand } from "@/features/player/ui/components/PlayerSearchCommand";
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
+import { useJoinRequestStore } from "@/features/teams/store/useJoinRequestStore";
 import { TeamMembersTypes } from "../../lib/types";
 
 interface MemberHeaderProps {
@@ -41,11 +42,13 @@ export const MemberHeader = ({
   const navigate = useNavigate();
   const [isMemberDialogOpen, setIsMemberDialogOpen] = useState(false);
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
-  const { isLoading, leaveMember, clearError, currentTeam } =
-    useTeamStore();
+
+  const { currentTeam, leaveMember, clearError, isLoading: teamLoading } = useTeamManagementStore();
+  const { inviteMember, isLoading: inviteLoading } = useJoinRequestStore();
 
   const handleSingleInvite = async (id: string) => {
-    const { success, message } = await useTeamStore.getState().inviteMember(id);
+    if (!currentTeam?._id) return false;
+    const { success, message } = await inviteMember(id, currentTeam._id);
     if (success) {
       toast.success("Invite sent successfully");
       return true;
@@ -82,7 +85,7 @@ export const MemberHeader = ({
         open={isMemberDialogOpen}
         onOpenChange={(val) => !val && closeSearchDialog()}
         onInvite={handleSingleInvite}
-        isLoading={isLoading}
+        isLoading={inviteLoading || teamLoading}
         existingMemberIds={members.map((m) => m.user)}
       />
 

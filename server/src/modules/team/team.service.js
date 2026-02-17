@@ -2,6 +2,7 @@ import fs from "fs";
 import Team from "./team.model.js";
 import User from "../user/user.model.js";
 import JoinRequest from "../join-request/join-request.model.js";
+import { createNotification } from "../notification/notification.controller.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
 import { Roles, Scopes } from "../../shared/constants/roles.js";
 import { redis } from "../../shared/config/redis.js";
@@ -799,8 +800,9 @@ const _addMemberToTeamOps = async ({ teamId, userId, roleInTeam, session }) => {
     }
   }
 
-  await User.findByIdAndUpdate(
-    userId,
+  // Atomic User Update: Ensures user isn't already in another team (race condition guard)
+  const updatedUser = await User.findOneAndUpdate(
+    { _id: userId, teamId: null },
     {
       $set: { teamId: teamId },
       $push: {
@@ -812,8 +814,16 @@ const _addMemberToTeamOps = async ({ teamId, userId, roleInTeam, session }) => {
         },
       },
     },
-    { session }
+    { session, new: true }
   );
+
+  if (!updatedUser) {
+    // Rollback Team update (if we are in a session, this throws. If not, we have a mismatch)
+    // Actually, in a session, throwing is enough. 
+    // If no session, we just pushed to Team but failed to update User.
+    // This is why withOptionalTransaction is critical.
+    throw new CustomError(`User ${user.username} successfully assigned to a team concurrently. Join failed.`, 409);
+  }
 
   return true;
 };
@@ -862,7 +872,7 @@ const _batchAddMembersOps = async ({ teamId, memberIds, session }) => {
 
     bulkOps.push({
       updateOne: {
-        filter: { _id: user._id },
+        filter: { _id: user._id, teamId: null },
         update: {
           $set: { teamId: teamId },
           $push: {
@@ -922,6 +932,12 @@ const _batchAddMembersOps = async ({ teamId, memberIds, session }) => {
         409,
         "CONCURRENT_MODIFICATION"
       );
+    }
+
+    // Verify all users were updated (check for race condition where user joined another team)
+    const usersInUpdate = await User.find({ _id: { $in: memberIds }, teamId: teamId }).session(session).countDocuments();
+    if (usersInUpdate !== memberIds.length) {
+      throw new CustomError("One or more users joined another team concurrently. Batch join aborted.", 409);
     }
   }
 };
@@ -1059,7 +1075,15 @@ export const validateInvitation = async (senderId, inviteeId, teamId) => {
   const target = await Team.findById(teamId);
   if (!target || target.isDeleted) throw new CustomError("Team not found", 404);
 
-  const isAuthorized = target.captain?.toString() === senderId.toString();
+  const senderUser = await User.findById(senderId).select("roles");
+  const senderRole = senderUser?.roles?.find(
+    (r) => r.scope === Scopes.TEAM && r.scopeId?.toString() === teamId.toString()
+  )?.role;
+
+  const isAuthorized =
+    target.captain?.toString() === senderId.toString() ||
+    senderRole === Roles.TEAM.MANAGER;
+
   if (!isAuthorized) {
     throw new CustomError("You do not have permission to invite members to this team", 403);
   }
@@ -1093,40 +1117,13 @@ export const acceptInvitation = async (inviteeId, teamId, role, session = null) 
   // Standardize roleInTeam
   const roleInTeam = role === Roles.TEAM.MANAGER ? "manager" : "player";
 
-  // Update Team Roster
-  await Team.findByIdAndUpdate(
+  // Use the atomic addMemberToTeam service to eliminate race conditions
+  await addMemberToTeam({
     teamId,
-    {
-      $push: {
-        teamMembers: {
-          user: inviteeId,
-          username: user.username,
-          avatar: user.avatar,
-          roleInTeam: roleInTeam,
-          joinedAt: new Date(),
-          isActive: true
-        }
-      }
-    },
-    { session }
-  );
-
-  // Update User
-  await User.findByIdAndUpdate(
-    inviteeId,
-    {
-      $set: { teamId: teamId },
-      $push: {
-        roles: {
-          scope: Scopes.TEAM,
-          role: role || Roles.TEAM.PLAYER,
-          scopeId: teamId,
-          scopeModel: "Team",
-        },
-      },
-    },
-    { session }
-  );
+    userId: inviteeId,
+    roleInTeam,
+    session,
+  });
 
   return {
     resultMessage: `You have successfully joined ${team.teamName}`,

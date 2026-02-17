@@ -17,7 +17,7 @@ import { DashboardSidebar } from "@/features/dashboard/ui/components/DashboardSi
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { TEAM_ACCESS } from "@/features/teams/lib/access";
 import { useFilteredNavigation } from "@/hooks/useFilteredNavigation";
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { TeamLoading } from "../components/TeamLoading";
 import { TeamError } from "../components/TeamError";
@@ -73,7 +73,7 @@ const teamSidebarLinks = [
 const TeamLayout = () => {
   const filteredLinks = useFilteredNavigation(teamSidebarLinks);
   const { user } = useAuthStore();
-  const { getTeamById, isLoading, error, currentTeam, clearError } = useTeamStore();
+  const { getTeamById, isLoading, error, currentTeam, clearError } = useTeamManagementStore();
 
   // Join team room via WebSocket
   useTeamRoom(user?.teamId);
@@ -92,7 +92,7 @@ const TeamLayout = () => {
     console.log("🔔 Member left, refreshing team data...");
     // Check current store state (not stale closure) — if user just left,
     // currentTeam will be null and we should NOT re-fetch
-    const currentTeam = useTeamStore.getState().currentTeam;
+    const currentTeam = useTeamManagementStore.getState().currentTeam;
     if (user?.teamId && currentTeam) {
       getTeamById(user.teamId, true, true);
     }
@@ -108,7 +108,7 @@ const TeamLayout = () => {
   useSocketEvent("team:owner:transferred", () => {
     console.log("🔔 Ownership transferred, refreshing team data...");
     // Check current store state — user may have lost their team in transfer
-    const currentTeam = useTeamStore.getState().currentTeam;
+    const currentTeam = useTeamManagementStore.getState().currentTeam;
     if (user?.teamId && currentTeam) {
       getTeamById(user.teamId, true, true);
     }

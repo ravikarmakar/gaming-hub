@@ -31,7 +31,7 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { TEAM_ACCESS } from "@/features/teams/lib/access";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
@@ -42,7 +42,7 @@ import { BrandingForm } from "../components/settings/BrandingForm";
 import { SocialsForm } from "../components/settings/SocialsForm";
 
 const TeamSettings = () => {
-    const { updateTeam, isLoading, currentTeam } = useTeamStore();
+    const { updateTeam, isLoading, currentTeam, getTeamById } = useTeamManagementStore();
     const { user } = useAuthStore();
     const { can } = useAccess();
 
@@ -102,7 +102,6 @@ const TeamSettings = () => {
         if (result) {
             toast.success("Team settings updated successfully!");
             // Force refresh team data to ensure UI is in sync
-            const { getTeamById } = useTeamStore.getState();
             await getTeamById(currentTeam._id, true);
             // Mark current values as clean baseline so Save/Reset buttons hide
             form.reset(undefined, { keepValues: true });

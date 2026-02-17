@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useJoinRequestStore } from "@/features/teams/store/useJoinRequestStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import toast from "react-hot-toast";
 import { Loader2, Send } from "lucide-react";
 
@@ -27,10 +28,12 @@ export const TeamInviteDialog: React.FC<TeamInviteDialogProps> = ({
     playerName,
 }) => {
     const [message, setMessage] = useState("");
-    const { inviteMember, isLoading } = useTeamStore();
+    const { inviteMember, isLoading } = useJoinRequestStore();
+    const { currentTeam } = useTeamManagementStore();
 
     const handleInvite = async () => {
-        const result = await inviteMember(playerId, message);
+        if (!currentTeam) return;
+        const result = await inviteMember(playerId, currentTeam._id, message);
         if (result.success) {
             toast.success(result.message || `Invitation sent to ${playerName}`);
             onOpenChange(false);

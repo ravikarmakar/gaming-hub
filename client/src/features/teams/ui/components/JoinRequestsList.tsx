@@ -16,11 +16,23 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-import { useTeamStore } from '../../store/useTeamStore';
+import { useJoinRequestStore } from '../../store/useJoinRequestStore';
+import { useTeamManagementStore } from '../../store/useTeamManagementStore';
+import { useSocket } from '@/contexts/SocketContext';
 import { TeamLoading } from './TeamLoading';
 
 export const JoinRequestsList: React.FC = () => {
-    const { joinRequests, fetchJoinRequests, handleJoinRequest, clearAllJoinRequests, isLoading, currentTeam } = useTeamStore();
+    const {
+        joinRequests,
+        fetchJoinRequests,
+        handleJoinRequest,
+        clearAllJoinRequests,
+        addIncomingJoinRequest,
+        isLoading
+    } = useJoinRequestStore();
+
+    const { currentTeam } = useTeamManagementStore();
+    const { socket } = useSocket();
     const [isClearing, setIsClearing] = useState(false);
 
     // Fetch join requests whenever the team changes
@@ -29,6 +41,25 @@ export const JoinRequestsList: React.FC = () => {
             fetchJoinRequests(currentTeam._id);
         }
     }, [currentTeam?._id, fetchJoinRequests]);
+
+    // Set up real-time listener for new join requests
+    useEffect(() => {
+        if (!socket || !currentTeam?._id) return;
+
+        const handleNewRequest = (data: { request: any }) => {
+            // Check if request is for the current team (though room should handle this)
+            if (data.request.target === currentTeam._id) {
+                addIncomingJoinRequest(data.request);
+                toast.success(`New join request from ${data.request.requester.username}!`);
+            }
+        };
+
+        socket.on("team:join_request:created", handleNewRequest);
+
+        return () => {
+            socket.off("team:join_request:created", handleNewRequest);
+        };
+    }, [socket, currentTeam?._id, addIncomingJoinRequest]);
 
     const onHandle = async (requestId: string, action: 'accepted' | 'rejected') => {
         const res = await handleJoinRequest(requestId, action);

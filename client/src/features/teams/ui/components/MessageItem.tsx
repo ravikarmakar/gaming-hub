@@ -9,7 +9,7 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { ChatMessage, useChatStore } from "../../store/useChatStore";
-import { useTeamStore } from "../../store/useTeamStore";
+import { useTeamManagementStore } from "../../store/useTeamManagementStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import {
     AlertDialog,
@@ -30,7 +30,7 @@ interface MessageItemProps {
 
 export const MessageItem = ({ message, isOwnMessage }: MessageItemProps) => {
     const { deleteMessage, setEditingMessage } = useChatStore();
-    const { currentTeam } = useTeamStore();
+    const { currentTeam } = useTeamManagementStore();
     const { user } = useAuthStore();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 

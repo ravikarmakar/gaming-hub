@@ -15,12 +15,12 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 
 export const DeleteTeamSection = () => {
     const navigate = useNavigate();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const { isLoading, deleteTeam } = useTeamStore();
+    const { isLoading, deleteTeam } = useTeamManagementStore();
 
     const handleDeleteTeam = async () => {
         const result = await deleteTeam();

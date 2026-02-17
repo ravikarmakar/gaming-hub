@@ -1,8 +1,8 @@
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { TeamChat } from "../components/TeamChat";
 
 const TeamChatPage = () => {
-    const { currentTeam } = useTeamStore();
+    const { currentTeam } = useTeamManagementStore();
 
     if (!currentTeam) return null;
 

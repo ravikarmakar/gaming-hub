@@ -14,6 +14,31 @@ const SCOPE_MODELS = {
     [Scopes.INVITATION]: Invitation
 };
 
+/**
+ * Industry-Standard Permission Matrix
+ * Decouples code from specific roles.
+ */
+const PERMISSION_MATRIX = {
+    [Scopes.TEAM]: {
+        [Roles.TEAM.OWNER]: [
+            "UPDATE_TEAM", "DELETE_TEAM", "MANAGE_STAFF", "TRANSFER_OWNERSHIP",
+            "ADD_MEMBER", "REMOVE_MEMBER", "MANAGE_ROLES", "VIEW_REQUESTS", "HANDLE_REQUESTS"
+        ],
+        [Roles.TEAM.MANAGER]: [
+            "UPDATE_TEAM", "ADD_MEMBER", "REMOVE_MEMBER", "MANAGE_ROLES",
+            "VIEW_REQUESTS", "HANDLE_REQUESTS"
+        ],
+        [Roles.TEAM.PLAYER]: [
+            "LEAVE_TEAM", "VIEW_TEAM"
+        ]
+    },
+    [Scopes.ORG]: {
+        [Roles.ORG.OWNER]: ["*"],
+        [Roles.ORG.MANAGER]: ["UPDATE_ORG", "MANAGE_STAFF", "INVITE_MEMBER"],
+        // ... extend as needed
+    }
+};
+
 // --- L1 Memory Cache for RBAC Resource Document Checks ---
 const RBAC_CACHE_TTL = 60 * 1000; // 60 seconds
 const RBAC_CACHE_MAX_SIZE = 500;
@@ -174,8 +199,22 @@ export const authorize = (scope, requiredRoles = [], options = {}) => {
                 return next(new CustomError(`Access Denied: Not a member of this ${scope}`, 403));
             }
 
-            if (requiredRoles.length > 0 && !requiredRoles.includes(authorizedRole.role)) {
-                return next(new CustomError("Access Denied: Insufficient permissions", 403));
+            // 8. Permission Matrix Check
+            const permissions = PERMISSION_MATRIX[scope]?.[authorizedRole.role] || [];
+
+            // If requiredRoles is empty, membership is enough
+            if (requiredRoles.length > 0) {
+                const hasPermission = requiredRoles.some(req =>
+                    permissions.includes(req) || permissions.includes("*")
+                );
+
+                if (!hasPermission) {
+                    // Fallback: Legacy role support (if requiredRoles contains raw roles)
+                    const isLegacyRoleMatch = requiredRoles.includes(authorizedRole.role);
+                    if (!isLegacyRoleMatch) {
+                        return next(new CustomError("Access Denied: Insufficient permissions", 403));
+                    }
+                }
             }
 
             req.rbacContext = { scope, scopeId, role: authorizedRole.role, isSuperAdmin: false };

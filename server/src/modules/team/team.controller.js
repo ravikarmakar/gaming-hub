@@ -1,4 +1,3 @@
-import fs from "fs";
 import mongoose from "mongoose";
 
 import Team from "../team/team.model.js";
@@ -20,6 +19,7 @@ import { createNotification } from "../notification/notification.controller.js";
 import JoinRequest from "../join-request/join-request.model.js";
 import { redis } from "../../shared/config/redis.js";
 import { logger } from "../../shared/utils/logger.js";
+import { Roles } from "../../shared/constants/roles.js";
 import {
   emitMemberJoined,
   emitMemberLeft,
@@ -263,6 +263,22 @@ export const removeMember = TryCatchHandler(async (req, res, next) => {
     throw new CustomError("User is not a member of this team.", 404);
   }
 
+  // 1. Security Check: Only Captains can remove staff (managers/coaches).
+  // Managers can only remove 'players'.
+  const targetMember = team.teamMembers.find(m => m.user?.toString() === memberId.toString());
+  const rbacRole = req.rbacContext?.role; // current user's role: team:owner or team:manager
+
+  if (rbacRole === Roles.TEAM.MANAGER) {
+    // Managers can NEVER remove the Captain or other Managers.
+    // We check their system-level role within the team.
+    const targetUser = await User.findById(memberId).select("roles");
+    const targetSystemRole = targetUser.roles.find(r => r.scopeId?.toString() === team._id.toString())?.role;
+
+    if (targetSystemRole !== Roles.TEAM.PLAYER) {
+      throw new CustomError("Managers can only remove members with the Player role.", 403);
+    }
+  }
+
   // Use Service Layer
   await removeMemberFromTeam({
     teamId: team._id,
@@ -274,13 +290,14 @@ export const removeMember = TryCatchHandler(async (req, res, next) => {
 
   // 4. Notify the removed member
   try {
+    const actorRole = rbacRole === Roles.TEAM.OWNER ? "captain" : "manager";
     await createNotification({
       recipient: memberId,
       sender: userId,
       type: "TEAM_KICK",
       content: {
         title: "Kicked from Team",
-        message: `You have been removed from the team ${team.teamName} by the captain.`,
+        message: `You have been removed from the team ${team.teamName} by the team ${actorRole}.`,
       },
       relatedData: {
         teamId: team._id,

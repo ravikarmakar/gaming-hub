@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 
 import { TeamMembers } from "../components/TeamMembers";
 import { MemberHeader } from "../components/MemberHeader";
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { JoinRequestsList } from "../components/JoinRequestsList";
 import { useAccess } from "@/features/auth/hooks/useAccess";
@@ -22,17 +22,9 @@ const TeamMembersPage = () => {
     isLoading,
     removeMember,
     updateMemberRole,
-  } = useTeamStore();
+  } = useTeamManagementStore();
   const { user } = useAuthStore();
   const { can } = useAccess()
-
-  // RBAC
-  const accessJoinRequestList = can(
-    TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.accessJoinRequestList]
-  );
-  const canManageRoster = can(
-    TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.manageRoster]
-  );
 
   const handleRemove = useCallback(
     async (memberId: string) => {
@@ -65,6 +57,16 @@ const TeamMembersPage = () => {
   if (!currentTeam) {
     return null;
   }
+
+  // RBAC
+  const accessJoinRequestList = can({
+    ...TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.accessJoinRequestList],
+    scopeId: currentTeam._id
+  });
+  const canManageRoster = can({
+    ...TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.manageRoster],
+    scopeId: currentTeam._id
+  });
 
   return (
     <div className="min-h-screen">

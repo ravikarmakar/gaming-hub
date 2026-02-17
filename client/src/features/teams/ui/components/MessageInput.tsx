@@ -6,7 +6,7 @@ import { Check, Pencil, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useChatStore } from "../../store/useChatStore";
-import { useTeamStore } from "../../store/useTeamStore";
+import { useTeamManagementStore } from "../../store/useTeamManagementStore";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +30,7 @@ export const MessageInput = ({ onSendMessage, isLoading }: MessageInputProps) =>
         setEditingMessage,
         updateMessage
     } = useChatStore();
-    const { currentTeam } = useTeamStore();
+    const { currentTeam } = useTeamManagementStore();
 
     const {
         register,

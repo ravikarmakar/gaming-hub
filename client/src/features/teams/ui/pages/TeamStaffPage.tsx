@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +31,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { TEAM_ACTIONS, TEAM_ACTIONS_ACCESS, TEAM_ACCESS } from "@/features/teams/lib/access";
 import { TEAM_ROUTES } from "../../lib/routes";
@@ -49,7 +48,7 @@ export function formatTeamRole(systemRole?: string) {
 }
 
 const TeamStaffPage = () => {
-    const { currentTeam, promoteMember, demoteMember, transferTeamOwnerShip, isLoading } = useTeamStore();
+    const { currentTeam, promoteMember, demoteMember, transferTeamOwnerShip, isLoading } = useTeamManagementStore();
     // user removed as it was only used for fetching
     const { can } = useAccess();
 

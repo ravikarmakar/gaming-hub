@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { TeamHeader } from "../components/TeamHeader";
 import { TeamStatCard } from "../components/TeamStatCard";
 import { TeamRecentMatch } from "../components/TeamRecentMatch";
@@ -17,7 +17,7 @@ import { TEAM_ROUTES } from "../../lib/routes";
 const TeamDashboard = () => {
   const navigate = useNavigate();
   const { can } = useAccess();
-  const { currentTeam, clearError } = useTeamStore();
+  const { currentTeam, clearError } = useTeamManagementStore();
 
   const canManageSettings = can(TEAM_ACCESS.settings);
   const canManageRoster = can(TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.manageRoster]);

@@ -1,16 +1,18 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useTeamStore } from "../../store/useTeamStore";
+import { useTeamListStore } from "../../store/useTeamListStore";
 import { AnimatePresence } from "framer-motion";
 import TeamCard from "../components/TeamCard";
 import TeamFilters from "../components/TeamFilters";
 import { ResourceGridWrapper } from "@/components/shared/ResourceGridWrapper";
 
 const FindTeams: React.FC = () => {
-    const { paginatedTeams, pagination, isLoading, fetchTeams } = useTeamStore();
+    const { paginatedTeamIds, teamsById, pagination, isLoading, fetchTeams } = useTeamListStore();
     const [search, setSearch] = useState("");
     const [region, setRegion] = useState<string | undefined>();
     const [isRecruiting, setIsRecruiting] = useState<boolean | undefined>();
     const [isVerified, setIsVerified] = useState<boolean | undefined>();
+
+    const paginatedTeams = paginatedTeamIds.map(id => teamsById[id]).filter(Boolean);
 
     const loadTeams = useCallback((page: number = 1, append: boolean = false) => {
         fetchTeams({

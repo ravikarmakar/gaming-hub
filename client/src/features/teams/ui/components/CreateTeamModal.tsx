@@ -32,6 +32,7 @@ import {
 
 import FileUpload from "@/components/FileUpload";
 import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { MAX_FILE_SIZE, teamSchema, TeamForm } from "@/features/teams/lib/teamSchema";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
@@ -39,7 +40,8 @@ import { useNavigate } from "react-router-dom";
 
 const CreateTeamModal = () => {
   const navigate = useNavigate();
-  const { createTeam, isLoading, error, clearError, isCreateTeamOpen, setIsCreateTeamOpen } = useTeamStore();
+  const { error, clearError, isCreateTeamOpen, setIsCreateTeamOpen } = useTeamStore();
+  const { createTeam, isLoading } = useTeamManagementStore();
 
   const form = useForm<TeamForm>({
     resolver: zodResolver(teamSchema),

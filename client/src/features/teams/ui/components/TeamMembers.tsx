@@ -1,11 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Users } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
-import { MemberCard } from "./MemberCard";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
+import { MemberCard, roleIcons, formatJoinedDate } from "./MemberCard";
 import { TeamMembersTypes } from "../../lib/types";
+import { roleColors } from "../../lib/constants";
+import { TEAM_ROLES } from "../../lib/access";
 
 interface TeamMembersProps {
   members: TeamMembersTypes[];
@@ -28,7 +30,8 @@ export const TeamMembers = ({
   onViewProfile,
   isLoading,
 }: TeamMembersProps) => {
-  const { currentTeam } = useTeamStore();
+  const { currentTeam } = useTeamManagementStore();
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
 
   // Memoize filtered and sorted member lists for performance
   const { activeMembers, inactiveMembers } = useMemo(() => {
@@ -76,20 +79,74 @@ export const TeamMembers = ({
 
     return (
       <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-        {memberList.map((member) => (
-          <MemberCard
-            key={member.user}
-            member={member}
-            isOwner={owner}
-            isCaptain={isCaptain}
-            currentUserId={currentUserId}
-            onRemove={onRemove}
-            onEditRole={onEditRole}
-            onViewProfile={onViewProfile}
-            isLoading={isLoading || false}
-            allMembers={members}
-          />
-        ))}
+        {memberList.map((member) => {
+          const isMemberOwner = member.systemRole === TEAM_ROLES.OWNER;
+          const isCurrentUser = member.user === currentUserId;
+          const RoleIcon = roleIcons[member.roleInTeam];
+
+          return (
+            <MemberCard key={member.user} member={member} isLoading={isLoading}>
+              {editingMemberId === member.user ? (
+                <MemberCard.RoleSelector
+                  currentRole={member.roleInTeam}
+                  memberUser={member.user}
+                  allMembers={members}
+                  onCancel={() => setEditingMemberId(null)}
+                  onSave={(role) => {
+                    onEditRole(role, member.user);
+                    setEditingMemberId(null);
+                  }}
+                />
+              ) : (
+                <>
+                  <MemberCard.Header
+                    isCurrentUser={isCurrentUser}
+                    roleLabel={isMemberOwner ? "Team Captain" : undefined}
+                    roleIcon={isMemberOwner ? roleIcons.igl : undefined}
+                  />
+
+                  <MemberCard.Actions>
+                    <MemberCard.ProfileAction onClick={() => onViewProfile(member.user)} />
+                    {owner && (
+                      <MemberCard.Dropdown
+                        onEditRole={() => setEditingMemberId(member.user)}
+                        onRemove={() => onRemove(member.user)}
+                        isRemovable={
+                          // Captain can remove anyone except themselves
+                          (isCaptain && !isCurrentUser) ||
+                          // Managers can remove members who only have the 'player' role
+                          (owner && !isCaptain && member.systemRole === TEAM_ROLES.PLAYER && !isCurrentUser)
+                        }
+                        isLoading={isLoading}
+                      />
+                    )}
+                  </MemberCard.Actions>
+
+                  <MemberCard.InfoGrid>
+                    <MemberCard.InfoItem
+                      label="Role"
+                      value={member.roleInTeam.charAt(0).toUpperCase() + member.roleInTeam.slice(1)}
+                      icon={RoleIcon}
+                      valueClassName={roleColors[member.roleInTeam]?.split(' ')[1]}
+                    />
+                    <MemberCard.InfoItem
+                      label="Status"
+                      value={member.isActive ? "Active" : "Inactive"}
+                      statusDot
+                      active={member.isActive}
+                      valueClassName={member.isActive ? "text-emerald-400" : "text-gray-400"}
+                    />
+                    {!isMemberOwner && (
+                      <div className="col-span-2 mt-1">
+                        <span className="text-[10px] text-gray-500">Joined at: {formatJoinedDate(member.joinedAt)}</span>
+                      </div>
+                    )}
+                  </MemberCard.InfoGrid>
+                </>
+              )}
+            </MemberCard>
+          );
+        })}
       </div>
     );
   };

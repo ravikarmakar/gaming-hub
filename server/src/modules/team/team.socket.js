@@ -10,6 +10,21 @@ export const TEAM_EVENTS = {
     ROLE_UPDATED: "team:role:updated",
     OWNER_TRANSFERRED: "team:owner:transferred",
     TEAM_UPDATED: "team:updated",
+    JOIN_REQUEST_CREATED: "team:join_request:created",
+};
+
+/**
+ * Emit when a new join request is created for the team
+ */
+export const emitJoinRequestCreated = (teamId, requestData) => {
+    try {
+        emitToTeam(teamId, TEAM_EVENTS.JOIN_REQUEST_CREATED, {
+            request: requestData,
+            timestamp: new Date().toISOString(),
+        });
+    } catch (error) {
+        logger.error("Failed to emit join request created event:", error);
+    }
 };
 
 /**

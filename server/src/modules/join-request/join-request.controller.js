@@ -3,7 +3,7 @@ import User from "../user/user.model.js";
 import { TryCatchHandler } from "../../shared/middleware/error.middleware.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
 import { createNotification } from "../notification/notification.controller.js";
-import { emitMemberJoined } from "../team/team.socket.js";
+import { emitMemberJoined, emitJoinRequestCreated } from "../team/team.socket.js";
 import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
 import { invalidateCacheWithRetry } from "../../shared/utils/cache.js";
 import { logger } from "../../shared/utils/logger.js";
@@ -26,7 +26,7 @@ export const sendJoinRequest = TryCatchHandler(async (req, res, next) => {
 
     const strategy = getStrategy(targetModel);
 
-    const joinRequest = await withOptionalTransaction(async (session) => {
+    const { joinRequest, user } = await withOptionalTransaction(async (session) => {
         // 1. Delegate Logic to Strategy
         const { resource, recipientId } = await strategy.validateJoinRequest(userId, targetId, session);
 
@@ -66,8 +66,19 @@ export const sendJoinRequest = TryCatchHandler(async (req, res, next) => {
             }, { session });
         }
 
-        return joinRequest;
+        return { joinRequest, user };
     });
+
+    // 4. Real-time updates via Socket.io
+    if (targetModel === "Team") {
+        // We need the populated requester for the UI to display it immediately
+        const populatedRequest = await JoinRequest.findById(joinRequest._id)
+            .populate("requester", "username avatar _id");
+
+        if (populatedRequest) {
+            emitJoinRequestCreated(targetId, populatedRequest);
+        }
+    }
 
     res.status(201).json({
         success: true,

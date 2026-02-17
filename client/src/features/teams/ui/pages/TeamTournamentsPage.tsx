@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Trophy, Search, Filter } from "lucide-react";
 import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { MemberHeader } from "../components/MemberHeader";
 import { TournamentItem } from "../components/TournamentItem";
@@ -16,7 +17,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const TeamTournamentsPage = () => {
     const { user } = useAuthStore();
-    const { currentTeam, teamTournaments, fetchTeamTournaments, isLoading } = useTeamStore();
+    const { currentTeam } = useTeamManagementStore();
+    const { teamTournaments, fetchTeamTournaments, isLoading } = useTeamStore();
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
 
