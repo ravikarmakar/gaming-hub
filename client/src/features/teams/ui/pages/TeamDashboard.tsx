@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Users, Trophy, Crown, Target, UserPlus, Settings, ArrowRight, Activity, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -33,6 +33,7 @@ const TeamDashboard = () => {
   const navigate = useNavigate();
   const { can } = useAccess();
   const currentTeam = useTeamManagementStore((state) => state.currentTeam);
+  const stats = useTeamManagementStore((state) => state.currentTeam?.stats);
   const clearError = useTeamManagementStore((state) => state.clearError);
 
   const canManageSettings = can(TEAM_ACCESS.settings);
@@ -46,32 +47,32 @@ const TeamDashboard = () => {
 
   if (!currentTeam) return null;
 
-  const statsData = [
+  const statsData = useMemo(() => [
     {
       title: "Win Rate",
-      value: `${currentTeam.stats?.winRate || 0}%`,
+      value: `${stats?.winRate || 0}%`,
       icon: Trophy,
       color: "emerald",
     },
     {
       title: "Total Matches",
-      value: currentTeam.stats?.totalMatches || 0,
+      value: stats?.totalMatches || 0,
       icon: Target,
       color: "blue",
     },
     {
       title: "Tournament Wins",
-      value: currentTeam.stats?.tournamentWins || 0,
+      value: stats?.tournamentWins || 0,
       icon: Crown,
       color: "amber",
     },
     {
       title: "Total Prize Won",
-      value: `$${(currentTeam.stats?.totalPrizeWon || 0).toLocaleString()}`,
+      value: `$${(stats?.totalPrizeWon || 0).toLocaleString()}`,
       icon: Users,
       color: "purple",
     },
-  ];
+  ], [stats]);
 
   return (
     <motion.div

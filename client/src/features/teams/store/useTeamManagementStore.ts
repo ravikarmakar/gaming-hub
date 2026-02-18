@@ -32,7 +32,12 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
     error: null,
 
     clearError: () => set({ error: null }),
-    setCurrentTeam: (team) => set({ currentTeam: team }),
+    setCurrentTeam: (team) => {
+        set({ currentTeam: team });
+        if (team) {
+            useTeamListStore.getState().updateTeamInList(team);
+        }
+    },
 
     getTeamById: async (id, forceRefresh = false, skipServerCache = false) => {
         // Always check ListStore first if not forceRefreshing
@@ -52,8 +57,8 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
             const response = await axiosInstance.get(url);
             const team = response.data.data;
 
-            set({ currentTeam: team, isLoading: false });
-            useTeamListStore.getState().updateTeamInList(team);
+            get().setCurrentTeam(team);
+            set({ isLoading: false });
 
             return team;
         } catch (error) {
@@ -67,8 +72,8 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
         try {
             const response = await axiosInstance.post(TEAM_ENDPOINTS.CREATE, teamData);
             const team = response.data.data;
-            set({ currentTeam: team, isLoading: false });
-            useTeamListStore.getState().updateTeamInList(team);
+            get().setCurrentTeam(team);
+            set({ isLoading: false });
             return team;
         } catch (error) {
             set({ error: getErrorMessage(error, "Error creating new team"), isLoading: false });
@@ -81,8 +86,8 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
         try {
             const response = await axiosInstance.put(`${TEAM_ENDPOINTS.UPDATE}?teamId=${teamId}`, teamData);
             const updatedTeam = response.data.data;
-            set({ currentTeam: updatedTeam, isLoading: false });
-            useTeamListStore.getState().updateTeamInList(updatedTeam);
+            get().setCurrentTeam(updatedTeam);
+            set({ isLoading: false });
             return updatedTeam;
         } catch (error) {
             set({ error: getErrorMessage(error, "Error updating team details"), isLoading: false });
@@ -131,11 +136,9 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
 
             if (response.data.success) {
                 const updatedTeam = response.data.data;
-                set({ currentTeam: updatedTeam, isLoading: false });
-                useTeamListStore.getState().updateTeamInList(updatedTeam);
-            } else {
-                set({ isLoading: false });
+                get().setCurrentTeam(updatedTeam);
             }
+            set({ isLoading: false });
             return response.data;
         } catch (error) {
             set({ isLoading: false });
@@ -189,8 +192,8 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
                 memberId,
             });
             const updatedTeam = response.data.data;
-            set({ currentTeam: updatedTeam, isLoading: false });
-            useTeamListStore.getState().updateTeamInList(updatedTeam);
+            get().setCurrentTeam(updatedTeam);
+            set({ isLoading: false });
             return updatedTeam;
         } catch (error) {
             set({ error: getErrorMessage(error, "Error updating role"), isLoading: false });
@@ -212,8 +215,8 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
 
             if (response.data.success) {
                 const updatedTeam = response.data.data || currentTeam;
-                set({ currentTeam: updatedTeam, isLoading: false });
-                useTeamListStore.getState().updateTeamInList(updatedTeam);
+                get().setCurrentTeam(updatedTeam);
+                set({ isLoading: false });
             } else {
                 set({ isLoading: false });
             }
@@ -238,8 +241,8 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
 
             if (response.data.success) {
                 const updatedTeam = response.data.data || currentTeam;
-                set({ currentTeam: updatedTeam, isLoading: false });
-                useTeamListStore.getState().updateTeamInList(updatedTeam);
+                get().setCurrentTeam(updatedTeam);
+                set({ isLoading: false });
             } else {
                 set({ isLoading: false });
             }
@@ -274,8 +277,8 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
                     });
                 }
                 const updatedTeam = response.data.data || currentTeam;
-                set({ currentTeam: updatedTeam, isLoading: false });
-                useTeamListStore.getState().updateTeamInList(updatedTeam);
+                get().setCurrentTeam(updatedTeam);
+                set({ isLoading: false });
             } else {
                 set({ isLoading: false });
             }

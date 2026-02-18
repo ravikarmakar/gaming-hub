@@ -17,6 +17,9 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    include: ["react-window"],
+  },
   test: {
     globals: true,
     environment: "jsdom",

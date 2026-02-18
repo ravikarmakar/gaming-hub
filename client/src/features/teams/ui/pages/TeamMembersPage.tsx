@@ -113,22 +113,24 @@ const TeamMembersPage = () => {
           )}
         </AnimatePresence>
 
-
-        <TeamMembers
-          members={currentTeam.teamMembers ?? []}
-          owner={canManageRoster}
-          isCaptain={currentTeam.captain === user?._id}
-          currentUserId={user?._id ?? ""}
-          onRemove={handleRemove}
-          onEditRole={handleEditRole}
-          onViewProfile={handleViewProfile}
-          isLoading={isLoading}
-        />
+        <div className="space-y-4">
+          {!accessJoinRequestList && <div className="pt-4" />}
+          <TeamMembers
+            members={currentTeam.teamMembers ?? []}
+            owner={canManageRoster}
+            isCaptain={currentTeam.captain === user?._id}
+            currentUserId={user?._id ?? ""}
+            onRemove={handleRemove}
+            onEditRole={handleEditRole}
+            onViewProfile={handleViewProfile}
+            isLoading={isLoading}
+          />
+        </div>
 
         {accessJoinRequestList && (
-          <section className="pt-4">
+          <div className="pt-4">
             <JoinRequestsList />
-          </section>
+          </div>
         )}
       </main>
     </div >

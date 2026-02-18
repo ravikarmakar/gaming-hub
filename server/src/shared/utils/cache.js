@@ -18,14 +18,18 @@ export const invalidateCacheWithRetry = async (keys, options = {}) => {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            if (keysArray.length === 1) {
-                await redis.del(keysArray[0]);
-            } else {
-                // Use pipeline for multiple keys
-                const pipeline = redis.pipeline();
-                keysArray.forEach(key => pipeline.del(key));
-                await pipeline.exec();
-            }
+            const redisOp = keysArray.length === 1
+                ? redis.del(keysArray[0])
+                : (async () => {
+                    const pipeline = redis.pipeline();
+                    keysArray.forEach(key => pipeline.del(key));
+                    return await pipeline.exec();
+                })();
+
+            await Promise.race([
+                redisOp,
+                new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 1500))
+            ]);
 
             if (attempt > 1) {
                 logger.info(`Cache invalidation succeeded on attempt ${attempt} for keys: ${keysArray.join(', ')}`);

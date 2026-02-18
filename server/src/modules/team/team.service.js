@@ -69,10 +69,11 @@ export const checkTeamNameUnique = async (teamName, session = null) => {
 export const createTeamService = async (userId, body, file) => {
   const { teamName, bio, tag, region } = body;
 
-  // 0. Pre-validation (Fail early to avoid unnecessary upload)
-  await checkTeamNameUnique(teamName);
-
-  const userPreCheck = await User.findById(userId);
+  // 0. Pre-validation (Parallelize DB checks to reduce RTT)
+  const [userPreCheck] = await Promise.all([
+    User.findById(userId),
+    checkTeamNameUnique(teamName) // throws CustomError(409) if duplicate
+  ]);
   if (!userPreCheck) throw new CustomError("User not found", 404);
   if (userPreCheck.teamId) throw new CustomError("You are already in a team", 400);
   if (!userPreCheck.isAccountVerified)

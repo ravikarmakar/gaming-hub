@@ -32,10 +32,11 @@ import {
 } from "@/components/ui/select";
 
 import { roles } from "@/features/teams/lib/constants";
+import { TeamMembersTypes } from "@/features/teams/lib/types";
 
 // Context for Compound Components
 interface MemberCardContextType {
-    member: any;
+    member: TeamMembersTypes;
     isLoading?: boolean;
 }
 
@@ -49,7 +50,7 @@ const useMemberCard = () => {
 
 // --- Main Component ---
 interface MemberCardProps {
-    member: any;
+    member: TeamMembersTypes;
     isLoading?: boolean;
     children: React.ReactNode;
     className?: string;
@@ -226,7 +227,7 @@ interface MemberCardRoleSelectorProps {
     currentRole: string;
     onSave: (role: string) => void;
     onCancel: () => void;
-    allMembers: any[];
+    allMembers: TeamMembersTypes[];
     memberUser: string;
 }
 
