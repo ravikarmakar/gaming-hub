@@ -24,11 +24,15 @@ import invitationRouter from "./modules/invitation/invitation.route.js";
 import chatRouter from "./modules/chat/chat.route.js";
 
 // Event Imports
+import { initTeamListeners } from "./modules/team/team.events.js";
 import eventRouter from "./modules/event/event.route.js";
 import roundsRouter from "./modules/event/routes/round.route.js";
 import groupsRouter from "./modules/event/routes/group.route.js";
 import leaderboardRouter from "./modules/event/routes/leaderboard.route.js";
 import { corsOptions } from "./shared/config/corsOptions.js";
+
+// Initialize Team Event Listeners
+initTeamListeners();
 
 // Initialize Sentry
 if (process.env.SENTRY_DSN) {

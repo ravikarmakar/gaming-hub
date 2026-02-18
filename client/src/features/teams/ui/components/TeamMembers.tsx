@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Users } from "lucide-react";
 import { FixedSizeGrid } from "react-window";
 import type { GridChildComponentProps } from "react-window";
@@ -52,7 +52,7 @@ interface MemberCellContentProps {
   allMembers: TeamMembersTypes[];
 }
 
-const MemberCellContent = ({
+const MemberCellContent = React.memo(({
   member,
   isCaptain,
   owner,
@@ -131,7 +131,7 @@ const MemberCellContent = ({
       )}
     </MemberCard>
   );
-};
+});
 
 const Cell = ({ columnIndex, rowIndex, style, data }: GridChildComponentProps<ItemData>) => {
   const {

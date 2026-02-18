@@ -1,8 +1,8 @@
 import fs from "fs";
 import Team from "./team.model.js";
-import User from "../user/user.model.js";
+import * as UserGateway from "../user/user.gateway.js";
 import JoinRequest from "../join-request/join-request.model.js";
-import { createNotification } from "../notification/notification.controller.js";
+import teamEvents, { TEAM_EVENT_TYPES } from "./team.events.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
 import { Roles, Scopes } from "../../shared/constants/roles.js";
 import { redis } from "../../shared/config/redis.js";
@@ -71,7 +71,7 @@ export const createTeamService = async (userId, body, file) => {
 
   // 0. Pre-validation (Parallelize DB checks to reduce RTT)
   const [userPreCheck] = await Promise.all([
-    User.findById(userId),
+    UserGateway.getUserById(userId),
     checkTeamNameUnique(teamName) // throws CustomError(409) if duplicate
   ]);
   if (!userPreCheck) throw new CustomError("User not found", 404);
@@ -100,9 +100,7 @@ export const createTeamService = async (userId, body, file) => {
   try {
     const newTeam = await withOptionalTransaction(async (session) => {
       // Lock the user to ensure they haven't joined a team in the meantime
-      const userQuery = User.findById(userId);
-      if (session) userQuery.session(session);
-      const user = await userQuery;
+      const user = await UserGateway.getUserWithRoles(userId, session);
       if (!user) throw new CustomError("User not found", 404);
       if (user.teamId) throw new CustomError("You are already in a team", 400);
 
@@ -129,21 +127,7 @@ export const createTeamService = async (userId, body, file) => {
       await newTeam.save({ session });
 
       // 3. Update User
-      await User.findByIdAndUpdate(
-        userId,
-        {
-          $set: { teamId: newTeam._id },
-          $push: {
-            roles: {
-              scope: Scopes.TEAM,
-              role: Roles.TEAM.OWNER,
-              scopeId: newTeam._id,
-              scopeModel: "Team",
-            },
-          },
-        },
-        { session }
-      );
+      await UserGateway.assignTeamToUser(userId, newTeam._id, Roles.TEAM.OWNER, session);
 
       return newTeam;
     });
@@ -289,6 +273,16 @@ export const updateTeamService = async (teamId, body, files) => {
       );
     }
 
+    // Clean up local files on success path
+    if (files) {
+      if (files.image && files.image[0] && fs.existsSync(files.image[0].path)) {
+        try { fs.unlinkSync(files.image[0].path); } catch (e) { logger.error("Failed to delete local file:", e); }
+      }
+      if (files.banner && files.banner[0] && fs.existsSync(files.banner[0].path)) {
+        try { fs.unlinkSync(files.banner[0].path); } catch (e) { logger.error("Failed to delete local file:", e); }
+      }
+    }
+
     return await buildTransformedTeamFromDoc(team);
   } catch (err) {
     // Cleanup locally uploaded files first
@@ -318,18 +312,7 @@ export const deleteTeamService = async (teamId) => {
 
   // 1. Set teamId = null and remove team roles for all team members
   const memberIds = team.teamMembers.map((member) => member.user);
-  await User.updateMany(
-    { _id: { $in: memberIds } },
-    {
-      $set: { teamId: null },
-      $pull: {
-        roles: {
-          scope: "team",
-          scopeId: team._id,
-        },
-      },
-    }
-  );
+  await UserGateway.bulkRemoveTeamFromUsers(memberIds, team._id);
 
   // 2. Soft delete the team
   await Team.findByIdAndUpdate(team._id, {
@@ -364,6 +347,12 @@ export const deleteTeamService = async (teamId) => {
     deleteFromImageKit(team.bannerFileId).catch(err => logger.error(`Failed to delete team banner ${team.bannerFileId}`, err));
   }
 
+  // 6. Emit event for real-time UI refresh
+  teamEvents.emit(TEAM_EVENT_TYPES.TEAM_DELETED, {
+    teamId: team._id,
+    memberIds
+  });
+
   return true;
 };
 
@@ -386,9 +375,7 @@ export const transferTeamOwnershipService = async (teamId, currentOwnerId, newOw
   }
 
   const updatedTeam = await withOptionalTransaction(async (session) => {
-    const userQuery = User.findById(currentOwnerId);
-    if (session) userQuery.session(session);
-    const user = await userQuery; // Old owner
+    const user = await UserGateway.getUserWithRoles(currentOwnerId, session); // Old owner
 
     // Update Team document (captain + teamMembers)
     const updatedMembers = team.teamMembers.map((member) => {
@@ -417,50 +404,14 @@ export const transferTeamOwnershipService = async (teamId, currentOwnerId, newOw
     );
 
     // 3. Update User document (roles) - Old Owner becomes Player
-    await User.findByIdAndUpdate(
-      user._id,
-      {
-        $set: {
-          "roles.$[elem].role": Roles.TEAM.PLAYER
-        }
-      },
-      {
-        session,
-        arrayFilters: [{
-          "elem.scope": "team",
-          "elem.scopeId": team._id
-        }]
-      }
-    );
+    await UserGateway.updateMemberSystemRole(user._id, team._id, Roles.TEAM.PLAYER, session);
 
     // 4. Update New Captain document (roles)
-    await User.findByIdAndUpdate(
-      newOwnerId,
-      {
-        $pull: {
-          roles: {
-            scope: "team",
-            scopeId: team._id
-          }
-        }
-      },
-      { session }
-    );
+    // We remove and then push to ensure clean state (as per original logic although updateMemberSystemRole might be enough if target exists)
+    // To match original logic precisely:
+    await UserGateway.removeTeamFromUser(newOwnerId, team._id, session);
+    await UserGateway.assignTeamToUser(newOwnerId, team._id, Roles.TEAM.OWNER, session);
 
-    await User.findByIdAndUpdate(
-      newOwnerId,
-      {
-        $push: {
-          roles: {
-            scope: "team",
-            role: Roles.TEAM.OWNER,
-            scopeId: team._id,
-            scopeModel: "Team",
-          }
-        }
-      },
-      { session }
-    );
     return updatedTeam;
   });
 
@@ -470,6 +421,13 @@ export const transferTeamOwnershipService = async (teamId, currentOwnerId, newOw
   pipeline.del(`user_profile:${newOwnerId}`);
   pipeline.del(`team_details:${teamId}`);
   await pipeline.exec();
+
+  // 6. Emit event for side effects (notifications)
+  teamEvents.emit(TEAM_EVENT_TYPES.OWNER_TRANSFERRED, {
+    team,
+    newOwnerId,
+    oldOwnerId: currentOwnerId
+  });
 
   return await buildTransformedTeamFromDoc(updatedTeam);
 };
@@ -499,9 +457,7 @@ export const manageTeamStaffService = async (teamId, memberId, action) => {
       throw new CustomError("Cannot separate system role for the Team Owner.", 403);
     }
 
-    const userQuery = User.findById(memberId);
-    if (session) userQuery.session(session);
-    const user = await userQuery;
+    const user = await UserGateway.getUserWithRoles(memberId, session);
     if (!user) throw new CustomError("User not found", 404);
 
     if (action === "promote") {
@@ -517,21 +473,11 @@ export const manageTeamStaffService = async (teamId, memberId, action) => {
       }
 
       // Add Manager Role to User
-      const updateQuery = User.updateOne(
-        { _id: memberId, "roles.scopeId": team._id },
-        { $set: { "roles.$.role": Roles.TEAM.MANAGER } }
-      );
-      if (session) updateQuery.session(session);
-      await updateQuery;
+      await UserGateway.updateMemberSystemRole(memberId, team._id, Roles.TEAM.MANAGER, session);
 
     } else if (action === "demote") {
       // Remove Manager Role
-      const updateQuery = User.updateOne(
-        { _id: memberId, "roles.scopeId": team._id },
-        { $set: { "roles.$.role": Roles.TEAM.PLAYER } }
-      );
-      if (session) updateQuery.session(session);
-      await updateQuery;
+      await UserGateway.updateMemberSystemRole(memberId, team._id, Roles.TEAM.PLAYER, session);
     }
 
     return { earlyReturn: false, teamId: team._id, team };
@@ -551,6 +497,10 @@ export const manageTeamStaffService = async (teamId, memberId, action) => {
   } catch (err) {
     logger.warn("Failed to emit profile update for member role change:", err.message);
   }
+
+  // Emit event for side effects (notifications)
+  const newRole = action === "promote" ? "manager" : "player";
+  teamEvents.emit(TEAM_EVENT_TYPES.ROLE_UPDATED, { team: result.team, memberId, newRole });
 
   return { message: `Member successfully ${action === "promote" ? "promoted to Manager" : "demoted to Player"}.`, team: await buildTransformedTeamFromDoc(result.team) };
 };
@@ -573,9 +523,7 @@ export const manageMemberRoleService = async (teamId, memberId, role) => {
 
     // Backfill missing denormalized fields if any
     const memberUserIds = team.teamMembers.map(m => m.user);
-    const usersQuery = User.find({ _id: { $in: memberUserIds } }).select("username avatar");
-    if (session) usersQuery.session(session);
-    const users = await usersQuery;
+    const users = await UserGateway.findUsersByIds(memberUserIds, "username avatar", session);
 
     team.teamMembers.forEach(m => {
       const user = users.find(u => u._id.toString() === m.user.toString());
@@ -680,13 +628,9 @@ export const buildTransformedTeamFromDoc = async (teamDoc, session = null) => {
   const pendingRequestsQuery = JoinRequest.countDocuments({ target: teamId, status: "pending" });
   if (session) pendingRequestsQuery.session(session);
 
-  const usersQuery = User.find({ _id: { $in: userIds } }).select("roles _id username avatar").lean();
-  if (session) usersQuery.session(session);
+  const users = await UserGateway.findUsersByIds(userIds, "roles _id username avatar", session);
 
-  const [pendingRequestsCount, users] = await Promise.all([
-    pendingRequestsQuery,
-    usersQuery,
-  ]);
+  const pendingRequestsCount = await pendingRequestsQuery;
 
   // Strip __v if present
   const { __v, ...teamData } = team;
@@ -743,9 +687,7 @@ export const addMemberToTeam = async ({ teamId, userId, roleInTeam = "player", s
 
 /** Internal helper for addMemberToTeam operations */
 const _addMemberToTeamOps = async ({ teamId, userId, roleInTeam, session }) => {
-  const userQuery = User.findById(userId);
-  if (session) userQuery.session(session);
-  const user = await userQuery;
+  const user = await UserGateway.getUserById(userId, session);
   if (!user) throw new CustomError("User not found", 404);
   if (user.teamId) throw new CustomError(`${user.username} is already in a team`, 400);
 
@@ -810,27 +752,10 @@ const _addMemberToTeamOps = async ({ teamId, userId, roleInTeam, session }) => {
   }
 
   // Atomic User Update: Ensures user isn't already in another team (race condition guard)
-  const updatedUser = await User.findOneAndUpdate(
-    { _id: userId, teamId: null },
-    {
-      $set: { teamId: teamId },
-      $push: {
-        roles: {
-          scope: Scopes.TEAM,
-          role: Roles.TEAM.PLAYER,
-          scopeId: teamId,
-          scopeModel: "Team",
-        },
-      },
-    },
-    { session, new: true }
-  );
+  const updatedUser = await UserGateway.assignTeamToUser(userId, teamId, Roles.TEAM.PLAYER, session);
 
   if (!updatedUser) {
     // Rollback Team update (if we are in a session, this throws. If not, we have a mismatch)
-    // Actually, in a session, throwing is enough. 
-    // If no session, we just pushed to Team but failed to update User.
-    // This is why withOptionalTransaction is critical.
     throw new CustomError(`User ${user.username} successfully assigned to a team concurrently. Join failed.`, 409);
   }
 
@@ -876,9 +801,7 @@ const _batchAddMembersOps = async ({ teamId, memberIds, session }) => {
   const team = await teamQuery;
   if (!team) throw new CustomError("Team not found", 404);
 
-  const usersQuery = User.find({ _id: { $in: memberIds } });
-  if (session) usersQuery.session(session);
-  const users = await usersQuery;
+  const users = await UserGateway.findUsersByIds(memberIds, "", session);
   if (users.length !== memberIds.length) throw new CustomError("One or more users not found", 404);
 
   const bulkOps = [];
@@ -913,7 +836,7 @@ const _batchAddMembersOps = async ({ teamId, memberIds, session }) => {
   }
 
   if (bulkOps.length > 0) {
-    await User.bulkWrite(bulkOps, { session });
+    await UserGateway.bulkAssignTeamToUsers(memberIds, teamId, Roles.TEAM.PLAYER, session);
 
     const updatedTeam = await Team.findOneAndUpdate(
       {
@@ -952,8 +875,8 @@ const _batchAddMembersOps = async ({ teamId, memberIds, session }) => {
     }
 
     // Verify all users were updated (check for race condition where user joined another team)
-    const usersInUpdate = await User.find({ _id: { $in: memberIds }, teamId: teamId }).session(session).countDocuments();
-    if (usersInUpdate !== memberIds.length) {
+    const usersInUpdateCount = await UserGateway.countUsersInTeam(memberIds, teamId, session);
+    if (usersInUpdateCount !== memberIds.length) {
       throw new CustomError("One or more users joined another team concurrently. Batch join aborted.", 409);
     }
   }
@@ -970,7 +893,7 @@ export const syncUserInTeams = async (userId, { username, avatar }) => {
 /**
  * Service to remove a member from a team
  */
-export const removeMemberFromTeam = async ({ teamId, userId, session = null }) => {
+export const removeMemberFromTeam = async ({ teamId, userId, session = null, actorId = null, actorRole = null }) => {
   const team = await Team.findOne({ _id: teamId, isDeleted: false }).session(session);
   if (!team) throw new CustomError("Team not found", 404);
 
@@ -978,6 +901,10 @@ export const removeMemberFromTeam = async ({ teamId, userId, session = null }) =
   if (team.captain.toString() === userId.toString()) {
     throw new CustomError("Cannot remove the Team Captain. Transfer ownership first.", 403);
   }
+
+  // Capture member info before removal for event emission
+  const memberObj = team.teamMembers.find(m => m.user.toString() === userId.toString());
+  const memberName = memberObj?.username || "Unknown";
 
   // 1. Remove from Team Roster
   await Team.findByIdAndUpdate(
@@ -987,19 +914,7 @@ export const removeMemberFromTeam = async ({ teamId, userId, session = null }) =
   );
 
   // 2. Clear User Team Data & Roles
-  await User.findByIdAndUpdate(
-    userId,
-    {
-      $set: { teamId: null },
-      $pull: {
-        roles: {
-          scope: Scopes.TEAM,
-          scopeId: teamId,
-        },
-      },
-    },
-    { session }
-  );
+  await UserGateway.removeTeamFromUser(userId, teamId, session);
 
   // 3. Cache Invalidation (with retry logic)
   if (!session) {
@@ -1021,6 +936,24 @@ export const removeMemberFromTeam = async ({ teamId, userId, session = null }) =
     } catch (err) {
       logger.error(`Failed to invalidate socket membership cache:`, err.message);
     }
+
+    // 4. Emit event for side effects (notifications)
+    if (actorId && actorId.toString() !== userId.toString()) {
+      // It was a kick
+      teamEvents.emit(TEAM_EVENT_TYPES.MEMBER_KICKED, {
+        team,
+        memberId: userId,
+        actorId,
+        actorRole: actorRole || "manager"
+      });
+    } else {
+      // It was a self-leave
+      teamEvents.emit(TEAM_EVENT_TYPES.MEMBER_LEFT, {
+        team,
+        memberId: userId,
+        memberName
+      });
+    }
   }
 
   return true;
@@ -1031,9 +964,7 @@ export const removeMemberFromTeam = async ({ teamId, userId, session = null }) =
  */
 
 export const validateJoinRequest = async (userId, teamId, session = null) => {
-  const userQuery = User.findById(userId);
-  if (session) userQuery.session(session);
-  const user = await userQuery;
+  const user = await UserGateway.getUserById(userId, session);
   if (!user) throw new CustomError("User not found", 404);
 
   if (user.teamId) throw new CustomError("You are already in a team", 400);
@@ -1049,9 +980,7 @@ export const validateJoinRequest = async (userId, teamId, session = null) => {
 };
 
 export const acceptJoinRequest = async (requesterId, teamId, handledBy, session = null) => {
-  const requesterQuery = User.findById(requesterId);
-  if (session) requesterQuery.session(session);
-  const requester = await requesterQuery;
+  const requester = await UserGateway.getUserById(requesterId, session);
   if (!requester) throw new CustomError("Requester not found", 404);
 
   const teamQuery = Team.findById(teamId);
@@ -1073,13 +1002,11 @@ export const acceptJoinRequest = async (requesterId, teamId, handledBy, session 
     session,
   });
 
-  await createNotification({
-    recipient: requesterId,
-    sender: handledBy,
-    type: "TEAM_JOIN_SUCCESS",
-    content: { title: "Request Accepted!", message: `You joined ${team.teamName}.` },
-    relatedData: { teamId },
-  }, { session });
+  teamEvents.emit(TEAM_EVENT_TYPES.MEMBER_JOINED, {
+    team,
+    memberId: requesterId,
+    actorId: handledBy
+  });
 
   const responseData = await getTransformedTeam(teamId, session);
 
@@ -1106,7 +1033,7 @@ export const validateInvitation = async (senderId, inviteeId, teamId) => {
   const target = await Team.findById(teamId);
   if (!target || target.isDeleted) throw new CustomError("Team not found", 404);
 
-  const senderUser = await User.findById(senderId).select("roles");
+  const senderUser = await UserGateway.getUserById(senderId);
   const senderRole = senderUser?.roles?.find(
     (r) => r.scope === Scopes.TEAM && r.scopeId?.toString() === teamId.toString()
   )?.role;
@@ -1119,7 +1046,7 @@ export const validateInvitation = async (senderId, inviteeId, teamId) => {
     throw new CustomError("You do not have permission to invite members to this team", 403);
   }
 
-  const invitee = await User.findById(inviteeId);
+  const invitee = await UserGateway.getUserById(inviteeId);
   if (!invitee) throw new CustomError("User not found to invite", 404);
 
   if (invitee.teamId?.toString() === teamId.toString()) {
@@ -1130,9 +1057,7 @@ export const validateInvitation = async (senderId, inviteeId, teamId) => {
 };
 
 export const acceptInvitation = async (inviteeId, teamId, role, session = null) => {
-  const userQuery = User.findById(inviteeId);
-  if (session) userQuery.session(session);
-  const user = await userQuery;
+  const user = await UserGateway.getUserById(inviteeId, session);
   if (!user) throw new CustomError("User not found", 404);
 
   const teamQuery = Team.findById(teamId);

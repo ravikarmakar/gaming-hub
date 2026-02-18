@@ -72,13 +72,13 @@ router.put(
   updateTeam
 );
 
-router.put("/add-members", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), validateRequest(addMembersValidation), addMembers);
-router.put("/remove-member/:id", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), validateRequest(removeMemberValidation), removeMember);
-router.put("/leave-member", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.PLAYER, Roles.TEAM.MANAGER], { attachDoc: true }), leaveMember);
-router.put("/transfer-owner", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER], { attachDoc: true }), validateRequest(transferOwnerValidation), transferTeamOwnerShip);
-router.put("/manage-member-role", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), validateRequest(manageMemberRoleValidation), manageMemberRole);
-router.put("/manage-staff-role", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER], { attachDoc: true }), validateRequest(manageStaffRoleValidation), manageStaffRole);
-router.delete("/delete-team", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER], { attachDoc: true }), validateRequest(deleteTeamValidation), deleteTeam);
+router.put("/add-members", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), rateLimiter({ limit: 5, timer: 60, key: "team-add-members" }), validateRequest(addMembersValidation), addMembers);
+router.put("/remove-member/:id", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), rateLimiter({ limit: 10, timer: 60, key: "team-remove-member" }), validateRequest(removeMemberValidation), removeMember);
+router.put("/leave-member", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.PLAYER, Roles.TEAM.MANAGER], { attachDoc: true }), rateLimiter({ limit: 5, timer: 60, key: "team-leave" }), leaveMember);
+router.put("/transfer-owner", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER], { attachDoc: true }), rateLimiter({ limit: 5, timer: 60, key: "team-transfer-owner" }), validateRequest(transferOwnerValidation), transferTeamOwnerShip);
+router.put("/manage-member-role", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER, Roles.TEAM.MANAGER], { attachDoc: true }), rateLimiter({ limit: 10, timer: 60, key: "team-manage-role" }), validateRequest(manageMemberRoleValidation), manageMemberRole);
+router.put("/manage-staff-role", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER], { attachDoc: true }), rateLimiter({ limit: 10, timer: 60, key: "team-manage-staff" }), validateRequest(manageStaffRoleValidation), manageStaffRole);
+router.delete("/delete-team", isAuthenticated, isVerified, authorize(Scopes.TEAM, [Roles.TEAM.OWNER], { attachDoc: true }), rateLimiter({ limit: 3, timer: 60, key: "team-delete" }), validateRequest(deleteTeamValidation), deleteTeam);
 
 // NOTE: Join Request routes have been moved to a dedicated router
 // See: server/src/modules/join-request/join-request.route.js

@@ -15,7 +15,6 @@ import {
   manageTeamStaffService,
   manageMemberRoleService
 } from "../team/team.service.js";
-import { createNotification } from "../notification/notification.controller.js";
 import JoinRequest from "../join-request/join-request.model.js";
 import { redis } from "../../shared/config/redis.js";
 import { logger } from "../../shared/utils/logger.js";
@@ -282,29 +281,12 @@ export const removeMember = TryCatchHandler(async (req, res, next) => {
   await removeMemberFromTeam({
     teamId: team._id,
     userId: memberId,
+    actorId: req.user.userId,
+    actorRole: rbacRole === Roles.TEAM.OWNER ? "captain" : "manager"
   });
 
   // Emit socket event for member removal
   emitMemberLeft(team._id, memberId, "removed");
-
-  // 4. Notify the removed member
-  try {
-    const actorRole = rbacRole === Roles.TEAM.OWNER ? "captain" : "manager";
-    await createNotification({
-      recipient: memberId,
-      sender: userId,
-      type: "TEAM_KICK",
-      content: {
-        title: "Kicked from Team",
-        message: `You have been removed from the team ${team.teamName} by the team ${actorRole}.`,
-      },
-      relatedData: {
-        teamId: team._id,
-      },
-    });
-  } catch (error) {
-    logger.error("Notification failed for team member removal:", error);
-  }
 
   // Fetch updated team roster using helper
   const transformedTeam = await getTransformedTeam(team._id);
@@ -350,25 +332,6 @@ export const leaveMember = TryCatchHandler(async (req, res, next) => {
 
   // Emit socket event for member leaving
   emitMemberLeft(team._id, userId, "left");
-
-  // 3. Notify the captain
-  try {
-    await createNotification({
-      recipient: team.captain,
-      sender: userId,
-      type: "TEAM_LEAVE",
-      content: {
-        title: "Member Left Team",
-        message: `${user.username} has left the team ${team.teamName}.`,
-      },
-      relatedData: {
-        teamId: team._id,
-      },
-    });
-  } catch (notifErr) {
-    logger.error("Notification failed for team member removal:", notifErr);
-    // Continue anyway
-  }
 
   res.status(200).json({
     success: true,
