@@ -23,7 +23,7 @@ The service follows a modular approach within the `src/modules/team` directory:
 ### Join Request Handing (Acceptance)
 1. **Validate**: Check request status and team recruiting status.
 2. **Transaction**:
-   - Add player to `teamMembers` array (atomic limit check for 20 members).
+   - Add player to `teamMembers` array (atomic limit check for 12 members).
    - Update `User` with `teamId` and `TEAM_PLAYER` role.
    - Update `JoinRequest` status to 'accepted'.
    - Reject other pending join requests for the same user (auto-cleanup).
@@ -67,7 +67,7 @@ The frontend uses **Zustand** (`useTeamStore.ts`) to manage team state globally.
 - **~~Stale Cache~~**: FIXED - Previously, if `redis.del` failed during a mutation, users might see stale team details for up to 1 hour.
   - **Mitigation**: Implemented `invalidateCacheWithRetry` with 3 retry attempts and exponential backoff. Final fallback sets 1-second TTL to force near-immediate expiration if deletion fails.
 
-- **~~Multi-User Sync~~**: IMPROVED - Two managers accepting requests simultaneously could hit the 20-member limit. Atomic `$expr` check mitigates this.
+- **~~Multi-User Sync~~**: FIXED - Two managers accepting requests simultaneously could hit the 12-member limit. Atomic `$expr` check mitigates this.
   - **Mitigation**: Added descriptive error messages with current team size and error codes (`TEAM_LIMIT_EXCEEDED`, `CONCURRENT_MODIFICATION`) for better frontend handling and user feedback.
 
 - **~~Tight Coupling~~**: FIXED - `team.route.js` previously imported controllers directly from the `join-request` module.

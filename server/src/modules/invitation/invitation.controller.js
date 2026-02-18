@@ -76,7 +76,7 @@ export const inviteMember = TryCatchHandler(async (req, res) => {
     sender: userId,
     type: targetModel === "Team" ? "TEAM_INVITE" : "ORGANIZATION_INVITE",
     title: `New Invitation`,
-    message: `You have been invited to join ${resource.name || resource.teamName} as ${invitedRole}.`,
+    message: `You have been invited to join ${resource?.name || resource?.teamName || "Unknown Resource"} as ${invitedRole}.`,
     relatedData: {
       inviteId: invitation._id,
       [targetModel === "Team" ? "teamId" : "orgId"]: targetId

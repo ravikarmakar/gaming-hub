@@ -32,7 +32,10 @@ export const TeamInviteDialog: React.FC<TeamInviteDialogProps> = ({
     const { currentTeam } = useTeamManagementStore();
 
     const handleInvite = async () => {
-        if (!currentTeam) return;
+        if (!currentTeam) {
+            toast.error("You must have an active team selected to send invites.");
+            return;
+        }
         const result = await inviteMember(playerId, currentTeam._id, message);
         if (result.success) {
             toast.success(result.message || `Invitation sent to ${playerName}`);

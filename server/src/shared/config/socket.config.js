@@ -34,7 +34,7 @@ export const determineRoleFromProfile = (userProfile, teamId) => {
  */
 export const determineRoleFromDB = async (userId, teamId) => {
     try {
-        const team = await Team.findById(teamId).select("captain teamMembers").lean();
+        const team = await Team.findOne({ _id: teamId, isDeleted: false }).select("captain teamMembers").lean();
         if (!team) return null;
 
         if (team.captain && team.captain.toString() === userId.toString()) {

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { Outlet } from "react-router-dom";
 import {
   Users,
@@ -66,72 +66,75 @@ const teamSidebarLinks = [
 
 const TeamLayout = () => {
   const filteredLinks = useFilteredNavigation(teamSidebarLinks);
-  const { user } = useAuthStore();
-  const { getTeamById, isLoading, error, currentTeam, clearError } = useTeamManagementStore();
+  const user = useAuthStore((state) => state.user);
+  const teamId = user?.teamId;
+
+  const getTeamById = useTeamManagementStore((state) => state.getTeamById);
+  const isLoading = useTeamManagementStore((state) => state.isLoading);
+  const error = useTeamManagementStore((state) => state.error);
+  const currentTeam = useTeamManagementStore((state) => state.currentTeam);
+  const clearError = useTeamManagementStore((state) => state.clearError);
 
   // Join team room via WebSocket
   useTeamRoom(user?.teamId);
 
+  // Stable socket handlers to prevent listener churn
+  const refreshTeamData = useCallback(async () => {
+    if (user?.teamId) {
+      await getTeamById(user.teamId, true, true);
+      useAuthStore.getState().checkAuth(true);
+    }
+  }, [user?.teamId, getTeamById]);
 
+  const handleMemberLeft = useCallback(async () => {
+    const currentTeamState = useTeamManagementStore.getState().currentTeam;
+    if (user?.teamId && currentTeamState) {
+      await getTeamById(user.teamId, true, true);
+      useAuthStore.getState().checkAuth(true);
+    }
+  }, [user?.teamId, getTeamById]);
+
+  const handleTeamDeleted = useCallback(async () => {
+    await useAuthStore.getState().checkAuth(true);
+  }, []);
+
+  const handleProfileUpdated = useCallback(async () => {
+    await useAuthStore.getState().checkAuth(true);
+  }, []);
+
+  const handleTeamUpdated = useCallback(() => {
+    if (user?.teamId) {
+      getTeamById(user.teamId, true, true);
+    }
+  }, [user?.teamId, getTeamById]);
 
   // Listen for real-time team updates
-  useSocketEvent("team:member:joined", () => {
-    if (user?.teamId) {
-      getTeamById(user.teamId, true, true);
-      useAuthStore.getState().checkAuth();
-    }
-  });
-
-  useSocketEvent("team:member:left", () => {
-    // Check current store state (not stale closure) — if user just left,
-    // currentTeam will be null and we should NOT re-fetch
-    const currentTeam = useTeamManagementStore.getState().currentTeam;
-    if (user?.teamId && currentTeam) {
-      getTeamById(user.teamId, true, true);
-      useAuthStore.getState().checkAuth();
-    }
-  });
-
-  useSocketEvent("team:role:updated", () => {
-    if (user?.teamId) {
-      getTeamById(user.teamId, true, true);
-      useAuthStore.getState().checkAuth();
-    }
-  });
-
-  useSocketEvent("team:owner:transferred", () => {
-    // Check current store state — user may have lost their team in transfer
-    const currentTeam = useTeamManagementStore.getState().currentTeam;
-    if (user?.teamId && currentTeam) {
-      getTeamById(user.teamId, true, true);
-      useAuthStore.getState().checkAuth();
-    }
-  });
-
-  useSocketEvent("team:updated", () => {
-    if (user?.teamId) {
-      getTeamById(user.teamId, true, true);
-    }
-  });
+  useSocketEvent("team:member:joined", refreshTeamData);
+  useSocketEvent("team:member:left", handleMemberLeft);
+  useSocketEvent("team:role:updated", refreshTeamData);
+  useSocketEvent("team:owner:transferred", handleMemberLeft);
+  useSocketEvent("team:deleted", handleTeamDeleted);
+  useSocketEvent("user:profile_updated", handleProfileUpdated);
+  useSocketEvent("team:updated", handleTeamUpdated);
 
   useEffect(() => {
-    if (user?.teamId) {
-      // Initial load only - Socket.IO handles real-time updates
-      getTeamById(user.teamId, true);
+    // String comparison for IDs to avoid reference issues
+    const isDifferentTeam = currentTeam?._id?.toString() !== teamId?.toString();
 
-      // Refetch when user returns to the tab (event-driven)
-      const handleFocus = () => {
-        getTeamById(user.teamId, true);
-      };
-      window.addEventListener("focus", handleFocus);
-
-      return () => {
-        window.removeEventListener("focus", handleFocus);
-        clearError();
-      };
+    if (teamId && (!currentTeam || isDifferentTeam)) {
+      getTeamById(teamId, true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.teamId]); // Only refetch when teamId changes, not on every navigation
+
+    const handleFocus = () => {
+      if (teamId) getTeamById(teamId, true);
+    };
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      clearError();
+    };
+  }, [teamId, currentTeam?._id, getTeamById, clearError]);
 
   return (
     <SidebarProvider>

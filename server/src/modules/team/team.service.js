@@ -751,7 +751,7 @@ const _addMemberToTeamOps = async ({ teamId, userId, roleInTeam, session }) => {
   const query = {
     _id: teamId,
     isDeleted: false,
-    "teamMembers.19": { $exists: false }
+    "teamMembers.11": { $exists: false }
   };
 
   if (UNIQUE_ROLES.includes(roleInTeam)) {
@@ -787,22 +787,23 @@ const _addMemberToTeamOps = async ({ teamId, userId, roleInTeam, session }) => {
     const freshTeam = await freshQuery;
 
     if (!freshTeam) throw new CustomError("Team not found", 404);
-    if (freshTeam.teamMembers.length >= 20) {
-      throw new CustomError("Team limit exceeded. Max 20 members allowed.", 400);
+    if (freshTeam.teamMembers.length >= 12) {
+      throw new CustomError("Team limit exceeded. Max 12 members allowed.", 400);
     }
     if (UNIQUE_ROLES.includes(roleInTeam) && freshTeam.teamMembers.some(m => m.roleInTeam === roleInTeam)) {
       throw new CustomError(`The role '${roleInTeam.toUpperCase()}' is already assigned to another member.`, 400);
     }
-    // No specific substitute check here because it's handled by post-check if we can't do it atomically
-    // But wait, if it failed it might be because of UNIQUE_ROLES or 20 members limit.
-    throw new CustomError("Could not add member to team. Concurrent update detected or role occupied.", 400);
+    // If we reach here, it's likely a race condition where the team was updated 
+    // between our query and findOneAndUpdate, but none of the specific checks matched.
+    throw new CustomError("Could not join team: Team state changed or role no longer available. Please try again.", 409);
   }
 
   // Post-check for substitute limit if roleInTeam is substitute
   if (roleInTeam === "substitute") {
-    const substituteCount = updatedTeam.teamMembers.filter(m => m.roleInTeam === "substitute").length;
+    // Re-fetch within session to get latest count
+    const freshTeamForCheck = await Team.findById(teamId).session(session);
+    const substituteCount = freshTeamForCheck.teamMembers.filter(m => m.roleInTeam === "substitute").length;
     if (substituteCount > 2) {
-      // Rollback manually since we are in a transaction (hopefully)
       throw new CustomError("A team can have a maximum of 2 substitutes.", 400);
     }
   }
@@ -920,7 +921,7 @@ const _batchAddMembersOps = async ({ teamId, memberIds, session }) => {
         $expr: {
           $lte: [
             { $add: [{ $size: "$teamMembers" }, teamUpdateOps.length] },
-            20
+            12
           ]
         }
       },
@@ -935,9 +936,9 @@ const _batchAddMembersOps = async ({ teamId, memberIds, session }) => {
       const freshQuery = Team.findById(teamId);
       if (session) freshQuery.session(session);
       const freshTeam = await freshQuery;
-      if (freshTeam && freshTeam.teamMembers.length + teamUpdateOps.length > 20) {
+      if (freshTeam && freshTeam.teamMembers.length + teamUpdateOps.length > 12) {
         throw new CustomError(
-          `Cannot add ${memberIds.length} member(s). Team currently has ${freshTeam.teamMembers.length} members. Maximum limit is 20 members.`,
+          `Cannot add ${memberIds.length} member(s). Team currently has ${freshTeam.teamMembers.length} members. Maximum limit is 12 members.`,
           400,
           "TEAM_LIMIT_EXCEEDED"
         );
@@ -1012,8 +1013,13 @@ export const removeMemberFromTeam = async ({ teamId, userId, session = null }) =
     }
 
     // Invalidate socket membership cache so next join:team re-checks DB
-    redis.del(`socket_member:${userId}:${teamId}`)
-      .catch(err => logger.error(`Failed to invalidate socket membership cache:`, err.message));
+    try {
+      if (typeof redis.del === "function") {
+        await redis.del(`socket_member:${userId}:${teamId}`);
+      }
+    } catch (err) {
+      logger.error(`Failed to invalidate socket membership cache:`, err.message);
+    }
   }
 
   return true;
@@ -1082,7 +1088,7 @@ export const acceptJoinRequest = async (requesterId, teamId, handledBy, session 
       userId: requesterId,
       username: requester.username,
       avatar: requester.avatar,
-      role: "player",
+      roleInTeam: "player",
     }
   };
 
@@ -1135,8 +1141,8 @@ export const acceptInvitation = async (inviteeId, teamId, role, session = null) 
 
   if (user.teamId) throw new CustomError("You are already in a team", 400);
 
-  // Check Member Limit (Max 20)
-  if (team.teamMembers.length >= 20) throw new CustomError("Team has reached its member limit (20).", 400);
+  // Check Member Limit (Max 12)
+  if (team.teamMembers.length >= 12) throw new CustomError("Team has reached its member limit (12).", 400);
 
   // Standardize roleInTeam
   const roleInTeam = role === Roles.TEAM.MANAGER ? "manager" : "player";
@@ -1158,7 +1164,7 @@ export const acceptInvitation = async (inviteeId, teamId, role, session = null) 
         userId: inviteeId,
         username: user.username,
         avatar: user.avatar,
-        role: "player"
+        roleInTeam: roleInTeam
       }
     }
   };

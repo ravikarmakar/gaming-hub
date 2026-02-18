@@ -81,7 +81,7 @@ export const TeamMembers = ({
       <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
         {memberList.map((member) => {
           const isMemberOwner = member.systemRole === TEAM_ROLES.OWNER;
-          const isCurrentUser = member.user === currentUserId;
+          const isCurrentUser = member.user.toString() === currentUserId.toString();
           const RoleIcon = roleIcons[member.roleInTeam];
 
           return (

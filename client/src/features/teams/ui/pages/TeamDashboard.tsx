@@ -14,10 +14,26 @@ import { useAccess } from "@/features/auth/hooks/useAccess";
 import { TEAM_ACCESS, TEAM_ACTIONS, TEAM_ACTIONS_ACCESS } from "../../lib/access";
 import { TEAM_ROUTES } from "../../lib/routes";
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 }
+};
+
 const TeamDashboard = () => {
   const navigate = useNavigate();
   const { can } = useAccess();
-  const { currentTeam, clearError } = useTeamManagementStore();
+  const currentTeam = useTeamManagementStore((state) => state.currentTeam);
+  const clearError = useTeamManagementStore((state) => state.clearError);
 
   const canManageSettings = can(TEAM_ACCESS.settings);
   const canManageRoster = can(TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.manageRoster]);
@@ -56,21 +72,6 @@ const TeamDashboard = () => {
       color: "purple",
     },
   ];
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
-  };
 
   return (
     <motion.div

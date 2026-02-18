@@ -11,7 +11,7 @@ import { getStrategy } from "../join-request/target.strategy.js";
  * Atomic service to accept a Team or Organization invitation
  */
 export const acceptInvitationService = async (invitationId, userId) => {
-    const { resultMessage, entityModel, entityId, socketData, cacheKeys, senderId } = await withOptionalTransaction(async (session) => {
+    const { resultMessage, entityModel, entityId, socketData, cacheKeys } = await withOptionalTransaction(async (session) => {
         const inviteQuery = Invitation.findById(invitationId);
         if (session) inviteQuery.session(session);
         const invite = await inviteQuery;

@@ -109,7 +109,7 @@ export const useTeamListStore = create<TeamListState>((set, get) => ({
             set((state) => ({
                 teamsById: { ...state.teamsById, ...newTeamsById },
                 paginatedTeamIds: append ? [...state.paginatedTeamIds, ...newIds] : newIds,
-                pagination,
+                pagination: pagination || state.pagination,
                 isLoading: false,
             }));
         } catch (error) {

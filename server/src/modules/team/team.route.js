@@ -12,6 +12,7 @@ import {
   manageMemberRole,
   manageStaffRole,
 } from "./team.controller.js";
+import { rateLimiter } from "../../shared/middleware/rateLimiter.middleware.js";
 import { cache } from "../../shared/middleware/cache.middleware.js";
 import { isAuthenticated, isVerified, optionalAuthenticate } from "../../shared/middleware/auth.middleware.js";
 import { authorize } from "../../shared/middleware/rbac.middleware.js";
@@ -47,7 +48,15 @@ const validateWithCleanup = (schema) => (req, res, next) => {
 router.get("/", cache(300), fetchAllTeams);
 
 // Use validateWithCleanup for routes with file uploads
-router.post("/create-team", isAuthenticated, isVerified, upload.single("image"), validateWithCleanup(createTeamValidation), createTeam);
+router.post(
+  "/create-team",
+  isAuthenticated,
+  isVerified,
+  rateLimiter({ limit: 5, timer: 15 * 60, key: "create-team" }),
+  upload.single("image"),
+  validateWithCleanup(createTeamValidation),
+  createTeam
+);
 router.get("/details/:teamId", optionalAuthenticate, fetchTeamDetails);
 
 router.put(

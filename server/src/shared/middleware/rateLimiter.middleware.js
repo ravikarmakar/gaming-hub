@@ -9,6 +9,9 @@ const rlMemoryCache = new LRUCache({
   ttl: 2000,      // 2 seconds auto-expiry
 });
 
+// Exported for testing
+export const clearRateLimitCache = () => rlMemoryCache.clear();
+
 export const rateLimiter =
   ({ limit = 10, timer = 60, key = "global" }) =>
     async (req, res, next) => {

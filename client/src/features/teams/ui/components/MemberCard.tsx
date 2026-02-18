@@ -180,7 +180,6 @@ interface MemberCardDropdownProps {
     onEditRole?: () => void;
     onRemove?: () => void;
     removeLabel?: string;
-    removeIcon?: any;
     isRemovable?: boolean;
     isLoading?: boolean;
 }

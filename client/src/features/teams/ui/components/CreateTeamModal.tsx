@@ -40,8 +40,13 @@ import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 
 const CreateTeamModal = () => {
   const navigate = useNavigate();
-  const { error, clearError, isCreateTeamOpen, setIsCreateTeamOpen } = useTeamStore();
-  const { createTeam, isLoading } = useTeamManagementStore();
+  const isCreateTeamOpen = useTeamStore((state) => state.isCreateTeamOpen);
+  const setIsCreateTeamOpen = useTeamStore((state) => state.setIsCreateTeamOpen);
+  const error = useTeamStore((state) => state.error);
+  const clearError = useTeamStore((state) => state.clearError);
+
+  const createTeam = useTeamManagementStore((state) => state.createTeam);
+  const isLoading = useTeamManagementStore((state) => state.isLoading);
 
   const form = useForm<TeamForm>({
     resolver: zodResolver(teamSchema),
@@ -65,17 +70,15 @@ const CreateTeamModal = () => {
     const result = await createTeam(formData);
 
     if (result) {
-      // Close modal and reset form FIRST
-      setIsCreateTeamOpen(false);
-      reset();
       toast.success("Team created successfully!");
 
-      // Use setTimeout to ensure modal is fully closed before navigation
-      // This avoids React batching issues and ensures state is synced
-      setTimeout(async () => {
-        await useAuthStore.getState().checkAuth();
-        navigate(TEAM_ROUTES.DASHBOARD);
-      }, 100);
+      // Update auth state to get the new teamId and roles before navigating
+      // Await everything to ensure state is consistent
+      await useAuthStore.getState().checkAuth(true);
+
+      setIsCreateTeamOpen(false);
+      reset();
+      navigate(TEAM_ROUTES.DASHBOARD);
     }
   };
 

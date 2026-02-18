@@ -33,8 +33,17 @@ async function testRedisFallback() {
 
     } finally {
         // Restore env
-        process.env.NODE_ENV = originalNodeEnv;
-        process.env.REDIS_URL = originalRedisUrl;
+        if (originalNodeEnv === undefined) {
+            delete process.env.NODE_ENV;
+        } else {
+            process.env.NODE_ENV = originalNodeEnv;
+        }
+
+        if (originalRedisUrl === undefined) {
+            delete process.env.REDIS_URL;
+        } else {
+            process.env.REDIS_URL = originalRedisUrl;
+        }
     }
 }
 

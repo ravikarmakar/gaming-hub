@@ -39,7 +39,7 @@ export const useJoinRequestStore = create<JoinRequestState>((set) => ({
 
     fetchJoinRequests: async (teamId) => {
         if (!teamId) return;
-        set({ isLoading: true });
+        set({ isLoading: true, error: null });
         try {
             const response = await axiosInstance.get(TEAM_ENDPOINTS.FETCH_JOIN_REQUESTS(teamId));
             set({ joinRequests: response.data.data || [], isLoading: false });
@@ -56,19 +56,22 @@ export const useJoinRequestStore = create<JoinRequestState>((set) => ({
         try {
             const response = await axiosInstance.put(TEAM_ENDPOINTS.HANDLE_JOIN_REQUEST(currentTeam._id, requestId), { action });
 
-            // Update local requests list
-            set((state) => ({
-                joinRequests: state.joinRequests.filter((req) => req._id !== requestId),
-                isLoading: false
-            }));
+            if (response.data.success) {
+                // Update local requests list
+                set((state) => ({
+                    joinRequests: state.joinRequests.filter((req) => req._id !== requestId),
+                    isLoading: false
+                }));
 
-            // If accepted, we might need to update the team member count/roster in management store
-            if (action === 'accepted' && response.data.data) {
-                useTeamManagementStore.getState().setCurrentTeam(response.data.data);
-                // Also update list store if needed (already handled by ManagementStore strategy usually)
+                // If accepted, we might need to update the team member count/roster in management store
+                if (action === 'accepted' && response.data.data) {
+                    useTeamManagementStore.getState().setCurrentTeam(response.data.data);
+                }
+            } else {
+                set({ isLoading: false });
             }
 
-            return { success: true, message: response.data.message };
+            return { success: response.data.success, message: response.data.message };
         } catch (error) {
             set({ error: getErrorMessage(error, "Error handling join request"), isLoading: false });
             return { success: false, message: getErrorMessage(error, "Error handling join request") };
@@ -84,8 +87,10 @@ export const useJoinRequestStore = create<JoinRequestState>((set) => ({
             const response = await axiosInstance.delete(TEAM_ENDPOINTS.CLEAR_ALL_JOIN_REQUESTS(currentTeam._id));
             if (response.data.success) {
                 set({ joinRequests: [], isLoading: false });
+            } else {
+                set({ isLoading: false });
             }
-            return { success: true, message: response.data.message };
+            return { success: response.data.success, message: response.data.message };
         } catch (error) {
             set({ error: getErrorMessage(error, "Error clearing join requests"), isLoading: false });
             return { success: false, message: getErrorMessage(error, "Error clearing join requests") };
@@ -97,7 +102,7 @@ export const useJoinRequestStore = create<JoinRequestState>((set) => ({
         try {
             const response = await axiosInstance.post(TEAM_ENDPOINTS.SEND_JOIN_REQUEST(teamId), { message });
             set({ isRequestingJoin: false });
-            return { success: true, message: response.data.message };
+            return { success: response.data.success, message: response.data.message };
         } catch (error) {
             const errMsg = getErrorMessage(error, "Error sending join request");
             set({ isRequestingJoin: false, error: errMsg });
@@ -118,7 +123,7 @@ export const useJoinRequestStore = create<JoinRequestState>((set) => ({
                 }
             );
             set({ isLoading: false });
-            return { success: true, message: response.data.message };
+            return { success: response.data.success, message: response.data.message };
         } catch (error) {
             set({ error: getErrorMessage(error, "Error inviting member"), isLoading: false });
             return { success: false, message: getErrorMessage(error, "Error inviting member") };
@@ -127,11 +132,12 @@ export const useJoinRequestStore = create<JoinRequestState>((set) => ({
 
     fetchSentInvitations: async (teamId) => {
         if (!teamId) return;
+        set({ isLoading: true, error: null });
         try {
             const response = await axiosInstance.get(TEAM_ENDPOINTS.GET_PENDING_INVITES(teamId));
-            set({ sentInvitations: response.data.data });
+            set({ sentInvitations: response.data.data || [], isLoading: false });
         } catch (error) {
-            console.error("Error fetching sent invitations:", error);
+            set({ isLoading: false, error: getErrorMessage(error, "Error fetching sent invitations") });
         }
     },
 }));

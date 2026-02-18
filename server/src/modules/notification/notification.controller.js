@@ -134,6 +134,7 @@ export const handleNotificationAction = TryCatchHandler(async (req, res, next) =
 
     // Archive notification after action
     notification.status = "archived";
+    notification.actions = [];
     await notification.save();
 
     res.status(200).json({
@@ -199,13 +200,28 @@ export const getTeamNotifications = TryCatchHandler(async (req, res, next) => {
     const limit = parseInt(req.query.limit, 10) || 10;
     const skip = (page - 1) * limit;
 
-    const notifications = await Notification.find({
+    // Authorization: Check if user has access to this team
+    const team = await Team.findById(teamId).select("teamMembers captain");
+    if (!team) {
+        return next(new CustomError("Team not found", 404));
+    }
+
+    const isMember = team.captain.toString() === req.user._id.toString() ||
+        team.teamMembers.some((m) => m.user?.toString() === req.user._id.toString());
+
+    if (!isMember) {
+        return next(new CustomError("You do not have permission to view this team's notifications", 403));
+    }
+
+    const filter = {
         "relatedData.teamId": teamId,
         $or: [
             { recipient: req.user._id },
             { recipient: null }
         ]
-    })
+    };
+
+    const notifications = await Notification.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -213,16 +229,10 @@ export const getTeamNotifications = TryCatchHandler(async (req, res, next) => {
         .populate("relatedData.teamId", "teamName imageUrl")
         .populate("relatedData.eventId", "eventName banner");
 
-    const totalCount = await Notification.countDocuments({
-        "relatedData.teamId": teamId,
-        $or: [
-            { recipient: req.user._id },
-            { recipient: null }
-        ]
-    });
+    const totalCount = await Notification.countDocuments(filter);
 
     const unreadCount = await Notification.countDocuments({
-        "relatedData.teamId": teamId,
+        ...filter,
         recipient: req.user._id,
         status: "unread",
     });

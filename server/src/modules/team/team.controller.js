@@ -19,14 +19,17 @@ import { createNotification } from "../notification/notification.controller.js";
 import JoinRequest from "../join-request/join-request.model.js";
 import { redis } from "../../shared/config/redis.js";
 import { logger } from "../../shared/utils/logger.js";
-import { Roles } from "../../shared/constants/roles.js";
+import { Roles, Scopes } from "../../shared/constants/roles.js";
+import { invalidateRbacCache } from "../../shared/middleware/rbac.middleware.js";
 import {
   emitMemberJoined,
   emitMemberLeft,
   emitRoleUpdated,
   emitOwnerTransferred,
-  emitTeamUpdated
+  emitTeamUpdated,
+  emitTeamDeleted
 } from "./team.socket.js";
+import { emitProfileUpdate } from "../user/user.socket.js";
 
 export const createTeam = TryCatchHandler(async (req, res, next) => {
   const newTeam = await createTeamService(req.user.userId, req.body, req.file);
@@ -226,7 +229,7 @@ export const addMembers = TryCatchHandler(async (req, res, next) => {
         userId: user._id,
         username: user.username,
         avatar: user.avatar,
-        role: "player",
+        roleInTeam: "player",
       });
     });
   } catch (socketErr) {
@@ -264,7 +267,11 @@ export const removeMember = TryCatchHandler(async (req, res, next) => {
     // Managers can NEVER remove the Captain or other Managers.
     // We check their system-level role within the team.
     const targetUser = await User.findById(memberId).select("roles");
-    const targetSystemRole = targetUser.roles.find(r => r.scopeId?.toString() === team._id.toString())?.role;
+    if (!targetUser) {
+      throw new CustomError("Target user not found.", 404);
+    }
+
+    const targetSystemRole = targetUser.roles?.find(r => r.scopeId?.toString() === team._id.toString())?.role;
 
     if (targetSystemRole !== Roles.TEAM.PLAYER) {
       throw new CustomError("Managers can only remove members with the Player role.", 403);
@@ -379,6 +386,13 @@ export const transferTeamOwnerShip = TryCatchHandler(async (req, res, next) => {
   // Emit socket event for ownership transfer
   emitOwnerTransferred(team._id, memberId, user.userId);
 
+  // Invalidate RBAC cache to ensure next operation uses updated roles
+  invalidateRbacCache(Scopes.TEAM, team._id);
+
+  // Emit profile updates for real-time refresh
+  emitProfileUpdate(memberId, { teamId: team._id, action: "role_changed" });
+  emitProfileUpdate(user.userId, { teamId: team._id, action: "role_changed" });
+
   res.status(200).json({
     success: true,
     message: "Team ownership transferred successfully.",
@@ -398,6 +412,12 @@ export const manageMemberRole = TryCatchHandler(async (req, res, next) => {
   // Emit socket event for role update
   emitRoleUpdated(team._id, memberId, role, oldRole);
 
+  // Invalidate RBAC cache
+  invalidateRbacCache(Scopes.TEAM, team._id);
+
+  // Emit profile update for real-time refresh
+  emitProfileUpdate(memberId, { teamId: team._id, action: "role_changed" });
+
   res.status(200).json({
     success: true,
     message,
@@ -409,6 +429,12 @@ export const deleteTeam = TryCatchHandler(async (req, res, next) => {
   const team = req.teamDoc;
 
   await deleteTeamService(team._id);
+
+  // Emit socket event for team deletion
+  emitTeamDeleted(team._id);
+
+  // Invalidate RBAC cache for the team
+  invalidateRbacCache(Scopes.TEAM, team._id);
 
   res.status(200).json({
     success: true,
@@ -430,6 +456,12 @@ export const manageStaffRole = TryCatchHandler(async (req, res, next) => {
 
   // Emit socket event for staff role update
   emitRoleUpdated(team._id, memberId, newRole, oldRole);
+
+  // Invalidate RBAC cache
+  invalidateRbacCache(Scopes.TEAM, team._id);
+
+  // Emit profile update for real-time refresh
+  emitProfileUpdate(memberId, { teamId: team._id, action: "role_changed" });
 
   res.status(200).json({
     success: true,

@@ -52,16 +52,17 @@ app.use(morgan("dev", { stream }));
 app.use(express.json({ limit: "10kb" }));
 app.use(cookieParese());
 
-// Security Middleware - Disable in test environment to avoid interference with tests
-if (process.env.NODE_ENV !== "test") {
-    app.use(helmet());
-    app.use(mongoSanitize());
-    // Note: xss-clean is deprecated. Helmet provides some XSS protection via CSP.
-    // Consider using express-xss-sanitizer if additional XSS sanitization is needed.
-    app.use(hpp());
-    // TODO: Uncomment before production
-    // app.use(rateLimiter({ limit: 100, timer: 15 * 60, key: "global" }));
+// Trust proxy if we are behind a reverse proxy (e.g. Nginx, Heroku, etc.)
+// This is necessary for rate limiting and logging to get the correct client IP.
+if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
 }
+app.use(helmet());
+app.use(mongoSanitize());
+// Note: xss-clean is deprecated. Helmet provides some XSS protection via CSP.
+// Consider using express-xss-sanitizer if additional XSS sanitization is needed.
+app.use(hpp());
+app.use(rateLimiter({ limit: 300, timer: 15 * 60, key: "global" }));
 
 app.get("/", (req, res) => {
     res.send("This is calling from KRM Esports backend");

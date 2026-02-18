@@ -31,6 +31,9 @@ export const sendJoinRequest = TryCatchHandler(async (req, res, next) => {
         const { resource, recipientId } = await strategy.validateJoinRequest(userId, targetId, session);
 
         const user = await User.findById(userId).session(session);
+        if (!user) {
+            throw new CustomError("User not found", 404);
+        }
 
         // 2. Create Request (unique index prevents duplicates)
         let joinRequest;
@@ -215,7 +218,7 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
             // Notify the requester to update their own profile/dashboard
             try {
                 const { emitProfileUpdate } = await import("../user/user.socket.js");
-                emitProfileUpdate(notification.sender, {
+                emitProfileUpdate(joinRequest.requester, {
                     teamId: strategyResult.socketEventData.teamId,
                     action: "joined"
                 });

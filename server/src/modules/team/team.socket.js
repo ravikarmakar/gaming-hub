@@ -10,6 +10,7 @@ export const TEAM_EVENTS = {
     ROLE_UPDATED: "team:role:updated",
     OWNER_TRANSFERRED: "team:owner:transferred",
     TEAM_UPDATED: "team:updated",
+    TEAM_DELETED: "team:deleted",
     JOIN_REQUEST_CREATED: "team:join_request:created",
 };
 
@@ -29,6 +30,8 @@ export const emitJoinRequestCreated = (teamId, requestData) => {
 
 /**
  * Emit when a new member joins the team
+ * @param {string} teamId
+ * @param {Object} memberData - Minimal delta: { userId, username, avatar, roleInTeam }
  */
 export const emitMemberJoined = (teamId, memberData) => {
     try {
@@ -99,5 +102,19 @@ export const emitTeamUpdated = (teamId, updateType, data = {}) => {
         });
     } catch (error) {
         logger.error("Failed to emit team updated event:", error);
+    }
+};
+
+/**
+ * Emit when a team is deleted
+ */
+export const emitTeamDeleted = (teamId) => {
+    try {
+        emitToTeam(teamId, TEAM_EVENTS.TEAM_DELETED, {
+            teamId,
+            timestamp: new Date().toISOString(),
+        });
+    } catch (error) {
+        logger.error("Failed to emit team deleted event:", error);
     }
 };

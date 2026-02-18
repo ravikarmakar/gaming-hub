@@ -94,7 +94,7 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
         const currentTeam = get().currentTeam;
         if (!currentTeam) return { success: false, message: "No active team" };
 
-        set({ isLoading: true });
+        set({ isLoading: true, error: null });
         try {
             const response = await axiosInstance.delete(`${TEAM_ENDPOINTS.DELETE}?teamId=${currentTeam._id}`);
             if (response.data.success) {
@@ -123,7 +123,7 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
         const currentTeam = get().currentTeam;
         if (!currentTeam) return { success: false, message: "No active team" };
 
-        set({ isLoading: true });
+        set({ isLoading: true, error: null });
         try {
             const response = await axiosInstance.put(TEAM_ENDPOINTS.REMOVE_MEMBER(memberId), {
                 teamId: currentTeam._id
@@ -147,26 +147,28 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
         const currentTeam = get().currentTeam;
         if (!currentTeam) return null;
 
-        set({ isLoading: true });
+        set({ isLoading: true, error: null });
         try {
             const response = await axiosInstance.put(TEAM_ENDPOINTS.LEAVE_TEAM, {
                 teamId: currentTeam._id
             });
 
-            const authUser = useAuthStore.getState().user;
-            if (authUser) {
-                useAuthStore.setState({
-                    user: {
-                        ...authUser,
-                        teamId: "",
-                        roles: authUser.roles.filter(r => r.scope !== 'team')
-                    }
-                });
-            }
+            if (response.data.success) {
+                const authUser = useAuthStore.getState().user;
+                if (authUser) {
+                    useAuthStore.setState({
+                        user: {
+                            ...authUser,
+                            teamId: "",
+                            roles: authUser.roles.filter(r => r.scope !== 'team')
+                        }
+                    });
+                }
 
-            set({ currentTeam: null, isLoading: false });
-            // We don't remove it from ListStore as the team still exists, 
-            // but we might want to refresh its member count if needed.
+                set({ currentTeam: null, isLoading: false });
+            } else {
+                set({ isLoading: false });
+            }
 
             return response.data;
         } catch (error) {
@@ -212,8 +214,10 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
                 const updatedTeam = response.data.data || currentTeam;
                 set({ currentTeam: updatedTeam, isLoading: false });
                 useTeamListStore.getState().updateTeamInList(updatedTeam);
+            } else {
+                set({ isLoading: false });
             }
-            return { success: true, message: response.data.message };
+            return { success: response.data.success, message: response.data.message };
         } catch (error) {
             set({ isLoading: false });
             return { success: false, message: getErrorMessage(error, "Error promoting member") };
@@ -236,8 +240,10 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
                 const updatedTeam = response.data.data || currentTeam;
                 set({ currentTeam: updatedTeam, isLoading: false });
                 useTeamListStore.getState().updateTeamInList(updatedTeam);
+            } else {
+                set({ isLoading: false });
             }
-            return { success: true, message: response.data.message };
+            return { success: response.data.success, message: response.data.message };
         } catch (error) {
             set({ error: getErrorMessage(error, "Error demoting member"), isLoading: false });
             return { success: false, message: getErrorMessage(error, "Error demoting member") };
@@ -248,7 +254,7 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
         const currentTeam = get().currentTeam;
         if (!currentTeam) return { success: false, message: "No active team" };
 
-        set({ isLoading: true });
+        set({ isLoading: true, error: null });
         try {
             const response = await axiosInstance.put(TEAM_ENDPOINTS.TRANSFER_OWNERSHIP, {
                 memberId,

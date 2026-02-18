@@ -139,6 +139,7 @@ export const authorize = (scope, requiredRoles = [], options = {}) => {
             }
 
             if (!scopeId) {
+                console.log(`[RBAC] scopeId missing for ${scope}. Body:`, JSON.stringify(req.body));
                 return next(new CustomError(`${scope} ID is required`, 400));
             }
 
@@ -204,8 +205,8 @@ export const authorize = (scope, requiredRoles = [], options = {}) => {
 
             // If requiredRoles is empty, membership is enough
             if (requiredRoles.length > 0) {
-                const hasPermission = requiredRoles.some(req =>
-                    permissions.includes(req) || permissions.includes("*")
+                const hasPermission = requiredRoles.some(roleReq =>
+                    permissions.includes(roleReq) || permissions.includes("*")
                 );
 
                 if (!hasPermission) {

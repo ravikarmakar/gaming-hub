@@ -102,7 +102,7 @@ export const MemberHeader = ({
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label="Back"
+                aria-label="Toggle Info"
                 onClick={onInfoToggle}
                 className={`h-9 w-9 rounded-lg transition-all border border-white/10 shrink-0 ${showInfo
                   ? "bg-purple-500/10 text-purple-400 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]"
