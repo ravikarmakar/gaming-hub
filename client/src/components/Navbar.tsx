@@ -26,6 +26,7 @@ import { useNotificationManager } from "@/features/notifications/hooks/useNotifi
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { ORG_ACTIONS_ACCESS, ORG_ACTIONS } from "@/features/organizer/lib/access";
 import { AUTH_ROUTES } from "@/features/auth/lib/routes";
+import { ADMIN_ACCESS } from "@/features/admin/lib/access";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -50,7 +51,7 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const isSuperAdmin = false;
+  const isSuperAdmin = can(ADMIN_ACCESS.dashboard);
 
   const hasAnyOrgRole = can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.viewDashboardButton]);
 
