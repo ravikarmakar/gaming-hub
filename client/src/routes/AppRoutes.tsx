@@ -64,9 +64,9 @@ const AppRoutes = () => {
                         <Route path={TEAM_ROUTES.DASHBOARD} element={<pages.TeamLayout />}>
                             <Route index element={<pages.TeamDashboard />} />
                             <Route path={TEAM_ROUTES.MEMBERS} element={<pages.TeamMembers />} />
-                            <Route path={TEAM_ROUTES.PERFORMANCE} element={<div>performance</div>} />
                             <Route path={TEAM_ROUTES.TOURNAMENTS} element={<pages.TeamTournaments />} />
                             <Route path={TEAM_ROUTES.NOTIFICATIONS} element={<pages.TeamNotifications />} />
+                            <Route path={TEAM_ROUTES.CHAT} element={<pages.TeamChat />} />
                             <Route path={TEAM_ROUTES.STAFF} element={<pages.TeamStaff />} />
                             <Route path={TEAM_ROUTES.SETTINGS} element={<pages.TeamSettings />} />
                         </Route>

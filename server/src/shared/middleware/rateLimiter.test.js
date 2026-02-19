@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { rateLimiter } from './rateLimiter.middleware.js';
+import { rateLimiter, clearRateLimitCache } from './rateLimiter.middleware.js';
 import { redis } from '../config/redis.js';
 
 vi.mock('../config/redis.js', () => ({
@@ -20,6 +20,7 @@ describe('Rate Limiter Middleware', () => {
     let mockReq, mockRes, mockNext;
 
     beforeEach(() => {
+        clearRateLimitCache();
         mockReq = {
             headers: {},
             socket: { remoteAddress: '127.0.0.1' },
@@ -37,7 +38,7 @@ describe('Rate Limiter Middleware', () => {
         const mockPipeline = {
             incr: vi.fn(),
             ttl: vi.fn(),
-            exec: vi.fn().mockResolvedValue([[null, 1], [null, -1]]),
+            exec: vi.fn().mockResolvedValue([1, -1]),
         };
         redis.pipeline.mockReturnValue(mockPipeline);
 
@@ -51,7 +52,7 @@ describe('Rate Limiter Middleware', () => {
         const mockPipeline = {
             incr: vi.fn(),
             ttl: vi.fn(),
-            exec: vi.fn().mockResolvedValue([[null, 2], [null, 59]]),
+            exec: vi.fn().mockResolvedValue([2, 59]),
         };
         redis.pipeline.mockReturnValue(mockPipeline);
 
@@ -66,7 +67,7 @@ describe('Rate Limiter Middleware', () => {
         const mockPipeline = {
             incr: vi.fn(),
             ttl: vi.fn(),
-            exec: vi.fn().mockResolvedValue([[null, 1], [null, -1]]),
+            exec: vi.fn().mockResolvedValue([1, -1]),
         };
         redis.pipeline.mockReturnValue(mockPipeline);
 
@@ -81,7 +82,7 @@ describe('Rate Limiter Middleware', () => {
         const mockPipeline = {
             incr: vi.fn(),
             ttl: vi.fn(),
-            exec: vi.fn().mockResolvedValue([[null, 11], [null, 30]]),
+            exec: vi.fn().mockResolvedValue([11, 30]),
         };
         redis.pipeline.mockReturnValue(mockPipeline);
 

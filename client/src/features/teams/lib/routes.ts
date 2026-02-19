@@ -8,6 +8,7 @@ export const TEAM_ROUTES = {
     PERFORMANCE: `${TEAM_BASE}/performance`,
     TOURNAMENTS: `${TEAM_BASE}/tournaments`,
     NOTIFICATIONS: `${TEAM_BASE}/notifications`,
+    CHAT: `${TEAM_BASE}/chat`,
     SETTINGS: `${TEAM_BASE}/settings`,
     STAFF: `${TEAM_BASE}/staff`,
 };

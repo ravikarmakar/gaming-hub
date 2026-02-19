@@ -15,7 +15,7 @@ export interface NavigationLink {
 
 export function useFilteredNavigation(links: NavigationLink[]) {
     const { can } = useAccess();
-    const { user } = useAuthStore();
+    const user = useAuthStore((state) => state.user);
 
     const filteredLinks = useMemo(() => {
         return links.filter((link) => {

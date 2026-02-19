@@ -1,4 +1,5 @@
 import React from "react";
+import { Search } from "lucide-react";
 
 import {
     Select,
@@ -9,7 +10,6 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 import { Label } from "@/components/ui/label";
 
 interface TeamFiltersProps {

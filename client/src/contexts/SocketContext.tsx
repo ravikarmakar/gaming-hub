@@ -71,6 +71,14 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
             setIsConnected(false);
         });
 
+        // Global User Listeners
+        newSocket.on("user:profile_updated", async (data) => {
+            console.log("👤 Profile update received:", data);
+            // Refresh auth store to get latest teamId and roles
+            const { checkAuth } = useAuthStore.getState();
+            await checkAuth();
+        });
+
         setSocket(newSocket);
 
         // Cleanup on unmount or user change

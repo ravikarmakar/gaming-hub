@@ -6,6 +6,7 @@ import {
     markAllAsRead,
     handleNotificationAction,
     getOrgNotifications,
+    getTeamNotifications,
 } from "../notification/notification.controller.js";
 
 const router = express.Router();
@@ -15,6 +16,7 @@ router.use(isAuthenticated);
 
 router.get("/", getMyNotifications);
 router.get("/org/:orgId", getOrgNotifications);
+router.get("/team/:teamId", getTeamNotifications);
 router.patch("/read-all", markAllAsRead);
 router.patch("/:id/read", markAsRead);
 router.post("/:id/action", handleNotificationAction);

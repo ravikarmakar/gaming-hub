@@ -222,7 +222,8 @@ export const verifyEmail = TryCatchHandler(async (req, res, next) => {
 });
 
 export const getProfile = TryCatchHandler(async (req, res, next) => {
-  const { user, unreadCount, cached } = await getUserProfile(req.user.userId, req.user.cachedProfile);
+  const skipCache = req.query.skipCache === "true";
+  const { user, unreadCount, cached } = await getUserProfile(req.user.userId, req.user.cachedProfile, skipCache);
 
   // Note: user coming from getUserProfile is already formatted in the service layer usually,
   // but we apply formatUserResponse here to be safe and consistent.

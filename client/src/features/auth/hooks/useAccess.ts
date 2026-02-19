@@ -1,3 +1,5 @@
+import { useCallback } from "react";
+
 import { useAuthStore } from "../store/useAuthStore";
 import { SCOPES } from "../lib/scopes";
 import { SCOPE_ID_RESOLVER } from "../lib/scopeIdMap";
@@ -8,7 +10,7 @@ const SUPER_ADMIN_ROLE = "platform:superadmin";
 export function useAccess() {
     const { user } = useAuthStore();
 
-    function can(rule: AccessRule): boolean {
+    const can = useCallback((rule: AccessRule): boolean => {
         if (!user) return false;
 
         // Super admin override (ONE PLACE)
@@ -31,7 +33,7 @@ export function useAccess() {
             if (resolvedScopeId && r.scopeId?.toString() !== resolvedScopeId.toString()) return false;
             return true;
         }) ?? false;
-    }
+    }, [user]);
 
     return { can };
 }

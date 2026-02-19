@@ -35,13 +35,12 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
   try {
     const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
 
-    // L1 Cache Check
+    // --- Blacklist Check (L1 cache skips Redis blacklist check only) ---
     const l1Expiry = blacklistCache.get(accessToken);
-    if (l1Expiry && l1Expiry > Date.now()) {
-      // Token is in L1 cache = Valid (not blacklisted)
-      // Skip Redis blacklist check
-    } else {
-      // PIPELINE: Fetch blacklist AND profile in one roundtrip
+    const l1Hit = l1Expiry && l1Expiry > Date.now();
+
+    if (!l1Hit) {
+      // L1 cache miss — check Redis for blacklist AND fetch profile in one roundtrip
       const p = redis.pipeline();
       p.get(`blacklist_token:${accessToken}`);
       p.get(`user_profile:${decoded.userId}`);
@@ -50,7 +49,6 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
       let cachedProfile = null;
 
       try {
-        // Set a strict timeout for the Redis check (e.g., 1000ms)
         const results = await Promise.race([
           p.exec(),
           new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 1000))
@@ -59,10 +57,8 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
         // @upstash/redis results are [res, res]
         isBlacklisted = results[0];
         cachedProfile = results[1];
-
       } catch (redisError) {
         logger.error(`>>> [AUTH] Redis check failed: ${redisError.message}`);
-        // SECURITY: Fail-secure - block request if we can't verify blacklist status
         return next(new CustomError("Authentication service unavailable. Please try again.", 503, AUTH_ERRORS.AUTH_SERVICE_UNAVAILABLE));
       }
 
@@ -72,6 +68,7 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
       // Token is valid (not blacklisted). Add to L1 cache.
       blacklistCache.set(accessToken, Date.now() + BLACKLIST_L1_TTL);
 
+      // Parse and attach profile
       let parsedProfile = null;
       if (cachedProfile) {
         try {
@@ -87,32 +84,28 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
         roles: decoded.roles,
         cachedProfile: parsedProfile,
       };
-    }
+    } else {
+      // L1 blacklist cache hit — skip blacklist check, but STILL fetch fresh profile from Redis
+      let cachedProfile = null;
+      try {
+        const rawProfile = await Promise.race([
+          redis.get(`user_profile:${decoded.userId}`),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 1000))
+        ]);
+        if (rawProfile) {
+          cachedProfile = typeof rawProfile === "string" ? JSON.parse(rawProfile) : rawProfile;
+        }
+      } catch (redisError) {
+        // Non-fatal: fall back to JWT roles if Redis profile fetch fails
+        logger.warn(`[AUTH] Redis profile fetch failed on L1 hit: ${redisError.message}`);
+      }
 
-    // If we hit L1 cache, req.user wouldn't be set above (except if we reconstructed it, effectively).
-    // WAIT: The L1 cache logic above is incomplete. If we hit cache, we skip redis, 
-    // but we ALSO skip fetching the user profile from Redis if it wasn't in L1.
-    // However, the previous logic PIPELINED both.
-    // If we skip Redis, we lack `cachedProfile`. 
-    // BUT `req.user` must be set.
-
-    // CORRECTION: The L1 cache only caches "Not Blacklisted". 
-    // It does NOT cache the user profile (usually). 
-    // But `getUserProfile` (service) handles profile caching.
-    // `isAuthenticated` attaches `cachedProfile` to `req.user` if found in Redis.
-    // If we skip Redis, `req.user` won't be set.
-
-    // We MUST set req.user even if L1 hit.
-    if (!req.user) {
       req.user = {
         _id: decoded.userId,
         userId: decoded.userId,
         roles: decoded.roles,
-        // cachedProfile: null // We miss the profile if we skip Redis. 
-        // This is a trade-off. If we want profile, we must hit Redis or cache profile in L1 too.
+        cachedProfile: cachedProfile,
       };
-      // NOTE: The `getUserProfile` service is called by `getProfile` controller, which has its own L1/Redis cache.
-      // So missing `cachedProfile` here is fine, it just means `getProfile` might have to fetch it.
     }
 
     next();
@@ -203,37 +196,3 @@ export const isVerified = TryCatchHandler(async (req, res, next) => {
   logger.debug(">>> [isVerified] Account is verified. Next.");
   next();
 });
-
-export const requireRole = (requiredRole, requiredScope = "platform") => {
-  return (req, res, next) => {
-    const userRoles = req.user?.roles || [];
-
-    const hasRole = userRoles.some(
-      (r) => r.scope === requiredScope && r.role === requiredRole
-    );
-
-    if (!hasRole) {
-      return res
-        .status(403)
-        .json({ message: "Access Denied: Unauthorized role" });
-    }
-
-    next();
-  };
-};
-
-export const checkAnyRole = (rolesArray, scope = "platform") => {
-  return (req, res, next) => {
-    const userRoles = req.user?.roles || [];
-
-    const authorized = rolesArray.some((role) =>
-      userRoles.some((r) => r.scope === scope && r.role === role)
-    );
-
-    if (!authorized) {
-      return res.status(403).json({ message: "Not authorized" });
-    }
-
-    next();
-  };
-};

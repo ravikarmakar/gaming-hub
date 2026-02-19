@@ -35,7 +35,7 @@ export const TEAM_ACCESS = {
     },
     staff: {
         scope: SCOPES.TEAM,
-        roles: [TEAM_ROLES.OWNER],
+        roles: [TEAM_ROLES.OWNER, TEAM_ROLES.MANAGER],
     },
 };
 
@@ -54,7 +54,7 @@ export const TEAM_ACTIONS_ACCESS = {
     },
     [TEAM_ACTIONS.manageStaff]: {
         scope: SCOPES.TEAM,
-        roles: [TEAM_ROLES.OWNER],
+        roles: [TEAM_ROLES.OWNER, TEAM_ROLES.MANAGER],
     },
     [TEAM_ACTIONS.acceptJoinRequest]: {
         scope: SCOPES.TEAM,

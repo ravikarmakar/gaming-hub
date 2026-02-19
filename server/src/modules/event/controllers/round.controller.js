@@ -4,6 +4,7 @@ import EventRegistration from "../models/event-registration.model.js";
 import mongoose from "mongoose";
 import { logger } from "../../../shared/utils/logger.js";
 import { TryCatchHandler } from "../../../shared/middleware/error.middleware.js";
+import { withOptionalTransaction } from "../../../shared/utils/withOptionalTransaction.js";
 
 export const getRounds = TryCatchHandler(async (req, res) => {
   const { eventId } = req.query;
@@ -41,43 +42,31 @@ export const createRound = TryCatchHandler(async (req, res) => {
     return res.status(400).json({ message: "Valid Event ID is required!" });
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
+  const newRound = await withOptionalTransaction(async (session) => {
     // Check if Event exists
-    const event = await Event.findById(eventId).session(session);
+    const eventQuery = Event.findById(eventId);
+    if (session) eventQuery.session(session);
+    const event = await eventQuery;
     if (!event) {
-      await session.abortTransaction();
       return res.status(404).json({ message: "Event not found!" });
     }
 
-    // Check if Teams are registered (using EventRegistration) - Only count approved registrations
-    // Note: countDocuments doesn't support session in older mongoose, but likely fine here.
-    // Ideally use find().session(session).count() or assume consistency.
-    const totalTeams = await EventRegistration.countDocuments({ eventId, status: "approved" }).session(session);
+    const totalTeamsQuery = EventRegistration.countDocuments({ eventId, status: "approved" });
+    if (session) totalTeamsQuery.session(session);
+    const totalTeams = await totalTeamsQuery;
     if (totalTeams === 0) {
-      await session.abortTransaction();
       return res.status(400).json({
-        message:
-          "Cannot create a round. No teams have approved registrations in this event!",
+        message: "Cannot create a round. No teams have approved registrations in this event!",
       });
     }
 
-    // Check for ongoing round
-    const existingOngoingRound = await Round.findOne({
-      eventId,
-      status: "ongoing",
-    }).session(session);
-
+    const ongoingQuery = Round.findOne({ eventId, status: "ongoing" });
+    if (session) ongoingQuery.session(session);
+    const existingOngoingRound = await ongoingQuery;
     if (existingOngoingRound) {
-      await session.abortTransaction();
-      return res
-        .status(400)
-        .json({ message: "An ongoing round already exists!" });
+      return res.status(400).json({ message: "An ongoing round already exists!" });
     }
 
-    // 🚀 Atomic round counter increment
     const updatedEvent = await Event.findByIdAndUpdate(
       eventId,
       { $inc: { roundCount: 1 } },
@@ -86,8 +75,6 @@ export const createRound = TryCatchHandler(async (req, res) => {
 
     const roundNumber = updatedEvent.roundCount;
 
-    // Create the round
-    // Use array syntax for create with session
     const [newRound] = await Round.create([{
       eventId,
       roundName: roundName || `Round-${roundNumber}`,
@@ -101,71 +88,52 @@ export const createRound = TryCatchHandler(async (req, res) => {
       qualifyingTeams
     }], { session });
 
-    await session.commitTransaction();
+    return newRound;
+  });
 
-    // Note: We do not push to event.rounds because Event schema does not have a rounds array
-    // The relationship is handled by Round.eventId
+  // If the response was already sent (early returns above), don't continue
+  if (res.headersSent) return;
 
-    // ✅ PUSH NOTIFICATIONS TO ALL REGISTERED TEAMS
-    // (This can happen outside transaction or asynchronously to not block)
-    // We already committed, so safe to proceed.
-    try {
-      // Find all approved registrations for this event to get the teamIds
-      const registrations = await EventRegistration.find({ eventId, status: "approved" }).populate("teamId");
+  // Push notifications (best effort, outside transaction)
+  try {
+    const registrations = await EventRegistration.find({ eventId, status: "approved" }).populate("teamId");
+    const notificationsToCreate = [];
+    const Notification = mongoose.model("Notification");
 
-      const notificationsToCreate = [];
-      const Notification = mongoose.model("Notification");
-
-      for (const reg of registrations) {
-        if (!reg.teamId) continue;
-
-        const team = reg.teamId;
-
-        // Null check for teamMembers
-        if (!team.teamMembers || !Array.isArray(team.teamMembers)) {
-          logger.warn(`Team ${team._id} has invalid teamMembers structure during round creation notification.`);
-          continue;
-        }
-
-        const recipientIds = team.teamMembers
-          .filter(m => m.isActive)
-          .map(m => m.user);
-
-        for (const userId of recipientIds) {
-          notificationsToCreate.push({
-            recipient: userId,
-            sender: req.user._id,
-            type: "ROUND_CREATED",
-            content: {
-              title: "New Round Created!",
-              message: `${event.eventName}: ${newRound.roundName} has been created. ${startTime ? `Scheduled to start on ${new Date(startTime).toISOString()}.` : 'Schedule is pending.'}`
-            },
-            relatedData: {
-              eventId,
-              teamId: team._id
-            }
-          });
-        }
+    for (const reg of registrations) {
+      if (!reg.teamId) continue;
+      const team = reg.teamId;
+      if (!team.teamMembers || !Array.isArray(team.teamMembers)) {
+        logger.warn(`Team ${team._id} has invalid teamMembers structure during round creation notification.`);
+        continue;
       }
 
-      if (notificationsToCreate.length > 0) {
-        await Notification.insertMany(notificationsToCreate);
+      const recipientIds = team.teamMembers.filter(m => m.isActive).map(m => m.user);
+      for (const userId of recipientIds) {
+        notificationsToCreate.push({
+          recipient: userId,
+          sender: req.user._id,
+          type: "ROUND_CREATED",
+          content: {
+            title: "New Round Created!",
+            message: `${newRound.roundName} has been created. ${startTime ? `Scheduled to start on ${new Date(startTime).toISOString()}.` : 'Schedule is pending.'}`
+          },
+          relatedData: { eventId, teamId: team._id }
+        });
       }
-    } catch (notifError) {
-      logger.error("Error sending round creation notifications:", notifError);
     }
 
-    return res.status(201).json({
-      message: "New round created successfully!",
-      rounds: newRound,
-    });
-
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    session.endSession();
+    if (notificationsToCreate.length > 0) {
+      await Notification.insertMany(notificationsToCreate);
+    }
+  } catch (notifError) {
+    logger.error("Error sending round creation notifications:", notifError);
   }
+
+  return res.status(201).json({
+    message: "New round created successfully!",
+    rounds: newRound,
+  });
 });
 
 export const getRoundDetails = TryCatchHandler(async (req, res) => {
@@ -231,49 +199,48 @@ export const updateRound = TryCatchHandler(async (req, res) => {
 });
 
 export const deleteRound = TryCatchHandler(async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    const { roundId } = req.params;
+  const { roundId } = req.params;
 
-    if (!roundId || !mongoose.Types.ObjectId.isValid(roundId)) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ message: "Valid Round ID required" });
-    }
+  if (!roundId || !mongoose.Types.ObjectId.isValid(roundId)) {
+    return res.status(400).json({ message: "Valid Round ID required" });
+  }
 
-    const round = await Round.findById(roundId).session(session);
+  await withOptionalTransaction(async (session) => {
+    const roundQuery = Round.findById(roundId);
+    if (session) roundQuery.session(session);
+    const round = await roundQuery;
     if (!round) {
-      await session.abortTransaction();
-      session.endSession();
       return res.status(404).json({ message: "Round not found" });
     }
 
     // 1. Find all groups for this round
-    const groups = await mongoose.model("Group").find({ roundId }).session(session);
+    const groupsQuery = mongoose.model("Group").find({ roundId });
+    if (session) groupsQuery.session(session);
+    const groups = await groupsQuery;
     const groupIds = groups.map(g => g._id);
 
     // 2. Delete Leaderboards for these groups
     if (groupIds.length > 0) {
-      await mongoose.model("Leaderboard").deleteMany({ groupId: { $in: groupIds } }).session(session);
+      const delLbQuery = mongoose.model("Leaderboard").deleteMany({ groupId: { $in: groupIds } });
+      if (session) delLbQuery.session(session);
+      await delLbQuery;
     }
 
     // 3. Delete Groups
-    await mongoose.model("Group").deleteMany({ roundId }).session(session);
+    const delGroupsQuery = mongoose.model("Group").deleteMany({ roundId });
+    if (session) delGroupsQuery.session(session);
+    await delGroupsQuery;
 
     // 4. Delete Round
-    await Round.findByIdAndDelete(roundId).session(session);
+    const delRoundQuery = Round.findByIdAndDelete(roundId);
+    if (session) delRoundQuery.session(session);
+    await delRoundQuery;
+  });
 
-    await session.commitTransaction();
-    session.endSession();
+  if (res.headersSent) return;
 
-    res.status(200).json({
-      success: true,
-      message: "Round and all associated data deleted successfully",
-    });
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    throw error;
-  }
+  res.status(200).json({
+    success: true,
+    message: "Round and all associated data deleted successfully",
+  });
 });

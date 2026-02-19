@@ -3,8 +3,8 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Users, Trophy, ShieldCheck, Gamepad2, Globe } from "lucide-react";
 
-import { TEAM_ROUTES } from "../../lib/routes";
-import { Team } from "../../lib/types";
+import { TEAM_ROUTES } from "@/features/teams/lib/routes";
+import { Team } from "@/features/teams/lib/types";
 
 interface TeamCardProps {
     team: Team;

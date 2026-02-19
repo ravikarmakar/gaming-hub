@@ -4,6 +4,7 @@ import Group from "../models/group.model.js";
 import Round from "../models/round.model.js";
 import pointSystem from "../../../shared/config/pointSystem.js";
 import { logger } from "../../../shared/utils/logger.js";
+import { withOptionalTransaction } from "../../../shared/utils/withOptionalTransaction.js";
 
 // Create a new leaderboard entry
 export const createLeaderboardEntry = async (req, res) => {
@@ -309,129 +310,106 @@ export const createLeaderboardForRoundsGroups = async (req, res) => {
 
 // ✅ Update Group Results (Batch) with Transaction
 export const updateGroupResults = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const { groupId } = req.params;
+  const { results } = req.body;
+
+  if (!groupId || !results || !Array.isArray(results)) {
+    return res.status(400).json({ message: "Invalid data provided" });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(groupId)) {
+    return res.status(400).json({ message: "Invalid Group ID" });
+  }
 
   try {
-    const { groupId } = req.params;
-    const { results } = req.body; // Array of { teamId, kills, score (place pts), wins }
-
-    if (!groupId || !results || !Array.isArray(results)) {
-      throw new Error("Invalid data provided");
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(groupId)) {
-      throw new Error("Invalid Group ID");
-    }
-
-    const group = await Group.findById(groupId).populate("roundId").session(session);
-    if (!group) {
-      await session.abortTransaction();
-      await session.endSession();
-      return res.status(404).json({ message: "Group not found" });
-    }
-
-    const leaderboard = await Leaderboard.findOne({ groupId }).session(session);
-    if (!leaderboard) {
-      await session.abortTransaction();
-      await session.endSession();
-      return res.status(404).json({ message: "Leaderboard not found" });
-    }
-
-    // Update results for each team
-    for (const { teamId, rank, kills } of results) {
-      if (!teamId) continue;
-
-      const entry = leaderboard.teamScore.find(
-        (t) => t.teamId.toString() === teamId.toString()
-      );
-
-      if (entry) {
-        const placePoints = pointSystem.ranks[rank] || 0;
-        // ⚡ Cumulative Multi-Match Logic
-        entry.score = (entry.score || 0) + placePoints; // Accumulate Place Points
-        entry.kills = (entry.kills || 0) + (kills || 0); // Accumulate Kills
-        if (rank === 1) entry.wins = (entry.wins || 0) + 1; // Increment Wins if Match Rank 1
-        entry.matchesPlayed = (entry.matchesPlayed || 0) + 1; // Increment matches for this team
-
-        // Update current position based on this specific match
-        entry.position = rank;
-      } else {
-        // Handle silent failure: Log warning or error
-        logger.warn(`Team ${teamId} not found in leaderboard for group ${groupId}`);
-        // Optionally return error if this should be strict
+    const { leaderboard, group } = await withOptionalTransaction(async (session) => {
+      const groupQuery = Group.findById(groupId).populate("roundId");
+      if (session) groupQuery.session(session);
+      const group = await groupQuery;
+      if (!group) {
+        return res.status(404).json({ message: "Group not found" });
       }
-    }
 
-    // Increment Group matches played
-    group.matchesPlayed = (group.matchesPlayed || 0) + 1;
+      const lbQuery = Leaderboard.findOne({ groupId });
+      if (session) lbQuery.session(session);
+      const leaderboard = await lbQuery;
+      if (!leaderboard) {
+        return res.status(404).json({ message: "Leaderboard not found" });
+      }
 
-    // Null check for group.roundId
-    const effectiveTotalMatch = (group.roundId && group.roundId.matchesPerGroup) ? group.roundId.matchesPerGroup : (group.totalMatch || 1);
+      // Update results for each team
+      for (const { teamId, rank, kills } of results) {
+        if (!teamId) continue;
 
-    // Check if the group is fully completed
-    const qualifyingLimit = (group.roundId && group.roundId.qualifyingTeams) || 0;
+        const entry = leaderboard.teamScore.find(
+          (t) => t.teamId.toString() === teamId.toString()
+        );
 
-    if (group.matchesPlayed >= effectiveTotalMatch) {
-      group.status = "completed";
-
-      // 🏆 Apply Final Qualification only after ALL matches are done
-
-      // Calculate totalPoints manually for sorting logic (assuming 1 kill = 1 pt as fallback if no hook logic)
-      leaderboard.teamScore.forEach(entry => {
-        // Logic: points = score (place pts) + kills * 1 (kill pts)
-        // NOTE: This logic assumes 1 kill point. Ideally should fetch from pointSystem if variable.
-        // 'pointSystem' imported at top might have it.
-        // But let's check 'pointSystem'.
-        // If we don't know, we rely on current values.
-        entry.totalPoints = (entry.score || 0) + (entry.kills || 0);
-      });
-
-      // Sort Descending by Total Points
-      leaderboard.teamScore.sort((a, b) => b.totalPoints - a.totalPoints);
-
-      leaderboard.teamScore.forEach((entry, index) => {
-        if (qualifyingLimit > 0 && index < qualifyingLimit) {
-          entry.isQualified = true;
+        if (entry) {
+          const placePoints = pointSystem.ranks[rank] || 0;
+          entry.score = (entry.score || 0) + placePoints;
+          entry.kills = (entry.kills || 0) + (kills || 0);
+          if (rank === 1) entry.wins = (entry.wins || 0) + 1;
+          entry.matchesPlayed = (entry.matchesPlayed || 0) + 1;
+          entry.position = rank;
         } else {
-          entry.isQualified = false;
-        }
-      });
-    } else {
-      group.status = "ongoing";
-    }
-
-    // Consolidated Saves within transaction
-    await leaderboard.save({ session });
-    await group.save({ session });
-
-    // ✅ Check if all groups in the round are completed
-    // Requires querying other groups, usually okay in transaction
-    if (group.roundId && group.roundId._id) {
-      const allGroupsInRound = await Group.find({ roundId: group.roundId._id }).session(session);
-      const isRoundComplete = allGroupsInRound.every(g => g.status === 'completed');
-
-      if (isRoundComplete) {
-        await Round.findByIdAndUpdate(group.roundId._id, { status: 'completed' }).session(session);
-
-        // ✅ If it was a Grand Finale (only 1 group in round), mark event as completed
-        if (allGroupsInRound.length === 1 && group.roundId.eventId) {
-          await mongoose.model("Event").findByIdAndUpdate(group.roundId.eventId, { eventProgress: 'completed' }).session(session);
+          logger.warn(`Team ${teamId} not found in leaderboard for group ${groupId}`);
         }
       }
-    }
 
-    await session.commitTransaction();
+      // Increment Group matches played
+      group.matchesPlayed = (group.matchesPlayed || 0) + 1;
+
+      const effectiveTotalMatch = (group.roundId && group.roundId.matchesPerGroup) ? group.roundId.matchesPerGroup : (group.totalMatch || 1);
+      const qualifyingLimit = (group.roundId && group.roundId.qualifyingTeams) || 0;
+
+      if (group.matchesPlayed >= effectiveTotalMatch) {
+        group.status = "completed";
+
+        leaderboard.teamScore.forEach(entry => {
+          entry.totalPoints = (entry.score || 0) + (entry.kills || 0);
+        });
+
+        leaderboard.teamScore.sort((a, b) => b.totalPoints - a.totalPoints);
+
+        leaderboard.teamScore.forEach((entry, index) => {
+          entry.isQualified = qualifyingLimit > 0 && index < qualifyingLimit;
+        });
+      } else {
+        group.status = "ongoing";
+      }
+
+      await leaderboard.save({ session });
+      await group.save({ session });
+
+      // Check if all groups in the round are completed
+      if (group.roundId && group.roundId._id) {
+        const allGroupsQuery = Group.find({ roundId: group.roundId._id });
+        if (session) allGroupsQuery.session(session);
+        const allGroupsInRound = await allGroupsQuery;
+        const isRoundComplete = allGroupsInRound.every(g => g.status === 'completed');
+
+        if (isRoundComplete) {
+          const updateRoundQuery = Round.findByIdAndUpdate(group.roundId._id, { status: 'completed' });
+          if (session) updateRoundQuery.session(session);
+          await updateRoundQuery;
+
+          if (allGroupsInRound.length === 1 && group.roundId.eventId) {
+            const updateEventQuery = mongoose.model("Event").findByIdAndUpdate(group.roundId.eventId, { eventProgress: 'completed' });
+            if (session) updateEventQuery.session(session);
+            await updateEventQuery;
+          }
+        }
+      }
+
+      return { leaderboard, group };
+    });
+
+    if (res.headersSent) return;
+
     res.status(200).json({ message: "Results updated and group completed", leaderboard, group });
-
   } catch (error) {
-    if (session.inTransaction()) {
-      await session.abortTransaction();
-    }
     logger.error("Error updating group results:", error);
     res.status(500).json({ message: "Internal Server Error", error: error.message });
-  } finally {
-    // ⚡ FIX: Always end session to prevent memory leaks
-    session.endSession();
   }
 };

@@ -20,6 +20,9 @@ import { findEventById } from "../event/event.service.js";
 import { uploadOnImageKit, deleteFromImageKit } from "../../shared/services/imagekit.service.js";
 import { logger } from "../../shared/utils/logger.js";
 import Team from "../team/team.model.js";
+import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
+import { getTournamentRegistrants } from "../../shared/utils/tournament.js";
+
 
 const requiredFields = [
   "title",
@@ -314,13 +317,23 @@ export const registerEvent = TryCatchHandler(async (req, res, next) => {
       return next(new CustomError(`Your team must have at least ${minSize} active players to register.`, 400));
     }
 
-    const players = activeMembers.slice(0, minSize).map(m => m.user);
-    const substitutes = activeMembers.slice(minSize).map(m => m.user);
+    let players = [];
+    let substitutes = [];
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    if (event.category === 'squad') {
+      const registrants = getTournamentRegistrants(team.teamMembers);
+      players = registrants.players;
+      substitutes = registrants.substitutes;
 
-    try {
+      if (players.length < 4) {
+        return next(new CustomError("Your team must have an IGL, Rusher, Sniper, and Support to join a squad tournament.", 400));
+      }
+    } else {
+      players = activeMembers.slice(0, minSize).map(m => m.user);
+      substitutes = activeMembers.slice(minSize).map(m => m.user);
+    }
+
+    await withOptionalTransaction(async (session) => {
       // Atomic Slot Increment with condition check
       const updatedEvent = await Event.findOneAndUpdate(
         {
@@ -359,20 +372,12 @@ export const registerEvent = TryCatchHandler(async (req, res, next) => {
         { $push: { eventHistory: eventId } },
         { session }
       );
+    });
 
-      await session.commitTransaction();
-
-      return res.status(200).json({
-        success: true,
-        message: "Your Team successfully registered for the tournament",
-      });
-
-    } catch (error) {
-      await session.abortTransaction();
-      return next(error);
-    } finally {
-      session.endSession();
-    }
+    return res.status(200).json({
+      success: true,
+      message: "Your Team successfully registered for the tournament",
+    });
   } else {
     // Create JoinRequest for invite-only event
     await JoinRequest.create({
@@ -670,19 +675,12 @@ export const deleteEvent = TryCatchHandler(async (req, res) => {
   );
   if (!isAuthorized) throw new CustomError("Not authorized to delete this event", 403);
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
+  const deletedEvent = await withOptionalTransaction(async (session) => {
     const deletedEvent = await Event.findByIdAndDelete(eventId, { session });
 
     if (!deletedEvent) {
       throw new CustomError("Event not found (or already deleted)", 404);
     }
-
-    // Cleanup associated assets/data
-    // ImageKit cleanup cannot be part of transaction, do it after or log for background job
-    // We will do it after commit.
 
     // Cascade deletions
     await Promise.all([
@@ -691,25 +689,20 @@ export const deleteEvent = TryCatchHandler(async (req, res) => {
       Group.deleteMany({ eventId: eventId }, { session })
     ]);
 
-    await session.commitTransaction();
+    return deletedEvent;
+  });
 
-    // Post-transaction cleanup
-    if (deletedEvent.imageFileId) {
-      deleteFromImageKit(deletedEvent.imageFileId).catch(err =>
-        logger.error(`Failed to cleanup event image ${deletedEvent.imageFileId}:`, err)
-      );
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Event and associated data deleted successfully"
-    });
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    session.endSession();
+  // Post-transaction cleanup
+  if (deletedEvent.imageFileId) {
+    deleteFromImageKit(deletedEvent.imageFileId).catch(err =>
+      logger.error(`Failed to cleanup event image ${deletedEvent.imageFileId}:`, err)
+    );
   }
+
+  res.status(200).json({
+    success: true,
+    message: "Event and associated data deleted successfully"
+  });
 });
 
 export const unregisterEvent = TryCatchHandler(async (req, res, next) => {
@@ -721,10 +714,7 @@ export const unregisterEvent = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("You are not part of any team", 400));
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
+  await withOptionalTransaction(async (session) => {
     const registration = await EventRegistration.findOneAndDelete(
       { eventId, teamId: user.teamId },
       { session }
@@ -740,23 +730,12 @@ export const unregisterEvent = TryCatchHandler(async (req, res, next) => {
       { $inc: { joinedSlots: -1 } },
       { session }
     );
+  });
 
-    // Optional: Remove from histroy? Usually history remains, but user requested "atomic with registration"
-    // If they meant cleanup history too:
-    // await User.updateMany({ _id: { $in: teamMembers } }, { $pull: { eventHistory: eventId } }, { session });
-
-    await session.commitTransaction();
-
-    res.status(200).json({
-      success: true,
-      message: "Successfully unregistered from the event",
-    });
-  } catch (error) {
-    await session.abortTransaction();
-    return next(error);
-  } finally {
-    session.endSession();
-  }
+  res.status(200).json({
+    success: true,
+    message: "Successfully unregistered from the event",
+  });
 });
 
 export const startEvent = TryCatchHandler(async (req, res, next) => {

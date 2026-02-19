@@ -1,61 +1,16 @@
 import fs from "fs";
-import mongoose from "mongoose";
 import Team from "./team.model.js";
-import User from "../user/user.model.js";
+import * as UserGateway from "../user/user.gateway.js";
 import JoinRequest from "../join-request/join-request.model.js";
+import teamEvents, { TEAM_EVENT_TYPES } from "./team.events.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
 import { Roles, Scopes } from "../../shared/constants/roles.js";
 import { redis } from "../../shared/config/redis.js";
 import { uploadOnImageKit, deleteFromImageKit } from "../../shared/services/imagekit.service.js";
 import { logger } from "../../shared/utils/logger.js";
-
-// --- Cache Helpers (Risk Mitigation) ---
-
-/**
- * Resilient cache invalidation with retry logic and fallback
- * Addresses Risk: Stale Cache from redis.del failures
- */
-const invalidateCacheWithRetry = async (keys, options = {}) => {
-  const { maxRetries = 3, retryDelay = 100 } = options;
-  const keysArray = Array.isArray(keys) ? keys : [keys];
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      if (keysArray.length === 1) {
-        await redis.del(keysArray[0]);
-      } else {
-        // Use pipeline for multiple keys
-        const pipeline = redis.pipeline();
-        keysArray.forEach(key => pipeline.del(key));
-        await pipeline.exec();
-      }
-
-      if (attempt > 1) {
-        logger.info(`Cache invalidation succeeded on attempt ${attempt} for keys: ${keysArray.join(', ')}`);
-      }
-      return true;
-    } catch (error) {
-      logger.error(`Cache invalidation attempt ${attempt}/${maxRetries} failed for keys: ${keysArray.join(', ')}`, error);
-
-      if (attempt === maxRetries) {
-        // Final fallback: Set very short TTL (1 second) to force near-immediate expiration
-        logger.warn(`All cache deletion attempts failed. Setting 1-second TTL as fallback for keys: ${keysArray.join(', ')}`);
-        try {
-          const pipeline = redis.pipeline();
-          keysArray.forEach(key => pipeline.expire(key, 1));
-          await pipeline.exec();
-        } catch (fallbackError) {
-          logger.error('Fallback TTL update also failed:', fallbackError);
-        }
-        return false;
-      }
-
-      // Exponential backoff
-      await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
-    }
-  }
-  return false;
-};
+import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
+import { invalidateCacheWithRetry } from "../../shared/utils/cache.js";
+import { VALID_TEAM_MEMBER_ROLES, UNIQUE_ROLES } from "./team.constants.js";
 
 /**
  * Sync user denormalized data in team rosters with retry logic
@@ -78,9 +33,6 @@ const syncUserInTeamsWithRetry = async (userId, { username, avatar }, options = 
         { arrayFilters: [{ "elem.user": userId }] }
       );
 
-      if (attempt > 1) {
-        logger.info(`Team denormalization sync succeeded on attempt ${attempt} for user ${userId}`);
-      }
       return true;
     } catch (error) {
       logger.error(`Team sync attempt ${attempt}/${maxRetries} failed for user ${userId}:`, error);
@@ -114,15 +66,14 @@ export const checkTeamNameUnique = async (teamName, session = null) => {
   return true;
 };
 
-// --- CRUD Services ---
-
 export const createTeamService = async (userId, body, file) => {
   const { teamName, bio, tag, region } = body;
 
-  // 0. Pre-validation (Fail early to avoid unnecessary upload)
-  await checkTeamNameUnique(teamName);
-
-  const userPreCheck = await User.findById(userId);
+  // 0. Pre-validation (Parallelize DB checks to reduce RTT)
+  const [userPreCheck] = await Promise.all([
+    UserGateway.getUserById(userId),
+    checkTeamNameUnique(teamName) // throws CustomError(409) if duplicate
+  ]);
   if (!userPreCheck) throw new CustomError("User not found", 404);
   if (userPreCheck.teamId) throw new CustomError("You are already in a team", 400);
   if (!userPreCheck.isAccountVerified)
@@ -146,72 +97,51 @@ export const createTeamService = async (userId, body, file) => {
     }
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
-    // Re-check unique name inside transaction (or rely on E11000) happens at save()
+    const newTeam = await withOptionalTransaction(async (session) => {
+      // Lock the user to ensure they haven't joined a team in the meantime
+      const user = await UserGateway.getUserWithRoles(userId, session);
+      if (!user) throw new CustomError("User not found", 404);
+      if (user.teamId) throw new CustomError("You are already in a team", 400);
 
-    // Lock the user to ensure they haven't joined a team in the meantime
-    const user = await User.findById(userId).session(session);
-    if (!user) throw new CustomError("User not found", 404);
-    if (user.teamId) throw new CustomError("You are already in a team", 400); // Race condition check
-
-    const teamData = {
-      teamName,
-      tag,
-      region,
-      captain: user._id,
-      imageUrl,
-      imageFileId,
-      bio,
-      teamMembers: [
-        {
-          user: user._id,
-          username: user.username,
-          avatar: user.avatar,
-          roleInTeam: "igl",
-        },
-      ],
-    };
-
-    // 2. Create Team
-    const newTeam = new Team(teamData);
-    await newTeam.save({ session });
-
-    // 3. Update User
-    await User.findByIdAndUpdate(
-      userId,
-      {
-        $set: { teamId: newTeam._id },
-        $push: {
-          roles: {
-            scope: Scopes.TEAM,
-            role: Roles.TEAM.OWNER,
-            scopeId: newTeam._id,
-            scopeModel: "Team",
+      const teamData = {
+        teamName,
+        tag,
+        region,
+        captain: user._id,
+        imageUrl,
+        imageFileId,
+        bio,
+        teamMembers: [
+          {
+            user: user._id,
+            username: user.username,
+            avatar: user.avatar,
+            roleInTeam: "igl",
           },
-        },
-      },
-      { session }
-    );
+        ],
+      };
 
-    await session.commitTransaction();
-    session.endSession();
+      // 2. Create Team
+      const newTeam = new Team(teamData);
+      await newTeam.save({ session });
 
-    // 4. Invalidate user profile cache (with retry logic)
+      // 3. Update User
+      await UserGateway.assignTeamToUser(userId, newTeam._id, Roles.TEAM.OWNER, session);
+
+      return newTeam;
+    });
+
+    // 4. Invalidate user profile cache
     await invalidateCacheWithRetry(`user_profile:${userId}`);
 
-    // Clean up local file only after success (or failure)
+    // Clean up local file only after success
     if (file && fs.existsSync(file.path)) {
       try { fs.unlinkSync(file.path); } catch (e) { logger.error("Failed to delete local file:", e); }
     }
 
     return newTeam;
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-
     // Rollback ImageKit upload if DB failed
     if (uploadedImageStart) {
       await deleteFromImageKit(uploadedImageStart).catch(err =>
@@ -328,7 +258,7 @@ export const updateTeamService = async (teamId, body, files) => {
 
     await team.save();
 
-    // Invalidate Team Cache (with retry logic)
+    // Invalidate Team Cache
     await invalidateCacheWithRetry(`team_details:${team._id}`);
 
     // Async cleanup of old images AFTER successful save
@@ -343,7 +273,17 @@ export const updateTeamService = async (teamId, body, files) => {
       );
     }
 
-    return await getTransformedTeam(team._id);
+    // Clean up local files on success path
+    if (files) {
+      if (files.image && files.image[0] && fs.existsSync(files.image[0].path)) {
+        try { fs.unlinkSync(files.image[0].path); } catch (e) { logger.error("Failed to delete local file:", e); }
+      }
+      if (files.banner && files.banner[0] && fs.existsSync(files.banner[0].path)) {
+        try { fs.unlinkSync(files.banner[0].path); } catch (e) { logger.error("Failed to delete local file:", e); }
+      }
+    }
+
+    return await buildTransformedTeamFromDoc(team);
   } catch (err) {
     // Cleanup locally uploaded files first
     if (files) {
@@ -370,22 +310,11 @@ export const deleteTeamService = async (teamId) => {
   const team = await Team.findOne({ _id: teamId, isDeleted: false });
   if (!team) throw new CustomError("Team not found", 404);
 
-  // 1. Set teamId = null and remove team roles for all team members (Atomic)
+  // 1. Set teamId = null and remove team roles for all team members
   const memberIds = team.teamMembers.map((member) => member.user);
-  await User.updateMany(
-    { _id: { $in: memberIds } },
-    {
-      $set: { teamId: null },
-      $pull: {
-        roles: {
-          scope: "team",
-          scopeId: team._id,
-        },
-      },
-    }
-  );
+  await UserGateway.bulkRemoveTeamFromUsers(memberIds, team._id);
 
-  // 2. Soft delete the team (Atomic)
+  // 2. Soft delete the team
   await Team.findByIdAndUpdate(team._id, {
     $set: {
       isDeleted: true,
@@ -393,13 +322,16 @@ export const deleteTeamService = async (teamId) => {
     }
   });
 
-  // 3. Invalidate Redis cache for all members (Pipeline for efficiency)
+  // 3. Invalidate Redis cache for all members
   const pipeline = redis.pipeline();
   memberIds.forEach((userId) => {
     pipeline.del(`user_profile:${userId}`);
   });
-  // Also invalidate team details
+  // Also invalidate team details and socket memberships
   pipeline.del(`team_details:${teamId}`);
+  memberIds.forEach((userId) => {
+    pipeline.del(`socket_member:${userId}:${teamId}`);
+  });
   await pipeline.exec();
 
   // 4. Async cleanup of related data
@@ -415,6 +347,12 @@ export const deleteTeamService = async (teamId) => {
     deleteFromImageKit(team.bannerFileId).catch(err => logger.error(`Failed to delete team banner ${team.bannerFileId}`, err));
   }
 
+  // 6. Emit event for real-time UI refresh
+  teamEvents.emit(TEAM_EVENT_TYPES.TEAM_DELETED, {
+    teamId: team._id,
+    memberIds
+  });
+
   return true;
 };
 
@@ -427,7 +365,7 @@ export const transferTeamOwnershipService = async (teamId, currentOwnerId, newOw
     throw new CustomError("You are not the captain of this team", 403);
   }
 
-  // 1 Check: member team ka hissa hai ya nahi
+  // Check: member team ka hissa hai ya nahi
   const isMember = team.teamMembers.some(
     (m) => m.user.toString() === newOwnerId.toString()
   );
@@ -436,13 +374,10 @@ export const transferTeamOwnershipService = async (teamId, currentOwnerId, newOw
     throw new CustomError("The selected member is not part of your team.", 400);
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const updatedTeam = await withOptionalTransaction(async (session) => {
+    const user = await UserGateway.getUserWithRoles(currentOwnerId, session); // Old owner
 
-  try {
-    const user = await User.findById(currentOwnerId).session(session); // Old owner
-
-    // 2 Update Team document (captain + teamMembers)
+    // Update Team document (captain + teamMembers)
     const updatedMembers = team.teamMembers.map((member) => {
       const uid = member.user.toString();
 
@@ -457,7 +392,7 @@ export const transferTeamOwnershipService = async (teamId, currentOwnerId, newOw
       return member.toObject();
     });
 
-    await Team.findByIdAndUpdate(
+    const updatedTeam = await Team.findByIdAndUpdate(
       team._id,
       {
         $set: {
@@ -465,75 +400,36 @@ export const transferTeamOwnershipService = async (teamId, currentOwnerId, newOw
           teamMembers: updatedMembers,
         },
       },
-      { session }
+      { session, new: true, lean: true }
     );
 
     // 3. Update User document (roles) - Old Owner becomes Player
-    await User.findByIdAndUpdate(
-      user._id,
-      {
-        $set: {
-          "roles.$[elem].role": Roles.TEAM.PLAYER
-        }
-      },
-      {
-        session,
-        arrayFilters: [{
-          "elem.scope": "team",
-          "elem.scopeId": team._id
-        }]
-      }
-    );
+    await UserGateway.updateMemberSystemRole(user._id, team._id, Roles.TEAM.PLAYER, session);
 
     // 4. Update New Captain document (roles)
-    const newCaptainUser = await User.findById(newOwnerId).session(session);
+    // We remove and then push to ensure clean state (as per original logic although updateMemberSystemRole might be enough if target exists)
+    // To match original logic precisely:
+    await UserGateway.removeTeamFromUser(newOwnerId, team._id, session);
+    await UserGateway.assignTeamToUser(newOwnerId, team._id, Roles.TEAM.OWNER, session);
 
-    // Remove existing team role (if any) and push new OWNER role
-    // Using $pull and $push ensures we don't overwrite other roles
-    await User.findByIdAndUpdate(
-      newOwnerId,
-      {
-        $pull: {
-          roles: {
-            scope: "team",
-            scopeId: team._id
-          }
-        }
-      },
-      { session }
-    );
+    return updatedTeam;
+  });
 
-    await User.findByIdAndUpdate(
-      newOwnerId,
-      {
-        $push: {
-          roles: {
-            scope: "team",
-            role: Roles.TEAM.OWNER, // "team:owner"
-            scopeId: team._id,
-            scopeModel: "Team",
-          }
-        }
-      },
-      { session }
-    );
+  // 5. Clear Redis cache
+  const pipeline = redis.pipeline();
+  pipeline.del(`user_profile:${currentOwnerId}`);
+  pipeline.del(`user_profile:${newOwnerId}`);
+  pipeline.del(`team_details:${teamId}`);
+  await pipeline.exec();
 
-    await session.commitTransaction();
-    session.endSession();
+  // 6. Emit event for side effects (notifications)
+  teamEvents.emit(TEAM_EVENT_TYPES.OWNER_TRANSFERRED, {
+    team,
+    newOwnerId,
+    oldOwnerId: currentOwnerId
+  });
 
-    // 5. Clear Redis cache
-    const pipeline = redis.pipeline();
-    pipeline.del(`user_profile:${user._id}`);
-    pipeline.del(`user_profile:${newOwnerId}`);
-    pipeline.del(`team_details:${teamId}`);
-    await pipeline.exec();
-
-    return await getTransformedTeam(teamId);
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    throw error;
-  }
+  return await buildTransformedTeamFromDoc(updatedTeam);
 };
 
 export const manageTeamStaffService = async (teamId, memberId, action) => {
@@ -541,11 +437,10 @@ export const manageTeamStaffService = async (teamId, memberId, action) => {
     throw new CustomError("Invalid action. Must be 'promote' or 'demote'.", 400);
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    const team = await Team.findOne({ _id: teamId, isDeleted: false }).session(session);
+  const result = await withOptionalTransaction(async (session) => {
+    const teamQuery = Team.findOne({ _id: teamId, isDeleted: false });
+    if (session) teamQuery.session(session);
+    const team = await teamQuery;
     if (!team) throw new CustomError("Team not found", 404);
 
     // Verify member exists in team
@@ -562,7 +457,7 @@ export const manageTeamStaffService = async (teamId, memberId, action) => {
       throw new CustomError("Cannot separate system role for the Team Owner.", 403);
     }
 
-    const user = await User.findById(memberId).session(session);
+    const user = await UserGateway.getUserWithRoles(memberId, session);
     if (!user) throw new CustomError("User not found", 404);
 
     if (action === "promote") {
@@ -574,55 +469,48 @@ export const manageTeamStaffService = async (teamId, memberId, action) => {
       );
 
       if (alreadyManager) {
-        await session.abortTransaction();
-        session.endSession();
-        return { message: "Member is already a Manager.", team: await getTransformedTeam(team._id) };
+        return { earlyReturn: true, message: "Member is already a Manager.", teamId: team._id, team };
       }
 
       // Add Manager Role to User
-      await User.updateOne(
-        { _id: memberId, "roles.scopeId": team._id },
-        { $set: { "roles.$.role": Roles.TEAM.MANAGER } }
-      ).session(session);
-
-      // Update role in Team Member array
-      // team.teamMembers[memberIndex].roleInTeam = "manager"; // if you want to track it in team array too? 
-      // Based on existing code, keys seemed to be 'igl' or 'player'. 'manager' might not be a standard role key in array.
-      // But looking at manageMemberRoleService, it seems `roleInTeam` IS updated. Let's update it here for consistency if that's the pattern.
-      // However, the original code didn't update teamMembers array for promote/demote, only User roles. 
-      // I will stick to original logic but fix consistency if needed. 
-      // Wait, `manageMemberRoleService` DOES update team.teamMembers. `manageTeamStaffService` previously ONLY updated User roles.
-      // This inconsistency is suspicious. promoting to manager in User roles but not in Team array?
-      // Let's assume the previous logic was partial. But for minimal regression, I'll stick to what it did: updating User roles.
+      await UserGateway.updateMemberSystemRole(memberId, team._id, Roles.TEAM.MANAGER, session);
 
     } else if (action === "demote") {
       // Remove Manager Role
-      await User.updateOne(
-        { _id: memberId, "roles.scopeId": team._id },
-        { $set: { "roles.$.role": Roles.TEAM.PLAYER } }
-      ).session(session);
+      await UserGateway.updateMemberSystemRole(memberId, team._id, Roles.TEAM.PLAYER, session);
     }
 
-    await session.commitTransaction();
-    session.endSession();
+    return { earlyReturn: false, teamId: team._id, team };
+  });
 
-    // Invalidate Redis cache (with retry logic)
-    await invalidateCacheWithRetry([`user_profile:${memberId}`, `team_details:${teamId}`]);
-
-    return { message: `Member successfully ${action === "promote" ? "promoted to Manager" : "demoted to Player"}.`, team: await getTransformedTeam(team._id) };
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    throw error;
+  if (result.earlyReturn) {
+    return { message: result.message, team: await buildTransformedTeamFromDoc(result.team) };
   }
+
+  // Invalidate Redis cache
+  await invalidateCacheWithRetry([`user_profile:${memberId}`, `team_details:${teamId}`]);
+
+  // Emit profile update to the affected user
+  try {
+    const { emitProfileUpdate } = await import("../user/user.socket.js");
+    emitProfileUpdate(memberId, { teamId, action: "role_changed" });
+  } catch (err) {
+    logger.warn("Failed to emit profile update for member role change:", err.message);
+  }
+
+  // Emit event for side effects (notifications)
+  const newRole = action === "promote" ? "manager" : "player";
+  teamEvents.emit(TEAM_EVENT_TYPES.ROLE_UPDATED, { team: result.team, memberId, newRole });
+
+  return { message: `Member successfully ${action === "promote" ? "promoted to Manager" : "demoted to Player"}.`, team: await buildTransformedTeamFromDoc(result.team) };
 };
 
 export const manageMemberRoleService = async (teamId, memberId, role) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    const team = await Team.findOne({ _id: teamId, isDeleted: false }).session(session);
+  const teamId_saved = teamId;
+  const savedTeam = await withOptionalTransaction(async (session) => {
+    const teamQuery = Team.findOne({ _id: teamId, isDeleted: false });
+    if (session) teamQuery.session(session);
+    const team = await teamQuery;
     if (!team) throw new CustomError("Team not found", 404);
 
     const member = team.teamMembers.find(
@@ -633,9 +521,9 @@ export const manageMemberRoleService = async (teamId, memberId, role) => {
       throw new CustomError("The specified user is not a member of the team.", 404);
     }
 
-    // Backfill missing denormalized fields if any (Read-only on User, so no lock needed really, but kept in session)
+    // Backfill missing denormalized fields if any
     const memberUserIds = team.teamMembers.map(m => m.user);
-    const users = await User.find({ _id: { $in: memberUserIds } }).select("username avatar").session(session);
+    const users = await UserGateway.findUsersByIds(memberUserIds, "username avatar", session);
 
     team.teamMembers.forEach(m => {
       const user = users.find(u => u._id.toString() === m.user.toString());
@@ -645,26 +533,39 @@ export const manageMemberRoleService = async (teamId, memberId, role) => {
       }
     });
 
-    const VALID_ROLES = ["igl", "rusher", "sniper", "support", "player", "coach", "analyst", "substitute"];
-    if (!VALID_ROLES.includes(role)) {
+    if (!VALID_TEAM_MEMBER_ROLES.includes(role)) {
       throw new CustomError("Invalid role specified.", 400);
+    }
+
+    // Role Uniqueness Check
+    if (UNIQUE_ROLES.includes(role)) {
+      const alreadyExists = team.teamMembers.some(
+        (m) => m.roleInTeam === role && m.user.toString() !== memberId.toString()
+      );
+      if (alreadyExists) {
+        throw new CustomError(`The role '${role.toUpperCase()}' is already assigned to another member. Each team can have only one member in this role.`, 400);
+      }
+    }
+
+    // Role Limit Check
+    if (role === "substitute") {
+      const substituteCount = team.teamMembers.filter(
+        (m) => m.roleInTeam === "substitute" && m.user.toString() !== memberId.toString()
+      ).length;
+      if (substituteCount >= 2) {
+        throw new CustomError("A team can have a maximum of 2 substitutes.", 400);
+      }
     }
 
     member.roleInTeam = role;
     await team.save({ session });
+    return team;
+  });
 
-    await session.commitTransaction();
-    session.endSession();
+  // Update Cache
+  await invalidateCacheWithRetry([`team_details:${teamId_saved}`, `user_profile:${memberId}`]);
 
-    // Update Cache (with retry logic)
-    await invalidateCacheWithRetry([`team_details:${team._id}`, `user_profile:${memberId}`]);
-
-    return { message: `The member's role has been updated to '${role}'.`, team: await getTransformedTeam(team._id) };
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    throw error;
-  }
+  return { message: `The member's role has been updated to '${role}'.`, team: await buildTransformedTeamFromDoc(savedTeam) };
 };
 
 // --- Existing Helpers & Services ---
@@ -697,35 +598,53 @@ export const teamExists = async (id) => {
 /**
  * Helper to fetch a fully populated and transformed team
  * used by multiple members/staff management controllers.
+ * @param {string} teamId
+ * @param {Object} session - Optional MongoDB session
  */
-export const getTransformedTeam = async (teamId) => {
-  const team = await Team.findOne({ _id: teamId, isDeleted: false })
-    .select("-__v")
-    .lean();
+export const getTransformedTeam = async (teamId, session = null) => {
+  const query = Team.findOne({ _id: teamId, isDeleted: false }).select("-__v").lean();
+  if (session) query.session(session);
+  const team = await query;
 
   if (!team) return null;
 
-  // Add pending requests count for frontend synchronization
-  const { default: JoinRequest } = await import("../join-request/join-request.model.js");
-  const pendingRequestsCount = await JoinRequest.countDocuments({
-    target: teamId,
-    status: "pending"
-  });
+  return await buildTransformedTeamFromDoc(team, session);
+};
 
+/**
+ * Build a transformed team response from an already-loaded team document.
+ * Reduces 3 DB queries to 1 (just JoinRequest.countDocuments + User.find).
+ * Used after mutations where the team doc is already in memory.
+ * @param {Object} teamDoc - A team document (Mongoose doc or plain object)
+ * @param {Object} session - Optional MongoDB session
+ */
+export const buildTransformedTeamFromDoc = async (teamDoc, session = null) => {
+  const team = teamDoc.toObject ? teamDoc.toObject() : teamDoc;
+  const teamId = team._id;
+
+  // Run the two remaining queries in parallel (instead of sequentially)
   const userIds = team.teamMembers.map((m) => m.user);
-  const users = await User.find({ _id: { $in: userIds } })
-    .select("roles _id username avatar")
-    .lean();
+
+  const pendingRequestsQuery = JoinRequest.countDocuments({ target: teamId, status: "pending" });
+  if (session) pendingRequestsQuery.session(session);
+
+  const users = await UserGateway.findUsersByIds(userIds, "roles _id username avatar", session);
+
+  const pendingRequestsCount = await pendingRequestsQuery;
+
+  // Strip __v if present
+  const { __v, ...teamData } = team;
 
   return {
-    ...team,
+    ...teamData,
     pendingRequestsCount,
     teamMembers: team.teamMembers.map((m) => {
-      const userObj = users.find((u) => u._id.toString() === m.user.toString());
+      const memberData = m.toObject ? m.toObject() : m;
+      const userObj = users.find((u) => u._id.toString() === memberData.user.toString());
       return {
-        ...m,
-        username: m.username || userObj?.username || "Unknown",
-        avatar: m.avatar || userObj?.avatar || "",
+        ...memberData,
+        username: memberData.username || userObj?.username || "Unknown",
+        avatar: memberData.avatar || userObj?.avatar || "",
         systemRole:
           userObj?.roles.find(
             (r) =>
@@ -740,199 +659,226 @@ export const getTransformedTeam = async (teamId) => {
  * Service to add a single member to a team (Scalable/Reusable)
  */
 export const addMemberToTeam = async ({ teamId, userId, roleInTeam = "player", session = null }) => {
-  let localSession = null;
+  // If a session is passed from a parent transaction, use it directly
+  if (session) {
+    return await _addMemberToTeamOps({ teamId, userId, roleInTeam, session });
+  }
+
+  // Otherwise, wrap in optional transaction
+  await withOptionalTransaction(async (session) => {
+    await _addMemberToTeamOps({ teamId, userId, roleInTeam, session });
+  });
+
+  // Cache Invalidation (always runs, post-commit/standalone)
   if (!session) {
-    localSession = await mongoose.startSession();
-    localSession.startTransaction();
-    session = localSession;
+    await invalidateCacheWithRetry([`user_profile:${userId}`, `team_details:${teamId}`]);
+
+    // Emit profile update to the joining user
+    try {
+      const { emitProfileUpdate } = await import("../user/user.socket.js");
+      emitProfileUpdate(userId, { teamId, action: "joined" });
+    } catch (err) {
+      logger.warn("Failed to emit profile update for new member:", err.message);
+    }
   }
 
-  try {
-    const user = await User.findById(userId).session(session);
-    if (!user) throw new CustomError("User not found", 404);
-    if (user.teamId) throw new CustomError(`${user.username} is already in a team`, 400);
+  return true;
+};
 
-    // Atomic Update: Checks if team exists AND has fewer than 20 members (index 19 doesn't exist)
-    const updatedTeam = await Team.findOneAndUpdate(
-      {
-        _id: teamId,
-        isDeleted: false,
-        "teamMembers.19": { $exists: false } // Ensures < 20 members
-      },
-      {
-        $push: {
-          teamMembers: {
-            user: userId,
-            username: user.username,
-            avatar: user.avatar,
-            roleInTeam,
-          },
-        },
-      },
-      { session, new: true }
-    );
+/** Internal helper for addMemberToTeam operations */
+const _addMemberToTeamOps = async ({ teamId, userId, roleInTeam, session }) => {
+  const user = await UserGateway.getUserById(userId, session);
+  if (!user) throw new CustomError("User not found", 404);
+  if (user.teamId) throw new CustomError(`${user.username} is already in a team`, 400);
 
-    if (!updatedTeam) {
-      // Check if team exists to give specific error
-      const teamExists = await Team.exists({ _id: teamId, isDeleted: false }).session(session);
-      if (!teamExists) throw new CustomError("Team not found", 404);
-      throw new CustomError("Team limit exceeded. Max 20 members allowed.", 400);
-    }
+  const query = {
+    _id: teamId,
+    isDeleted: false,
+    "teamMembers.11": { $exists: false }
+  };
 
-    // 2. Update User Roles & Team ID
-    await User.findByIdAndUpdate(
-      userId,
-      {
-        $set: { teamId: teamId },
-        $push: {
-          roles: {
-            scope: Scopes.TEAM,
-            role: Roles.TEAM.PLAYER,
-            scopeId: teamId,
-            scopeModel: "Team",
-          },
-        },
-      },
-      { session }
-    );
-
-    if (localSession) {
-      await localSession.commitTransaction();
-      localSession.endSession();
-    }
-
-    // 3. Cache Invalidation (Post-commit if sessions used, handled by caller)
-    if (localSession) {
-      const pipeline = redis.pipeline();
-      pipeline.del(`user_profile:${userId}`);
-      pipeline.del(`team_details:${teamId}`);
-      await pipeline.exec();
-    }
-
-    return true;
-  } catch (error) {
-    if (localSession) {
-      await localSession.abortTransaction();
-      localSession.endSession();
-    }
-    throw error;
+  if (UNIQUE_ROLES.includes(roleInTeam)) {
+    query["teamMembers.roleInTeam"] = { $ne: roleInTeam };
   }
+
+  if (roleInTeam === "substitute") {
+    // This is a bit tricky for atomic update with $ne as we need count. 
+    // We'll perform a pre-check since this is a relatively low-concurrency event compared to joins.
+    // However, to stay atomic, we can count the substitutes in the query if we was using aggregation, 
+    // but findOneAndUpdate limited. We'll use the pre-check + post-check pattern like team limit.
+  }
+
+  // Atomic Update: Checks if team exists, has capacity, and role is unique (if required)
+  const updatedTeam = await Team.findOneAndUpdate(
+    query,
+    {
+      $push: {
+        teamMembers: {
+          user: userId,
+          username: user.username,
+          avatar: user.avatar,
+          roleInTeam,
+        },
+      },
+    },
+    { session, new: true }
+  );
+
+  if (!updatedTeam) {
+    const freshQuery = Team.findOne({ _id: teamId, isDeleted: false });
+    if (session) freshQuery.session(session);
+    const freshTeam = await freshQuery;
+
+    if (!freshTeam) throw new CustomError("Team not found", 404);
+    if (freshTeam.teamMembers.length >= 12) {
+      throw new CustomError("Team limit exceeded. Max 12 members allowed.", 400);
+    }
+    if (UNIQUE_ROLES.includes(roleInTeam) && freshTeam.teamMembers.some(m => m.roleInTeam === roleInTeam)) {
+      throw new CustomError(`The role '${roleInTeam.toUpperCase()}' is already assigned to another member.`, 400);
+    }
+    // If we reach here, it's likely a race condition where the team was updated 
+    // between our query and findOneAndUpdate, but none of the specific checks matched.
+    throw new CustomError("Could not join team: Team state changed or role no longer available. Please try again.", 409);
+  }
+
+  // Post-check for substitute limit if roleInTeam is substitute
+  if (roleInTeam === "substitute") {
+    // Re-fetch within session to get latest count
+    const freshTeamForCheck = await Team.findById(teamId).session(session);
+    const substituteCount = freshTeamForCheck.teamMembers.filter(m => m.roleInTeam === "substitute").length;
+    if (substituteCount > 2) {
+      throw new CustomError("A team can have a maximum of 2 substitutes.", 400);
+    }
+  }
+
+  // Atomic User Update: Ensures user isn't already in another team (race condition guard)
+  const updatedUser = await UserGateway.assignTeamToUser(userId, teamId, Roles.TEAM.PLAYER, session);
+
+  if (!updatedUser) {
+    // Rollback Team update (if we are in a session, this throws. If not, we have a mismatch)
+    throw new CustomError(`User ${user.username} successfully assigned to a team concurrently. Join failed.`, 409);
+  }
+
+  return true;
 };
 
 /**
  * Service to batch add members to a team
  */
 export const batchAddMembersToTeam = async ({ teamId, memberIds, session = null }) => {
-  let localSession = null;
-  if (!session) {
-    localSession = await mongoose.startSession();
-    localSession.startTransaction();
-    session = localSession;
+  // If a session is passed from a parent transaction, use it directly
+  if (session) {
+    return await _batchAddMembersOps({ teamId, memberIds, session });
   }
 
-  try {
-    const team = await Team.findOne({ _id: teamId, isDeleted: false }).session(session);
-    if (!team) throw new CustomError("Team not found", 404);
+  // Otherwise, wrap in optional transaction
+  await withOptionalTransaction(async (session) => {
+    await _batchAddMembersOps({ teamId, memberIds, session });
+  });
 
-    // Atomic limit check handled in findOneAndUpdate below
+  // Cache Invalidation (always runs, post-commit/standalone)
+  if (!session) {
+    const keys = memberIds.map((mid) => `user_profile:${mid}`);
+    keys.push(`team_details:${teamId}`);
+    await invalidateCacheWithRetry(keys);
 
-    const users = await User.find({ _id: { $in: memberIds } }).session(session);
-    if (users.length !== memberIds.length) throw new CustomError("One or more users not found", 404);
+    // Emit profile updates to all batch-added users
+    try {
+      const { emitProfileUpdate } = await import("../user/user.socket.js");
+      memberIds.forEach((mid) => emitProfileUpdate(mid, { teamId, action: "joined" }));
+    } catch (err) {
+      logger.warn("Failed to emit profile updates for batch added members:", err.message);
+    }
+  }
 
-    const bulkOps = [];
-    const teamUpdateOps = [];
+  return true;
+};
 
-    for (const user of users) {
-      if (user.teamId) throw new CustomError(`${user.username} is already in a team`, 400);
+/** Internal helper for batchAddMembersToTeam operations */
+const _batchAddMembersOps = async ({ teamId, memberIds, session }) => {
+  const teamQuery = Team.findOne({ _id: teamId, isDeleted: false });
+  if (session) teamQuery.session(session);
+  const team = await teamQuery;
+  if (!team) throw new CustomError("Team not found", 404);
 
-      // User Bulk Ops
-      bulkOps.push({
-        updateOne: {
-          filter: { _id: user._id },
-          update: {
-            $set: { teamId: teamId },
-            $push: {
-              roles: {
-                scope: Scopes.TEAM,
-                role: Roles.TEAM.PLAYER,
-                scopeId: teamId,
-                scopeModel: "Team",
-              },
+  const users = await UserGateway.findUsersByIds(memberIds, "", session);
+  if (users.length !== memberIds.length) throw new CustomError("One or more users not found", 404);
+
+  const bulkOps = [];
+  const teamUpdateOps = [];
+
+  for (const user of users) {
+    if (user.teamId) throw new CustomError(`${user.username} is already in a team`, 400);
+
+    bulkOps.push({
+      updateOne: {
+        filter: { _id: user._id, teamId: null },
+        update: {
+          $set: { teamId: teamId },
+          $push: {
+            roles: {
+              scope: Scopes.TEAM,
+              role: Roles.TEAM.PLAYER,
+              scopeId: teamId,
+              scopeModel: "Team",
             },
           },
         },
-      });
+      },
+    });
 
-      // Team Roster Ops
-      teamUpdateOps.push({
-        user: user._id,
-        username: user.username,
-        avatar: user.avatar,
-        roleInTeam: "player",
-      });
-    }
+    teamUpdateOps.push({
+      user: user._id,
+      username: user.username,
+      avatar: user.avatar,
+      roleInTeam: "player",
+    });
+  }
 
-    // Execute Updates
-    if (bulkOps.length > 0) {
-      await User.bulkWrite(bulkOps, { session });
+  if (bulkOps.length > 0) {
+    await UserGateway.bulkAssignTeamToUsers(memberIds, teamId, Roles.TEAM.PLAYER, session);
 
-      // Atomic Update: Checks version AND member limit using $expr
-      const updatedTeam = await Team.findOneAndUpdate(
-        {
-          _id: teamId,
-          __v: team.__v, // Optimistic concurrency for other fields
-          $expr: {
-            $lte: [
-              { $add: [{ $size: "$teamMembers" }, teamUpdateOps.length] },
-              20
-            ]
-          }
-        },
-        {
-          $push: { teamMembers: { $each: teamUpdateOps } },
-          $inc: { __v: 1 }
-        },
-        { session, new: true }
-      );
-
-      if (!updatedTeam) {
-        // Distinguish errors - concurrent operations detected
-        const freshTeam = await Team.findById(teamId).session(session);
-        if (freshTeam && freshTeam.teamMembers.length + teamUpdateOps.length > 20) {
-          throw new CustomError(
-            `Cannot add ${memberIds.length} member(s). Team currently has ${freshTeam.teamMembers.length} members. Maximum limit is 20 members.`,
-            400,
-            "TEAM_LIMIT_EXCEEDED"
-          );
+    const updatedTeam = await Team.findOneAndUpdate(
+      {
+        _id: teamId,
+        __v: team.__v,
+        $expr: {
+          $lte: [
+            { $add: [{ $size: "$teamMembers" }, teamUpdateOps.length] },
+            12
+          ]
         }
+      },
+      {
+        $push: { teamMembers: { $each: teamUpdateOps } },
+        $inc: { __v: 1 }
+      },
+      { session, new: true }
+    );
+
+    if (!updatedTeam) {
+      const freshQuery = Team.findById(teamId);
+      if (session) freshQuery.session(session);
+      const freshTeam = await freshQuery;
+      if (freshTeam && freshTeam.teamMembers.length + teamUpdateOps.length > 12) {
         throw new CustomError(
-          "Team roster is being updated by another manager. Please refresh and try again.",
-          409,
-          "CONCURRENT_MODIFICATION"
+          `Cannot add ${memberIds.length} member(s). Team currently has ${freshTeam.teamMembers.length} members. Maximum limit is 12 members.`,
+          400,
+          "TEAM_LIMIT_EXCEEDED"
         );
       }
+      throw new CustomError(
+        "Team roster is being updated by another manager. Please refresh and try again.",
+        409,
+        "CONCURRENT_MODIFICATION"
+      );
     }
 
-    if (localSession) {
-      await localSession.commitTransaction();
-      localSession.endSession();
+    // Verify all users were updated (check for race condition where user joined another team)
+    const usersInUpdateCount = await UserGateway.countUsersInTeam(memberIds, teamId, session);
+    if (usersInUpdateCount !== memberIds.length) {
+      throw new CustomError("One or more users joined another team concurrently. Batch join aborted.", 409);
     }
-
-    // Cache Invalidation (only if we created the session/transaction, otherwise caller handles)
-    if (localSession) {
-      const pipeline = redis.pipeline();
-      memberIds.forEach((mid) => pipeline.del(`user_profile:${mid}`));
-      pipeline.del(`team_details:${teamId}`);
-      await pipeline.exec();
-    }
-
-    return true;
-  } catch (error) {
-    if (localSession) {
-      await localSession.abortTransaction();
-      localSession.endSession();
-    }
-    throw error;
   }
 };
 
@@ -947,7 +893,7 @@ export const syncUserInTeams = async (userId, { username, avatar }) => {
 /**
  * Service to remove a member from a team
  */
-export const removeMemberFromTeam = async ({ teamId, userId, session = null }) => {
+export const removeMemberFromTeam = async ({ teamId, userId, session = null, actorId = null, actorRole = null }) => {
   const team = await Team.findOne({ _id: teamId, isDeleted: false }).session(session);
   if (!team) throw new CustomError("Team not found", 404);
 
@@ -955,6 +901,10 @@ export const removeMemberFromTeam = async ({ teamId, userId, session = null }) =
   if (team.captain.toString() === userId.toString()) {
     throw new CustomError("Cannot remove the Team Captain. Transfer ownership first.", 403);
   }
+
+  // Capture member info before removal for event emission
+  const memberObj = team.teamMembers.find(m => m.user.toString() === userId.toString());
+  const memberName = memberObj?.username || "Unknown";
 
   // 1. Remove from Team Roster
   await Team.findByIdAndUpdate(
@@ -964,24 +914,185 @@ export const removeMemberFromTeam = async ({ teamId, userId, session = null }) =
   );
 
   // 2. Clear User Team Data & Roles
-  await User.findByIdAndUpdate(
-    userId,
-    {
-      $set: { teamId: null },
-      $pull: {
-        roles: {
-          scope: Scopes.TEAM,
-          scopeId: teamId,
-        },
-      },
-    },
-    { session }
-  );
+  await UserGateway.removeTeamFromUser(userId, teamId, session);
 
   // 3. Cache Invalidation (with retry logic)
   if (!session) {
     await invalidateCacheWithRetry([`user_profile:${userId}`, `team_details:${teamId}`]);
+
+    // Emit profile update to the removed user
+    try {
+      const { emitProfileUpdate } = await import("../user/user.socket.js");
+      emitProfileUpdate(userId, { teamId, action: "left" });
+    } catch (err) {
+      logger.warn("Failed to emit profile update for removed member:", err.message);
+    }
+
+    // Invalidate socket membership cache so next join:team re-checks DB
+    try {
+      if (typeof redis.del === "function") {
+        await redis.del(`socket_member:${userId}:${teamId}`);
+      }
+    } catch (err) {
+      logger.error(`Failed to invalidate socket membership cache:`, err.message);
+    }
+
+    // 4. Emit event for side effects (notifications)
+    if (actorId && actorId.toString() !== userId.toString()) {
+      // It was a kick
+      teamEvents.emit(TEAM_EVENT_TYPES.MEMBER_KICKED, {
+        team,
+        memberId: userId,
+        actorId,
+        actorRole: actorRole || "manager"
+      });
+    } else {
+      // It was a self-leave
+      teamEvents.emit(TEAM_EVENT_TYPES.MEMBER_LEFT, {
+        team,
+        memberId: userId,
+        memberName
+      });
+    }
   }
 
   return true;
 };
+
+/**
+ * Strategy methods for Join Requests and Invitations
+ */
+
+export const validateJoinRequest = async (userId, teamId, session = null) => {
+  const user = await UserGateway.getUserById(userId, session);
+  if (!user) throw new CustomError("User not found", 404);
+
+  if (user.teamId) throw new CustomError("You are already in a team", 400);
+
+  const q = Team.findById(teamId);
+  if (session) q.session(session);
+  const resource = await q;
+
+  if (!resource || resource.isDeleted) throw new CustomError("Team not found", 404);
+  if (!resource.isRecruiting) throw new CustomError("This team is not currently recruiting", 400);
+
+  return { resource, recipientId: resource.captain };
+};
+
+export const acceptJoinRequest = async (requesterId, teamId, handledBy, session = null) => {
+  const requester = await UserGateway.getUserById(requesterId, session);
+  if (!requester) throw new CustomError("Requester not found", 404);
+
+  const teamQuery = Team.findById(teamId);
+  if (session) teamQuery.session(session);
+  const team = await teamQuery;
+
+  if (!team || team.isDeleted || !team.isRecruiting) {
+    throw new CustomError("This team is no longer recruiting", 400);
+  }
+
+  if (requester.teamId) {
+    throw new CustomError("Requester has already joined another team", 400);
+  }
+
+  await addMemberToTeam({
+    teamId,
+    userId: requesterId,
+    roleInTeam: "player",
+    session,
+  });
+
+  teamEvents.emit(TEAM_EVENT_TYPES.MEMBER_JOINED, {
+    team,
+    memberId: requesterId,
+    actorId: handledBy
+  });
+
+  const responseData = await getTransformedTeam(teamId, session);
+
+  const socketEventData = {
+    teamId,
+    memberData: {
+      userId: requesterId,
+      username: requester.username,
+      avatar: requester.avatar,
+      roleInTeam: "player",
+    }
+  };
+
+  return {
+    responseData,
+    socketEventData,
+    requesterId,
+    teamId,
+    cacheKeys: [`user_profile:${requesterId}`, `team_details:${teamId}`]
+  };
+};
+
+export const validateInvitation = async (senderId, inviteeId, teamId) => {
+  const target = await Team.findById(teamId);
+  if (!target || target.isDeleted) throw new CustomError("Team not found", 404);
+
+  const senderUser = await UserGateway.getUserById(senderId);
+  const senderRole = senderUser?.roles?.find(
+    (r) => r.scope === Scopes.TEAM && r.scopeId?.toString() === teamId.toString()
+  )?.role;
+
+  const isAuthorized =
+    target.captain?.toString() === senderId.toString() ||
+    senderRole === Roles.TEAM.MANAGER;
+
+  if (!isAuthorized) {
+    throw new CustomError("You do not have permission to invite members to this team", 403);
+  }
+
+  const invitee = await UserGateway.getUserById(inviteeId);
+  if (!invitee) throw new CustomError("User not found to invite", 404);
+
+  if (invitee.teamId?.toString() === teamId.toString()) {
+    throw new CustomError("User is already a member of this team", 400);
+  }
+
+  return { resource: target, invitee };
+};
+
+export const acceptInvitation = async (inviteeId, teamId, role, session = null) => {
+  const user = await UserGateway.getUserById(inviteeId, session);
+  if (!user) throw new CustomError("User not found", 404);
+
+  const teamQuery = Team.findById(teamId);
+  if (session) teamQuery.session(session);
+  const team = await teamQuery;
+  if (!team || team.isDeleted) throw new CustomError("Team not found or deleted", 404);
+
+  if (user.teamId) throw new CustomError("You are already in a team", 400);
+
+  // Check Member Limit (Max 12)
+  if (team.teamMembers.length >= 12) throw new CustomError("Team has reached its member limit (12).", 400);
+
+  // Standardize roleInTeam
+  const roleInTeam = role === Roles.TEAM.MANAGER ? "manager" : "player";
+
+  // Use the atomic addMemberToTeam service to eliminate race conditions
+  await addMemberToTeam({
+    teamId,
+    userId: inviteeId,
+    roleInTeam,
+    session,
+  });
+
+  return {
+    resultMessage: `You have successfully joined ${team.teamName}`,
+    cacheKeys: [`user_profile:${inviteeId}`, `team_details:${teamId}`],
+    socketData: {
+      teamId,
+      memberData: {
+        userId: inviteeId,
+        username: user.username,
+        avatar: user.avatar,
+        roleInTeam: roleInTeam
+      }
+    }
+  };
+};
+

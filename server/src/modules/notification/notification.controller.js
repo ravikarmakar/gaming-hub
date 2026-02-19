@@ -134,6 +134,7 @@ export const handleNotificationAction = TryCatchHandler(async (req, res, next) =
 
     // Archive notification after action
     notification.status = "archived";
+    notification.actions = [];
     await notification.save();
 
     res.status(200).json({
@@ -173,6 +174,66 @@ export const getOrgNotifications = TryCatchHandler(async (req, res, next) => {
     const totalCount = await Notification.countDocuments({ "relatedData.orgId": orgId });
     const unreadCount = await Notification.countDocuments({
         "relatedData.orgId": orgId,
+        status: "unread",
+    });
+
+    res.status(200).json({
+        success: true,
+        notifications,
+        pagination: {
+            currentPage: Number(page),
+            totalPages: Math.ceil(totalCount / limit),
+            totalCount,
+            unreadCount,
+        },
+    });
+});
+
+/**
+ * @desc Get notifications for a specific team
+ * @route GET /api/v1/notifications/team/:teamId
+ * @access Private
+ */
+export const getTeamNotifications = TryCatchHandler(async (req, res, next) => {
+    const { teamId } = req.params;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    // Authorization: Check if user has access to this team
+    const team = await Team.findById(teamId).select("teamMembers captain");
+    if (!team) {
+        return next(new CustomError("Team not found", 404));
+    }
+
+    const isMember = team.captain.toString() === req.user._id.toString() ||
+        team.teamMembers.some((m) => m.user?.toString() === req.user._id.toString());
+
+    if (!isMember) {
+        return next(new CustomError("You do not have permission to view this team's notifications", 403));
+    }
+
+    const filter = {
+        "relatedData.teamId": teamId,
+        $or: [
+            { recipient: req.user._id },
+            { recipient: null }
+        ]
+    };
+
+    const notifications = await Notification.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate("sender", "username avatar")
+        .populate("relatedData.teamId", "teamName imageUrl")
+        .populate("relatedData.eventId", "eventName banner");
+
+    const totalCount = await Notification.countDocuments(filter);
+
+    const unreadCount = await Notification.countDocuments({
+        ...filter,
+        recipient: req.user._id,
         status: "unread",
     });
 

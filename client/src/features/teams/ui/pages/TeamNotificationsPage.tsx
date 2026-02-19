@@ -5,50 +5,42 @@ import { Bell, Loader2, Inbox } from "lucide-react";
 import { useNotificationStore } from "@/features/notifications/store/useNotificationStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import NotificationItem from "@/features/notifications/ui/components/NotificationItem";
+import { TeamPageHeader } from "../components/TeamPageHeader";
 
 
 const TeamNotificationsPage: React.FC = () => {
-    const { notifications, isLoading, fetchNotifications } = useNotificationStore();
+    const { notifications, isLoading, fetchTeamNotifications } = useNotificationStore();
     const { user } = useAuthStore();
 
     useEffect(() => {
-        fetchNotifications();
-    }, [fetchNotifications]);
+        if (user?.teamId) {
+            fetchTeamNotifications(user.teamId.toString());
+        }
+    }, [fetchTeamNotifications, user?.teamId]);
 
-    // Filter notifications relevant to the current team
+    // Strict filter for current team notifications
     const teamNotifications = useMemo(() => {
         if (!user?.teamId) return [];
-        return notifications.filter(n =>
-            n.relatedData?.teamId?.toString() === user.teamId.toString() ||
-            (n.type === "TEAM_INVITE" || n.type === "TEAM_JOIN_REQUEST" || n.type === "TEAM_LEAVE" || n.type === "TEAM_KICK")
-        );
+        const currentTeamId = user.teamId.toString();
+
+        return notifications.filter(n => {
+            // Get teamId from relatedData (handle object or string)
+            const notificationTeamId = n.relatedData?.teamId?._id
+                ? n.relatedData.teamId._id.toString()
+                : n.relatedData?.teamId?.toString();
+
+            return notificationTeamId === currentTeamId;
+        });
     }, [notifications, user?.teamId]);
 
     return (
         <div className="h-full">
             <div className="w-full relative z-10">
-                {/* Header */}
-                <div className="flex flex-col mb-12">
-                    <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-3 mb-2"
-                    >
-                        <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                            <Bell className="w-5 h-5 text-purple-400" />
-                        </div>
-                        <span className="text-purple-400 font-bold tracking-wider text-sm">TEAM NEXUS</span>
-                    </motion.div>
-                    <motion.h1
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="text-3xl md:text-4xl font-black text-white tracking-tighter"
-                    >
-                        Team <span className="text-purple-500/50">Notifications</span>
-                    </motion.h1>
-                    <p className="mt-2 text-gray-500 text-sm">Stay updated with your team's tactical alerts and updates</p>
-                </div>
+                <TeamPageHeader
+                    icon={Bell}
+                    title="Team Notifications"
+                    subtitle="Stay updated with your team's tactical alerts and updates"
+                />
 
                 {/* Notifications List */}
                 <div className="space-y-4 w-full">
