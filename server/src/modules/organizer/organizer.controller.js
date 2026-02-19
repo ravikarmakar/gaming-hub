@@ -13,6 +13,7 @@ import { createNotification } from "../notification/notification.controller.js";
 import { logger } from "../../shared/utils/logger.js";
 import fs from "fs";
 import Invitation from "../invitation/invitation.model.js";
+import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
 
 const escapeRegex = (string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -72,37 +73,36 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
     }
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
-    const [newOrg] = await Organizer.create([{
-      ownerId: user._id,
-      imageUrl,
-      imageFileId,
-      name,
-      email,
-      description,
-      tag: tag?.toUpperCase(),
-    }], { session });
+    const newOrg = await withOptionalTransaction(async (session) => {
+      const [newOrg] = await Organizer.create([{
+        ownerId: user._id,
+        imageUrl,
+        imageFileId,
+        name,
+        email,
+        description,
+        tag: tag?.toUpperCase(),
+      }], { session });
 
-    await User.findByIdAndUpdate(userId, {
-      $push: {
-        roles: {
-          scope: Scopes.ORG,
-          role: Roles.ORG.OWNER,
-          scopeId: newOrg._id,
-          scopeModel: "Organizer",
-        }
-      },
-      canCreateOrg: false,
-      orgId: newOrg._id
-    }, { session });
+      await User.findByIdAndUpdate(userId, {
+        $push: {
+          roles: {
+            scope: Scopes.ORG,
+            role: Roles.ORG.OWNER,
+            scopeId: newOrg._id,
+            scopeModel: "Organizer",
+          }
+        },
+        canCreateOrg: false,
+        orgId: newOrg._id
+      }, { session });
 
-    await session.commitTransaction();
+      return newOrg;
+    });
 
-    // After commit, we update session tokens/cookies and redis
-    const updatedUser = await User.findById(userId); // Fetch fresh user for tokens
+    // After commit, update session tokens/cookies and redis
+    const updatedUser = await User.findById(userId);
     const { accessToken, refreshToken } = generateTokens(updatedUser._id, updatedUser.roles);
     await storeRefreshToken(updatedUser._id, refreshToken);
     setCookies(res, accessToken, refreshToken);
@@ -113,17 +113,13 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
       .json({ success: true, message: "Org created successfully", data: newOrg });
 
   } catch (error) {
-    await session.abortTransaction();
-
-    // 🧹 Cleanup orphaned image if DB save fails
+    // Cleanup orphaned image if DB save fails
     if (imageFileId) {
       deleteFromImageKit(imageFileId).catch(cleanupError =>
         logger.error(`Failed to cleanup orphaned image ${imageFileId}:`, cleanupError)
       );
     }
     throw error;
-  } finally {
-    session.endSession();
   }
 });
 
@@ -299,10 +295,7 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
       await Promise.all(uploadPromises);
     }
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
+    await withOptionalTransaction(async (session) => {
       // Apply updates
       if (newImageUrl) {
         org.imageUrl = newImageUrl;
@@ -329,14 +322,7 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
       }
 
       await org.save({ session });
-      await session.commitTransaction();
-
-    } catch (saveError) {
-      await session.abortTransaction();
-      throw saveError;
-    } finally {
-      session.endSession();
-    }
+    });
 
     // Success! Now delete old images
   } catch (error) {
@@ -605,10 +591,7 @@ export const deleteOrg = TryCatchHandler(async (req, res, next) => {
     );
   }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
+  await withOptionalTransaction(async (session) => {
     // Soft Delete
     org.isDeleted = true;
     org.deletedAt = new Date();
@@ -636,31 +619,24 @@ export const deleteOrg = TryCatchHandler(async (req, res, next) => {
     if (ownerId) {
       await User.findByIdAndUpdate(ownerId, { canCreateOrg: true }, { session });
     }
+  });
 
-    await session.commitTransaction();
-
-    // Cleanup ImageKit assets AFTER commit
-    if (org.imageFileId) {
-      deleteFromImageKit(org.imageFileId).catch(err => logger.error(`Failed to delete org logo ${org.imageFileId}`, err));
-    }
-    if (org.bannerFileId) {
-      deleteFromImageKit(org.bannerFileId).catch(err => logger.error(`Failed to delete org banner ${org.bannerFileId}`, err));
-    }
-
-    // Invalidate owner cache
-    if (ownerId) await redis.del(`user_profile:${ownerId}`);
-
-    res.status(200).json({
-      success: true,
-      message: "Organization deleted successfully",
-    });
-
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    session.endSession();
+  // Cleanup ImageKit assets AFTER commit
+  if (org.imageFileId) {
+    deleteFromImageKit(org.imageFileId).catch(err => logger.error(`Failed to delete org logo ${org.imageFileId}`, err));
   }
+  if (org.bannerFileId) {
+    deleteFromImageKit(org.bannerFileId).catch(err => logger.error(`Failed to delete org banner ${org.bannerFileId}`, err));
+  }
+
+  // Invalidate owner cache
+  const ownerId = org.ownerId;
+  if (ownerId) await redis.del(`user_profile:${ownerId}`);
+
+  res.status(200).json({
+    success: true,
+    message: "Organization deleted successfully",
+  });
 });
 
 export const getDashboardStats = TryCatchHandler(async (req, res, next) => {

@@ -1,11 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Users, Trophy, Crown, Target, UserPlus, Settings, ArrowRight, Activity, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { TeamHeader } from "../components/TeamHeader";
 import { TeamStatCard } from "../components/TeamStatCard";
 import { TeamRecentMatch } from "../components/TeamRecentMatch";
@@ -14,10 +14,27 @@ import { useAccess } from "@/features/auth/hooks/useAccess";
 import { TEAM_ACCESS, TEAM_ACTIONS, TEAM_ACTIONS_ACCESS } from "../../lib/access";
 import { TEAM_ROUTES } from "../../lib/routes";
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 }
+};
+
 const TeamDashboard = () => {
   const navigate = useNavigate();
   const { can } = useAccess();
-  const { currentTeam, clearError } = useTeamStore();
+  const currentTeam = useTeamManagementStore((state) => state.currentTeam);
+  const stats = useTeamManagementStore((state) => state.currentTeam?.stats);
+  const clearError = useTeamManagementStore((state) => state.clearError);
 
   const canManageSettings = can(TEAM_ACCESS.settings);
   const canManageRoster = can(TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.manageRoster]);
@@ -30,47 +47,32 @@ const TeamDashboard = () => {
 
   if (!currentTeam) return null;
 
-  const statsData = [
+  const statsData = useMemo(() => [
     {
       title: "Win Rate",
-      value: `${currentTeam.stats?.winRate || 0}%`,
+      value: `${stats?.winRate || 0}%`,
       icon: Trophy,
       color: "emerald",
     },
     {
       title: "Total Matches",
-      value: currentTeam.stats?.totalMatches || 0,
+      value: stats?.totalMatches || 0,
       icon: Target,
       color: "blue",
     },
     {
       title: "Tournament Wins",
-      value: currentTeam.stats?.tournamentWins || 0,
+      value: stats?.tournamentWins || 0,
       icon: Crown,
       color: "amber",
     },
     {
       title: "Total Prize Won",
-      value: `$${(currentTeam.stats?.totalPrizeWon || 0).toLocaleString()}`,
+      value: `$${(stats?.totalPrizeWon || 0).toLocaleString()}`,
       icon: Users,
       color: "purple",
     },
-  ];
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
-  };
+  ], [stats]);
 
   return (
     <motion.div

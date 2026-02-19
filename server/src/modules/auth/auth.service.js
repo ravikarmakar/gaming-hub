@@ -382,26 +382,24 @@ setInterval(() => {
   }
 }, 60000); // Clean up every minute
 
-export const getUserProfile = async (userId, cachedProfile) => {
+export const getUserProfile = async (userId, cachedProfile, skipCache = false) => {
   const now = Date.now();
   const l1Key = `profile:${userId}`;
 
-  // 1. Check L1 Cache (Memory)
-  const cachedL1 = profileL1Cache.get(l1Key);
-  if (cachedL1 && (now - cachedL1.timestamp < L1_TTL)) {
-    logger.info(`>>> [L1 PROFILE HIT] ${userId}`);
-    // Refresh LRU
-    setL1Cache(l1Key, cachedL1);
-    return { ...cachedL1.data, cached: true };
+  // 1. Check L1 Cache (Memory) - Skip if skipCache is true
+  if (!skipCache) {
+    const cachedL1 = profileL1Cache.get(l1Key);
+    if (cachedL1 && (now - cachedL1.timestamp < L1_TTL)) {
+      logger.info(`>>> [L1 PROFILE HIT] ${userId}`);
+      // Refresh LRU
+      setL1Cache(l1Key, cachedL1);
+      return { ...cachedL1.data, cached: true };
+    }
   }
 
-  // 2. Check cachedProfile from middleware
-  if (cachedProfile) {
+  // 2. Check cachedProfile from middleware - Skip if skipCache is true
+  if (cachedProfile && !skipCache) {
     const response = { user: cachedProfile, cached: true };
-    // If middleware provided the profile but not the unreadCount, we still need the count
-    // but the controller expects unreadCount to be present if possible.
-    // However, if we want to BE FAST, we skip unreadCount if it's cached.
-    // Let's check if unreadCount is in the cachedProfile or if we should fetch it.
     if (cachedProfile.unreadCount !== undefined) {
       response.unreadCount = cachedProfile.unreadCount;
       setL1Cache(l1Key, { data: response, timestamp: now });
@@ -409,23 +407,23 @@ export const getUserProfile = async (userId, cachedProfile) => {
     }
   }
 
-  // 3. Check L2 Cache (Redis)
+  // 3. Check L2 Cache (Redis) - Skip if skipCache is true
   const cacheKey = `user_profile:${userId}`;
   let cachedData = null;
-  try {
-    cachedData = await Promise.race([
-      redis.get(cacheKey),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 800))
-    ]);
-  } catch (err) {
-    logger.error("Redis profile get error:", err.message);
+  if (!skipCache) {
+    try {
+      cachedData = await Promise.race([
+        redis.get(cacheKey),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 800))
+      ]);
+    } catch (err) {
+      logger.error("Redis profile get error:", err.message);
+    }
   }
 
-  if (cachedData) {
+  if (cachedData && !skipCache) {
     try {
       const user = typeof cachedData === "string" ? JSON.parse(cachedData) : cachedData;
-      // Fetch unread count if not in redis (old cache format)
-      // Note: Ideally we should cache unreadCount too, or use a separate counter
       const unreadCount = await Notification.countDocuments({
         recipient: userId,
         status: "unread",

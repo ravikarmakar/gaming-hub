@@ -1,15 +1,9 @@
 import { useState } from "react";
+import { Navigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import {
-    ShieldAlert,
-    UserCog,
-    Loader2,
-    Crown,
-    BadgeCheck
-} from "lucide-react";
+import { ShieldAlert, UserCog, Crown, BadgeCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -21,23 +15,14 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { TEAM_ACTIONS, TEAM_ACTIONS_ACCESS, TEAM_ACCESS } from "@/features/teams/lib/access";
 import { TEAM_ROUTES } from "../../lib/routes";
-import { Navigate } from "react-router-dom";
 import { TeamMembersTypes } from "@/features/teams/lib/types";
+import { TeamPageHeader } from "../components/TeamPageHeader";
+import { ConfirmActionDialog, DialogVariant } from "../components/ConfirmActionDialog";
 
 export function formatTeamRole(systemRole?: string) {
     if (!systemRole) return "";
@@ -49,7 +34,7 @@ export function formatTeamRole(systemRole?: string) {
 }
 
 const TeamStaffPage = () => {
-    const { currentTeam, promoteMember, demoteMember, transferTeamOwnerShip, isLoading } = useTeamStore();
+    const { currentTeam, promoteMember, demoteMember, transferTeamOwnerShip, isLoading } = useTeamManagementStore();
     // user removed as it was only used for fetching
     const { can } = useAccess();
 
@@ -102,19 +87,57 @@ const TeamStaffPage = () => {
         }, 10);
     };
 
+    const getDialogConfig = () => {
+        const config: { title: string; description: React.ReactNode; variant: DialogVariant } = {
+            title: "",
+            description: "",
+            variant: "default",
+        };
+
+        if (actionType === "transfer") {
+            config.title = "Transfer Team Ownership?";
+            config.variant = "warning";
+            config.description = (
+                <>
+                    Are you sure you want to transfer ownership to <span className="text-white font-bold">{actionTarget?.username}</span>?
+                    You will lose your Owner privileges.
+                </>
+            );
+        } else if (actionType === "promote") {
+            config.title = "Promote to Manager?";
+            config.variant = "success";
+            config.description = (
+                <>
+                    Promoting <span className="text-white font-bold">{actionTarget?.username}</span> will grant them Manager permissions, allowing them to invite/remove members and manage practice schedules.
+                </>
+            );
+        } else if (actionType === "demote") {
+            config.title = "Demote to Player?";
+            config.variant = "danger";
+            config.description = (
+                <>
+                    Demoting <span className="text-white font-bold">{actionTarget?.username}</span> will revoke their Manager permissions. They will remain on the team as a player.
+                </>
+            );
+        }
+
+        return config;
+    };
+
+    const dialogConfig = getDialogConfig();
+
     return (
         <>
             <div className="h-full">
                 <div className="w-full space-y-8">
-                    <div className="flex items-center gap-3 mb-8">
-                        <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 shadow-[0_0_15px_rgba(249,115,22,0.1)]">
-                            <ShieldAlert className="w-6 h-6 text-orange-400" />
-                        </div>
-                        <div>
-                            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter">Staff Management</h1>
-                            <p className="text-gray-400 text-sm">Manage system access, promotions, and ownership</p>
-                        </div>
-                    </div>
+                    <TeamPageHeader
+                        icon={ShieldAlert}
+                        title="Staff Management"
+                        subtitle="Manage system access, promotions, and ownership"
+                        iconBgClass="bg-orange-500/10"
+                        iconColorClass="text-orange-400"
+                        borderClassName="border-orange-500/20"
+                    />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {currentTeam.teamMembers?.map((member) => {
@@ -223,52 +246,15 @@ const TeamStaffPage = () => {
                 </div>
             </div>
 
-            <AlertDialog open={!!actionTarget} onOpenChange={(open) => !open && setActionTarget(null)}>
-                <AlertDialogContent className="bg-[#0F0720]/95 border-white/10 backdrop-blur-xl shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="text-2xl font-black text-white tracking-tight">
-                            {actionType === "transfer" ? "Transfer Team Ownership?" :
-                                actionType === "promote" ? "Promote to Manager?" :
-                                    "Demote to Player?"}
-                        </AlertDialogTitle>
-                        <AlertDialogDescription className="text-gray-400 font-medium">
-                            {actionType === "transfer" && (
-                                <>
-                                    Are you sure you want to transfer ownership to <span className="text-white font-bold">{actionTarget?.username}</span>?
-                                    You will lose your Owner privileges.
-                                </>
-                            )}
-                            {actionType === "promote" && (
-                                <>
-                                    Promoting <span className="text-white font-bold">{actionTarget?.username}</span> will grant them Manager permissions, allowing them to invite/remove members and manage practice schedules.
-                                </>
-                            )}
-                            {actionType === "demote" && (
-                                <>
-                                    Demoting <span className="text-white font-bold">{actionTarget?.username}</span> will revoke their Manager permissions. They will remain on the team as a player.
-                                </>
-                            )}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter className="gap-3 sm:gap-0">
-                        <AlertDialogCancel className="bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:text-white transition-all">
-                            Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleAction}
-                            disabled={isLoading}
-                            className={`
-                            border-0 shadow-lg transition-all font-bold min-w-[100px]
-                            ${actionType === "transfer" ? "bg-amber-500 hover:bg-amber-400 text-black" :
-                                    actionType === "promote" ? "bg-green-600 hover:bg-green-500 text-white" :
-                                        "bg-red-600 hover:bg-red-500 text-white"}
-                        `}
-                        >
-                            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm"}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <ConfirmActionDialog
+                open={!!actionTarget}
+                onOpenChange={(open) => !open && setActionTarget(null)}
+                title={dialogConfig.title}
+                description={dialogConfig.description}
+                onConfirm={handleAction}
+                isLoading={isLoading}
+                variant={dialogConfig.variant}
+            />
         </>
     );
 };

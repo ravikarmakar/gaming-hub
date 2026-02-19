@@ -10,13 +10,13 @@ import { ProfileBannerLayout } from "@/components/shared/ProfileBannerLayout";
 import { TeamHero } from "../components/TeamHero";
 import { TeamStatsGrid } from "../components/TeamStatsGrid";
 import { TeamMembersList } from "../components/TeamMembersList";
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { TEAM_ACCESS as ACCESS } from "@/features/teams/lib/access";
 
 export default function TeamIdPage() {
   const { id } = useParams<{ id: string }>();
-  const { currentTeam, getTeamById, isLoading, error } = useTeamStore();
+  const { currentTeam, getTeamById, isLoading, error } = useTeamManagementStore();
   const { can } = useAccess();
 
   useEffect(() => {

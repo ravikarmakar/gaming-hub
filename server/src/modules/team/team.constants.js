@@ -14,3 +14,6 @@ export const TeamMemberRoles = {
 
 // Array of valid team member roles for validation
 export const VALID_TEAM_MEMBER_ROLES = Object.values(TeamMemberRoles);
+
+// Roles that are unique per team (tournament core roles)
+export const UNIQUE_ROLES = ["igl", "rusher", "sniper", "support"];

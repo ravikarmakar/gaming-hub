@@ -49,6 +49,7 @@ interface NotificationState {
     markAllAsRead: () => Promise<void>;
     setUnreadCount: (count: number) => void;
     performAction: (id: string, actionType: string) => Promise<void>;
+    fetchTeamNotifications: (teamId: string, page?: number) => Promise<void>;
     clearError: () => void;
 }
 
@@ -100,10 +101,10 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             );
 
             if (hasTeamUpdate) {
-                const { useTeamStore } = await import("@/features/teams/store/useTeamStore");
-                const teamId = useTeamStore.getState().currentTeam?._id;
+                const { useTeamManagementStore } = await import("@/features/teams/store/useTeamManagementStore");
+                const teamId = useTeamManagementStore.getState().currentTeam?._id;
                 if (teamId) {
-                    await useTeamStore.getState().getTeamById(teamId, true);
+                    await useTeamManagementStore.getState().getTeamById(teamId, true);
                 }
             }
         } catch (error) {
@@ -152,15 +153,17 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             if (actionType === "ACCEPT" && notification) {
                 if (notification.type === "TEAM_INVITE") {
                     const { useAuthStore } = await import("@/features/auth/store/useAuthStore");
-                    const { useTeamStore } = await import("@/features/teams/store/useTeamStore");
+                    const { useTeamManagementStore } = await import("@/features/teams/store/useTeamManagementStore");
 
                     // Sync user roles and teamId
                     await useAuthStore.getState().checkAuth();
 
                     // Fetch team details immediately to update dashboard
-                    const teamId = notification.relatedData?.teamId;
+                    // relatedData.teamId may be a populated object {_id, teamName, ...} or a raw string
+                    const rawTeamId = notification.relatedData?.teamId;
+                    const teamId = rawTeamId?._id ? String(rawTeamId._id) : rawTeamId ? String(rawTeamId) : null;
                     if (teamId) {
-                        await useTeamStore.getState().getTeamById(teamId, true);
+                        await useTeamManagementStore.getState().getTeamById(teamId, true, true);
                     }
                 } else if (notification.type === "ORGANIZATION_INVITE") {
                     const { useAuthStore } = await import("@/features/auth/store/useAuthStore");
@@ -168,7 +171,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
                     await useAuthStore.getState().checkAuth();
 
-                    const orgId = notification.relatedData?.orgId;
+                    const rawOrgId = notification.relatedData?.orgId;
+                    const orgId = rawOrgId?._id ? String(rawOrgId._id) : rawOrgId ? String(rawOrgId) : null;
                     if (orgId) {
                         await useOrganizerStore.getState().getOrgById(orgId);
                     }
@@ -188,6 +192,31 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         } catch (error) {
             set({
                 error: getErrorMessage(error, "Failed to perform notification action"),
+                isLoading: false,
+            });
+        }
+    },
+
+    fetchTeamNotifications: async (teamId, page = 1) => {
+        if (get().isLoading) return;
+        set({ isLoading: true, error: null });
+        try {
+            const response = await axiosInstance.get(`/notifications/team/${teamId}?page=${page}`);
+            const newNotifications: Notification[] = response.data.notifications;
+
+            set({
+                notifications: newNotifications,
+                unreadCount: response.data.pagination.unreadCount,
+                pagination: {
+                    currentPage: response.data.pagination.currentPage,
+                    totalPages: response.data.pagination.totalPages,
+                    totalCount: response.data.pagination.totalCount,
+                },
+                isLoading: false,
+            });
+        } catch (error) {
+            set({
+                error: getErrorMessage(error, "Failed to fetch team notifications"),
                 isLoading: false,
             });
         }

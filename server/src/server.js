@@ -20,7 +20,7 @@ const startServer = async () => {
     const httpServer = createServer(app);
 
     // Initialize Socket.IO
-    initializeSocket(httpServer);
+    await initializeSocket(httpServer);
 
     httpServer.on("error", (error) => {
       logger.error("Server startup error:", error);

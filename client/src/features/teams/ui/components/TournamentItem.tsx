@@ -1,10 +1,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Trophy, Calendar, Users, Gamepad2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
+import { cn } from "@/lib/utils";
 import { EVENT_ROUTES } from "@/features/events/lib/routes";
-import { TournamentItemProps } from "../../lib/types";
+import { TournamentItemProps } from "@/features/teams/lib/types";
 
 export const TournamentItem = React.memo(({
     id,

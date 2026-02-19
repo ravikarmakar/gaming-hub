@@ -36,4 +36,7 @@ export const TEAM_ENDPOINTS = {
     HANDLE_JOIN_REQUEST: (teamId: string, requestId: string) =>
         `${TEAMS_BASE}/${teamId}/join-requests/${requestId}`,
     CLEAR_ALL_JOIN_REQUESTS: (teamId: string) => `${TEAMS_BASE}/${teamId}/join-requests/clear-all`,
+    // Chat
+    CHAT_HISTORY: (teamId: string) => `${TEAMS_BASE}/${teamId}/chat`,
+    CHAT_MESSAGE_ACTION: (teamId: string, messageId: string) => `${TEAMS_BASE}/${teamId}/chat/${messageId}`,
 } as const;

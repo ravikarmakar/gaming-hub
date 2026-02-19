@@ -1,4 +1,3 @@
-import fs from "fs";
 import mongoose from "mongoose";
 
 import Team from "../team/team.model.js";
@@ -16,17 +15,20 @@ import {
   manageTeamStaffService,
   manageMemberRoleService
 } from "../team/team.service.js";
-import { createNotification } from "../notification/notification.controller.js";
 import JoinRequest from "../join-request/join-request.model.js";
 import { redis } from "../../shared/config/redis.js";
 import { logger } from "../../shared/utils/logger.js";
+import { Roles, Scopes } from "../../shared/constants/roles.js";
+import { invalidateRbacCache } from "../../shared/middleware/rbac.middleware.js";
 import {
   emitMemberJoined,
   emitMemberLeft,
   emitRoleUpdated,
   emitOwnerTransferred,
-  emitTeamUpdated
+  emitTeamUpdated,
+  emitTeamDeleted
 } from "./team.socket.js";
+import { emitProfileUpdate } from "../user/user.socket.js";
 
 export const createTeam = TryCatchHandler(async (req, res, next) => {
   const newTeam = await createTeamService(req.user.userId, req.body, req.file);
@@ -53,13 +55,14 @@ export const updateTeam = TryCatchHandler(async (req, res, next) => {
 
 export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
   const { teamId } = req.params;
+  const skipCache = req.query.skipCache === "true";
 
   if (!mongoose.Types.ObjectId.isValid(teamId)) {
     return next(new CustomError("Invalid team ID format", 400));
   }
 
-  // 1. Check Redis Cache (shared team data only, no user-specific data)
-  const cachedTeam = await redis.get(`team_details:${teamId}`);
+  // 1. Check Redis Cache
+  const cachedTeam = skipCache ? null : await redis.get(`team_details:${teamId}`);
 
   let team;
   if (cachedTeam) {
@@ -85,6 +88,8 @@ export const fetchTeamDetails = TryCatchHandler(async (req, res, next) => {
     // 2. Set Redis Cache (team data only, no user-specific fields)
     await redis.set(`team_details:${teamId}`, JSON.stringify(team), { ex: 3600 }); // 1 hour
   }
+
+
 
   // Compute user-specific data on-demand (not cached)
   let hasPendingRequest = false;
@@ -208,18 +213,27 @@ export const addMembers = TryCatchHandler(async (req, res, next) => {
   if (!Array.isArray(members) || members.length < 1)
     throw new CustomError("Please provide at least one team member.", 400);
 
-  // Basic pre-check (not atomic, but prevents obvious overruns)
-  // The service layer will do atomic validation
-  // if (team.teamMembers.length + members.length > 20) {
-  //   throw new CustomError(`Team limit exceeded. Max 20 members allowed.`, 400);
-  // }
-
   // Use Service Layer for the heavy lifting
   // Service should ideally verify limit atomically, but for now this is acceptable
   await batchAddMembersToTeam({
     teamId: team._id,
     memberIds: members,
   });
+
+  // Emit socket event for each added member
+  try {
+    const addedUsers = await User.find({ _id: { $in: members } }).select("username avatar");
+    addedUsers.forEach(user => {
+      emitMemberJoined(team._id, {
+        userId: user._id,
+        username: user.username,
+        avatar: user.avatar,
+        roleInTeam: "player",
+      });
+    });
+  } catch (socketErr) {
+    logger.warn("Failed to emit socket events for batch added members:", socketErr.message);
+  }
 
   res.status(200).json({
     success: true,
@@ -228,7 +242,7 @@ export const addMembers = TryCatchHandler(async (req, res, next) => {
 });
 
 export const removeMember = TryCatchHandler(async (req, res, next) => {
-  logger.info("REMOVE MEMBER REQUEST: " + req.params.id);
+
   const memberId = req.params.id;
   const { userId } = req.user;
   const team = req.teamDoc;
@@ -243,37 +257,41 @@ export const removeMember = TryCatchHandler(async (req, res, next) => {
     throw new CustomError("User is not a member of this team.", 404);
   }
 
+  // 1. Security Check: Only Captains can remove staff (managers/coaches).
+  // Managers can only remove 'players'.
+  const targetMember = team.teamMembers.find(m => m.user?.toString() === memberId.toString());
+  const rbacRole = req.rbacContext?.role; // current user's role: team:owner or team:manager
+
+  if (rbacRole === Roles.TEAM.MANAGER) {
+    // Managers can NEVER remove the Captain or other Managers.
+    // We check their system-level role within the team.
+    const targetUser = await User.findById(memberId).select("roles");
+    if (!targetUser) {
+      throw new CustomError("Target user not found.", 404);
+    }
+
+    const targetSystemRole = targetUser.roles?.find(r => r.scopeId?.toString() === team._id.toString())?.role;
+
+    if (targetSystemRole !== Roles.TEAM.PLAYER) {
+      throw new CustomError("Managers can only remove members with the Player role.", 403);
+    }
+  }
+
   // Use Service Layer
   await removeMemberFromTeam({
     teamId: team._id,
     userId: memberId,
+    actorId: req.user.userId,
+    actorRole: rbacRole === Roles.TEAM.OWNER ? "captain" : "manager"
   });
 
   // Emit socket event for member removal
   emitMemberLeft(team._id, memberId, "removed");
 
-  // 4. Notify the removed member
-  try {
-    await createNotification({
-      recipient: memberId,
-      sender: userId,
-      type: "TEAM_KICK",
-      content: {
-        title: "Kicked from Team",
-        message: `You have been removed from the team ${team.teamName} by the captain.`,
-      },
-      relatedData: {
-        teamId: team._id,
-      },
-    });
-  } catch (error) {
-    logger.error("Notification failed for team member removal:", error);
-  }
-
   // Fetch updated team roster using helper
   const transformedTeam = await getTransformedTeam(team._id);
 
-  logger.info("REMOVE MEMBER SUCCESS, Sending response.");
+
 
   res.status(200).json({
     success: true,
@@ -315,25 +333,6 @@ export const leaveMember = TryCatchHandler(async (req, res, next) => {
   // Emit socket event for member leaving
   emitMemberLeft(team._id, userId, "left");
 
-  // 3. Notify the captain
-  try {
-    await createNotification({
-      recipient: team.captain,
-      sender: userId,
-      type: "TEAM_LEAVE",
-      content: {
-        title: "Member Left Team",
-        message: `${user.username} has left the team ${team.teamName}.`,
-      },
-      relatedData: {
-        teamId: team._id,
-      },
-    });
-  } catch (notifErr) {
-    logger.error("Notification failed for team member removal:", notifErr);
-    // Continue anyway
-  }
-
   res.status(200).json({
     success: true,
     message: "You have successfully left the team.",
@@ -349,6 +348,13 @@ export const transferTeamOwnerShip = TryCatchHandler(async (req, res, next) => {
 
   // Emit socket event for ownership transfer
   emitOwnerTransferred(team._id, memberId, user.userId);
+
+  // Invalidate RBAC cache to ensure next operation uses updated roles
+  invalidateRbacCache(Scopes.TEAM, team._id);
+
+  // Emit profile updates for real-time refresh
+  emitProfileUpdate(memberId, { teamId: team._id, action: "role_changed" });
+  emitProfileUpdate(user.userId, { teamId: team._id, action: "role_changed" });
 
   res.status(200).json({
     success: true,
@@ -369,6 +375,12 @@ export const manageMemberRole = TryCatchHandler(async (req, res, next) => {
   // Emit socket event for role update
   emitRoleUpdated(team._id, memberId, role, oldRole);
 
+  // Invalidate RBAC cache
+  invalidateRbacCache(Scopes.TEAM, team._id);
+
+  // Emit profile update for real-time refresh
+  emitProfileUpdate(memberId, { teamId: team._id, action: "role_changed" });
+
   res.status(200).json({
     success: true,
     message,
@@ -380,6 +392,12 @@ export const deleteTeam = TryCatchHandler(async (req, res, next) => {
   const team = req.teamDoc;
 
   await deleteTeamService(team._id);
+
+  // Emit socket event for team deletion
+  emitTeamDeleted(team._id);
+
+  // Invalidate RBAC cache for the team
+  invalidateRbacCache(Scopes.TEAM, team._id);
 
   res.status(200).json({
     success: true,
@@ -401,6 +419,12 @@ export const manageStaffRole = TryCatchHandler(async (req, res, next) => {
 
   // Emit socket event for staff role update
   emitRoleUpdated(team._id, memberId, newRole, oldRole);
+
+  // Invalidate RBAC cache
+  invalidateRbacCache(Scopes.TEAM, team._id);
+
+  // Emit profile update for real-time refresh
+  emitProfileUpdate(memberId, { teamId: team._id, action: "role_changed" });
 
   res.status(200).json({
     success: true,

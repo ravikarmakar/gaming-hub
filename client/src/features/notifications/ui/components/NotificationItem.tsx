@@ -92,13 +92,16 @@ const NotificationItem = React.forwardRef<HTMLDivElement, NotificationItemProps>
             markAsRead(notification._id);
         }
 
-        // Redirect logic
-        if (notification.type === "GROUP_CREATED" && notification.relatedData?.groupId) {
-            navigate(`/groups/${notification.relatedData.groupId}/teams`);
+        // relatedData IDs may be populated objects {_id, ...} or raw strings
+        const groupId = notification.relatedData?.groupId?._id || notification.relatedData?.groupId;
+        const eventId = notification.relatedData?.eventId?._id || notification.relatedData?.eventId;
+
+        if (notification.type === "GROUP_CREATED" && groupId) {
+            navigate(`/groups/${String(groupId)}/teams`);
         } else if (notification.relatedData?.teamId) {
-            navigate(`/dashboard/team`); // Redirect to team dashboard for team events
-        } else if (notification.relatedData?.eventId) {
-            navigate(EVENT_ROUTES.TOURNAMENT_DETAILS.replace(":eventId", notification.relatedData.eventId));
+            navigate(`/dashboard/team`);
+        } else if (eventId) {
+            navigate(EVENT_ROUTES.TOURNAMENT_DETAILS.replace(":eventId", String(eventId)));
         }
     };
 

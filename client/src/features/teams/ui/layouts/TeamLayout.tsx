@@ -1,12 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { Outlet } from "react-router-dom";
 import {
   Users,
   UserPlus,
   Trophy,
   Settings,
-  BarChart2,
   Bell,
+  MessageSquare,
 } from "lucide-react";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -16,7 +16,7 @@ import { DashboardSidebar } from "@/features/dashboard/ui/components/DashboardSi
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { TEAM_ACCESS } from "@/features/teams/lib/access";
 import { useFilteredNavigation } from "@/hooks/useFilteredNavigation";
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { TeamLoading } from "../components/TeamLoading";
 import { TeamError } from "../components/TeamError";
@@ -24,13 +24,13 @@ import { useTeamRoom, useSocketEvent } from "@/hooks/useSocket";
 
 const teamSidebarLinks = [
   {
-    label: "Team Overview",
+    label: "Overview",
     icon: Users,
     href: TEAM_ROUTES.DASHBOARD,
     access: TEAM_ACCESS.dashboard,
   },
   {
-    label: "Team Members",
+    label: "Active Roster",
     icon: UserPlus,
     href: TEAM_ROUTES.MEMBERS,
     access: TEAM_ACCESS.members,
@@ -47,17 +47,17 @@ const teamSidebarLinks = [
     href: TEAM_ROUTES.TOURNAMENTS,
   },
   {
-    label: "Team Performance",
-    icon: BarChart2,
-    href: TEAM_ROUTES.PERFORMANCE,
-  },
-  {
-    label: "Team Notifications",
+    label: "Notifications",
     icon: Bell,
     href: TEAM_ROUTES.NOTIFICATIONS,
   },
   {
-    label: "Team Settings",
+    label: "Chat",
+    icon: MessageSquare,
+    href: TEAM_ROUTES.CHAT,
+  },
+  {
+    label: "Settings",
     icon: Settings,
     href: TEAM_ROUTES.SETTINGS,
     access: TEAM_ACCESS.settings,
@@ -66,66 +66,75 @@ const teamSidebarLinks = [
 
 const TeamLayout = () => {
   const filteredLinks = useFilteredNavigation(teamSidebarLinks);
-  const { user } = useAuthStore();
-  const { getTeamById, isLoading, error, currentTeam, clearError } = useTeamStore();
+  const user = useAuthStore((state) => state.user);
+  const teamId = user?.teamId;
+
+  const getTeamById = useTeamManagementStore((state) => state.getTeamById);
+  const isLoading = useTeamManagementStore((state) => state.isLoading);
+  const error = useTeamManagementStore((state) => state.error);
+  const currentTeam = useTeamManagementStore((state) => state.currentTeam);
+  const clearError = useTeamManagementStore((state) => state.clearError);
 
   // Join team room via WebSocket
   useTeamRoom(user?.teamId);
 
+  // Stable socket handlers to prevent listener churn
+  const refreshTeamData = useCallback(async () => {
+    if (user?.teamId) {
+      await getTeamById(user.teamId, true, true);
+      useAuthStore.getState().checkAuth(true);
+    }
+  }, [user?.teamId, getTeamById]);
+
+  const handleMemberLeft = useCallback(async () => {
+    const currentTeamState = useTeamManagementStore.getState().currentTeam;
+    if (user?.teamId && currentTeamState) {
+      await getTeamById(user.teamId, true, true);
+      useAuthStore.getState().checkAuth(true);
+    }
+  }, [user?.teamId, getTeamById]);
+
+  const handleTeamDeleted = useCallback(async () => {
+    await useAuthStore.getState().checkAuth(true);
+  }, []);
+
+  const handleProfileUpdated = useCallback(async () => {
+    await useAuthStore.getState().checkAuth(true);
+  }, []);
+
+  const handleTeamUpdated = useCallback(() => {
+    if (user?.teamId) {
+      getTeamById(user.teamId, true, true);
+    }
+  }, [user?.teamId, getTeamById]);
+
   // Listen for real-time team updates
-  useSocketEvent("team:member:joined", () => {
-    console.log("🔔 New member joined, refreshing team data...");
-    if (user?.teamId) {
-      getTeamById(user.teamId, true);
-    }
-  });
-
-  useSocketEvent("team:member:left", () => {
-    console.log("🔔 Member left, refreshing team data...");
-    if (user?.teamId) {
-      getTeamById(user.teamId, true);
-    }
-  });
-
-  useSocketEvent("team:role:updated", () => {
-    console.log("🔔 Role updated, refreshing team data...");
-    if (user?.teamId) {
-      getTeamById(user.teamId, true);
-    }
-  });
-
-  useSocketEvent("team:owner:transferred", () => {
-    console.log("🔔 Ownership transferred, refreshing team data...");
-    if (user?.teamId) {
-      getTeamById(user.teamId, true);
-    }
-  });
-
-  useSocketEvent("team:updated", () => {
-    console.log("🔔 Team updated, refreshing team data...");
-    if (user?.teamId) {
-      getTeamById(user.teamId, true);
-    }
-  });
+  useSocketEvent("team:member:joined", refreshTeamData);
+  useSocketEvent("team:member:left", handleMemberLeft);
+  useSocketEvent("team:role:updated", refreshTeamData);
+  useSocketEvent("team:owner:transferred", handleMemberLeft);
+  useSocketEvent("team:deleted", handleTeamDeleted);
+  useSocketEvent("user:profile_updated", handleProfileUpdated);
+  useSocketEvent("team:updated", handleTeamUpdated);
 
   useEffect(() => {
-    if (user?.teamId) {
-      // Initial load only - Socket.IO handles real-time updates
-      getTeamById(user.teamId, true);
+    // String comparison for IDs to avoid reference issues
+    const isDifferentTeam = currentTeam?._id?.toString() !== teamId?.toString();
 
-      // Refetch when user returns to the tab (event-driven)
-      const handleFocus = () => {
-        getTeamById(user.teamId, true);
-      };
-      window.addEventListener("focus", handleFocus);
-
-      return () => {
-        window.removeEventListener("focus", handleFocus);
-        clearError();
-      };
+    if (teamId && (!currentTeam || isDifferentTeam)) {
+      getTeamById(teamId, true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.teamId]); // Only refetch when teamId changes, not on every navigation
+
+    const handleFocus = () => {
+      if (teamId) getTeamById(teamId, true);
+    };
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      clearError();
+    };
+  }, [teamId, currentTeam?._id, getTeamById, clearError]);
 
   return (
     <SidebarProvider>

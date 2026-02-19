@@ -5,6 +5,7 @@ import Event from "../event.model.js";
 import Leaderboard from "../models/leaderBoard.model.js";
 import EventRegistration from "../models/event-registration.model.js";
 import { logger } from "../../../shared/utils/logger.js";
+import { withOptionalTransaction } from "../../../shared/utils/withOptionalTransaction.js";
 
 // ✅ Get All Groups (With Pagination)
 export const getGroups = async (req, res) => {
@@ -250,13 +251,8 @@ export const createGroups = async (req, res) => {
       });
     }
 
-    // 6️⃣ Batch Insert Groups and Leaderboards (Atomic Transaction)
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    let createdGroups;
-    try {
-      createdGroups = await Group.insertMany(groupsData, { session });
+    const createdGroups = await withOptionalTransaction(async (session) => {
+      const createdGroups = await Group.insertMany(groupsData, { session });
 
       // 7️⃣ Prepare Leaderboards for each Group
       const leaderboardsData = createdGroups.map((group) => {
@@ -278,19 +274,18 @@ export const createGroups = async (req, res) => {
       // 8️⃣ Batch Insert Leaderboards
       await Leaderboard.insertMany(leaderboardsData, { session });
 
-      // 9️⃣ NOTIFY TEAMS ABOUT THEIR GROUPS (Inside Transaction)
+      // 9️⃣ NOTIFY TEAMS ABOUT THEIR GROUPS
       if (req.user && req.user._id) {
         const Notification = mongoose.model("Notification");
         const Team = mongoose.model("Team");
 
-        // Collect all team IDs from all groups
         const allTeamIds = createdGroups.flatMap(group => group.teams);
 
-        // Fetch all teams in ONE query (Fix N+1)
-        const teams = await Team.find({ _id: { $in: allTeamIds } }).session(session).lean();
+        const teamsQuery = Team.find({ _id: { $in: allTeamIds } }).lean();
+        if (session) teamsQuery.session(session);
+        const teams = await teamsQuery;
         const teamMap = new Map(teams.map(t => [t._id.toString(), t]));
 
-        // Prepare notifications in bulk
         const notificationsToCreate = [];
 
         for (const group of createdGroups) {
@@ -328,7 +323,6 @@ export const createGroups = async (req, res) => {
           }
         }
 
-        // Batch insert notifications
         if (notificationsToCreate.length > 0) {
           await Notification.insertMany(notificationsToCreate, { session });
         }
@@ -336,13 +330,8 @@ export const createGroups = async (req, res) => {
         logger.warn("Cannot send notifications: req.user is not available");
       }
 
-      await session.commitTransaction();
-    } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
-    }
+      return createdGroups;
+    });
 
     return res.status(201).json({
       message: "Groups and Leaderboards created successfully!",

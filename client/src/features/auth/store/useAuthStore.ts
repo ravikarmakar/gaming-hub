@@ -27,7 +27,7 @@ interface AuthStateTypes {
   login: (identifier: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<void>;
-  checkAuth: () => Promise<void>;
+  checkAuth: (skipCache?: boolean) => Promise<void>;
   googleAuth: (code: string) => Promise<User | null>;
   loginWithDiscord: (code: string) => Promise<User | null>;
   sendVerifyOtp: () => Promise<{ success: boolean; message: string }>;
@@ -95,7 +95,7 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
     });
   },
 
-  checkAuth: async () => {
+  checkAuth: async (skipCache = false) => {
     const { user, checkingAuth } = get();
 
     // Only show global loading during initial app load (no user yet)
@@ -108,7 +108,8 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
     set({ error: null });
 
     try {
-      const response = await axiosInstance.get<AuthResponse>(AUTH_ENDPOINTS.GET_PROFILE);
+      const url = skipCache ? `${AUTH_ENDPOINTS.GET_PROFILE}?skipCache=true` : AUTH_ENDPOINTS.GET_PROFILE;
+      const response = await axiosInstance.get<AuthResponse>(url);
       set({ user: response.data.user });
 
       // Update unread count if available

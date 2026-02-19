@@ -1,7 +1,3 @@
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
-import toast from "react-hot-toast";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Shield, Info } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -31,57 +27,13 @@ import {
 } from "@/components/ui/select";
 
 import FileUpload from "@/components/FileUpload";
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { MAX_FILE_SIZE, teamSchema, TeamForm } from "@/features/teams/lib/teamSchema";
-import { TEAM_ROUTES } from "@/features/teams/lib/routes";
-import { useNavigate } from "react-router-dom";
+import { MAX_FILE_SIZE } from "@/features/teams/lib/teamSchema";
+import { useCreateTeam } from "@/features/teams/hooks/useCreateTeam";
 
 const CreateTeamModal = () => {
-  const navigate = useNavigate();
-  const { createTeam, isLoading, error, clearError, isCreateTeamOpen, setIsCreateTeamOpen } = useTeamStore();
+  const { form, onSubmit, isLoading, error, isCreateTeamOpen, setIsCreateTeamOpen } = useCreateTeam();
 
-  const form = useForm<TeamForm>({
-    resolver: zodResolver(teamSchema),
-    defaultValues: {
-      teamName: "",
-      tag: "",
-      region: "INDIA",
-      bio: "",
-    },
-  });
-
-  const { handleSubmit, control, reset } = form;
-
-  const onSubmit = async (data: TeamForm) => {
-    const formData = new FormData();
-
-    Object.entries(data).forEach(([key, value]) => {
-      if (value) formData.append(key, value as string | Blob);
-    });
-
-    const result = await createTeam(formData);
-
-    if (result) {
-      // Close modal and reset form FIRST
-      setIsCreateTeamOpen(false);
-      reset();
-      toast.success("Team created successfully!");
-
-      // Use setTimeout to ensure modal is fully closed before navigation
-      // This avoids React batching issues and ensures state is synced
-      setTimeout(async () => {
-        await useAuthStore.getState().checkAuth();
-        navigate(TEAM_ROUTES.DASHBOARD);
-      }, 100);
-    }
-  };
-
-  useEffect(() => {
-    if (!isCreateTeamOpen) {
-      clearError();
-    }
-  }, [isCreateTeamOpen, clearError]);
+  const { control } = form;
 
   return (
     <Dialog open={isCreateTeamOpen} onOpenChange={setIsCreateTeamOpen}>
@@ -104,7 +56,7 @@ const CreateTeamModal = () => {
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} className="px-6 pb-6 pt-2">
+          <form onSubmit={onSubmit} className="px-6 pb-6 pt-2">
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">

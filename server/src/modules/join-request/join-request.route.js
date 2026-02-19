@@ -9,6 +9,7 @@ import { isAuthenticated, isVerified } from "../../shared/middleware/auth.middle
 import { authorize } from "../../shared/middleware/rbac.middleware.js";
 import { Scopes, Roles } from "../../shared/constants/roles.js";
 import { validateRequest } from "../../shared/middleware/validate.middleware.js";
+import { rateLimiter } from "../../shared/middleware/rateLimiter.middleware.js";
 import {
     manageJoinRequestValidation,
     bulkRejectJoinRequestsValidation,
@@ -20,7 +21,13 @@ const router = express.Router();
 // This provides a dedicated router for join-request operations
 
 // Send join request to a team
-router.post("/:teamId/join-request", isAuthenticated, isVerified, sendJoinRequest);
+router.post(
+    "/:teamId/join-request",
+    isAuthenticated,
+    isVerified,
+    rateLimiter({ limit: 5, timer: 60, key: "join-request" }),
+    sendJoinRequest
+);
 
 // Get all join requests for a team (Manager/Owner only)
 router.get(

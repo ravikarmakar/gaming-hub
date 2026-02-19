@@ -41,6 +41,7 @@ export const pages = {
     TeamNotifications: lazy(() => import("@/features/teams/ui/pages/TeamNotificationsPage")),
     TeamSettings: lazy(() => import("@/features/teams/ui/pages/TeamSettings")),
     TeamTournaments: lazy(() => import("@/features/teams/ui/pages/TeamTournamentsPage")),
+    TeamChat: lazy(() => import("@/features/teams/ui/pages/TeamChatPage")),
     FindTeams: lazy(() => import("@/features/teams/ui/pages/FindTeams")),
 
     // Events

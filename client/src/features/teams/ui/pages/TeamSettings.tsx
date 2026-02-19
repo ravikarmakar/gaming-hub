@@ -31,18 +31,19 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { TEAM_ACCESS } from "@/features/teams/lib/access";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { DeleteTeamSection } from "../components/DeleteTeamSection";
+import { TeamPageHeader } from "../components/TeamPageHeader";
 import { teamSchema, TeamForm } from "@/features/teams/lib/teamSchema";
 import { BrandingForm } from "../components/settings/BrandingForm";
 import { SocialsForm } from "../components/settings/SocialsForm";
 
 const TeamSettings = () => {
-    const { updateTeam, isLoading, currentTeam } = useTeamStore();
+    const { updateTeam, isLoading, currentTeam, getTeamById } = useTeamManagementStore();
     const { user } = useAuthStore();
     const { can } = useAccess();
 
@@ -58,12 +59,17 @@ const TeamSettings = () => {
             discord: "",
             youtube: "",
             instagram: "",
+            image: null,
+            banner: null,
         },
     });
+    const { isDirty, isSubmitting } = form.formState;
 
     // Sync form with currentTeam data
+    // Only reset if form is not dirty to prevent "blinking" while editing
+    // due to background refreshes or socket/revalidation events
     useEffect(() => {
-        if (currentTeam) {
+        if (currentTeam && !isDirty && !isSubmitting) {
             form.reset({
                 teamName: currentTeam.teamName || "",
                 tag: currentTeam.tag || "",
@@ -74,9 +80,11 @@ const TeamSettings = () => {
                 discord: currentTeam.socialLinks?.discord || "",
                 youtube: currentTeam.socialLinks?.youtube || "",
                 instagram: currentTeam.socialLinks?.instagram || "",
+                image: null,
+                banner: null,
             });
         }
-    }, [currentTeam, form]);
+    }, [currentTeam, form, isDirty, isSubmitting]);
 
     const onSubmit = async (data: TeamForm) => {
         const formData = new FormData();
@@ -99,8 +107,21 @@ const TeamSettings = () => {
         const result = await updateTeam(currentTeam._id, formData);
         if (result) {
             toast.success("Team settings updated successfully!");
-            // Force refresh team data to ensure UI is in sync
-            const { getTeamById } = useTeamStore.getState();
+            // Mark current values as clean baseline
+            form.reset({
+                teamName: result.teamName || "",
+                tag: result.tag || "",
+                bio: result.bio || "",
+                region: (result.region as any) || "INDIA",
+                isRecruiting: result.isRecruiting || false,
+                twitter: result.socialLinks?.twitter || "",
+                discord: result.socialLinks?.discord || "",
+                youtube: result.socialLinks?.youtube || "",
+                instagram: result.socialLinks?.instagram || "",
+                image: null,
+                banner: null,
+            });
+            // Force refresh team data to ensure other components are in sync
             await getTeamById(currentTeam._id, true);
         } else {
             toast.error("Failed to update team settings");
@@ -119,8 +140,9 @@ const TeamSettings = () => {
                 discord: currentTeam.socialLinks?.discord || "",
                 youtube: currentTeam.socialLinks?.youtube || "",
                 instagram: currentTeam.socialLinks?.instagram || "",
+                image: null,
+                banner: null,
             });
-            toast.success("Changes reset locally");
         }
     };
 
@@ -138,47 +160,47 @@ const TeamSettings = () => {
         <div className="w-full">
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                    <div className="flex flex-col mb-8 md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 border rounded-lg bg-purple-500/10 border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.1)]">
-                                <Settings className="w-6 h-6 text-purple-400" />
-                            </div>
-                            <div>
-                                <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter">Team Settings</h1>
-                                <p className="text-sm text-gray-400">Manage your team's identity and professional presence</p>
-                            </div>
-                        </div>
-
-                        {form.formState.isDirty && (
-                            <div className="flex items-center gap-3 duration-300 animate-in fade-in slide-in-from-right-4">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    className="text-gray-400 transition-all border border-transparent hover:text-white hover:bg-white/5 hover:border-white/10"
-                                    onClick={handleReset}
-                                >
-                                    Reset
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={isLoading}
-                                    className="bg-purple-600 hover:bg-purple-700 text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] border border-purple-500/50 min-w-[120px] transition-all"
-                                >
-                                    {isLoading ? (
-                                        <>
-                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                            Saving...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Save className="w-4 h-4 mr-2" />
-                                            Save Changes
-                                        </>
-                                    )}
-                                </Button>
-                            </div>
-                        )}
-                    </div>
+                    <TeamPageHeader
+                        icon={Settings}
+                        title="Team Settings"
+                        subtitle="Manage your team's identity and professional presence"
+                        actions={
+                            (isDirty || isLoading) && (
+                                <div className="flex items-center gap-2 sm:gap-3 duration-300 animate-in fade-in slide-in-from-right-4">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        disabled={isLoading}
+                                        className="text-gray-400 h-9 transition-all border border-transparent hover:text-white hover:bg-white/5 hover:border-white/10"
+                                        onClick={handleReset}
+                                    >
+                                        Reset
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        size="sm"
+                                        disabled={isLoading}
+                                        className="bg-purple-600 hover:bg-purple-700 text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] border border-purple-500/50 h-9 px-4 transition-all font-bold"
+                                    >
+                                        {isLoading ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                <span className="hidden sm:inline">Saving...</span>
+                                                <span className="sm:hidden">...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save className="w-4 h-4 sm:mr-2" />
+                                                <span className="hidden sm:inline">Save Changes</span>
+                                                <span className="sm:hidden">Save</span>
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                            )
+                        }
+                    />
 
                     <BrandingForm control={form.control} currentTeam={currentTeam} />
 

@@ -46,6 +46,33 @@ export const DashboardSidebar = ({ sidebarItems }: Props) => {
     setOpenMobile(false);
   };
 
+  // Helper to check if an item matches the current path
+  const isMatch = (item: SidebarItem) => {
+    if (pathname === item.href) return true;
+    if (item.matches) {
+      for (const match of item.matches) {
+        if (match.includes(':')) {
+          // Escape static parts of the pattern and replace :param with [^/]+
+          const escapedPattern = match
+            .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            .replace(/:(\w+)/g, '[^/]+');
+          const pattern = new RegExp('^' + escapedPattern + '$');
+          if (pattern.test(pathname)) return true;
+        } else if (pathname === match || pathname.startsWith(match + "/")) {
+          return true;
+        }
+      }
+    }
+    return item.href !== '/' && pathname.startsWith(item.href + "/");
+  };
+
+  // Identify the SINGLE best matching item (longest href match)
+  const bestMatch = sidebarItems.reduce<SidebarItem | null>((best, current) => {
+    if (!isMatch(current)) return best;
+    if (!best) return current;
+    return current.href.length > best.href.length ? current : best;
+  }, null);
+
   return (
     <Sidebar
       style={{ borderRight: "none" }}
@@ -93,28 +120,7 @@ export const DashboardSidebar = ({ sidebarItems }: Props) => {
         <SidebarGroupContent className="px-3 group-data-[collapsible=icon]:px-2">
           <SidebarMenu className="gap-1">
             {sidebarItems.map((item) => {
-              const isMatch = (item: SidebarItem) => {
-                // Check direct match
-                if (pathname === item.href) return true;
-
-                // Check matches array (handling dynamic segments)
-                if (item.matches?.some(match => {
-                  // If match contains dynamic segment (e.g., :id), create regex
-                  if (match.includes(':')) {
-                    const pattern = new RegExp('^' + match.replace(/:\w+/g, '[^/]+') + '$');
-                    return pattern.test(pathname);
-                  }
-                  return pathname === match || pathname.startsWith(match + "/");
-                })) return true;
-
-                // Check active prefix if not root
-                return item.href !== '/' && pathname.startsWith(item.href + "/");
-              };
-
-              const isActive = isMatch(item) && !sidebarItems.some(other =>
-                other.href !== item.href &&
-                (isMatch(other) && (other.href.length > item.href.length || (other.matches && !item.matches)))
-              );
+              const isActive = bestMatch?.href === item.href;
 
               return (
                 <SidebarMenuItem key={item.href}>

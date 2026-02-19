@@ -85,3 +85,9 @@ export const bulkRejectJoinRequestsValidation = {
         teamId: objectId.required(),
     }),
 };
+
+export const deleteTeamValidation = {
+    query: Joi.object({
+        teamId: objectId.required(),
+    }),
+};

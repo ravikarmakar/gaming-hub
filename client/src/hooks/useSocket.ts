@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useSocket } from "@/contexts/SocketContext";
 
 /**
@@ -9,13 +9,18 @@ export const useSocketEvent = <T = any>(
     callback: (data: T) => void
 ) => {
     const { socket } = useSocket();
+    const callbackRef = useRef(callback);
+
+    // Keep callback ref updated
+    useEffect(() => {
+        callbackRef.current = callback;
+    }, [callback]);
 
     useEffect(() => {
         if (!socket) return;
 
-        // Wrap callback to ensure we use the latest version
         const handler = (data: T) => {
-            callback(data);
+            callbackRef.current(data);
         };
 
         socket.on(event, handler);
@@ -23,7 +28,7 @@ export const useSocketEvent = <T = any>(
         return () => {
             socket.off(event, handler);
         };
-    }, [socket, event, callback]);
+    }, [socket, event]);
 };
 
 /**
