@@ -23,7 +23,6 @@ import notificationRouter from "./modules/notification/notification.route.js";
 import invitationRouter from "./modules/invitation/invitation.route.js";
 import chatRouter from "./modules/chat/chat.route.js";
 import adminRouter from "./modules/admin/admin.route.js";
-import chatRouter from "./modules/chat/chat.route.js";
 
 // Event Imports
 import { initTeamListeners } from "./modules/team/team.events.js";
