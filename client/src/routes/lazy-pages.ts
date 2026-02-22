@@ -51,4 +51,11 @@ export const pages = {
 
     // Notifications
     Notifications: lazy(() => import("@/features/notifications/ui/pages/NotificationsPage")),
+
+    // Admin
+    AdminDashboard: lazy(() => import("@/features/admin/ui/pages/AdminDashboard")),
+    UserManagementPage: lazy(() => import("@/features/admin/ui/pages/UserManagementPage")),
+    TeamManagementPage: lazy(() => import("@/features/admin/ui/pages/TeamManagementPage")),
+    OrganizerManagementPage: lazy(() => import("@/features/admin/ui/pages/OrganizerManagementPage")),
+    AdminLayout: lazy(() => import("@/features/admin/ui/layout/AdminLayout")),
 };

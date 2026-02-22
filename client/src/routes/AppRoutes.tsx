@@ -8,6 +8,8 @@ import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { EVENT_ROUTES } from "@/features/events/lib";
 import { PLAYER_ROUTES } from "@/features/player/lib/routes";
+import { ADMIN_ROUTES } from "@/features/admin/lib/routes";
+import { ADMIN_ACCESS } from "@/features/admin/lib/access";
 import { ORG_ACCESS } from "@/features/organizer/lib/access";
 import { TEAM_ACCESS } from "@/features/teams/lib/access";
 
@@ -87,6 +89,22 @@ const AppRoutes = () => {
                             <Route path={ORGANIZER_ROUTES.NOTIFICATIONS} element={<pages.OrganizerNotifications />} />
                             <Route path={ORGANIZER_ROUTES.JOIN_REQUESTS} element={<pages.OrganizerJoinRequests />} />
                             <Route path={ORGANIZER_ROUTES.SETTINGS} element={<pages.OrganizerSettings />} />
+                        </Route>
+                    </Route>
+                </Route>
+
+                {/* Admin Dashboard Routes */}
+                <Route element={<ProtectedRoute />}>
+                    <Route element={<RoleGuard access={ADMIN_ACCESS.dashboard} />}>
+                        <Route path="/admin" element={<pages.AdminLayout />}>
+                            <Route index element={<pages.AdminDashboard />} />
+                            <Route path={ADMIN_ROUTES.DASHBOARD.replace("/admin/", "")} element={<pages.AdminDashboard />} />
+                            <Route path={ADMIN_ROUTES.USERS.replace("/admin/", "")} element={<pages.UserManagementPage />} />
+                            <Route path={ADMIN_ROUTES.TEAMS.replace("/admin/", "")} element={<pages.TeamManagementPage />} />
+                            <Route path={ADMIN_ROUTES.ORGANIZERS.replace("/admin/", "")} element={<pages.OrganizerManagementPage />} />
+                            <Route path={ADMIN_ROUTES.CHAT.replace("/admin/", "")} element={<pages.AdminDashboard />} />
+                            <Route path={ADMIN_ROUTES.ACTIVITY.replace("/admin/", "")} element={<pages.AdminDashboard />} />
+                            <Route path={ADMIN_ROUTES.SETTINGS.replace("/admin/", "")} element={<pages.AdminDashboard />} />
                         </Route>
                     </Route>
                 </Route>

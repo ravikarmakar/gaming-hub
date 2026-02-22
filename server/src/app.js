@@ -22,6 +22,7 @@ import joinRequestRouter from "./modules/join-request/join-request.route.js";
 import notificationRouter from "./modules/notification/notification.route.js";
 import invitationRouter from "./modules/invitation/invitation.route.js";
 import chatRouter from "./modules/chat/chat.route.js";
+import adminRouter from "./modules/admin/admin.route.js";
 
 // Event Imports
 import { initTeamListeners } from "./modules/team/team.events.js";
@@ -86,6 +87,7 @@ v1Router.use("/events", eventRouter);
 v1Router.use("/rounds", roundsRouter);
 v1Router.use("/groups", groupsRouter);
 v1Router.use("/leaderboards", leaderboardRouter);
+v1Router.use("/admin", adminRouter);
 
 app.use("/api/v1", v1Router);
 
