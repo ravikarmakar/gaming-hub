@@ -1,11 +1,10 @@
-import { Activity, Shield, LayoutDashboard } from "lucide-react";
+import { Activity, Shield } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 
 import { cn } from "@/lib/utils";
 import StatsGrid from "@/features/admin/ui/components/StatsGrid";
 import { useAdminStats } from "@/features/admin/hooks/useAdminStats";
-import ManagementTables from "@/features/admin/ui/components/ManagementTables";
 import { GlassCard, SectionHeader, NeonBadge } from "@/features/events/ui/components/ThemedComponents";
 
 const AdminDashboard = () => {
@@ -43,9 +42,6 @@ const AdminDashboard = () => {
             </div>
 
             <StatsGrid stats={stats} />
-
-            <SectionHeader title="Entity management" icon={LayoutDashboard} />
-            <ManagementTables />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-6">

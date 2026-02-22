@@ -177,7 +177,7 @@ const TeamManagementPage = () => {
                                                 <Avatar className="w-10 h-10 border border-white/10 rounded-xl">
                                                     <AvatarImage src={team.logo} />
                                                     <AvatarFallback className="bg-white/5 text-gray-400 font-bold uppercase text-xs rounded-xl">
-                                                        {team.teamName.substring(0, 2)}
+                                                        {team.teamName}
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <div className="flex flex-col">
