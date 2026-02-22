@@ -44,6 +44,7 @@ const userSchema = new mongoose.Schema(
     },
     coverImageFileId: { type: String, default: null, trim: true },
     isAccountVerified: { type: Boolean, default: false },
+    isBlocked: { type: Boolean, default: false },
     isPlayerVerified: { type: Boolean, default: false },
     gameIgn: { type: String, default: "" },
     gameUid: { type: String, default: "" },
@@ -158,6 +159,8 @@ userSchema.index({ orgId: 1 });
 userSchema.index({ teamId: 1 });
 userSchema.index({ eventHistory: 1 });
 userSchema.index({ isDeleted: 1 });
+userSchema.index({ isBlocked: 1 });
+userSchema.index({ isAccountVerified: 1 });
 // Text index for optimized search (high performance)
 userSchema.index({ username: "text", gameIgn: "text" });
 

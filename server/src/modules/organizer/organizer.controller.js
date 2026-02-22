@@ -15,9 +15,7 @@ import fs from "fs";
 import Invitation from "../invitation/invitation.model.js";
 import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
 
-const escapeRegex = (string) => {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-};
+import * as organizerService from "./organizer.service.js";
 
 export const createOrg = TryCatchHandler(async (req, res, next) => {
   const { userId } = req.user;
@@ -73,36 +71,37 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
     }
   }
 
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    const newOrg = await withOptionalTransaction(async (session) => {
-      const [newOrg] = await Organizer.create([{
-        ownerId: user._id,
-        imageUrl,
-        imageFileId,
-        name,
-        email,
-        description,
-        tag: tag?.toUpperCase(),
-      }], { session });
+    const [newOrg] = await Organizer.create([{
+      ownerId: user._id,
+      imageUrl,
+      imageFileId,
+      name,
+      email,
+      description,
+      tag: tag?.toUpperCase(),
+    }], { session });
 
-      await User.findByIdAndUpdate(userId, {
-        $push: {
-          roles: {
-            scope: Scopes.ORG,
-            role: Roles.ORG.OWNER,
-            scopeId: newOrg._id,
-            scopeModel: "Organizer",
-          }
-        },
-        canCreateOrg: false,
-        orgId: newOrg._id
-      }, { session });
+    await User.findByIdAndUpdate(userId, {
+      $push: {
+        roles: {
+          scope: Scopes.ORG,
+          role: Roles.ORG.OWNER,
+          scopeId: newOrg._id,
+          scopeModel: "Organizer",
+        }
+      },
+      canCreateOrg: false,
+      orgId: newOrg._id
+    }, { session });
 
-      return newOrg;
-    });
+    await session.commitTransaction();
 
-    // After commit, update session tokens/cookies and redis
-    const updatedUser = await User.findById(userId);
+    // After commit, we update session tokens/cookies and redis
+    const updatedUser = await User.findById(userId); // Fetch fresh user for tokens
     const { accessToken, refreshToken } = generateTokens(updatedUser._id, updatedUser.roles);
     await storeRefreshToken(updatedUser._id, refreshToken);
     setCookies(res, accessToken, refreshToken);
@@ -113,13 +112,17 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
       .json({ success: true, message: "Org created successfully", data: newOrg });
 
   } catch (error) {
-    // Cleanup orphaned image if DB save fails
+    await session.abortTransaction();
+
+    // 🧹 Cleanup orphaned image if DB save fails
     if (imageFileId) {
       deleteFromImageKit(imageFileId).catch(cleanupError =>
         logger.error(`Failed to cleanup orphaned image ${imageFileId}:`, cleanupError)
       );
     }
     throw error;
+  } finally {
+    session.endSession();
   }
 });
 

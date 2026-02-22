@@ -5,6 +5,7 @@ import { createServer } from "http";
 import app from "./app.js";
 import connectDB from "./shared/config/db.js";
 import { initializeSocket } from "./shared/config/socket.config.js";
+import { initializeAdminGateway } from "./modules/admin/admin.gateway.js";
 
 const PORT = process.env.PORT || 4000;
 
@@ -21,6 +22,7 @@ const startServer = async () => {
 
     // Initialize Socket.IO
     await initializeSocket(httpServer);
+    initializeAdminGateway();
 
     httpServer.on("error", (error) => {
       logger.error("Server startup error:", error);

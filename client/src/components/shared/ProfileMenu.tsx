@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Loader2, LogOut, PlusCircle, User, Settings, Bell, UserCog, Building, LayoutDashboard } from "lucide-react";
+import { Loader2, LogOut, PlusCircle, User, Settings, Bell, UserCog, Building, LayoutDashboard, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,6 +26,8 @@ import { ORG_ACTIONS, ORG_ACTIONS_ACCESS } from "@/features/organizer/lib/access
 import { TEAM_ACCESS } from "@/features/teams/lib/access";
 import { PLAYER_ROUTES } from "@/features/player/lib/routes";
 import { AUTH_ROUTES } from "@/features/auth/lib/routes";
+import { ADMIN_ROUTES } from "@/features/admin/lib/routes";
+import { ADMIN_ACCESS } from "@/features/admin/lib/access";
 
 interface MenuOption {
   name: string;
@@ -42,6 +44,7 @@ const ProfileMenu = () => {
   const { setIsCreateTeamOpen } = useTeamStore();
 
   const { can } = useAccess();
+  const isSuperAdmin = can(ADMIN_ACCESS.dashboard);
 
   const canViewOrgDashboard = user?.orgId && can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.viewDashboardButton]);
   const canViewTeamDashboard = user?.teamId && can(TEAM_ACCESS.dashboard);
@@ -53,6 +56,12 @@ const ProfileMenu = () => {
       href: PLAYER_ROUTES.PLAYER_DETAILS.replace(":id", user?._id ?? ""),
       color: "text-blue-400",
     },
+    ...(isSuperAdmin ? [{
+      name: "Admin Dashboard",
+      icon: ShieldCheck,
+      href: ADMIN_ROUTES.DASHBOARD,
+      color: "text-red-400",
+    }] : []),
     {
       name: "Notifications",
       icon: Bell,
