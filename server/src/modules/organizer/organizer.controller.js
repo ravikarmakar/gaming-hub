@@ -18,17 +18,112 @@ import { withOptionalTransaction } from "../../shared/utils/withOptionalTransact
 import * as organizerService from "./organizer.service.js";
 
 export const createOrg = TryCatchHandler(async (req, res, next) => {
-  const user = req.user.cachedProfile || req.user;
-  const newOrg = await organizerService.createOrgService(
-    user,
-    req.body,
-    req.file,
-    res
-  );
+  const { userId } = req.user;
+  const cacheKey = `user_profile:${userId}`;
+  const { name, email, description, tag } = req.body;
 
-  res
-    .status(201)
-    .json({ success: true, message: "Org created successfully", data: newOrg });
+  const user = await User.findById(userId);
+  if (!user) return next(new CustomError("User not found", 404));
+
+  if (!user.canCreateOrg || !user.isAccountVerified || user.orgId)
+    return next(
+      new CustomError("You are not allowed to create an organization", 403)
+    );
+
+  // Check for duplicate name, email, or tag pre-emptively (Case Insensitive)
+  const existingOrg = await Organizer.findOne({
+    isDeleted: false,
+    $or: [
+      { name: { $regex: `^${escapeRegex(name)}$`, $options: "i" } },
+      { email: { $regex: `^${escapeRegex(email)}$`, $options: "i" } },
+      { tag: tag?.toUpperCase() }
+    ]
+  });
+
+  if (existingOrg) {
+    if (existingOrg.name.toLowerCase() === name.toLowerCase())
+      return next(new CustomError("Organization name is already in use", 400));
+    if (existingOrg.email.toLowerCase() === email.toLowerCase())
+      return next(new CustomError("Organization email is already in use", 400));
+    if (existingOrg.tag === tag?.toUpperCase())
+      return next(new CustomError("Organization tag is already in use", 400));
+  }
+
+  // Generate ImageKit uploads first (outside transaction)
+  let imageUrl = null;
+  let imageFileId = null;
+
+  if (req.file) {
+    try {
+      const uploadRes = await uploadOnImageKit(
+        req.file.path,
+        `org-logo-${Date.now()}`,
+        "/organizers/logos"
+      );
+      if (uploadRes) {
+        imageUrl = uploadRes.url;
+        imageFileId = uploadRes.fileId;
+      }
+    } finally {
+      if (req.file.path && fs.existsSync(req.file.path)) {
+        try { fs.unlinkSync(req.file.path); } catch (e) { logger.warn("Failed to delete local file:", e); }
+      }
+    }
+  }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const [newOrg] = await Organizer.create([{
+      ownerId: user._id,
+      imageUrl,
+      imageFileId,
+      name,
+      email,
+      description,
+      tag: tag?.toUpperCase(),
+    }], { session });
+
+    await User.findByIdAndUpdate(userId, {
+      $push: {
+        roles: {
+          scope: Scopes.ORG,
+          role: Roles.ORG.OWNER,
+          scopeId: newOrg._id,
+          scopeModel: "Organizer",
+        }
+      },
+      canCreateOrg: false,
+      orgId: newOrg._id
+    }, { session });
+
+    await session.commitTransaction();
+
+    // After commit, we update session tokens/cookies and redis
+    const updatedUser = await User.findById(userId); // Fetch fresh user for tokens
+    const { accessToken, refreshToken } = generateTokens(updatedUser._id, updatedUser.roles);
+    await storeRefreshToken(updatedUser._id, refreshToken);
+    setCookies(res, accessToken, refreshToken);
+    await redis.del(cacheKey);
+
+    res
+      .status(201)
+      .json({ success: true, message: "Org created successfully", data: newOrg });
+
+  } catch (error) {
+    await session.abortTransaction();
+
+    // 🧹 Cleanup orphaned image if DB save fails
+    if (imageFileId) {
+      deleteFromImageKit(imageFileId).catch(cleanupError =>
+        logger.error(`Failed to cleanup orphaned image ${imageFileId}:`, cleanupError)
+      );
+    }
+    throw error;
+  } finally {
+    session.endSession();
+  }
 });
 
 export const getOrgDetails = TryCatchHandler(async (req, res, next) => {
