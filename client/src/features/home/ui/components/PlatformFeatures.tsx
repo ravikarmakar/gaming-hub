@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Trophy, Zap, Shield, Globe, Headphones, Users, Sword, Target } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 const features = [

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Flame, Crosshair, Zap, Target } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -66,28 +66,8 @@ const GAMES = [
 const GameSection = () => {
     const [activeId, setActiveId] = useState<string | null>(GAMES[0].id);
 
-    // Mouse position for 3D tilt effect
-    const mouseX = useMotionValue(0);
-    const mouseY = useMotionValue(0);
-
-    // Smooth spring animation for tilt
-    const rotateX = useSpring(mouseY, { stiffness: 100, damping: 30 });
-    const rotateY = useSpring(mouseX, { stiffness: 100, damping: 30 });
-
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>, id: string) => {
-        if (activeId !== id) return;
-        const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
-        // Calculate normalized position (-1 to 1) and scale for rotation
-        const x = (e.clientX - left - width / 2) / 25;
-        const y = (e.clientY - top - height / 2) / 25;
-        mouseX.set(x);
-        mouseY.set(-y); // Invert Y for natural tilt
-    };
-
     const activateCard = (id: string) => {
         setActiveId(id);
-        mouseX.set(0);
-        mouseY.set(0);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent, id: string) => {
@@ -151,16 +131,6 @@ const GameSection = () => {
                         onMouseEnter={() => activateCard(game.id)}
                         onFocus={() => activateCard(game.id)}
                         onKeyDown={(e) => handleKeyDown(e, game.id)}
-                        onMouseMove={(e) => handleMouseMove(e, game.id)}
-                        onMouseLeave={() => {
-                            mouseX.set(0);
-                            mouseY.set(0);
-                        }}
-                        style={{
-                            rotateX: activeId === game.id ? rotateX : 0,
-                            rotateY: activeId === game.id ? rotateY : 0,
-                            transitionTimingFunction: "cubic-bezier(0.32,0.72,0,1)"
-                        }}
                         className={cn(
                             "relative h-full transition-all duration-700 overflow-hidden border-r border-white/5 last:border-r-0 cursor-pointer will-change-transform z-10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-purple-500/50",
                             activeId === game.id ? "flex-[3.5] z-20" : "flex-1 hover:flex-[1.2] opacity-80 hover:opacity-100"
