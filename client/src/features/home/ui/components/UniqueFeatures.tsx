@@ -2,52 +2,58 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Users, Sword, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+
 import { cn } from "@/lib/utils";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { PLAYER_ROUTES } from "@/features/player/lib/routes";
+import { useTeamStore } from "@/features/teams/store/useTeamStore";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
-const features = [
-    {
-        id: "teams",
-        title: "Find Best Teams",
-        highlight: "SQUAD SCOUTING",
-        description: "Discover and recruit the most dominant teams. Our data-driven scouting engine connects you with elite organizations.",
-        icon: Search,
-        image: "/assets/features/scout-teams.png",
-        color: "from-purple-600 to-indigo-600",
-        orbColor: "bg-purple-600/30",
-        glowColor: "text-purple-400",
-        href: TEAM_ROUTES.ALL_TEAMS,
-    },
-    {
-        id: "players",
-        title: "Find Top Tier Players",
-        highlight: "VALUED PROSPECTS",
-        description: "Find the hidden gems in the tier-1 player market. Analyze performance metrics, playstyles, and chemistry.",
-        icon: Users,
-        image: "/assets/features/scout-players.png",
-        color: "from-violet-600 to-purple-600",
-        orbColor: "bg-violet-600/30",
-        glowColor: "text-violet-400",
-        href: PLAYER_ROUTES.ALL_PLAYERS,
-    },
-    {
-        id: "create",
-        title: "Create Your Team",
-        highlight: "SQUAD SYNTHESIS",
-        description: "Build your legacy from the ground up. Our intuitive team builder allows you to manage rosters and track growth.",
-        icon: Sword,
-        image: "/assets/features/create-squad.png",
-        color: "from-fuchsia-600 to-purple-600",
-        orbColor: "bg-fuchsia-600/30",
-        glowColor: "text-fuchsia-400",
-        href: TEAM_ROUTES.DASHBOARD,
-    },
-];
 
 export const UniqueFeatures = () => {
     const [activeTab, setActiveTab] = useState(0);
     const navigate = useNavigate();
+    const { setIsCreateTeamOpen } = useTeamStore()
+    const { user } = useAuthStore()
+
+    const features = [
+        {
+            id: "teams",
+            title: "Find Best Teams",
+            highlight: "SQUAD SCOUTING",
+            description: "Discover and recruit the most dominant teams. Our data-driven scouting engine connects you with elite organizations.",
+            icon: Search,
+            image: "/assets/features/scout-teams.png",
+            color: "from-purple-600 to-indigo-600",
+            orbColor: "bg-purple-600/30",
+            glowColor: "text-purple-400",
+            onClick: () => navigate(TEAM_ROUTES.ALL_TEAMS),
+        },
+        {
+            id: "players",
+            title: "Find Top Tier Players",
+            highlight: "VALUED PROSPECTS",
+            description: "Find the hidden gems in the tier-1 player market. Analyze performance metrics, playstyles, and chemistry.",
+            icon: Users,
+            image: "/assets/features/scout-players.png",
+            color: "from-violet-600 to-purple-600",
+            orbColor: "bg-violet-600/30",
+            glowColor: "text-violet-400",
+            onClick: () => navigate(PLAYER_ROUTES.ALL_PLAYERS),
+        },
+        {
+            id: "create",
+            title: "Create Your Team",
+            highlight: "SQUAD SYNTHESIS",
+            description: "Build your legacy from the ground up. Our intuitive team builder allows you to manage rosters and track growth.",
+            icon: Sword,
+            image: "/assets/features/create-squad.png",
+            color: "from-fuchsia-600 to-purple-600",
+            orbColor: "bg-fuchsia-600/30",
+            glowColor: "text-fuchsia-400",
+            onClick: () => user?.teamId ? navigate(TEAM_ROUTES.DASHBOARD) : setIsCreateTeamOpen(true),
+        },
+    ];
 
     const ActiveIcon = features[activeTab].icon;
 
@@ -71,7 +77,7 @@ export const UniqueFeatures = () => {
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20">
                                 <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
                                 <span className="text-[10px] font-black text-purple-400 uppercase tracking-[0.3em]">
-                                    NEXUS CORE SUITE
+                                    KRM ESPORTS CORE SUITE
                                 </span>
                             </div>
                             <h2 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-tight">
@@ -84,7 +90,7 @@ export const UniqueFeatures = () => {
                                 <button
                                     key={feature.id}
                                     onMouseEnter={() => setActiveTab(index)}
-                                    onClick={() => navigate(feature.href)}
+                                    onClick={feature.onClick}
                                     className="group relative text-left"
                                 >
                                     <div className={cn(
@@ -133,7 +139,7 @@ export const UniqueFeatures = () => {
                                     {features[activeTab].description}
                                 </p>
                                 <button
-                                    onClick={() => navigate(features[activeTab].href)}
+                                    onClick={features[activeTab].onClick}
                                     className="group flex items-center gap-6"
                                 >
                                     <div className="w-14 h-14 rounded-full border border-purple-500/30 flex items-center justify-center transition-all duration-500 group-hover:bg-purple-600 group-hover:border-purple-600 group-hover:shadow-[0_0_30px_rgba(147,51,234,0.4)]">
@@ -167,14 +173,14 @@ export const UniqueFeatures = () => {
                                 >
                                     {/* Atmospheric Glow Overlay - Deeper layers */}
                                     <div className={cn(
-                                        "absolute inset-0 z-10 opacity-40 mix-blend-overlay",
+                                        "absolute inset-0 z-10 opacity-30",
                                         "bg-gradient-to-tr from-black via-[#010005]/80 to-purple-900/10"
                                     )} />
 
                                     <img
                                         src={features[activeTab].image}
                                         alt={features[activeTab].title}
-                                        className="w-full h-full object-cover grayscale-[0.4] contrast-125 transition-transform duration-1000 group-hover/hub:scale-110"
+                                        className="w-full h-full object-cover grayscale-[0.2] transition-transform duration-1000 group-hover/hub:scale-110"
                                     />
 
                                     {/* Overlay Gradient for extreme depth */}
@@ -212,7 +218,7 @@ export const UniqueFeatures = () => {
                         </div>
 
                         {/* Visual Echoes - Deep Neon bits */}
-                        <div className="absolute -top-16 -right-16 w-80 h-80 bg-purple-950/10 blur-[120px] rounded-full pointer-events-none group-hover/hub:bg-purple-900/15 transition-all duration-1000" />
+                        <div className="absolute -top-16 -right-16 w-80 h-80 bg-purple-950/10 blur-3xl rounded-full pointer-events-none group-hover/hub:bg-purple-900/15 transition-all duration-1000" />
                     </div>
 
                 </div>
