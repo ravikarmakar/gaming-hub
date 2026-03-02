@@ -6,7 +6,6 @@ import {
     Save,
     AlertTriangle,
     Building2,
-    Mail,
     Tag,
     Globe,
     MessageCircle,
@@ -52,6 +51,13 @@ import {
     FormDescription
 } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import FileUpload from "@/components/FileUpload";
 
 import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
@@ -69,7 +75,7 @@ const OrganizerSettingsPage = () => {
     // Initial values based on currentOrg
     const defaultValues: Partial<OrgSettingsFormSchema> = {
         name: "",
-        email: "",
+        region: "",
         tag: "",
         description: "",
         isHiring: false,
@@ -95,7 +101,7 @@ const OrganizerSettingsPage = () => {
         if (currentOrg) {
             reset({
                 name: currentOrg.name || "",
-                email: currentOrg.email || "",
+                region: currentOrg.region || "",
                 tag: currentOrg.tag || "",
                 description: currentOrg.description || "",
                 isHiring: currentOrg.isHiring || false,
@@ -126,7 +132,7 @@ const OrganizerSettingsPage = () => {
 
         const data = new FormData();
         data.append("name", values.name);
-        data.append("email", values.email);
+        data.append("region", values.region);
         data.append("tag", values.tag);
         if (values.description) data.append("description", values.description);
         data.append("isHiring", String(values.isHiring));
@@ -328,21 +334,27 @@ const OrganizerSettingsPage = () => {
                                     </div>
                                     <FormField
                                         control={control}
-                                        name="email"
+                                        name="region"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-xs font-black text-gray-500 uppercase tracking-widest">Official Email</FormLabel>
-                                                <FormControl>
-                                                    <div className="relative">
-                                                        <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                                                        <Input
-                                                            {...field}
-                                                            className="bg-white/5 border-white/10 text-white pl-10 focus:ring-purple-500 focus:border-purple-500 h-11"
-                                                            placeholder="admin@yourorg.com"
-                                                            disabled={!canUpdate}
-                                                        />
-                                                    </div>
-                                                </FormControl>
+                                                <FormLabel className="text-xs font-black text-gray-500 uppercase tracking-widest">Region</FormLabel>
+                                                <Select disabled={!canUpdate} onValueChange={field.onChange} value={field.value || ""}>
+                                                    <FormControl>
+                                                        <SelectTrigger className="bg-white/5 border-white/10 text-white h-11 focus:ring-purple-500 focus:border-purple-500">
+                                                            <div className="flex items-center gap-2">
+                                                                <Globe className="h-4 w-4 text-gray-500" />
+                                                                <SelectValue placeholder="Select a region" />
+                                                            </div>
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
+                                                        <SelectItem value="India">India (IND)</SelectItem>
+                                                        <SelectItem value="Brazil">Brazil (BR)</SelectItem>
+                                                        <SelectItem value="Indonesia">Indonesia (ID)</SelectItem>
+                                                        <SelectItem value="MENA">Middle East & North Africa (MENA)</SelectItem>
+                                                        <SelectItem value="LATAM">Latin America (LATAM)</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
                                                 <FormMessage />
                                             </FormItem>
                                         )}

@@ -6,7 +6,7 @@ const objectId = Joi.string().regex(/^[0-9a-fA-F]{24}$/).message("Invalid ID for
 export const createOrgValidation = {
     body: Joi.object({
         name: Joi.string().min(3).max(50).required(),
-        email: Joi.string().email().required(),
+        region: Joi.string().min(2).required(),
         description: Joi.string().max(1000).required(),
         tag: Joi.string().min(2).max(6).required(),
     }),
@@ -18,7 +18,7 @@ export const updateOrgValidation = {
     }),
     body: Joi.object({
         name: Joi.string().min(3).max(50).optional(),
-        email: Joi.string().email().optional(),
+        region: Joi.string().min(2).optional(),
         description: Joi.string().max(1000).optional(),
         tag: Joi.string().min(2).max(6).optional(),
         isHiring: Joi.alternatives().try(Joi.string(), Joi.boolean()).optional(),

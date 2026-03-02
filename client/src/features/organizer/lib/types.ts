@@ -15,7 +15,7 @@ export interface Organizer {
     imageUrl: string;
     bannerUrl: string;
     description: string;
-    email: string;
+    region: string;
     members: Member[];
     isVerified: boolean;
     isHiring: boolean;

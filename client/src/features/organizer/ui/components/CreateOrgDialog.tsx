@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Building2, Mail, Tag, FileText, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
+import { Building2, Globe, Tag, FileText, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,13 @@ import {
     DialogTitle,
     DialogDescription
 } from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import FileUpload from "@/components/FileUpload";
 
 import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
@@ -66,7 +73,7 @@ const CreateOrgDialog: React.FC = () => {
         defaultValues: {
             name: "",
             tag: "",
-            email: "",
+            region: "",
             description: "",
             image: undefined,
         },
@@ -76,7 +83,7 @@ const CreateOrgDialog: React.FC = () => {
         const orgData = new FormData();
         orgData.append("name", values.name);
         orgData.append("tag", values.tag.toUpperCase());
-        orgData.append("email", values.email);
+        orgData.append("region", values.region);
         orgData.append("description", values.description);
 
         if (values.image) {
@@ -180,26 +187,32 @@ const CreateOrgDialog: React.FC = () => {
                                 />
                             </div>
 
-                            {/* Contact Email */}
+                            {/* Contact Region */}
                             <FormField
                                 control={form.control}
-                                name="email"
+                                name="region"
                                 render={({ field }) => (
                                     <FormItem className="space-y-1">
                                         <FormLabel className="text-[9px] uppercase font-bold text-purple-200/40 tracking-wider">
-                                            Email
+                                            Region
                                         </FormLabel>
-                                        <FormControl>
-                                            <div className="relative group">
-                                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-500/50 group-focus-within:text-purple-400 transition-colors" />
-                                                <Input
-                                                    placeholder="contact@nexus.com"
-                                                    type="email"
-                                                    {...field}
-                                                    className="pl-9 h-9 text-xs bg-white/5 border-white/10 focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg text-white placeholder:text-white/10"
-                                                />
-                                            </div>
-                                        </FormControl>
+                                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                                            <FormControl>
+                                                <SelectTrigger className="pl-3 h-9 text-xs bg-white/5 border-white/10 focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg text-white">
+                                                    <div className="flex items-center gap-2">
+                                                        <Globe className="w-3.5 h-3.5 text-purple-500/50" />
+                                                        <SelectValue placeholder="Select a region" />
+                                                    </div>
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
+                                                <SelectItem value="India">India (IND)</SelectItem>
+                                                <SelectItem value="Brazil">Brazil (BR)</SelectItem>
+                                                <SelectItem value="Indonesia">Indonesia (ID)</SelectItem>
+                                                <SelectItem value="MENA">Middle East & North Africa (MENA)</SelectItem>
+                                                <SelectItem value="LATAM">Latin America (LATAM)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                         <FormMessage className="text-[9px] font-bold text-rose-500" />
                                     </FormItem>
                                 )}
@@ -234,7 +247,7 @@ const CreateOrgDialog: React.FC = () => {
                                 render={({ field }) => (
                                     <FormItem className="space-y-1">
                                         <FormLabel className="text-[9px] uppercase font-bold text-purple-200/40 tracking-wider">
-                                            Manifest
+                                            About Your Organization
                                         </FormLabel>
                                         <FormControl>
                                             <div className="relative group">

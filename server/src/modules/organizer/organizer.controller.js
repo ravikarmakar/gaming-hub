@@ -17,10 +17,14 @@ import { withOptionalTransaction } from "../../shared/utils/withOptionalTransact
 
 import * as organizerService from "./organizer.service.js";
 
+const escapeRegex = (string) => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
 export const createOrg = TryCatchHandler(async (req, res, next) => {
   const { userId } = req.user;
   const cacheKey = `user_profile:${userId}`;
-  const { name, email, description, tag } = req.body;
+  const { name, region, description, tag } = req.body;
 
   const user = await User.findById(userId);
   if (!user) return next(new CustomError("User not found", 404));
@@ -35,7 +39,7 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
     isDeleted: false,
     $or: [
       { name: { $regex: `^${escapeRegex(name)}$`, $options: "i" } },
-      { email: { $regex: `^${escapeRegex(email)}$`, $options: "i" } },
+      { region: { $regex: `^${escapeRegex(region)}$`, $options: "i" } },
       { tag: tag?.toUpperCase() }
     ]
   });
@@ -43,8 +47,8 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
   if (existingOrg) {
     if (existingOrg.name.toLowerCase() === name.toLowerCase())
       return next(new CustomError("Organization name is already in use", 400));
-    if (existingOrg.email.toLowerCase() === email.toLowerCase())
-      return next(new CustomError("Organization email is already in use", 400));
+    if (existingOrg.region.toLowerCase() === region.toLowerCase())
+      return next(new CustomError("Organization region is already in use", 400));
     if (existingOrg.tag === tag?.toUpperCase())
       return next(new CustomError("Organization tag is already in use", 400));
   }
@@ -80,7 +84,7 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
       imageUrl,
       imageFileId,
       name,
-      email,
+      region,
       description,
       tag: tag?.toUpperCase(),
     }], { session });
@@ -228,7 +232,7 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Invalid Organization ID format", 400));
   }
 
-  const { name, email, description, tag, isHiring, socialLinks } = req.body;
+  const { name, region, description, tag, isHiring, socialLinks } = req.body;
   const files = req.files;
 
   // Find existing organization (ensure it's not deleted)
@@ -238,17 +242,17 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
   }
 
   // Check unique constraints if fields are changing
-  if (name || email || tag) {
+  if (name || region || tag) {
     const query = { _id: { $ne: orgId }, isDeleted: false, $or: [] };
     if (name) query.$or.push({ name: { $regex: `^${escapeRegex(name)}$`, $options: "i" } });
-    if (email) query.$or.push({ email: { $regex: `^${escapeRegex(email)}$`, $options: "i" } });
+    if (region) query.$or.push({ region: { $regex: `^${escapeRegex(region)}$`, $options: "i" } });
     if (tag) query.$or.push({ tag: tag.toUpperCase() });
 
     if (query.$or.length > 0) {
       const duplicate = await Organizer.findOne(query);
       if (duplicate) {
         if (name && duplicate.name.toLowerCase() === name.toLowerCase()) return next(new CustomError("Organization name is already in use", 400));
-        if (email && duplicate.email.toLowerCase() === email.toLowerCase()) return next(new CustomError("Organization email is already in use", 400));
+        if (region && duplicate.region.toLowerCase() === region.toLowerCase()) return next(new CustomError("Organization region is already in use", 400));
         if (tag && duplicate.tag === tag.toUpperCase()) return next(new CustomError("Organization tag is already in use", 400));
       }
     }
@@ -310,7 +314,7 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
       }
 
       if (typeof name !== 'undefined') org.name = name;
-      if (typeof email !== 'undefined') org.email = email;
+      if (typeof region !== 'undefined') org.region = region;
       if (typeof description !== 'undefined') org.description = description;
       if (typeof tag !== 'undefined') org.tag = tag;
       if (typeof isHiring !== 'undefined') org.isHiring = isHiring === 'true' || isHiring === true;
