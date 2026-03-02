@@ -12,7 +12,7 @@ import { SocketProvider } from "@/contexts/SocketContext";
 // Components
 import { ErrorFallback } from "@/components/ErrorFallback";
 import CreateOrgDialog from "@/features/organizer/ui/components/CreateOrgDialog";
-import CreateTeamModal from "@/features/teams/ui/components/CreateTeamModal";
+import CreateTeamDialog from "@/features/teams/ui/components/CreateTeamDialog";
 import ScrollToTop from "@/components/shared/ScrollToTop";
 
 // Routes
@@ -39,7 +39,7 @@ const App = () => {
     <SocketProvider>
       <Toaster position="top-center" />
       <CreateOrgDialog />
-      <CreateTeamModal />
+      <CreateTeamDialog />
       <ErrorBoundary FallbackComponent={ErrorFallback}>
         <ScrollToTop />
         <AppRoutes />
