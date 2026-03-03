@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft,
@@ -14,31 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import toast from "react-hot-toast";
-import { useTournamentStore, Group } from "@/features/organizer/store/useTournamentStore";
+import { useGetGroupDetailsQuery } from "../../hooks";
 
 export default function GroupTeamList() {
     const { groupId } = useParams<{ groupId: string }>();
     const navigate = useNavigate();
-    const { fetchGroupDetails } = useTournamentStore();
-
-    const [group, setGroup] = useState<Group | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        const loadData = async () => {
-            if (!groupId) return;
-            setIsLoading(true);
-            const data = await fetchGroupDetails(groupId);
-            if (data) {
-                setGroup(data);
-                // Also fetch event details if possible to get event name
-                // Group model usually has roundId, and round has eventId
-                // For simplicity, we assume we want event info
-            }
-            setIsLoading(false);
-        };
-        loadData();
-    }, [groupId, fetchGroupDetails]);
+    const { data: group, isLoading } = useGetGroupDetailsQuery(groupId || "");
 
     if (isLoading) {
         return (

@@ -2,10 +2,10 @@ import { useQuery, useInfiniteQuery, UseQueryOptions, UseInfiniteQueryOptions, I
 import { AxiosError } from "axios";
 import { organizerApi } from "../api/organizerApi";
 import { organizerKeys } from "./organizerKeys";
-import { Organizer, DashboardStats, Invite, Pagination } from "../lib/types";
+import { Organizer, DashboardStats, Invite, Pagination, JoinRequest } from "../lib/types";
 import { User } from "@/features/auth/lib/types";
 import { Notification } from "@/features/notifications/store/useNotificationStore";
-import { JoinRequest } from "../store/useOrganizerUIStore";
+
 
 // --- GET ORG DETAILS BY ID ---
 export const useGetOrgByIdQuery = (
@@ -64,7 +64,7 @@ export const useOrgDashboardStatsQuery = (
     options?: Omit<UseQueryOptions<DashboardStats, AxiosError>, "queryKey" | "queryFn">
 ) => {
     return useQuery({
-        queryKey: [...organizerKeys.detail(orgId), 'dashboard'],
+        queryKey: organizerKeys.dashboard(orgId),
         queryFn: () => organizerApi.getDashboardStats(orgId),
         enabled: !!orgId,
         ...options,
@@ -93,7 +93,7 @@ export const useOrgJoinRequestsQuery = (
     options?: Omit<UseQueryOptions<{ success: boolean; data: JoinRequest[]; pagination: Pagination }, AxiosError>, "queryKey" | "queryFn">
 ) => {
     return useQuery({
-        queryKey: [...organizerKeys.detail(orgId), 'join-requests', page, limit],
+        queryKey: [...organizerKeys.requests(orgId), page, limit],
         queryFn: () => organizerApi.fetchJoinRequests(orgId, page, limit),
         enabled: !!orgId,
         ...options,
@@ -106,7 +106,7 @@ export const useOrgPendingInvitesQuery = (
     options?: Omit<UseQueryOptions<Invite[], AxiosError>, "queryKey" | "queryFn">
 ) => {
     return useQuery({
-        queryKey: [...organizerKeys.detail(orgId), 'invites'],
+        queryKey: organizerKeys.invites(orgId),
         queryFn: () => organizerApi.fetchPendingInvites(orgId),
         enabled: !!orgId,
         ...options,
@@ -119,7 +119,7 @@ export const useOrgNotificationsQuery = (
     options?: Omit<UseQueryOptions<Notification[], AxiosError>, "queryKey" | "queryFn">
 ) => {
     return useQuery({
-        queryKey: [...organizerKeys.detail(orgId), 'notifications'],
+        queryKey: organizerKeys.notifications(orgId),
         queryFn: () => organizerApi.fetchNotifications(orgId),
         enabled: !!orgId,
         ...options,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm, DefaultValues } from "react-hook-form";
 import toast from "react-hot-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,7 +7,7 @@ import * as z from "zod";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useTeamStore } from "@/features/teams/store/useTeamStore";
-import { useOrganizerUIStore } from "@/features/organizer/store/useOrganizerUIStore";
+
 import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
@@ -31,7 +31,17 @@ export function useCreateGroup<TFieldValues extends Record<string, any>>({
 
     // Dialog Toggle Stores
     const { isCreateTeamOpen, setIsCreateTeamOpen } = useTeamStore();
-    const { isCreateOrgOpen, setIsCreateOrgOpen } = useOrganizerUIStore();
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    const isCreateOrgOpen = searchParams.get("modal") === "create-org";
+    const setIsCreateOrgOpen = (open: boolean) => {
+        if (open) {
+            searchParams.set("modal", "create-org");
+        } else {
+            searchParams.delete("modal");
+        }
+        setSearchParams(searchParams);
+    };
 
     const isTeam = type === "team";
     const isOpen = isTeam ? isCreateTeamOpen : isCreateOrgOpen;

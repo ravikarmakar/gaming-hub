@@ -15,6 +15,11 @@
   --font-press: "Press Start 2P", serif;
   --font-audiowide: "Audiowide", serif;
   --font-russo: "Russo One", serif;
+  /* Glow Colors */
+  --glow-cyan: rgba(0, 255, 255, 0.5);
+  --glow-cyan-intense: rgba(0, 255, 255, 0.8);
+  --glow-purple: rgba(147, 51, 234, 0.4);
+  --glow-purple-intense: rgba(147, 51, 234, 0.6);
 }
 
 body {
@@ -56,84 +61,17 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Custom Animations */
-@keyframes glow {
-
-  0%,
-  100% {
-    box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
-  }
-
-  50% {
-    box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
-  }
-}
-
 .hover-glow:hover {
-  animation: glow 2s infinite;
+  @apply animate-glow;
 }
 
-/* Animated gradient text */
-@keyframes gradient-x {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
 .animate-gradient-x {
   background-size: 200% 200%;
-  animation: gradient-x 4s ease infinite;
 }
 
-/* Floating animation */
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-12px); }
-}
-.animate-float {
-  animation: float 5s ease-in-out infinite;
-}
-.animate-float-slow {
-  animation: float 7s ease-in-out infinite;
-}
-.animate-float-delayed {
-  animation: float 6s ease-in-out 1s infinite;
-}
-
-/* Shimmer / shine effect */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
 .animate-shimmer {
-  background: linear-gradient(90deg, transparent 30%, rgba(255,255,255,0.06) 50%, transparent 70%);
+  background: linear-gradient(90deg, transparent 30%, rgba(255, 255, 255, 0.06) 50%, transparent 70%);
   background-size: 200% 100%;
-  animation: shimmer 3s ease-in-out infinite;
-}
-
-/* Neon pulse glow for buttons */
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(147,51,234,0.4), 0 0 40px rgba(147,51,234,0.1); }
-  50% { box-shadow: 0 0 30px rgba(147,51,234,0.6), 0 0 60px rgba(147,51,234,0.2); }
-}
-.animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-
-/* Slide up entrance */
-@keyframes slide-up {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-slide-up {
-  animation: slide-up 0.8s ease-out forwards;
-}
-
-/* Marquee scroll */
-@keyframes marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-.animate-marquee {
-  animation: marquee 30s linear infinite;
 }
 
 /* Smooth Scrolling */

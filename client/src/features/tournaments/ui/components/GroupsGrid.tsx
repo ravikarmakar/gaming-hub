@@ -1,19 +1,14 @@
-
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { FixedSizeGrid, GridChildComponentProps } from "react-window";
+import { AutoSizer } from "react-virtualized-auto-sizer";
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronLeft, ChevronRight, Edit2, ArrowLeft, AlertTriangle } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, Edit2, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useTournamentStore, Group } from "@/features/organizer/store/useTournamentStore";
-import {
-    Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
+import { EditGroupDialog } from "./dialogs/EditGroupDialog";
+import { SubmitResultsDialog } from "./dialogs/SubmitResultsDialog";
+import { useGetRoundsQuery, useGetGroupsQuery, useGetLeaderboardQuery, useUpdateGroupResultsMutation, Group } from "../../hooks";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import toast from "react-hot-toast";
 
 interface GroupsGridProps {
     roundId: string;
@@ -21,22 +16,18 @@ interface GroupsGridProps {
 }
 
 export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
-    const {
-        groups,
-        isLoading,
-        fetchGroups,
-        currentPage,
-        totalPages,
-        totalGroups,
-        updateGroup,
-        fetchLeaderboard,
-        leaderboard,
-        updateGroupResults,
-        rounds
-    } = useTournamentStore();
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const { data: rounds = [] } = useGetRoundsQuery(eventId);
+    const { data, isLoading } = useGetGroupsQuery(roundId, currentPage);
+    const groups = data?.groups || [];
+    const { totalPages, totalGroups } = data?.pagination || { totalPages: 1, totalGroups: 0 };
 
     // Check if group is completed
     const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+    const { data: leaderboard } = useGetLeaderboardQuery(selectedGroupId || "");
+    const { mutateAsync: updateGroupResults } = useUpdateGroupResultsMutation();
+
     const [editingGroup, setEditingGroup] = useState<Group | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
 
@@ -61,34 +52,8 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
     const [isSaving, setIsSaving] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
-    // Form State for Group Edit
-    const [editName, setEditName] = useState("");
-    const [editMatches, setEditMatches] = useState(1);
-    const [editRoomId, setEditRoomId] = useState("");
-    const [editPassword, setEditPassword] = useState("");
-    const [editDate, setEditDate] = useState("");
-    const [editTime, setEditTime] = useState("");
-
     const openEditModal = useCallback((group: Group) => {
         setEditingGroup(group);
-        setEditName(group.groupName);
-        setEditMatches(group.totalMatch);
-        setEditRoomId(group.roomId?.toString() || "");
-        setEditPassword(group.roomPassword?.toString() || "");
-
-        // Format for datetime-local input (YYYY-MM-DDThh:mm)
-        if (group.matchTime) {
-            const date = new Date(group.matchTime);
-            // Adjust for timezone to show local time in input
-            const offset = date.getTimezoneOffset() * 60000;
-            const localISOTime = (new Date(date.getTime() - offset)).toISOString();
-            setEditDate(localISOTime.split('T')[0]);
-            setEditTime(localISOTime.split('T')[1].slice(0, 5));
-        } else {
-            setEditDate("");
-            setEditTime("");
-        }
-
         setIsEditOpen(true);
     }, []);
 
@@ -114,29 +79,7 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
         }
     }, [leaderboard, isResultsMode]);
 
-    const handleSaveGroup = async () => {
-        if (!editingGroup) return;
 
-        let combinedMatchTime = undefined;
-        if (editDate && editTime) {
-            combinedMatchTime = new Date(`${editDate}T${editTime}`).toISOString();
-        }
-
-        const success = await updateGroup(editingGroup._id, eventId, {
-            groupName: editName,
-            totalMatch: editMatches,
-            roomId: editRoomId ? parseInt(editRoomId) : undefined,
-            roomPassword: editPassword ? parseInt(editPassword) : undefined,
-            matchTime: combinedMatchTime
-        });
-
-        if (success) {
-            toast.success("Group updated!");
-            setIsEditOpen(false);
-            setEditingGroup(null);
-            fetchGroups(roundId, currentPage);
-        }
-    };
 
     // ✅ Handle Result Input Change
     const handleResultChange = useCallback((teamId: string, field: 'kills' | 'rank', value: number) => {
@@ -168,36 +111,26 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
 
         setIsSaving(true);
         setIsConfirmOpen(false); // Close modal before API call
-        const success = await updateGroupResults(selectedGroupId, eventId, resultsArray);
-        setIsSaving(false);
-
-        if (success) {
-            const currentMatch = (currentGroup.matchesPlayed || 0) + 1;
-            const isFinalMatch = currentMatch >= effectiveTotalMatch;
-            toast.success(isFinalMatch ? "Final results submitted! Group completed." : `Match ${currentMatch} results submitted!`);
+        try {
+            await updateGroupResults({ groupId: selectedGroupId, eventId, results: resultsArray });
+            setIsSaving(false);
             setIsResultsMode(false);
-            fetchLeaderboard(selectedGroupId);
+        } catch (error) {
+            console.error(error);
+            setIsSaving(false);
         }
     };
 
-    useEffect(() => {
-        if (roundId) {
-            fetchGroups(roundId, currentPage);
-        }
-    }, [roundId, currentPage, fetchGroups]);
-
-    // Fetch leaderboard when group is selected
+    // Reset Results mode when selecting another group
     useEffect(() => {
         if (selectedGroupId) {
-            fetchLeaderboard(selectedGroupId);
             setIsResultsMode(false);
         }
-    }, [selectedGroupId, fetchLeaderboard]);
-
+    }, [selectedGroupId]);
 
     const handlePageChange = useCallback((newPage: number) => {
-        fetchGroups(roundId, newPage);
-    }, [fetchGroups, roundId]);
+        setCurrentPage(newPage);
+    }, []);
 
     if (isLoading && groups.length === 0 && !selectedGroupId) {
         return (
@@ -435,18 +368,52 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
                         </div>
                     )}
 
-                    <div className="rounded-xl border border-white/5 bg-gray-900/40 overflow-hidden">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-                            {groups.map((group) => (
-                                <GroupCard
-                                    key={group._id}
-                                    group={group}
-                                    roundMatches={roundMatches}
-                                    onSelect={setSelectedGroupId}
-                                    onEdit={openEditModal}
-                                />
-                            ))}
-                        </div>
+                    <div className="rounded-xl border border-white/5 bg-gray-900/40 overflow-hidden h-[600px]">
+                        <AutoSizer renderProp={({ width, height }) => {
+                            let columnCount = 1;
+                            if (width && width >= 1280) columnCount = 4;
+                            else if (width && width >= 1024) columnCount = 3;
+                            else if (width && width >= 768) columnCount = 2;
+
+                            const rowCount = Math.ceil(groups.length / columnCount);
+                            const columnWidth = width ? width / columnCount : 0;
+
+                            // Each cell rendering function
+                            const Cell = ({ columnIndex, rowIndex, style }: GridChildComponentProps) => {
+                                const index = rowIndex * columnCount + columnIndex;
+                                const group = groups[index];
+
+                                if (!group) return null;
+
+                                return (
+                                    <div style={{ ...style, padding: '8px', boxSizing: 'border-box' }}>
+                                        <div className="h-full">
+                                            <GroupCard
+                                                group={group}
+                                                roundMatches={roundMatches}
+                                                onSelect={setSelectedGroupId}
+                                                onEdit={openEditModal}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            };
+
+                            return (
+                                <FixedSizeGrid
+                                    columnCount={columnCount}
+                                    columnWidth={columnWidth}
+                                    rowCount={rowCount}
+                                    rowHeight={160} // Approximate height of GroupCard
+                                    height={height || 600}
+                                    width={width || 800}
+                                    style={{ overflowX: 'hidden' }}
+                                >
+                                    {Cell}
+                                </FixedSizeGrid>
+                            );
+                        }}
+                        />
                     </div>
 
                     {/* Pagination Controls */}
@@ -481,130 +448,16 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
             )}
 
             {/* ✅ Dialogs are outside conditional view so they are ALWAYS rendered */}
-            <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-                <DialogContent className="bg-gray-900 border-white/10 text-white">
-                    <DialogHeader>
-                        <DialogTitle>Edit Group Details</DialogTitle>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right text-gray-300">Name</Label>
-                            <Input
-                                value={editName}
-                                onChange={(e) => setEditName(e.target.value)}
-                                className="col-span-3 bg-white/5 border-white/10 text-white"
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right text-gray-300">Matches</Label>
-                            <Input
-                                type="number"
-                                value={editMatches}
-                                onChange={(e) => setEditMatches(parseInt(e.target.value) || 1)}
-                                className="col-span-3 bg-white/5 border-white/10 text-white"
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right text-gray-300">Match Date</Label>
-                            <Input
-                                type="date"
-                                value={editDate}
-                                onChange={(e) => setEditDate(e.target.value)}
-                                className="col-span-3 bg-white/5 border-white/10 text-white [&::-webkit-calendar-picker-indicator]:invert"
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right text-gray-300">Match Time</Label>
-                            <Input
-                                type="time"
-                                value={editTime}
-                                onChange={(e) => setEditTime(e.target.value)}
-                                className="col-span-3 bg-white/5 border-white/10 text-white [&::-webkit-calendar-picker-indicator]:invert"
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right text-gray-300">Room ID</Label>
-                            <Input
-                                type="number"
-                                value={editRoomId}
-                                onChange={(e) => setEditRoomId(e.target.value)}
-                                placeholder="Enter Room ID"
-                                className="col-span-3 bg-white/5 border-white/10 text-white"
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right text-gray-300">Password</Label>
-                            <Input
-                                type="number"
-                                value={editPassword}
-                                onChange={(e) => setEditPassword(e.target.value)}
-                                placeholder="Enter Password"
-                                className="col-span-3 bg-white/5 border-white/10 text-white"
-                            />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button onClick={handleSaveGroup} className="bg-purple-600 hover:bg-purple-700">
-                            Save Changes
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <EditGroupDialog open={isEditOpen} onOpenChange={setIsEditOpen} eventId={eventId} group={editingGroup} />
 
-            {/* ✅ Result Submission Confirmation Modal */}
-            <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-                <DialogContent className="max-w-md bg-[#1a1625] border-white/5 text-white">
-                    <DialogHeader className="space-y-3">
-                        <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-2">
-                            <AlertTriangle className="w-6 h-6 text-amber-500" />
-                        </div>
-                        <DialogTitle className="text-2xl font-black text-center tracking-tight">
-                            {(currentGroup?.matchesPlayed || 0) + 1 >= effectiveTotalMatch ? "Final Submission" : "Submit Results"}
-                        </DialogTitle>
-                        <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 space-y-2">
-                            <p className="text-gray-400 text-sm leading-relaxed text-center">
-                                Are you sure about these results for <span className="text-white font-bold">Match {(currentGroup?.matchesPlayed || 0) + 1}</span> of {effectiveTotalMatch}?
-                            </p>
-                            {(currentGroup?.matchesPlayed || 0) + 1 >= effectiveTotalMatch ? (
-                                <p className="text-amber-500/80 text-[11px] font-bold uppercase tracking-widest text-center">
-                                    Final Match: Results will be locked
-                                </p>
-                            ) : (
-                                <p className="text-blue-400/80 text-[11px] font-bold uppercase tracking-widest text-center">
-                                    Match {(currentGroup?.matchesPlayed || 0) + 1} of {effectiveTotalMatch}
-                                </p>
-                            )}
-                        </div>
-                    </DialogHeader>
-
-                    <div className="space-y-4 pt-4">
-                        <div className="flex items-start gap-3 p-3 rounded-lg bg-red-500/5 border border-red-500/10">
-                            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                            <p className="text-[11px] text-red-200/60 leading-tight">
-                                <span className="text-red-400 font-bold block mb-1">PLATFORM RULE</span>
-                                Results cannot be edited once submitted. Please double-check all ranks and kill counts before confirming.
-                            </p>
-                        </div>
-                    </div>
-
-                    <DialogFooter className="grid grid-cols-2 gap-3 mt-6">
-                        <Button
-                            variant="ghost"
-                            onClick={() => setIsConfirmOpen(false)}
-                            className="bg-white/5 hover:bg-white/10 text-gray-400"
-                        >
-                            Review Again
-                        </Button>
-                        <Button
-                            className="bg-purple-600 hover:bg-purple-700 text-white font-bold"
-                            onClick={handleConfirmSubmit}
-                            disabled={isSaving}
-                        >
-                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm & Submit"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <SubmitResultsDialog
+                open={isConfirmOpen}
+                onOpenChange={setIsConfirmOpen}
+                matchesPlayed={currentGroup?.matchesPlayed || 0}
+                effectiveTotalMatch={effectiveTotalMatch}
+                onConfirm={handleConfirmSubmit}
+                isSaving={isSaving}
+            />
         </div>
     );
 };

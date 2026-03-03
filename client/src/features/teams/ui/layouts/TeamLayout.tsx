@@ -67,7 +67,7 @@ const teamSidebarLinks = [
 const TeamLayout = () => {
   const filteredLinks = useFilteredNavigation(teamSidebarLinks);
   const user = useAuthStore((state) => state.user);
-  const teamId = user?.teamId;
+  const teamId = typeof user?.teamId === 'string' ? user.teamId : user?.teamId?._id;
 
   const getTeamById = useTeamManagementStore((state) => state.getTeamById);
   const isLoading = useTeamManagementStore((state) => state.isLoading);
@@ -76,23 +76,23 @@ const TeamLayout = () => {
   const clearError = useTeamManagementStore((state) => state.clearError);
 
   // Join team room via WebSocket
-  useTeamRoom(user?.teamId);
+  useTeamRoom(teamId);
 
   // Stable socket handlers to prevent listener churn
   const refreshTeamData = useCallback(async () => {
-    if (user?.teamId) {
-      await getTeamById(user.teamId, true, true);
+    if (teamId) {
+      await getTeamById(teamId, true, true);
       useAuthStore.getState().checkAuth(true);
     }
-  }, [user?.teamId, getTeamById]);
+  }, [teamId, getTeamById]);
 
   const handleMemberLeft = useCallback(async () => {
     const currentTeamState = useTeamManagementStore.getState().currentTeam;
-    if (user?.teamId && currentTeamState) {
-      await getTeamById(user.teamId, true, true);
+    if (teamId && currentTeamState) {
+      await getTeamById(teamId, true, true);
       useAuthStore.getState().checkAuth(true);
     }
-  }, [user?.teamId, getTeamById]);
+  }, [teamId, getTeamById]);
 
   const handleTeamDeleted = useCallback(async () => {
     await useAuthStore.getState().checkAuth(true);
@@ -103,10 +103,10 @@ const TeamLayout = () => {
   }, []);
 
   const handleTeamUpdated = useCallback(() => {
-    if (user?.teamId) {
-      getTeamById(user.teamId, true, true);
+    if (teamId) {
+      getTeamById(teamId, true, true);
     }
-  }, [user?.teamId, getTeamById]);
+  }, [teamId, getTeamById]);
 
   // Listen for real-time team updates
   useSocketEvent("team:member:joined", refreshTeamData);
@@ -152,7 +152,7 @@ const TeamLayout = () => {
             ) : error && !currentTeam ? (
               <TeamError
                 message={error}
-                onRetry={() => user?.teamId && getTeamById(user.teamId)}
+                onRetry={() => teamId && getTeamById(teamId)}
               />
             ) : (
               <Outlet />

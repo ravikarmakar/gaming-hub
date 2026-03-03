@@ -13,7 +13,7 @@ export const playerSettingsSchema = z.object({
     esportsRole: z.enum(["rusher", "sniper", "support", "igl", "coach", "player"], {
         required_error: "Please select an esports role",
     }),
-    region: z.enum(["na", "eu", "sea", "sa", "mea", "global"], {
+    region: z.enum(["NA", "EU", "ASIA", "SEA", "SA", "OCE", "MENA", "INDIA", "GLOBAL"], {
         required_error: "Please select your region",
     }),
     country: z.string().optional().or(z.literal("")),

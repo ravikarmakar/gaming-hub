@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { Trash2, LayoutGrid, X, Shield, Gamepad2, Trophy, Users, Clock, ChevronLeft, Loader2, DollarSign, ChevronRight, ImageIcon } from "lucide-react";
@@ -25,7 +25,7 @@ import {
   GlassCard,
   SectionHeader
 } from "@/features/events/ui/components/ThemedComponents";
-import FileUpload from "@/components/FileUpload";
+const FileUpload = lazy(() => import("@/components/FileUpload"));
 import {
   EventFormValues,
   eventSchema,
@@ -295,7 +295,7 @@ export default function CreateTournament() {
                     <Label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Current Protocol Status</Label>
                     <Select
                       value={watch("status")}
-                      onValueChange={(val) => setValue("status", val as any)}
+                      onValueChange={(val) => setValue("status", val as RegistrationStatus)}
                     >
                       <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl">
                         <SelectValue />
@@ -387,19 +387,21 @@ export default function CreateTournament() {
 
               <GlassCard className="p-8 space-y-6 border-purple-500/10">
                 <SectionHeader title="Arena Visuals" icon={ImageIcon} />
-                <Controller
-                  name="image"
-                  control={control}
-                  render={({ field, fieldState }) => (
-                    <FileUpload
-                      label="Arena Banner"
-                      hint="Recommended: 16:9 Aspect Ratio"
-                      value={field.value}
-                      onChange={field.onChange}
-                      error={fieldState.error?.message}
-                    />
-                  )}
-                />
+                <Suspense fallback={<div className="h-32 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 animate-pulse text-xs text-gray-500">Loading Uplink...</div>}>
+                  <Controller
+                    name="image"
+                    control={control}
+                    render={({ field, fieldState }) => (
+                      <FileUpload
+                        label="Arena Banner"
+                        hint="Recommended: 16:9 Aspect Ratio"
+                        value={field.value}
+                        onChange={field.onChange}
+                        error={fieldState.error?.message}
+                      />
+                    )}
+                  />
+                </Suspense>
               </GlassCard>
             </div>
           </div>

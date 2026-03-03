@@ -66,3 +66,18 @@ export interface Invite {
     createdAt: string;
     expiresAt: string;
 }
+
+export interface JoinRequest {
+    _id: string;
+    requester: {
+        _id: string;
+        username: string;
+        avatar: string;
+        email: string;
+    };
+    target: string;
+    targetModel: string;
+    status: "pending" | "accepted" | "rejected";
+    message: string;
+    createdAt: string;
+}

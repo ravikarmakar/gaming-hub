@@ -1,6 +1,6 @@
 import { brand } from "@/config/brand";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Menu, Gamepad2, Bell } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -21,7 +21,6 @@ import NavItems from "./shared/NavItems";
 import ProfileMenu from "./shared/ProfileMenu";
 import { DashboardButton } from "./shared/DashboardButton";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { useOrganizerUIStore } from "@/features/organizer/store/useOrganizerUIStore";
 import { useNotificationManager } from "@/features/notifications/hooks/useNotificationManager";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { ORG_ACTIONS_ACCESS, ORG_ACTIONS } from "@/features/organizer/lib/access";
@@ -31,7 +30,15 @@ import { ADMIN_ACCESS } from "@/features/admin/lib/access";
 const Navbar = () => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { setIsCreateOrgOpen } = useOrganizerUIStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const setIsCreateOrgOpen = (open: boolean) => {
+    if (open) {
+      searchParams.set("modal", "create-org");
+    } else {
+      searchParams.delete("modal");
+    }
+    setSearchParams(searchParams);
+  };
   const [scrolled, setScrolled] = useState(false);
   const { can } = useAccess()
 

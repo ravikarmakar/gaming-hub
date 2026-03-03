@@ -14,7 +14,7 @@ import {
 import {
     useManageJoinRequestMutation
 } from "../../hooks/useOrganizerMutations";
-import { JoinRequest } from "@/features/organizer/store/useOrganizerUIStore";
+import { JoinRequest } from "../../lib/types";
 
 const OrganizerJoinRequestsPage = () => {
     const [page, setPage] = useState(1);

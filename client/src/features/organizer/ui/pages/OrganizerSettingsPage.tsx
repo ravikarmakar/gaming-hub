@@ -1,63 +1,28 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-    Trash2,
-    Save,
-    AlertTriangle,
-    Building2,
-    Tag,
-    Globe,
-    MessageCircle,
-    Twitter,
-    Instagram,
-    Briefcase,
-    X,
-    Loader2
-} from "lucide-react";
+import { Save, Tag, Briefcase, X, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
     Card,
     CardContent,
-    CardDescription,
     CardFooter,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import {
     Form,
     FormControl,
     FormField,
     FormItem,
     FormLabel,
-    FormMessage,
     FormDescription
 } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import FileUpload from "@/components/FileUpload";
 
 import { useGetOrgByIdQuery } from "@/features/organizer/hooks/useOrganizerQueries";
@@ -69,6 +34,12 @@ import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { ORG_ACTIONS, ORG_ACTIONS_ACCESS } from "../../lib/access";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { OrgSettingsFormSchema, orgSettingsSchema } from "../../lib/orgSchemas";
+import { prepareOrgUpdateFormData } from "../../lib/orgUtils";
+
+// New sub-components
+import { ProfileInfoForm } from "../components/ProfileInfoForm";
+import { SocialLinksForm } from "../components/SocialLinksForm";
+import { DangerZone } from "../components/DangerZone";
 
 const OrganizerSettingsPage = () => {
     const navigate = useNavigate();
@@ -87,7 +58,6 @@ const OrganizerSettingsPage = () => {
     );
     const currentOrg = orgData?.data;
 
-    // Initial values based on currentOrg
     const defaultValues: Partial<OrgSettingsFormSchema> = {
         name: "",
         region: "",
@@ -109,9 +79,8 @@ const OrganizerSettingsPage = () => {
         mode: "onChange",
     });
 
-    const { reset, watch, setValue, control, handleSubmit, formState: { isDirty } } = form;
+    const { reset, watch, setValue, handleSubmit, formState: { isDirty } } = form;
 
-    // Reset form when currentOrg loads
     useEffect(() => {
         if (currentOrg) {
             reset({
@@ -133,34 +102,19 @@ const OrganizerSettingsPage = () => {
         }
     }, [currentOrg, reset]);
 
-    // RBAC
     const canUpdate = can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.updateOrg]);
     const canDelete = can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.deleteOrg]);
 
     const onSubmit = async (values: OrgSettingsFormSchema) => {
         if (!currentOrg?._id) return;
 
-        const data = new FormData();
-        data.append("name", values.name);
-        data.append("region", values.region);
-        data.append("tag", values.tag);
-        if (values.description) data.append("description", values.description);
-        data.append("isHiring", String(values.isHiring));
-        data.append("socialLinks", JSON.stringify(values.socialLinks));
-
-        if (values.image instanceof File) {
-            data.append("image", values.image);
-        }
-        if (values.banner instanceof File) {
-            data.append("banner", values.banner);
-        }
+        const data = prepareOrgUpdateFormData(values);
 
         updateMutation.mutate(
             { orgId: currentOrg._id, data },
             {
                 onSuccess: () => {
                     toast.success("Organization updated successfully");
-                    // Reset file inputs specifically since they are consumed
                     setValue("image", undefined);
                     setValue("banner", undefined);
                 },
@@ -270,7 +224,7 @@ const OrganizerSettingsPage = () => {
                                 </CardHeader>
                                 <CardContent>
                                     <FormField
-                                        control={control}
+                                        control={form.control}
                                         name="isHiring"
                                         render={({ field }) => (
                                             <FormItem className="flex items-center space-x-3 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 transition-colors hover:bg-emerald-500/10 space-y-0">
@@ -300,204 +254,15 @@ const OrganizerSettingsPage = () => {
                         {/* Forms (Right 2 Columns) */}
                         <div className="md:col-span-2 space-y-6">
                             {/* Information Form */}
-                            <Card className="bg-[#0B0C1A] border-white/5 shadow-xl">
-                                <CardHeader className="border-b border-white/5 pb-4">
-                                    <CardTitle className="text-white flex items-center gap-2">
-                                        <Building2 className="size-5 text-purple-500" /> Organization Profile
-                                    </CardTitle>
-                                    <CardDescription>Update your public identity and contact information.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-6 pt-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <FormField
-                                            control={control}
-                                            name="name"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className="text-xs font-black text-gray-500 uppercase tracking-widest">Brand Name</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            {...field}
-                                                            className="bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 h-11"
-                                                            placeholder="e.g. Pro Gaming League"
-                                                            disabled={!canUpdate}
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={control}
-                                            name="tag"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className="text-xs font-black text-gray-500 uppercase tracking-widest">Public Tag</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            {...field}
-                                                            onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                                                            className="bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 h-11"
-                                                            placeholder="e.g. PGL"
-                                                            disabled={!canUpdate}
-                                                        />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </div>
-                                    <FormField
-                                        control={control}
-                                        name="region"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel className="text-xs font-black text-gray-500 uppercase tracking-widest">Region</FormLabel>
-                                                <Select disabled={!canUpdate} onValueChange={field.onChange} value={field.value || ""}>
-                                                    <FormControl>
-                                                        <SelectTrigger className="bg-white/5 border-white/10 text-white h-11 focus:ring-purple-500 focus:border-purple-500">
-                                                            <div className="flex items-center gap-2">
-                                                                <Globe className="h-4 w-4 text-gray-500" />
-                                                                <SelectValue placeholder="Select a region" />
-                                                            </div>
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
-                                                        <SelectItem value="India">India (IND)</SelectItem>
-                                                        <SelectItem value="Brazil">Brazil (BR)</SelectItem>
-                                                        <SelectItem value="Indonesia">Indonesia (ID)</SelectItem>
-                                                        <SelectItem value="MENA">Middle East & North Africa (MENA)</SelectItem>
-                                                        <SelectItem value="LATAM">Latin America (LATAM)</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={control}
-                                        name="description"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel className="text-xs font-black text-gray-500 uppercase tracking-widest">Biography</FormLabel>
-                                                <FormControl>
-                                                    <Textarea
-                                                        {...field}
-                                                        className="bg-white/5 border-white/10 text-white min-h-[140px] focus:ring-purple-500 focus:border-purple-500 resize-none leading-relaxed"
-                                                        placeholder="Tell participants about your mission, history, and goals..."
-                                                        disabled={!canUpdate}
-                                                        value={field.value || ""}
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </CardContent>
-                            </Card>
+                            <ProfileInfoForm disabled={!canUpdate} />
 
                             {/* Social Links Form */}
-                            <Card className="bg-[#0B0C1A] border-white/5 shadow-xl">
-                                <CardHeader className="border-b border-white/5 pb-4">
-                                    <CardTitle className="text-white flex items-center gap-2">
-                                        <Globe className="size-5 text-blue-400" /> Social Presence
-                                    </CardTitle>
-                                    <CardDescription>Connect your official social media channels.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-6 pt-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <FormField
-                                            control={control}
-                                            name="socialLinks.website"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className="text-xs font-black text-gray-500 uppercase tracking-widest">Website</FormLabel>
-                                                    <FormControl>
-                                                        <div className="relative">
-                                                            <Globe className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                                                            <Input
-                                                                {...field}
-                                                                className="bg-white/5 border-white/10 text-white pl-10 h-11"
-                                                                placeholder="https://yourorg.com"
-                                                                disabled={!canUpdate}
-                                                                value={field.value || ""}
-                                                            />
-                                                        </div>
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={control}
-                                            name="socialLinks.discord"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className="text-xs font-black text-gray-500 uppercase tracking-widest">Discord Invite</FormLabel>
-                                                    <FormControl>
-                                                        <div className="relative">
-                                                            <MessageCircle className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                                                            <Input
-                                                                {...field}
-                                                                className="bg-white/5 border-white/10 text-white pl-10 h-11"
-                                                                placeholder="discord.gg/xyz"
-                                                                disabled={!canUpdate}
-                                                                value={field.value || ""}
-                                                            />
-                                                        </div>
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={control}
-                                            name="socialLinks.twitter"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className="text-xs font-black text-gray-500 uppercase tracking-widest">Twitter (X)</FormLabel>
-                                                    <FormControl>
-                                                        <div className="relative">
-                                                            <Twitter className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                                                            <Input
-                                                                {...field}
-                                                                className="bg-white/5 border-white/10 text-white pl-10 h-11"
-                                                                placeholder="@YourOrg"
-                                                                disabled={!canUpdate}
-                                                                value={field.value || ""}
-                                                            />
-                                                        </div>
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={control}
-                                            name="socialLinks.instagram"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className="text-xs font-black text-gray-500 uppercase tracking-widest">Instagram</FormLabel>
-                                                    <FormControl>
-                                                        <div className="relative">
-                                                            <Instagram className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                                                            <Input
-                                                                {...field}
-                                                                className="bg-white/5 border-white/10 text-white pl-10 h-11"
-                                                                placeholder="username"
-                                                                disabled={!canUpdate}
-                                                                value={field.value || ""}
-                                                            />
-                                                        </div>
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </div>
-                                </CardContent>
-                                {canUpdate && isDirty && (
-                                    <CardFooter className="pt-4 pb-6 border-t border-white/5 flex justify-end gap-3 sticky bottom-4 z-10 animate-in slide-in-from-bottom-4 duration-300">
+                            <SocialLinksForm disabled={!canUpdate} />
+
+                            {/* Save Button (Conditional) */}
+                            {canUpdate && isDirty && (
+                                <Card className="bg-[#0B0C1A] border-white/5 shadow-xl overflow-hidden">
+                                    <CardFooter className="py-4 border-t border-white/5 flex justify-end gap-3 sticky bottom-4 z-10 animate-in slide-in-from-bottom-4 duration-300">
                                         <Button
                                             type="button"
                                             variant="outline"
@@ -522,48 +287,16 @@ const OrganizerSettingsPage = () => {
                                             )}
                                         </Button>
                                     </CardFooter>
-                                )}
-                            </Card>
+                                </Card>
+                            )}
 
                             {/* Danger Zone */}
                             {canDelete && (
-                                <Card className="border-red-500/20 bg-red-500/5 shadow-inner">
-                                    <CardHeader>
-                                        <CardTitle className="text-red-400 flex items-center gap-2">
-                                            <AlertTriangle className="size-5" /> Account Safety
-                                        </CardTitle>
-                                        <CardDescription className="text-red-400/60 font-medium">Permanently dissolve your organization and remove its presence.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <p className="text-sm text-red-300/60 mb-6 leading-relaxed bg-red-950/20 p-4 rounded-lg border border-red-500/10">
-                                            <strong className="text-red-400">Warning:</strong> Dissolving this organization will terminate all hosted events, revoke staff credentials, and purge your metrics. This metadata cannot be recovered.
-                                        </p>
-
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="destructive" className="bg-red-600/10 hover:bg-red-600 border border-red-500/30 text-red-500 hover:text-white font-black px-8">
-                                                    Terminate Organization
-                                                    <Trash2 className="size-4 ml-2" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent className="bg-[#0F0720] border-red-500/20 text-white shadow-2xl max-w-lg">
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle className="text-2xl font-black text-red-400">Irreversible Action</AlertDialogTitle>
-                                                    <AlertDialogDescription className="text-gray-400 py-2">
-                                                        You are about to dissolve <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">"{currentOrg?.name}"</span>.
-                                                        This will permanently erase all history, events, and rosters associated with this organization.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter className="gap-3 mt-4">
-                                                    <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 font-bold">Abandon</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white font-black px-10">
-                                                        Dissolve Now
-                                                    </AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </CardContent>
-                                </Card>
+                                <DangerZone
+                                    orgName={currentOrg?.name}
+                                    onDelete={handleDelete}
+                                    isDeleting={deleteMutation.isPending}
+                                />
                             )}
                         </div>
                     </div>

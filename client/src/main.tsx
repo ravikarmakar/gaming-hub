@@ -6,6 +6,11 @@ import App from "./App.tsx";
 import "./index.css";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { setupAxiosInterceptors } from "./lib/axiosInterceptor";
+import { useAuthStore } from "./features/auth/store/useAuthStore";
+
+// Initialize Axios Interceptors via Dependency Injection
+setupAxiosInterceptors(() => useAuthStore.getState().refreshToken());
 
 const queryClient = new QueryClient({
   defaultOptions: {

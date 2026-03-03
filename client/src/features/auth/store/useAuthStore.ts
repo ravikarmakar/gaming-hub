@@ -1,6 +1,5 @@
 import { create } from "zustand";
 
-import "../../../lib/axiosInterceptor";
 import { axiosInstance } from "@/lib/axios";
 import { AUTH_ENDPOINTS } from "../lib/endpoints";
 import { User } from "../lib/types";

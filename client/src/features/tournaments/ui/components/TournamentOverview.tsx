@@ -11,11 +11,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useEventStore } from "@/features/events/store/useEventStore";
-import { useTournamentStore } from "@/features/organizer/store/useTournamentStore";
+import { useGetRoundsQuery } from "../../hooks";
 
 export const TournamentOverview = () => {
     const { eventDetails } = useEventStore();
-    const { rounds } = useTournamentStore();
+    const { data: rounds = [] } = useGetRoundsQuery(eventDetails?._id || "");
 
     const stats = useMemo(() => {
         if (!eventDetails) return null;

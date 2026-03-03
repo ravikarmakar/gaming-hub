@@ -6,40 +6,39 @@ import {
     Users,
     Swords,
     Settings,
-    PlayCircle,
     Trash2,
     Edit2,
     AlertTriangle,
-    Loader2
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import toast from "react-hot-toast";
 
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { useEventStore } from "@/features/events/store/useEventStore";
-import { useTournamentStore } from "@/features/organizer/store/useTournamentStore";
-import { RoundsManager } from "@/features/organizer/ui/components/RoundsManager";
+import { useGetRoundsQuery, useFinishEventMutation, useStartEventMutation } from "../../hooks";
+import { RoundsManager } from "../components/RoundsManager";
+import { TournamentOverview } from "../components/TournamentOverview";
+import { RegisteredTeamsList } from "../components/RegisteredTeamsList";
 
-import { TournamentOverview } from "@/features/organizer/ui/components/TournamentOverview";
-import { RegisteredTeamsList } from "@/features/organizer/ui/components/RegisteredTeamsList";
+// Extracted sub-components
+import { TournamentDashboardHeader } from "../components/tournaments/TournamentDashboardHeader";
 
-export default function OrganizerTournamentDashboard() {
+export default function TournamentDashboard() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("overview");
     const { eventDetails, fetchEventDetailsById, deleteEvent } = useEventStore();
-    const { rounds, fetchRounds, finishEvent } = useTournamentStore();
-    const [isFinishing, setIsFinishing] = useState(false);
+    const { data: rounds = [] } = useGetRoundsQuery(id || "");
+    const { mutateAsync: finishEvent, isPending: isFinishing } = useFinishEventMutation();
+    const { mutateAsync: startEvent } = useStartEventMutation();
 
     useEffect(() => {
         if (id) {
             fetchEventDetailsById(id);
-            fetchRounds(id);
         }
-    }, [id, fetchEventDetailsById, fetchRounds]);
+    }, [id, fetchEventDetailsById]);
 
     if (!id) {
         return <div className="p-6 text-white">Invalid Tournament ID</div>;
@@ -65,12 +64,11 @@ export default function OrganizerTournamentDashboard() {
         if (!id) return;
         if (!window.confirm("Are you sure you want to finish this tournament? This will publish the final leaderboard.")) return;
 
-        setIsFinishing(true);
-        const success = await finishEvent(id);
-        setIsFinishing(false);
-        if (success) {
-            toast.success("Tournament finished! Final results are now public.");
+        try {
+            await finishEvent(id);
             fetchEventDetailsById(id); // Refresh status
+        } catch (error) {
+            console.error(error);
         }
     };
 
@@ -92,59 +90,23 @@ export default function OrganizerTournamentDashboard() {
             </Button>
 
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gray-900/40 p-6 rounded-2xl border border-white/5 backdrop-blur-xl">
-                <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                        <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter">
-                            {eventDetails?.title || "Loading..."}
-                        </h1>
-                        <Badge variant="outline" className="border-green-500/20 text-green-400 bg-green-500/10">
-                            {eventDetails?.registrationStatus?.toUpperCase() || "LOADING"}
-                        </Badge>
-                        <Badge variant="outline" className="border-blue-500/20 text-blue-400 bg-blue-500/10">
-                            {eventDetails?.eventProgress?.toUpperCase() || "LOADING"}
-                        </Badge>
-                    </div>
-                    <p className="text-gray-400">Manage rounds, groups, and results for Event ID: {id}</p>
-                </div>
-
-                <div className="flex gap-3">
-                    {/* Start Event Button - Only visible when not started */}
-                    {(eventDetails?.eventProgress === "pending") && (
-                        <Button
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                            onClick={async () => {
-                                if (await useTournamentStore.getState().startEvent(id)) {
-                                    toast.success("Event Started!");
-                                    fetchEventDetailsById(id);
-                                }
-                            }}
-                        >
-                            <PlayCircle className="w-4 h-4 mr-2" />
-                            Start Event
-                        </Button>
-                    )}
-
-                    {/* End Tournament Button */}
-                    {eventDetails?.eventProgress === "ongoing" && (
-                        <Button
-                            variant="outline"
-                            className="border-purple-500/20 text-purple-400 hover:bg-purple-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
-                            onClick={handleFinishTournament}
-                            disabled={!canFinish || isFinishing}
-                        >
-                            {isFinishing ? (
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            ) : (
-                                <Trophy className="w-4 h-4 mr-2" />
-                            )}
-                            Finish Tournament
-                        </Button>
-                    )}
-
-                    {/* Resume Button? Maybe not needed if we have Start Event logic distinct. Keeping generic if needed or removing as per plan */}
-                </div>
-            </div>
+            <TournamentDashboardHeader
+                title={eventDetails?.title || ""}
+                registrationStatus={eventDetails?.registrationStatus || ""}
+                eventProgress={eventDetails?.eventProgress || ""}
+                onStartEvent={async () => {
+                    if (!id) return;
+                    try {
+                        await startEvent(id);
+                        fetchEventDetailsById(id);
+                    } catch (error) {
+                        console.error(error);
+                    }
+                }}
+                onFinishEvent={handleFinishTournament}
+                canFinish={canFinish ?? false}
+                isFinishing={isFinishing}
+            />
 
             {/* Main Content Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

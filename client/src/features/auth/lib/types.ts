@@ -22,13 +22,13 @@ export interface User {
     email: string;
     avatar: string;
     coverImage?: string;
-    region?: "na" | "eu" | "sea" | "sa" | "mea" | "global";
+    region?: "NA" | "EU" | "ASIA" | "SEA" | "SA" | "OCE" | "MENA" | "INDIA" | "GLOBAL";
     country?: string;
     countryCode?: string;
     isLookingForTeam?: boolean;
     roles: Roles[];
     orgId: string;
-    teamId: string;
+    teamId: string | { _id: string; teamName: string; tag: string };
     esportsRole: EsportsRole;
     canCreateOrg: boolean;
     isAccountVerified: boolean;

@@ -19,13 +19,13 @@ export const pages = {
     OrganizerDashboard: lazy(() => import("@/features/organizer/ui/pages/OrganizerDashboard")),
     OrganizerMember: lazy(() => import("@/features/organizer/ui/pages/OrganizerMemberPage")),
     OrganizerLayout: lazy(() => import("@/features/organizer/ui/layouts/OrganizerLayout")),
-    OrganizerTournaments: lazy(() => import("@/features/organizer/ui/pages/OrganizerTournaments")),
+    OrganizerTournaments: lazy(() => import("@/features/tournaments/ui/pages/TournamentsPage")),
     OrganizerSettings: lazy(() => import("@/features/organizer/ui/pages/OrganizerSettingsPage")),
     OrganizerJoinRequests: lazy(() => import("@/features/organizer/ui/pages/OrganizerJoinRequestsPage")),
     OrganizerNotifications: lazy(() => import("@/features/organizer/ui/pages/OrganizerNotificationsPage")),
-    OrganizerTournamentDashboard: lazy(() => import("@/features/organizer/ui/pages/OrganizerTournamentDashboard")),
+    OrganizerTournamentDashboard: lazy(() => import("@/features/tournaments/ui/pages/TournamentDashboard")),
     FindOrganizers: lazy(() => import("@/features/organizer/ui/pages/FindOrganizers")),
-    GroupTeamList: lazy(() => import("@/features/organizer/ui/pages/GroupTeamList")),
+    GroupTeamList: lazy(() => import("@/features/tournaments/ui/pages/GroupTeamList")),
 
     // Player
     PlayerId: lazy(() => import("@/features/player/ui/pages/PlayerIdPage")),
@@ -45,7 +45,7 @@ export const pages = {
     FindTeams: lazy(() => import("@/features/teams/ui/pages/FindTeams")),
 
     // Events
-    CreateTournament: lazy(() => import("@/features/events/ui/pages/CreateTournament")),
+    CreateTournament: lazy(() => import("@/features/tournaments/ui/pages/CreateTournament")),
     TournamentById: lazy(() => import("@/features/events/ui/pages/TournamentById")),
     AllTournaments: lazy(() => import("@/features/events/ui/pages/AllTournaments")),
 
