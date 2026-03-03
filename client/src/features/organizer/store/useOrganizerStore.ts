@@ -62,7 +62,6 @@ export interface OrganizerStateType {
   clearError: () => void;
 
   // API Calls
-  createOrg: (orgData: FormData) => Promise<boolean>;
   fetchOrganizers: (page?: number, limit?: number, search?: string, append?: boolean) => Promise<void>;
   getOrgById: (orgId: string, page?: number, limit?: number, search?: string) => Promise<Organizer | null>;
   updateOrg: (data: FormData | Partial<Organizer>) => Promise<boolean>;
@@ -112,13 +111,6 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
   setIsCreateOrgOpen: (open) => set({ isCreateOrgOpen: open }),
   clearAvailableUsers: () => set({ availableUsers: [] }),
   clearError: () => set({ error: null }),
-
-  createOrg: async (orgData) => {
-    const { success } = await runAsync(set, async () => {
-      await axiosInstance.post(ORGANIZER_ENDPOINTS.CREATE_ORG, orgData);
-    }, "Error creating organizer");
-    return success;
-  },
 
   fetchOrganizers: async (page = 1, limit = 20, search = "", append = false) => {
     await runAsync(set, async () => {

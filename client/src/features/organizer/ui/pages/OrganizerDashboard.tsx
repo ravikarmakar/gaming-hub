@@ -13,7 +13,6 @@ import {
   ListOrdered,
   BarChart,
   Settings,
-  Mail,
   Tag,
   Briefcase
 } from "lucide-react";
@@ -108,12 +107,6 @@ const OrganizerDashboard = () => {
           </div>
 
           <div className="w-full space-y-4 pt-6 border-t border-white/5">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500 font-bold uppercase tracking-widest text-[10px] flex items-center gap-1.5">
-                <Mail size={12} /> Email
-              </span>
-              <span className="text-gray-300 font-medium truncate max-w-[150px]">{orgInfo?.email || user?.email}</span>
-            </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-500 font-bold uppercase tracking-widest text-[10px] flex items-center gap-1.5">
                 <Calendar size={12} /> Created

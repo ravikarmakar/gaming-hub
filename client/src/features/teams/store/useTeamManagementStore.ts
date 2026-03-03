@@ -13,7 +13,6 @@ interface TeamManagementState {
 
     // Actions
     getTeamById: (id: string, forceRefresh?: boolean, skipServerCache?: boolean) => Promise<Team | null>;
-    createTeam: (teamData: FormData) => Promise<Team | null>;
     updateTeam: (teamId: string, teamData: FormData) => Promise<Team | null>;
     deleteTeam: () => Promise<{ success: boolean; message: string }>;
     removeMember: (memberId: string) => Promise<{ success: boolean; message: string } | null>;
@@ -63,20 +62,6 @@ export const useTeamManagementStore = create<TeamManagementState>((set, get) => 
             return team;
         } catch (error) {
             set({ error: getErrorMessage(error, "Error fetching team details"), isLoading: false });
-            return null;
-        }
-    },
-
-    createTeam: async (teamData) => {
-        set({ isLoading: true, error: null });
-        try {
-            const response = await axiosInstance.post(TEAM_ENDPOINTS.CREATE, teamData);
-            const team = response.data.data;
-            get().setCurrentTeam(team);
-            set({ isLoading: false });
-            return team;
-        } catch (error) {
-            set({ error: getErrorMessage(error, "Error creating new team"), isLoading: false });
             return null;
         }
     },
