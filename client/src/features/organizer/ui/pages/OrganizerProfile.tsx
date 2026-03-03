@@ -6,26 +6,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import LoadingSpinner from "@/components/LoadingSpinner";
 
-import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
 import { useEventStore } from "@/features/events/store/useEventStore";
 import { OrganizerProfileHeader } from "../components/profile/OrganizerProfileHeader";
 import { OrganizerEventsTab } from "../components/profile/OrganizerEventsTab";
 import { OrganizerAboutTab } from "../components/profile/OrganizerAboutTab";
 import { ProfileBannerLayout } from "@/components/shared/ProfileBannerLayout";
+import { useGetOrgByIdQuery } from "@/features/organizer/hooks/useOrganizerQueries";
 
 const OrganizerProfile = () => {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<string>("events");
 
-  const { currentOrg, getOrgById, isLoading: isOrgLoading } = useOrganizerStore();
+  const { data: orgData, isLoading: isOrgLoading } = useGetOrgByIdQuery(id as string, 1, 20, "", {
+    enabled: !!id,
+  });
+  const currentOrg = orgData?.data;
   const { orgEvents, fetchEventsByOrgId, isLoading: isEventsLoading } = useEventStore();
 
   useEffect(() => {
     if (id) {
-      getOrgById(id);
       fetchEventsByOrgId(id);
     }
-  }, [id, getOrgById, fetchEventsByOrgId]);
+  }, [id, fetchEventsByOrgId]);
 
   // Mock stats - in a real app these would come from the backend or be calculated
   const stats = useMemo(() => ({

@@ -60,6 +60,7 @@ import {
 } from "@/components/ui/select";
 import FileUpload from "@/components/FileUpload";
 
+import { useGetOrgByIdQuery } from "@/features/organizer/hooks/useOrganizerQueries";
 import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { ORG_ACTIONS, ORG_ACTIONS_ACCESS } from "../../lib/access";
@@ -68,9 +69,13 @@ import { OrgSettingsFormSchema, orgSettingsSchema } from "../../lib/orgSchemas";
 
 const OrganizerSettingsPage = () => {
     const navigate = useNavigate();
-    const { currentOrg, updateOrg, deleteOrg, isLoading, error, getOrgById } = useOrganizerStore();
+    const { updateOrg, deleteOrg, error } = useOrganizerStore();
     const { user } = useAuthStore();
     const { can } = useAccess();
+
+    const { data: currentOrg, isLoading, refetch } = useGetOrgByIdQuery(user?.orgId as string, {
+        enabled: !!user?.orgId,
+    });
 
     // Initial values based on currentOrg
     const defaultValues: Partial<OrgSettingsFormSchema> = {
@@ -115,13 +120,8 @@ const OrganizerSettingsPage = () => {
                 image: undefined,
                 banner: undefined
             });
-        } else {
-            // Fetch org if missing
-            if (user?.orgId) {
-                getOrgById(user.orgId);
-            }
         }
-    }, [currentOrg, reset, user?.orgId, getOrgById]);
+    }, [currentOrg, reset]);
 
     // RBAC
     const canUpdate = can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.updateOrg]);
@@ -149,7 +149,7 @@ const OrganizerSettingsPage = () => {
         if (success) {
             toast.success("Organization updated successfully");
             // Refresh org data
-            await getOrgById(currentOrg._id);
+            await refetch();
             // Reset file inputs specifically since they are consumed
             setValue("image", undefined);
             setValue("banner", undefined);

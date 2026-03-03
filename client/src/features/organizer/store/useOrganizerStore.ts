@@ -29,12 +29,6 @@ interface ApiListResponse<T> {
   pagination: Pagination;
 }
 
-interface ApiSingleResponse<T> {
-  success: boolean;
-  data: T;
-  pagination?: Pagination; // Sometimes single response includes pagination for sub-resources i.e members
-}
-
 interface SearchResponse {
   players: User[];
   pagination: Pagination;
@@ -63,7 +57,6 @@ export interface OrganizerStateType {
 
   // API Calls
   fetchOrganizers: (page?: number, limit?: number, search?: string, append?: boolean) => Promise<void>;
-  getOrgById: (orgId: string, page?: number, limit?: number, search?: string) => Promise<Organizer | null>;
   updateOrg: (data: FormData | Partial<Organizer>) => Promise<boolean>;
   deleteOrg: () => Promise<boolean>;
 
@@ -124,20 +117,6 @@ export const useOrganizerStore = create<OrganizerStateType>((set, get) => ({
         organizersPagination: data.pagination
       }));
     }, "Error fetching organizers");
-  },
-
-  getOrgById: async (orgId: string, page = 1, limit = 20, search = "") => {
-    const { data } = await runAsync(set, async () => {
-      const { data } = await axiosInstance.get<ApiSingleResponse<Organizer>>(ORGANIZER_ENDPOINTS.GET_ORG_DETAILS(orgId), {
-        params: { page, limit, search }
-      });
-      set({
-        currentOrg: data.data,
-        memberPagination: data.pagination || null
-      });
-      return data.data;
-    }, "Error fetching organizer");
-    return data || null;
   },
 
   updateOrg: async (updateData) => {

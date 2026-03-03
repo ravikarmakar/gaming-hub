@@ -7,14 +7,17 @@ import { User } from "@/features/auth/lib/types";
 import { Notification } from "@/features/notifications/store/useNotificationStore";
 import { JoinRequest } from "../store/useOrganizerStore";
 
-// --- GET ORG BY ID ---
+// --- GET ORG DETAILS BY ID ---
 export const useGetOrgByIdQuery = (
     id: string,
-    options?: Omit<UseQueryOptions<Organizer, AxiosError>, "queryKey" | "queryFn">
+    page: number = 1,
+    limit: number = 20,
+    search: string = "",
+    options?: Omit<UseQueryOptions<{ success: boolean; data: Organizer; pagination?: Pagination }, AxiosError>, "queryKey" | "queryFn">
 ) => {
     return useQuery({
-        queryKey: organizerKeys.detail(id),
-        queryFn: () => organizerApi.getOrgById(id),
+        queryKey: [...organizerKeys.detail(id), page, limit, search],
+        queryFn: () => organizerApi.getOrgById(id, page, limit, search),
         enabled: !!id,
         ...options,
     });

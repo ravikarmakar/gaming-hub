@@ -26,11 +26,11 @@ const router = express.Router();
 
 // Public routes
 router.get("/all-events", cache(300), fetchAllEvents);
+router.get("/org-events/:orgId", cache(300), fetchEventByOrg);
+router.get("/event-details/:eventId", cache(300), fetchEventDetailsById);
 
 // Protected routes (RBAC handled by authorize)
 router.post("/create-event", isAuthenticated, authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), upload.single("image"), createEvent);
-router.get("/org-events/:orgId", isAuthenticated, authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.MANAGER, Roles.ORG.STAFF]), cache(300), fetchEventByOrg);
-router.get("/event-details/:eventId", isAuthenticated, authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER], { attachDoc: true }), cache(300), fetchEventDetailsById);
 router.post("/register-event/:eventId", isAuthenticated, authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER], { attachDoc: true }), registerEvent);
 router.get("/is-registered/:eventId/teams/:teamId", isAuthenticated, authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER], { attachDoc: true }), cache(300), isTeamRegistered);
 router.get("/registered-teams/:eventId", isAuthenticated, authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER], { attachDoc: true }), cache(300), fetchAllRegisteredTeams);

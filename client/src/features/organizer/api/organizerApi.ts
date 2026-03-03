@@ -12,6 +12,12 @@ interface ApiListResponse<T> {
     pagination: Pagination;
 }
 
+export interface ApiSingleResponse<T> {
+    success: boolean;
+    data: T;
+    pagination?: Pagination;
+}
+
 export const organizerApi = {
     // GET APIs
     fetchOrganizers: async (page = 1, limit = 20, search = ""): Promise<ApiListResponse<Organizer>> => {
@@ -21,11 +27,11 @@ export const organizerApi = {
         return response.data;
     },
 
-    getOrgById: async (id: string, page = 1, limit = 20, search = ""): Promise<Organizer> => {
+    getOrgById: async (id: string, page = 1, limit = 20, search = ""): Promise<ApiSingleResponse<Organizer>> => {
         const response = await axiosInstance.get(ORGANIZER_ENDPOINTS.GET_ORG_DETAILS(id), {
             params: { page, limit, search }
         });
-        return response.data.data;
+        return response.data;
     },
 
     getDashboardStats: async (orgId: string): Promise<DashboardStats> => {
