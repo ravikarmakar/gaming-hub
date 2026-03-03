@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
 import { X, Clock } from "lucide-react";
@@ -8,7 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
+import {
+    useOrgPendingInvitesQuery
+} from "../../hooks/useOrganizerQueries";
+import {
+    useCancelInviteMutation
+} from "../../hooks/useOrganizerMutations";
 import { Invite } from "@/features/organizer/lib/types";
 
 interface OrganizerPendingInvitesProps {
@@ -16,19 +20,21 @@ interface OrganizerPendingInvitesProps {
 }
 
 export const OrganizerPendingInvites = ({ orgId }: OrganizerPendingInvitesProps) => {
-    const { fetchPendingInvites, pendingInvites, cancelInvite, isLoading } = useOrganizerStore();
+    const { data: pendingInvites } = useOrgPendingInvitesQuery(orgId);
+    const cancelMutation = useCancelInviteMutation();
 
-    useEffect(() => {
-        fetchPendingInvites(orgId);
-    }, [orgId, fetchPendingInvites]);
-
-    const handleCancel = async (inviteId: string) => {
-        const success = await cancelInvite(orgId, inviteId);
-        if (success) {
-            toast.success("Invitation cancelled");
-        } else {
-            toast.error("Failed to cancel invitation");
-        }
+    const handleCancel = (inviteId: string) => {
+        cancelMutation.mutate(
+            { orgId, inviteId },
+            {
+                onSuccess: () => {
+                    toast.success("Invitation cancelled");
+                },
+                onError: (error: any) => {
+                    toast.error(error.message || "Failed to cancel invitation");
+                }
+            }
+        );
     };
 
     if (!pendingInvites || pendingInvites.length === 0) return null;
@@ -69,7 +75,7 @@ export const OrganizerPendingInvites = ({ orgId }: OrganizerPendingInvitesProps)
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleCancel(invite._id)}
-                                disabled={isLoading}
+                                disabled={cancelMutation.isPending}
                                 aria-label="Cancel Invite"
                                 className="text-gray-500 hover:text-red-400 hover:bg-red-500/10 shrink-0"
                             >

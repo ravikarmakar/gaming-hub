@@ -7,7 +7,7 @@ import * as z from "zod";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useTeamStore } from "@/features/teams/store/useTeamStore";
-import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
+import { useOrganizerUIStore } from "@/features/organizer/store/useOrganizerUIStore";
 import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
@@ -31,7 +31,7 @@ export function useCreateGroup<TFieldValues extends Record<string, any>>({
 
     // Dialog Toggle Stores
     const { isCreateTeamOpen, setIsCreateTeamOpen } = useTeamStore();
-    const { isCreateOrgOpen, setIsCreateOrgOpen } = useOrganizerStore();
+    const { isCreateOrgOpen, setIsCreateOrgOpen } = useOrganizerUIStore();
 
     const isTeam = type === "team";
     const isOpen = isTeam ? isCreateTeamOpen : isCreateOrgOpen;
@@ -55,11 +55,9 @@ export function useCreateGroup<TFieldValues extends Record<string, any>>({
         // Update auth state to get the new teamId/orgId and roles before navigating
         await useAuthStore.getState().checkAuth(true);
 
-        // Proactively set the active team/org in the store if needed
+        // Proactively set the active team in the store if needed
         if (isTeam) {
             useTeamManagementStore.getState().setCurrentTeam(data);
-        } else {
-            useOrganizerStore.setState({ currentOrg: data });
         }
 
         setTimeout(() => {

@@ -3,7 +3,7 @@ import { ORGANIZER_ENDPOINTS, PLAYER_ENDPOINTS } from "../lib/endpoints";
 import { Organizer, DashboardStats, Pagination, Invite } from "../lib/types";
 import { User } from "@/features/auth/lib/types";
 import { Notification } from "@/features/notifications/store/useNotificationStore";
-import { JoinRequest } from "../store/useOrganizerStore";
+import { JoinRequest } from "../store/useOrganizerUIStore";
 
 // Type definitions for responses
 interface ApiListResponse<T> {

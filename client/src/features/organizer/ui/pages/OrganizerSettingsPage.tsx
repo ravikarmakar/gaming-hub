@@ -61,7 +61,10 @@ import {
 import FileUpload from "@/components/FileUpload";
 
 import { useGetOrgByIdQuery } from "@/features/organizer/hooks/useOrganizerQueries";
-import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
+import {
+    useUpdateOrgMutation,
+    useDeleteOrgMutation
+} from "@/features/organizer/hooks/useOrganizerMutations";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { ORG_ACTIONS, ORG_ACTIONS_ACCESS } from "../../lib/access";
 import { useAccess } from "@/features/auth/hooks/useAccess";
@@ -69,13 +72,20 @@ import { OrgSettingsFormSchema, orgSettingsSchema } from "../../lib/orgSchemas";
 
 const OrganizerSettingsPage = () => {
     const navigate = useNavigate();
-    const { updateOrg, deleteOrg, error } = useOrganizerStore();
     const { user } = useAuthStore();
     const { can } = useAccess();
 
-    const { data: currentOrg, isLoading, refetch } = useGetOrgByIdQuery(user?.orgId as string, {
-        enabled: !!user?.orgId,
-    });
+    const updateMutation = useUpdateOrgMutation();
+    const deleteMutation = useDeleteOrgMutation();
+
+    const { data: orgData } = useGetOrgByIdQuery(
+        user?.orgId as string,
+        undefined,
+        undefined,
+        undefined,
+        { enabled: !!user?.orgId }
+    );
+    const currentOrg = orgData?.data;
 
     // Initial values based on currentOrg
     const defaultValues: Partial<OrgSettingsFormSchema> = {
@@ -145,29 +155,34 @@ const OrganizerSettingsPage = () => {
             data.append("banner", values.banner);
         }
 
-        const success = await updateOrg(data);
-        if (success) {
-            toast.success("Organization updated successfully");
-            // Refresh org data
-            await refetch();
-            // Reset file inputs specifically since they are consumed
-            setValue("image", undefined);
-            setValue("banner", undefined);
-        } else {
-            toast.error(error || "Failed to update organization");
-        }
+        updateMutation.mutate(
+            { orgId: currentOrg._id, data },
+            {
+                onSuccess: () => {
+                    toast.success("Organization updated successfully");
+                    // Reset file inputs specifically since they are consumed
+                    setValue("image", undefined);
+                    setValue("banner", undefined);
+                },
+                onError: (error) => {
+                    toast.error(error.message || "Failed to update organization");
+                }
+            }
+        );
     };
 
     const handleDelete = async () => {
         if (!currentOrg?._id) return;
 
-        const success = await deleteOrg();
-        if (success) {
-            toast.success("Organization deleted successfully");
-            navigate("/");
-        } else {
-            toast.error(error || "Failed to delete organization");
-        }
+        deleteMutation.mutate(currentOrg._id, {
+            onSuccess: () => {
+                toast.success("Organization deleted successfully");
+                navigate("/");
+            },
+            onError: (error) => {
+                toast.error(error.message || "Failed to delete organization");
+            }
+        });
     };
 
     return (
@@ -487,14 +502,14 @@ const OrganizerSettingsPage = () => {
                                             type="button"
                                             variant="outline"
                                             onClick={() => reset()}
-                                            disabled={isLoading}
+                                            disabled={updateMutation.isPending}
                                             className="bg-white/5 border-white/10 text-white hover:bg-white/10 px-6 font-bold"
                                         >
                                             Cancel
                                             <X className="size-4 ml-2" />
                                         </Button>
-                                        <Button type="submit" disabled={isLoading} className="bg-purple-600 hover:bg-purple-500 text-white px-10 font-bold transition-all shadow-lg shadow-purple-900/40 active:scale-95">
-                                            {isLoading ? (
+                                        <Button type="submit" disabled={updateMutation.isPending} className="bg-purple-600 hover:bg-purple-500 text-white px-10 font-bold transition-all shadow-lg shadow-purple-900/40 active:scale-95">
+                                            {updateMutation.isPending ? (
                                                 <>
                                                     Saving...
                                                     <Loader2 className="size-4 ml-2 animate-spin" />

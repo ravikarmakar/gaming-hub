@@ -45,7 +45,7 @@ interface Member {
 interface OrganizerMemberCardProps {
     member: Member;
     onRemove: (id: string) => void;
-    onUpdateRole: (id: string, role: string) => Promise<void>;
+    onUpdateRole: (id: string, role: string) => void;
     onViewProfile: (id: string) => void;
     onTransferOwnership?: (id: string) => void;
     canManage: boolean;
@@ -76,9 +76,9 @@ export const OrganizerMemberCard = memo(({
     const [isEditingRole, setIsEditingRole] = useState(false);
     const [selectedRole, setSelectedRole] = useState<string>(member.role);
 
-    const handleSaveRole = async () => {
+    const handleSaveRole = () => {
         if (selectedRole !== member.role) {
-            await onUpdateRole(member._id, selectedRole);
+            onUpdateRole(member._id, selectedRole);
         }
         setIsEditingRole(false);
     };

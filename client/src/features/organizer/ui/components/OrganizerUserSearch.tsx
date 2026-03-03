@@ -15,13 +15,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 import { useDebounce } from "@/hooks/useDebounce";
-import { useOrganizerStore } from "../../store/useOrganizerStore";
 import { User } from "@/features/auth/lib/types";
+import { useSearchAvailableUsersQuery } from "../../hooks/useOrganizerQueries";
 
 interface OrganizerUserSearchProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onAddSelected: (userIds: string[]) => Promise<void>;
+    onAddSelected: (userIds: string[]) => void;
     isLoading?: boolean;
     existingMemberIds?: string[];
 }
@@ -36,21 +36,14 @@ export const OrganizerUserSearch = ({
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-    const { availableUsers, searchAvailableUsers, isLoading, error, clearAvailableUsers } = useOrganizerStore();
     const debouncedSearch = useDebounce(searchTerm, 500);
 
-    const handleSearch = useCallback(
-        async (term: string) => {
-            await searchAvailableUsers(term, 1, 50);
-        },
-        [searchAvailableUsers]
+    const { data: availableUsers, isLoading, error } = useSearchAvailableUsersQuery(
+        debouncedSearch,
+        1,
+        50,
+        { enabled: open }
     );
-
-    useEffect(() => {
-        if (open) {
-            handleSearch(debouncedSearch);
-        }
-    }, [open, debouncedSearch, handleSearch]);
 
     const toggleSelection = useCallback((id: string) => {
         setSelectedIds((prev) =>
@@ -62,13 +55,12 @@ export const OrganizerUserSearch = ({
         if (!open) {
             setSearchTerm("");
             setSelectedIds([]);
-            clearAvailableUsers();
         }
-    }, [open, clearAvailableUsers]);
+    }, [open]);
 
-    const handleSubmit = async () => {
+    const handleSubmit = () => {
         if (selectedIds.length > 0) {
-            await onAddSelected(selectedIds);
+            onAddSelected(selectedIds);
             onOpenChange(false);
         }
     };
@@ -105,7 +97,7 @@ export const OrganizerUserSearch = ({
                         {error && (
                             <div className="p-4 m-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-2 text-sm">
                                 <AlertCircle className="w-4 h-4" />
-                                {error}
+                                {error.message || "Failed to fetch available users"}
                             </div>
                         )}
 

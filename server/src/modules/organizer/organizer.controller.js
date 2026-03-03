@@ -464,7 +464,7 @@ export const updateStaffRole = TryCatchHandler(async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(orgId)) return next(new CustomError("Invalid Organization ID format", 400));
 
   // Validate newRole to prevent privilege escalation
-  const allowedRoles = [Roles.ORG.MANAGER, Roles.ORG.STAFF, Roles.ORG.PLAYER];
+  const allowedRoles = [Roles.ORG.CO_OWNER, Roles.ORG.MANAGER, Roles.ORG.STAFF, Roles.ORG.PLAYER];
   if (!allowedRoles.includes(newRole)) {
     return next(new CustomError("Invalid role or insufficient permissions to assign this role", 400));
   }
@@ -621,10 +621,11 @@ export const deleteOrg = TryCatchHandler(async (req, res, next) => {
       { session }
     );
 
-    // Update Owner's permissions to allow creating another org
+    // Update Owner's permissions to NOT allow creating another org
+    // because permission can only be given by superadmin
     const ownerId = org.ownerId;
     if (ownerId) {
-      await User.findByIdAndUpdate(ownerId, { canCreateOrg: true }, { session });
+      await User.findByIdAndUpdate(ownerId, { canCreateOrg: false }, { session });
     }
   });
 
@@ -768,7 +769,7 @@ export const transferOwnership = TryCatchHandler(async (req, res, next) => {
   org.ownerId = newOwnerId;
   await org.save();
 
-  // Demote current owner to Manager
+  // Demote current owner to Co-owner
   const currentUser = await User.findById(userId);
 
   if (currentUser) {
@@ -777,9 +778,9 @@ export const transferOwnership = TryCatchHandler(async (req, res, next) => {
     );
 
     if (currentOwnerRoleIndex !== -1) {
-      currentUser.roles[currentOwnerRoleIndex].role = Roles.ORG.MANAGER;
-      // Allow them to create another org if they want? Maybe yes.
-      currentUser.canCreateOrg = true;
+      currentUser.roles[currentOwnerRoleIndex].role = Roles.ORG.CO_OWNER;
+      // Set to false, permission can only be given by superadmin 
+      currentUser.canCreateOrg = false;
       await currentUser.save();
     }
   }

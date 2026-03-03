@@ -1,11 +1,11 @@
-import { useQuery, UseQueryOptions } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, UseQueryOptions, UseInfiniteQueryOptions, InfiniteData } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { organizerApi } from "../api/organizerApi";
 import { organizerKeys } from "./organizerKeys";
 import { Organizer, DashboardStats, Invite, Pagination } from "../lib/types";
 import { User } from "@/features/auth/lib/types";
 import { Notification } from "@/features/notifications/store/useNotificationStore";
-import { JoinRequest } from "../store/useOrganizerStore";
+import { JoinRequest } from "../store/useOrganizerUIStore";
 
 // --- GET ORG DETAILS BY ID ---
 export const useGetOrgByIdQuery = (
@@ -37,6 +37,27 @@ export const useOrganizersQuery = (
     });
 };
 
+// --- INFINITE LIST ORGANIZERS ---
+export const useInfiniteOrganizersQuery = (
+    limit: number = 20,
+    search: string = "",
+    options?: Omit<UseInfiniteQueryOptions<{ success: boolean; data: Organizer[]; pagination: Pagination }, AxiosError, InfiniteData<{ success: boolean; data: Organizer[]; pagination: Pagination }>>, "queryKey" | "queryFn" | "getNextPageParam" | "initialPageParam">
+) => {
+    return useInfiniteQuery({
+        queryKey: [...organizerKeys.lists(), 'infinite', limit, search],
+        queryFn: ({ pageParam = 1 }) => organizerApi.fetchOrganizers(pageParam as number, limit, search),
+        getNextPageParam: (lastPage) => {
+            const { pagination } = lastPage;
+            if (pagination.page < pagination.pages) {
+                return pagination.page + 1;
+            }
+            return undefined;
+        },
+        initialPageParam: 1,
+        ...options,
+    });
+};
+
 // --- DASHBOARD STATS ---
 export const useOrgDashboardStatsQuery = (
     orgId: string,
@@ -60,7 +81,6 @@ export const useSearchAvailableUsersQuery = (
     return useQuery({
         queryKey: ['users', 'search', query, page, limit],
         queryFn: () => organizerApi.searchAvailableUsers(query, page, limit),
-        enabled: !!query,
         ...options,
     });
 };

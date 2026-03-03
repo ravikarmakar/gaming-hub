@@ -50,7 +50,7 @@ router.post("/create-org", authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), up
 
 router.get("/:orgId", authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER], { attachDoc: true }), getOrgDetails);
 
-router.put("/:orgId/update", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.MANAGER], { attachDoc: true }), upload.fields([{ name: "image", maxCount: 1 }, { name: "banner", maxCount: 1 }]), validateRequest(updateOrgValidation), updateOrg);
+router.put("/:orgId/update", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER], { attachDoc: true }), upload.fields([{ name: "image", maxCount: 1 }, { name: "banner", maxCount: 1 }]), validateRequest(updateOrgValidation), updateOrg);
 router.delete("/:orgId/delete", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER], { attachDoc: true }), deleteOrg);
 
 // Staff Management

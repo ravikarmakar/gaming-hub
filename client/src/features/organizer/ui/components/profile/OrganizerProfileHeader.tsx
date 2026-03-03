@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Organizer } from "@/features/organizer/lib/types";
 import { UnifiedProfileHeader } from "@/components/shared/UnifiedProfileHeader";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
+import { useJoinOrgMutation } from "../../../hooks/useOrganizerMutations";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -127,28 +127,33 @@ export const OrganizerProfileHeader = ({ organizer, stats = mockStats }: Organiz
 
 const JoinOrgButton = ({ orgId, orgName }: { orgId: string, orgName: string }) => {
     const { user } = useAuthStore();
-    const { joinOrg } = useOrganizerStore();
+    const joinMutation = useJoinOrgMutation();
     const [isOpen, setIsOpen] = useState(false);
     const [message, setMessage] = useState("");
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // If no user, maybe redirect to login or hide? Sticking to hide or disable for now if logic needed.
     // If user is already in an org, they can't join.
     if (!user || user.orgId) return null;
 
-    const handleJoin = async () => {
+    const handleJoin = () => {
         if (!message.trim()) {
             toast.error("Please add a message to your request.");
             return;
         }
-        setIsSubmitting(true);
-        const success = await joinOrg(orgId, message);
-        setIsSubmitting(false);
-        if (success) {
-            toast.success("Join request sent successfully!");
-            setIsOpen(false);
-            setMessage("");
-        }
+
+        joinMutation.mutate(
+            { orgId, message },
+            {
+                onSuccess: () => {
+                    toast.success("Join request sent successfully!");
+                    setIsOpen(false);
+                    setMessage("");
+                },
+                onError: (error: any) => {
+                    toast.error(error.message || "Failed to send join request");
+                }
+            }
+        );
     };
 
     return (
@@ -182,10 +187,9 @@ const JoinOrgButton = ({ orgId, orgName }: { orgId: string, orgName: string }) =
                         </Button>
                         <Button
                             onClick={handleJoin}
-                            disabled={isSubmitting}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            disabled={joinMutation.isPending}
                         >
-                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            {joinMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                             Send Request
                         </Button>
                     </DialogFooter>

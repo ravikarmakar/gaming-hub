@@ -1,4 +1,4 @@
-import { useEffect, useState, memo } from "react";
+import { useState, memo } from "react";
 import { Check, X, Clock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -6,30 +6,41 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
-import { useOrganizerStore, JoinRequest } from "@/features/organizer/store/useOrganizerStore";
+import {
+    useOrgJoinRequestsQuery
+} from "../../hooks/useOrganizerQueries";
+import {
+    useManageJoinRequestMutation
+} from "../../hooks/useOrganizerMutations";
+import { JoinRequest } from "@/features/organizer/store/useOrganizerUIStore";
 
 const OrganizerJoinRequestsPage = () => {
-    const { currentOrg, fetchJoinRequests, joinRequests, manageJoinRequest, isLoading, joinRequestPagination } = useOrganizerStore();
-    const [processingId, setProcessingId] = useState<string | null>(null);
     const [page, setPage] = useState(1);
+    const { user } = useAuthStore();
+    const orgId = user?.orgId;
 
-    // can(ORG_ROUTE_ACCESS.joinRequests) is handled by the route or can be used for UI masking if needed
-    useEffect(() => {
-        if (currentOrg?._id) {
-            fetchJoinRequests(currentOrg._id, page);
-        }
-    }, [currentOrg?._id, fetchJoinRequests, page]);
+    const { data: joinRequestsData, isLoading } = useOrgJoinRequestsQuery(orgId as string, page);
+    const joinRequests = joinRequestsData?.data;
+    const joinRequestPagination = joinRequestsData?.pagination;
 
-    const handleAction = async (requestId: string, action: "accepted" | "rejected") => {
-        if (!currentOrg?._id) return;
-        setProcessingId(requestId);
-        const success = await manageJoinRequest(currentOrg._id, requestId, action);
-        setProcessingId(null);
-        if (success) {
-            toast.success(`Request ${action} successfully`);
-            // Refresh if last item on page removed? fetchJoinRequests will handle it if we call it, but store handles filtering already.
-        }
+    const manageMutation = useManageJoinRequestMutation();
+    const processingId = manageMutation.isPending ? manageMutation.variables?.requestId : null;
+
+    const handleAction = (requestId: string, action: "accepted" | "rejected") => {
+        if (!orgId) return;
+        manageMutation.mutate(
+            { orgId, requestId, action },
+            {
+                onSuccess: () => {
+                    toast.success(`Request ${action} successfully`);
+                },
+                onError: (error: any) => {
+                    toast.error(error.message || `Failed to ${action} request`);
+                }
+            }
+        );
     };
 
     if (isLoading && !joinRequests) {
@@ -121,7 +132,7 @@ const OrganizerJoinRequestsPage = () => {
 const JoinRequestItem = memo(({ request, processingId, onAction }: {
     request: JoinRequest;
     processingId: string | null;
-    onAction: (id: string, action: "accepted" | "rejected") => Promise<void>;
+    onAction: (id: string, action: "accepted" | "rejected") => void;
 }) => {
     return (
         <Card className="bg-[#0B0C1A] border-white/5 overflow-hidden group hover:border-purple-500/30 transition-colors">

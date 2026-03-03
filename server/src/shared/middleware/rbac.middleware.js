@@ -34,6 +34,7 @@ const PERMISSION_MATRIX = {
     },
     [Scopes.ORG]: {
         [Roles.ORG.OWNER]: ["*"],
+        [Roles.ORG.CO_OWNER]: ["*"],
         [Roles.ORG.MANAGER]: ["UPDATE_ORG", "MANAGE_STAFF", "INVITE_MEMBER"],
         // ... extend as needed
     }

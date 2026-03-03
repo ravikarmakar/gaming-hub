@@ -15,7 +15,7 @@ interface Member {
 interface OrganizerMemberListProps {
     members: Member[];
     onRemove: (id: string) => void;
-    onUpdateRole: (id: string, role: string) => Promise<void>;
+    onUpdateRole: (id: string, role: string) => void;
     onViewProfile: (id: string) => void;
     onTransferOwnership?: (id: string) => void;
     canManage: boolean;
@@ -27,6 +27,7 @@ interface OrganizerMemberListProps {
     onSearchChange?: (val: string) => void;
     pagination?: { total: number; page: number; limit: number; pages: number } | null;
     onPageChange?: (page: number) => void;
+    actionPendingId?: string | null;
 }
 
 export const OrganizerMemberList = ({
@@ -44,6 +45,7 @@ export const OrganizerMemberList = ({
     onSearchChange,
     pagination,
     onPageChange,
+    actionPendingId,
 }: OrganizerMemberListProps) => {
 
     return (
@@ -59,7 +61,7 @@ export const OrganizerMemberList = ({
                 />
             </div>
 
-            {isLoading ? (
+            {isLoading && (!members || members.length === 0) ? (
                 <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
                     <Loader2 className="w-12 h-12 text-purple-500 animate-spin mb-3" />
                     <p className="text-gray-400 text-sm">Loading members...</p>
@@ -85,7 +87,7 @@ export const OrganizerMemberList = ({
                                 canRemove={canRemove}
                                 canTransfer={canTransfer}
                                 isSelf={member._id === currentUserId}
-                                isLoading={isLoading}
+                                isLoading={actionPendingId === member._id}
                             />
                         ))}
                     </div>

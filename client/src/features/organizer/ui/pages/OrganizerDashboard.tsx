@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import {
   Trophy,
   Users,
@@ -20,7 +20,7 @@ import { Link } from "react-router-dom";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { EVENT_ROUTES } from "@/features/events/lib/routes";
-import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
+import { useOrgDashboardStatsQuery } from "../../hooks/useOrganizerQueries";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   GlassCard,
@@ -33,11 +33,9 @@ import { cn } from "@/lib/utils";
 
 const OrganizerDashboard = () => {
   const { user } = useAuthStore();
-  const { getDashboardStats, dashboardData } = useOrganizerStore();
+  const orgId = user?.orgId;
 
-  useEffect(() => {
-    getDashboardStats();
-  }, [getDashboardStats]);
+  const { data: dashboardData } = useOrgDashboardStatsQuery(orgId as string);
 
   const stats = useMemo(() => dashboardData?.stats || {
     totalEvents: 0,

@@ -1,7 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Loader2, Search, UserPlus, Check } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
+import {
+    useInviteStaffMutation
+} from "../../hooks/useOrganizerMutations";
+import { useSearchAvailableUsersQuery } from "../../hooks/useOrganizerQueries";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,35 +27,43 @@ export const OrganizerInviteDialog = ({ open, onOpenChange, orgId }: OrganizerIn
     const [role, setRole] = useState<string>(ORG_ROLE.STAFF);
     const [message, setMessage] = useState("");
 
-    const { searchAvailableUsers, availableUsers, inviteStaff, isLoading } = useOrganizerStore();
+    const inviteMutation = useInviteStaffMutation();
+    const isInviting = inviteMutation.isPending;
+
     const debouncedSearch = useDebounce(searchTerm, 500);
 
-    // Search Effect
-    useEffect(() => {
-        if (debouncedSearch && step === "search") {
-            searchAvailableUsers(debouncedSearch, 1, 10);
-        }
-    }, [debouncedSearch, step, searchAvailableUsers]);
+    const { data: availableUsers, isLoading: isSearching } = useSearchAvailableUsersQuery(
+        debouncedSearch,
+        1,
+        10,
+        { enabled: open && step === "search" }
+    );
 
     const handleSelectUser = (user: any) => {
         setSelectedUser(user);
         setStep("details");
     };
 
-    const handleSendInvite = async () => {
+    const handleSendInvite = () => {
         if (!selectedUser) return;
-        const success = await inviteStaff(orgId, selectedUser._id, role, message);
-        if (success) {
-            toast.success("Invitation sent successfully");
-            onOpenChange(false);
-            // Reset
-            setStep("search");
-            setSelectedUser(null);
-            setSearchTerm("");
-            setMessage("");
-        } else {
-            toast.error("Failed to send invitation");
-        }
+
+        inviteMutation.mutate(
+            { orgId, userId: selectedUser._id, role, message },
+            {
+                onSuccess: () => {
+                    toast.success("Invitation sent successfully");
+                    onOpenChange(false);
+                    // Reset
+                    setStep("search");
+                    setSelectedUser(null);
+                    setSearchTerm("");
+                    setMessage("");
+                },
+                onError: (error: any) => {
+                    toast.error(error.message || "Failed to send invitation");
+                }
+            }
+        );
     };
 
     return (
@@ -77,7 +88,11 @@ export const OrganizerInviteDialog = ({ open, onOpenChange, orgId }: OrganizerIn
                             />
                         </div>
                         <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                            {availableUsers?.map((user: any) => (
+                            {isSearching ? (
+                                <div className="flex justify-center p-4">
+                                    <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
+                                </div>
+                            ) : availableUsers?.map((user: any) => (
                                 <div
                                     key={user._id}
                                     onClick={() => handleSelectUser(user)}
@@ -102,7 +117,7 @@ export const OrganizerInviteDialog = ({ open, onOpenChange, orgId }: OrganizerIn
                                     <UserPlus className="ml-auto w-4 h-4 text-purple-400" />
                                 </div>
                             ))}
-                            {availableUsers?.length === 0 && searchTerm && (
+                            {!isSearching && availableUsers?.length === 0 && searchTerm && (
                                 <p className="text-center text-sm text-gray-500 py-4">No users found.</p>
                             )}
                         </div>
@@ -145,8 +160,8 @@ export const OrganizerInviteDialog = ({ open, onOpenChange, orgId }: OrganizerIn
                             />
                         </div>
 
-                        <Button onClick={handleSendInvite} disabled={isLoading} className="w-full bg-purple-600 hover:bg-purple-700 text-white">
-                            {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
+                        <Button onClick={handleSendInvite} disabled={isInviting} className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+                            {isInviting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
                             Send Invitation
                         </Button>
                     </div>
