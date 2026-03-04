@@ -51,3 +51,24 @@ export const useTeamRoom = (teamId: string | null | undefined) => {
         };
     }, [socket, teamId, isConnected]);
 };
+
+/**
+ * Custom hook to join/leave an organizer room
+ */
+export const useOrgRoom = (orgId: string | null | undefined) => {
+    const { socket, isConnected } = useSocket();
+
+    useEffect(() => {
+        if (!socket || !orgId || !isConnected) return;
+
+        // Join org room
+        socket.emit("join:org", orgId);
+        console.log(`📡 Joined org room: ${orgId}`);
+
+        // Leave room on unmount
+        return () => {
+            socket.emit("leave:org", orgId);
+            console.log(`📤 Left org room: ${orgId}`);
+        };
+    }, [socket, orgId, isConnected]);
+};

@@ -95,5 +95,53 @@ export const notificationHandlers = {
     ORG_INVITE: async (notification, actionType, req) => {
         return notificationHandlers.ORGANIZATION_INVITE(notification, actionType, req);
     },
+
+    TEAM_JOIN_REQUEST: async (notification, actionType, req) => {
+        const requestId = notification.relatedData.requestId;
+        if (!requestId) throw new CustomError("Invalid notification data: missing requestId", 400);
+
+        if (actionType !== "ACCEPT" && actionType !== "REJECT") {
+            throw new CustomError("Invalid action type", 400);
+        }
+
+        const { handleJoinRequestService } = await import("../join-request/join-request.service.js").catch((err) => {
+            logger.error("Failed to import join-request.service.js:", err);
+            throw new CustomError("Join Request service not available", 500);
+        });
+
+        // Let the join request module handle the complex logic (DB, sockets, cache)
+        const action = actionType === "ACCEPT" ? "accepted" : "rejected";
+        await handleJoinRequestService(requestId, action, req.user._id);
+
+        notification.status = "archived";
+        notification.actions = [];
+        await notification.save();
+
+        return `You have ${action} the team join request.`;
+    },
+
+    ORGANIZER_JOIN_REQUEST: async (notification, actionType, req) => {
+        const requestId = notification.relatedData.requestId;
+        if (!requestId) throw new CustomError("Invalid notification data: missing requestId", 400);
+
+        if (actionType !== "ACCEPT" && actionType !== "REJECT") {
+            throw new CustomError("Invalid action type", 400);
+        }
+
+        const { handleJoinRequestService } = await import("../join-request/join-request.service.js").catch((err) => {
+            logger.error("Failed to import join-request.service.js:", err);
+            throw new CustomError("Join Request service not available", 500);
+        });
+
+        // Let the join request module handle the complex logic (DB, sockets, cache)
+        const action = actionType === "ACCEPT" ? "accepted" : "rejected";
+        await handleJoinRequestService(requestId, action, req.user._id);
+
+        notification.status = "archived";
+        notification.actions = [];
+        await notification.save();
+
+        return `You have ${action} the organizer join request.`;
+    },
 };
 

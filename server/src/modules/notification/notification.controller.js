@@ -122,6 +122,7 @@ export const handleNotificationAction = TryCatchHandler(async (req, res, next) =
             }
             notification.content.message = resultMessage;
         } catch (error) {
+            logger.error("Notification handler execution failed:", error);
             return next(error);
         }
     } else {

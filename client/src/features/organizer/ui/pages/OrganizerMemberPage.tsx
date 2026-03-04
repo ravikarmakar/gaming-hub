@@ -12,7 +12,6 @@ import { OrganizerMemberHeader } from "../components/OrganizerMemberHeader";
 import { OrganizerMemberList } from "../components/OrganizerMemberList";
 import { ORG_ACTIONS, ORG_ACTIONS_ACCESS } from "../../lib/access";
 import { PLAYER_ROUTES } from "@/features/player/lib/routes";
-import { ChatWindow } from "@/features/teams/ui/components/ChatWindow";
 
 const OrganizerMemberPage = () => {
   const navigate = useNavigate();
@@ -82,42 +81,29 @@ const OrganizerMemberPage = () => {
         canLeave={canLeave}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <OrganizerMemberList
-            members={sortedMembers}
-            onRemove={handleStaffRemove}
-            onUpdateRole={handleUpdateRole}
-            onViewProfile={handleViewProfile}
-            onTransferOwnership={handleTransferOwnership}
-            onLeave={handleLeaveOrg}
-            canManage={canUpdateRole}
-            canRemove={canRemove}
-            canTransfer={canTransfer}
-            currentUserId={user?._id ?? ""}
-            isLoading={isLoading}
-            actionPendingId={pendingMemberId}
-            searchQuery={searchQuery}
-            onSearchChange={(val) => {
-              setSearchQuery(val);
-              setPage(1); // Reset to page 1 on search
-            }}
-            pagination={memberPagination || { total: 0, page: 1, limit: 20, pages: 1 }}
-            onPageChange={setPage}
-          />
-          {currentOrg?._id && <OrganizerPendingInvites orgId={currentOrg._id} />}
-        </div>
-
-        {currentOrg?._id && (
-          <div className="lg:col-span-1 h-[600px] sticky top-6 bg-[#0F111A]/40 border border-white/10 rounded-2xl backdrop-blur-xl p-6 overflow-hidden flex flex-col">
-            <ChatWindow
-              targetId={currentOrg._id}
-              targetName={currentOrg.name}
-              scope="organizer"
-              canDeleteParent={canUpdateRole}
-            />
-          </div>
-        )}
+      <div className="space-y-6">
+        <OrganizerMemberList
+          members={sortedMembers}
+          onRemove={handleStaffRemove}
+          onUpdateRole={handleUpdateRole}
+          onViewProfile={handleViewProfile}
+          onTransferOwnership={handleTransferOwnership}
+          onLeave={handleLeaveOrg}
+          canManage={canUpdateRole}
+          canRemove={canRemove}
+          canTransfer={canTransfer}
+          currentUserId={user?._id ?? ""}
+          isLoading={isLoading}
+          actionPendingId={pendingMemberId}
+          searchQuery={searchQuery}
+          onSearchChange={(val) => {
+            setSearchQuery(val);
+            setPage(1); // Reset to page 1 on search
+          }}
+          pagination={memberPagination || { total: 0, page: 1, limit: 20, pages: 1 }}
+          onPageChange={setPage}
+        />
+        {currentOrg?._id && <OrganizerPendingInvites orgId={currentOrg._id} />}
       </div>
 
       <OrganizerUserSearch

@@ -4,6 +4,7 @@ import Organizer from "../organizer/organizer.model.js";
 import User from "../user/user.model.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
 import { logger } from "../../shared/utils/logger.js";
+import { redis } from "../../shared/config/redis.js";
 
 /**
  * ChatService handles business logic for all chat scopes.
@@ -70,7 +71,30 @@ class ChatService {
     async checkAccess(scope, userId, targetId) {
         const handler = this.scopeHandlers.get(scope);
         if (!handler) throw new CustomError(`Unsupported chat scope: ${scope}`, 400);
-        return await handler.checkAccess(userId, targetId);
+
+        const cacheKey = `chat_access:${scope}:${userId}:${targetId}`;
+        try {
+            const cached = await redis.get(cacheKey);
+            if (cached !== null) {
+                return cached === "1";
+            }
+        } catch (err) {
+            logger.error(`Redis error in chat checkAccess: ${err.message}`);
+        }
+
+        const hasAccess = await handler.checkAccess(userId, targetId);
+
+        try {
+            if (hasAccess) {
+                await redis.set(cacheKey, "1", { ex: 300 }); // Cache for 5 mins
+            } else {
+                await redis.set(cacheKey, "0", { ex: 60 }); // Cache denial for 1 min
+            }
+        } catch (err) {
+            logger.error(`Redis error setting checkAccess cache: ${err.message}`);
+        }
+
+        return hasAccess;
     }
 
     /**
@@ -79,7 +103,24 @@ class ChatService {
     async getSenderRole(scope, userId, targetId) {
         const handler = this.scopeHandlers.get(scope);
         if (!handler) return "member";
-        return await handler.getSenderRole(userId, targetId);
+
+        const cacheKey = `chat_role:${scope}:${userId}:${targetId}`;
+        try {
+            const cachedRole = await redis.get(cacheKey);
+            if (cachedRole) return cachedRole;
+        } catch (err) {
+            logger.error(`Redis error in chat getSenderRole: ${err.message}`);
+        }
+
+        const role = await handler.getSenderRole(userId, targetId);
+
+        try {
+            await redis.set(cacheKey, role, { ex: 300 }); // Cache for 5 mins
+        } catch (err) {
+            logger.error(`Redis error setting getSenderRole cache: ${err.message}`);
+        }
+
+        return role;
     }
 
     /**

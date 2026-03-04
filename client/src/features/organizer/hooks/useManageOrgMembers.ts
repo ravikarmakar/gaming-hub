@@ -35,15 +35,29 @@ export const useManageOrgMembers = (orgId?: string) => {
     const { mutate: transferOwnership, isPending: isTransferringOwnership, variables: transferVars } = useTransferOwnershipMutation({
         onSuccess: () => {
             toast.success("Ownership transferred successfully");
-            useAuthStore.getState().checkAuth();
+
+            // Replicate Team's optimistic local update for instant UI feedback
+            const authStore = useAuthStore.getState();
+            if (authStore.user) {
+                useAuthStore.setState({
+                    user: {
+                        ...authStore.user,
+                        roles: authStore.user.roles.map((r) =>
+                            r.scope === "org" && r.scopeId === orgId ? { ...r, role: "org:co_owner" } : r
+                        ),
+                    },
+                });
+            }
+
+            useAuthStore.getState().checkAuth(true); // Pass true to skip local stale cache, ensuring the new role is fetched from DB
         },
         onError: (err) => handleError(err, "Failed to transfer ownership"),
     });
 
     const { mutate: leaveOrg, isPending: isLeavingOrg } = useLeaveOrgMutation({
-        onSuccess: () => {
+        onSuccess: async () => {
             toast.success("You have left the organization");
-            useAuthStore.getState().checkAuth();
+            await useAuthStore.getState().checkAuth(true); // Pass true to force DB read, skipping async Redis expiration delays
             navigate("/");
         },
         onError: (err) => handleError(err, "Failed to leave organization"),

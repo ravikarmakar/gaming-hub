@@ -1,4 +1,4 @@
-
+import { useCallback } from "react";
 import { Outlet } from "react-router-dom";
 import {
   Users,
@@ -22,6 +22,7 @@ import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useGetOrgByIdQuery } from "@/features/organizer/hooks/useOrganizerQueries";
 import { OrganizerLoading } from "../components/OrganizerLoading";
 import { OrganizerError } from "../components/OrganizerError";
+import { useOrgRoom, useSocketEvent } from "@/hooks/useSocket";
 
 const organizerSidebarLinks = [
   {
@@ -96,6 +97,34 @@ const OrganizerLayout = () => {
   } = useGetOrgByIdQuery(user?.orgId as string);
 
   const currentOrg = orgData?.data;
+  const orgId = user?.orgId as string;
+
+  // 1. Join the Socket.IO room for this Organization
+  useOrgRoom(orgId);
+
+  // 2. Define stable socket handlers
+  const handleOrgUpdate = useCallback(() => {
+    if (orgId) refetch();
+  }, [orgId, refetch]);
+
+  const handleRoleOrMembershipChange = useCallback(() => {
+    if (orgId) {
+      refetch();
+      useAuthStore.getState().checkAuth(true); // Sync RBAC tokens/profile
+    }
+  }, [orgId, refetch]);
+
+  const handleOrgDeleted = useCallback(() => {
+    useAuthStore.getState().checkAuth(true); // Drop org role, redirect
+  }, []);
+
+  // 3. Listen to incoming Socket events pushed by `organizer.events.js`
+  useSocketEvent("org:updated", handleOrgUpdate);
+  useSocketEvent("org:member:joined", handleRoleOrMembershipChange);
+  useSocketEvent("org:member:left", handleRoleOrMembershipChange);
+  useSocketEvent("org:role:updated", handleRoleOrMembershipChange);
+  useSocketEvent("org:owner:transferred", handleRoleOrMembershipChange);
+  useSocketEvent("org:deleted", handleOrgDeleted);
 
   return (
     <SidebarProvider>

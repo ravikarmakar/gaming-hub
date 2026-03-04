@@ -1010,7 +1010,7 @@ export const acceptJoinRequest = async (requesterId, teamId, handledBy, session 
 
   const responseData = await getTransformedTeam(teamId, session);
 
-  const socketEventData = {
+  const socketData = {
     teamId,
     memberData: {
       userId: requesterId,
@@ -1022,7 +1022,7 @@ export const acceptJoinRequest = async (requesterId, teamId, handledBy, session 
 
   return {
     responseData,
-    socketEventData,
+    socketData,
     requesterId,
     teamId,
     cacheKeys: [`user_profile:${requesterId}`, `team_details:${teamId}`]

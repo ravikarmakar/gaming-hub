@@ -16,6 +16,11 @@ import Invitation from "../invitation/invitation.model.js";
 import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
 
 import * as organizerService from "./organizer.service.js";
+import organizerEvents, { ORG_EVENT_TYPES, initOrganizerListeners } from "./organizer.events.js";
+
+// Initialize external async event listeners (Notification dispatching, cache dropping)
+// This mirrors the architecture of the Team module and ensures side effects never block the API.
+initOrganizerListeners();
 
 const escapeRegex = (string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -101,12 +106,15 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
 
     await session.commitTransaction();
 
-    // After commit, we update session tokens/cookies and redis
+    // After commit, we update session tokens/cookies locally as these are req-res specific
     const updatedUser = await User.findById(userId); // Fetch fresh user for tokens
     const { accessToken, refreshToken } = generateTokens(updatedUser._id, updatedUser.roles);
     await storeRefreshToken(updatedUser._id, refreshToken);
     setCookies(res, accessToken, refreshToken);
-    await redis.del(cacheKey);
+
+    // Emit event asynchronously instead of blocking the thread to drop Redis caches manually
+    organizerEvents.emit(ORG_EVENT_TYPES.ORG_CREATED, { org: newOrg, ownerId: userId });
+    organizerEvents.emit(ORG_EVENT_TYPES.MEMBER_JOINED, { org: newOrg, memberIds: [userId] });
 
     res
       .status(201)
@@ -340,6 +348,9 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
     });
 
     // Success! Now delete old images
+    // Emit async update event
+    organizerEvents.emit(ORG_EVENT_TYPES.ORG_UPDATED, { orgId: org._id });
+
   } catch (error) {
     // Rollback: Delete newly uploaded images if save/logic fails
     if (newlyUploadedFileIds.length > 0) {
@@ -450,12 +461,14 @@ export const addStaff = TryCatchHandler(async (req, res, next) => {
   if (bulkOps.length > 0) {
     await User.bulkWrite(bulkOps);
 
-    // Invalidate cache ONLY for successfully updated users
     const updatedUserIds = results.filter(r => r.success).map(r => r.userId);
     if (updatedUserIds.length > 0) {
-      const pipeline = redis.pipeline();
-      updatedUserIds.forEach(uid => pipeline.del(`user_profile:${uid}`));
-      await pipeline.exec();
+      // Emit async event for Staff Joining instead of blocking UI thread for Redis pipeline
+      organizerEvents.emit(ORG_EVENT_TYPES.MEMBER_JOINED, {
+        org: { _id: orgId, ownerId: org.ownerId, name: org.name },
+        memberIds: updatedUserIds,
+        handledById: req.user.userId
+      });
     }
   }
 
@@ -500,7 +513,9 @@ export const updateStaffRole = TryCatchHandler(async (req, res, next) => {
 
   user.roles[orgRoleIndex].role = newRole;
   await user.save();
-  await redis.del(`user_profile:${userId}`);
+
+  // Async Event Emitted
+  organizerEvents.emit(ORG_EVENT_TYPES.ROLE_UPDATED, { org, memberId: userId, newRole });
 
   // Fetch updated organization with members for the response
   const updatedOrg = await Organizer.findById(orgId);
@@ -555,7 +570,9 @@ export const removeStaff = TryCatchHandler(async (req, res, next) => {
   }
 
   await user.save();
-  await redis.del(`user_profile:${userId}`);
+
+  // Async Event Emitted (Handles Cache dropping and notification)
+  organizerEvents.emit(ORG_EVENT_TYPES.MEMBER_REMOVED, { org, memberId: userId });
 
   // Fetch updated organization with members for the response
   const updatedOrg = await Organizer.findById(orgId);
@@ -611,7 +628,9 @@ export const leaveOrg = TryCatchHandler(async (req, res, next) => {
   }
 
   await user.save();
-  await redis.del(`user_profile:${userId}`);
+
+  // Async event
+  organizerEvents.emit(ORG_EVENT_TYPES.MEMBER_LEFT, { org, memberId: userId });
 
   res.status(200).json({
     success: true,
@@ -688,9 +707,8 @@ export const deleteOrg = TryCatchHandler(async (req, res, next) => {
     deleteFromImageKit(org.bannerFileId).catch(err => logger.error(`Failed to delete org banner ${org.bannerFileId}`, err));
   }
 
-  // Invalidate owner cache
-  const ownerId = org.ownerId;
-  if (ownerId) await redis.del(`user_profile:${ownerId}`);
+  // Emit event asynchronously to drop the necessary caches across the application
+  organizerEvents.emit(ORG_EVENT_TYPES.ORG_DELETED, { orgId: org._id, ownerId: org.ownerId });
 
   res.status(200).json({
     success: true,
@@ -845,9 +863,8 @@ export const transferOwnership = TryCatchHandler(async (req, res, next) => {
   newOwner.orgId = org._id;
   await newOwner.save();
 
-  // Invalidate caches
-  await redis.del(`user_profile:${userId}`);
-  await redis.del(`user_profile:${newOwnerId}`);
+  // Async Event
+  organizerEvents.emit(ORG_EVENT_TYPES.OWNER_TRANSFERRED, { org, newOwnerId, oldOwnerId: userId });
 
   res.status(200).json({
     success: true,

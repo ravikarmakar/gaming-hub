@@ -9,8 +9,13 @@ import { logger } from "../utils/logger.js";
 import { Roles, Scopes } from "../constants/roles.js";
 import { initializeIORedis } from "./ioredis.js";
 import { redis } from "./redis.js";
+import { LRUCache } from "lru-cache";
 
 let io;
+const chatRateLimiters = new LRUCache({
+    max: 10000, // Store up to 10k users' rate limits
+    ttl: 5000,  // Automatically clean up memory after 5 seconds
+});
 
 /**
  * Determine the user's role in a team using their profile.
@@ -101,6 +106,40 @@ const checkMembership = async (userId, teamId) => {
 };
 
 /**
+ * Helper to check if a user is a member of an organization
+ */
+const checkOrgMembership = async (userId, orgId) => {
+    const cacheKey = `socket_org_member:${userId}:${orgId}`;
+    let isMember = false;
+
+    try {
+        const cached = await redis.get(cacheKey);
+        if (cached === "1" || cached === 1) {
+            isMember = true;
+        }
+    } catch (cacheErr) {
+        logger.error(`Redis cache check failed for socket org membership:`, cacheErr.message);
+    }
+
+    if (!isMember) {
+        // Find if user has a role in this org
+        const user = await User.findOne({
+            _id: userId,
+            "roles.scope": Scopes.ORG,
+            "roles.scopeId": orgId
+        }).select("_id");
+
+        if (user) {
+            isMember = true;
+            redis.set(cacheKey, "1", { ex: 60 })
+                .catch(err => logger.error(`Failed to cache socket org membership:`, err.message));
+        }
+    }
+
+    return isMember;
+};
+
+/**
  * Initialize Socket.IO server with authentication
  */
 export const initializeSocket = async (httpServer) => {
@@ -162,6 +201,56 @@ export const initializeSocket = async (httpServer) => {
         socket.join(`user:${socket.userId}`);
         logger.info(`User ${maskId(socket.userId)} joined personal room: user:${maskId(socket.userId)}`);
 
+        // Team Join Handler
+        socket.on("join:team", async (teamId) => {
+            if (!teamId || !mongoose.Types.ObjectId.isValid(teamId)) return;
+            try {
+                const isMember = await checkMembership(socket.userId, teamId);
+                if (isMember) {
+                    const room = `team:${teamId}`;
+                    socket.join(room);
+                    logger.info(`User ${maskId(socket.userId)} joined team room: ${room}`);
+                } else {
+                    logger.warn(`Unauthorized join:team attempt by ${maskId(socket.userId)} for team ${maskId(teamId)}`);
+                }
+            } catch (error) {
+                logger.error(`Error in join:team for ${maskId(teamId)}:`, error.message);
+            }
+        });
+
+        // Team Leave Handler
+        socket.on("leave:team", (teamId) => {
+            if (!teamId) return;
+            const room = `team:${teamId}`;
+            socket.leave(room);
+            logger.info(`User ${maskId(socket.userId)} left team room: ${room}`);
+        });
+
+        // Organizer Join Handler
+        socket.on("join:org", async (orgId) => {
+            if (!orgId || !mongoose.Types.ObjectId.isValid(orgId)) return;
+            try {
+                const isMember = await checkOrgMembership(socket.userId, orgId);
+                if (isMember) {
+                    const room = `org:${orgId}`;
+                    socket.join(room);
+                    logger.info(`User ${maskId(socket.userId)} joined org room: ${room}`);
+                } else {
+                    logger.warn(`Unauthorized join:org attempt by ${maskId(socket.userId)} for org ${maskId(orgId)}`);
+                }
+            } catch (error) {
+                logger.error(`Error in join:org for ${maskId(orgId)}:`, error.message);
+            }
+        });
+
+        // Organizer Leave Handler
+        socket.on("leave:org", (orgId) => {
+            if (!orgId) return;
+            const room = `org:${orgId}`;
+            socket.leave(room);
+            logger.info(`User ${maskId(socket.userId)} left org room: ${room}`);
+        });
+
         // Generic Chat Join handler
         socket.on("join:chat", async ({ targetId, scope }) => {
             if (!targetId || !scope) return;
@@ -200,6 +289,21 @@ export const initializeSocket = async (httpServer) => {
             const { targetId, content, scope = "team" } = data;
 
             if (!targetId || !content) return;
+
+            // In-memory Rate Limiting (Max 5 messages per 5 seconds)
+            const now = Date.now();
+            const userHistory = chatRateLimiters.get(socket.userId) || [];
+            const recentMsgs = userHistory.filter(time => now - time < 5000);
+
+            if (recentMsgs.length >= 5) {
+                logger.warn(`Chat rate limit exceeded for user ${maskId(socket.userId)}`);
+                socket.emit("error", { message: "You are sending messages too fast. Please wait." });
+                chatRateLimiters.set(socket.userId, recentMsgs); // Limit memory leak
+                return;
+            }
+
+            recentMsgs.push(now);
+            chatRateLimiters.set(socket.userId, recentMsgs);
 
             try {
                 if (!mongoose.Types.ObjectId.isValid(targetId)) return;
@@ -296,6 +400,24 @@ export const emitToTeam = (teamId, event, data) => {
 
     io.to(`team:${teamId}`).emit(event, data);
     logger.info(`Emitted ${event} to team:${maskId(teamId)}`);
+};
+
+/**
+ * Emit event to a specific organizer room
+ */
+export const emitToOrg = (orgId, event, data) => {
+    if (!io) {
+        logger.warn("Socket.IO not initialized. Cannot emit event.");
+        return;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(orgId)) {
+        logger.warn(`Invalid orgId for emitToOrg: ${maskId(orgId)}`);
+        return;
+    }
+
+    io.to(`org:${orgId}`).emit(event, data);
+    logger.info(`Emitted ${event} to org:${maskId(orgId)}`);
 };
 
 /**
