@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { cn } from "@/lib/utils";
 import { useChatStore } from "@/features/teams/store/useChatStore";
-import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 
 const messageSchema = z.object({
     content: z.string().min(1).max(1000),
@@ -31,7 +30,6 @@ export const MessageInput = ({ onSendMessage, isLoading }: MessageInputProps) =>
         setEditingMessage,
         updateMessage
     } = useChatStore();
-    const { currentTeam } = useTeamManagementStore();
 
     const {
         register,
@@ -84,8 +82,8 @@ export const MessageInput = ({ onSendMessage, isLoading }: MessageInputProps) =>
 
         setIsSubmitting(true);
         try {
-            if (editingMessage && currentTeam) {
-                await updateMessage(currentTeam._id, editingMessage._id, trimmedContent);
+            if (editingMessage) {
+                await updateMessage(editingMessage._id, trimmedContent);
                 setEditingMessage(null);
             } else {
                 await onSendMessage(trimmedContent);
@@ -143,7 +141,7 @@ export const MessageInput = ({ onSendMessage, isLoading }: MessageInputProps) =>
                         {...registerProps}
                         ref={(e) => {
                             ref(e);
-                            // @ts-ignore
+                            // @ts-expect-error
                             textareaRef.current = e;
                         }}
                         onKeyDown={handleKeyDown}

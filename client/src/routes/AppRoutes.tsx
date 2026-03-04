@@ -88,6 +88,7 @@ const AppRoutes = () => {
                             <Route path={ORGANIZER_ROUTES.ANALYTICS} element={<div>Analytics</div>} />
                             <Route path={ORGANIZER_ROUTES.NOTIFICATIONS} element={<pages.OrganizerNotifications />} />
                             <Route path={ORGANIZER_ROUTES.JOIN_REQUESTS} element={<pages.OrganizerJoinRequests />} />
+                            <Route path={ORGANIZER_ROUTES.CHAT} element={<pages.OrganizerChat />} />
                             <Route path={ORGANIZER_ROUTES.SETTINGS} element={<pages.OrganizerSettings />} />
                         </Route>
                     </Route>

@@ -162,53 +162,59 @@ export const initializeSocket = async (httpServer) => {
         socket.join(`user:${socket.userId}`);
         logger.info(`User ${maskId(socket.userId)} joined personal room: user:${maskId(socket.userId)}`);
 
-        // Join team room
-        socket.on("join:team", async (teamId) => {
-            if (!teamId) return;
-
-            if (!mongoose.Types.ObjectId.isValid(teamId)) {
-                logger.warn(`Invalid teamId format for join:team: ${maskId(teamId)} from user ${maskId(socket.userId)}`);
-                return;
-            }
+        // Generic Chat Join handler
+        socket.on("join:chat", async ({ targetId, scope }) => {
+            if (!targetId || !scope) return;
+            if (!["team", "organizer"].includes(scope)) return;
+            if (!mongoose.Types.ObjectId.isValid(targetId)) return;
 
             try {
-                const isMember = await checkMembership(socket.userId, teamId);
+                const ChatService = (await import("../../modules/chat/chat.service.js")).default;
+                const hasAccess = await ChatService.checkAccess(scope, socket.userId, targetId);
 
-                if (!isMember) {
-                    logger.warn(`Unauthorized join:team attempt: User ${maskId(socket.userId)} tried to join team ${maskId(teamId)}`);
-                    socket.emit("error", { message: "Unauthorized to join this team room" });
+                if (!hasAccess) {
+                    logger.warn(`Unauthorized join:chat attempt: User ${maskId(socket.userId)} tried to join ${scope}:${maskId(targetId)}`);
+                    socket.emit("error", { message: `Unauthorized to join this ${scope} chat` });
                     return;
                 }
 
-                socket.join(`team:${teamId}`);
-                logger.info(`User ${maskId(socket.userId)} joined team room: ${maskId(teamId)}`);
+                const room = `chat:${scope}:${targetId}`;
+                socket.join(room);
+                logger.info(`User ${maskId(socket.userId)} joined chat room: ${room}`);
             } catch (error) {
-                logger.error(`Error in join:team for team ${maskId(teamId)}:`, error.message);
+                logger.error(`Error in join:chat for ${scope}:${maskId(targetId)}:`, error.message);
             }
         });
 
-        // Leave team room
-        socket.on("leave:team", (teamId) => {
-            if (!teamId) return;
-
-            if (!mongoose.Types.ObjectId.isValid(teamId)) return;
-
-            socket.leave(`team:${teamId}`);
-            redis.del(`socket_member:${socket.userId}:${teamId}`)
-                .catch(err => logger.error(`Failed to invalidate socket membership cache:`, err.message));
-
-            logger.info(`User ${maskId(socket.userId)} left team room: ${maskId(teamId)}`);
+        // Generic Chat Leave handler
+        socket.on("leave:chat", ({ targetId, scope }) => {
+            if (!targetId || !scope) return;
+            if (!["team", "organizer"].includes(scope)) return;
+            const room = `chat:${scope}:${targetId}`;
+            socket.leave(room);
+            logger.info(`User ${maskId(socket.userId)} left chat room: ${room}`);
         });
 
-        // Chat message handler
+        // Chat message handler (Refactored to be generic)
         socket.on("chat:message", async (data) => {
-            const { teamId, content } = data;
-            if (!teamId || !content) return;
+            const { targetId, content, scope = "team" } = data;
+
+            if (!targetId || !content) return;
 
             try {
-                if (!mongoose.Types.ObjectId.isValid(teamId)) return;
+                if (!mongoose.Types.ObjectId.isValid(targetId)) return;
 
-                // 1. Fetch user profile (cached in Redis)
+                const ChatService = (await import("../../modules/chat/chat.service.js")).default;
+
+                // 1. Authorization check
+                const hasAccess = await ChatService.checkAccess(scope, socket.userId, targetId);
+                if (!hasAccess) {
+                    logger.warn(`Unauthorized chat attempt: User ${maskId(socket.userId)} for ${scope}:${maskId(targetId)}`);
+                    socket.emit("error", { message: `Unauthorized to send message to this ${scope} chat` });
+                    return;
+                }
+
+                // 2. Fetch user profile (cached in Redis)
                 let userProfile = null;
                 try {
                     const cached = await redis.get(`user_profile:${socket.userId}`);
@@ -219,55 +225,32 @@ export const initializeSocket = async (httpServer) => {
                     logger.error("Failed to get user profile from Redis for chat:", err.message);
                 }
 
-                if (!userProfile || !userProfile.username) {
-                    try {
-                        const user = await User.findById(socket.userId).lean();
-                        if (user) {
-                            userProfile = user;
-                            redis.set(`user_profile:${socket.userId}`, JSON.stringify(user), { ex: 60 })
-                                .catch(e => logger.error("Failed to re-cache profile in socket handler:", e.message));
-                        }
-                    } catch (dbErr) {
-                        logger.error("Failed to fetch user profile from DB for chat:", dbErr.message);
-                    }
-                }
-
                 if (!userProfile) {
-                    logger.warn(`Unauthorized chat attempt: Profile not found for user ${maskId(socket.userId)}`);
-                    return;
-                }
-
-                // 2. Authorization & Role Determination (Optimized)
-                let senderRole = determineRoleFromProfile(userProfile, teamId);
-
-                if (!senderRole) {
-                    // Fallback to fresh DB membership check (stale profile cache?)
-                    const isMember = await checkMembership(socket.userId, teamId);
-                    if (!isMember) {
-                        logger.warn(`Unauthorized chat attempt: User ${maskId(socket.userId)} not in team ${maskId(teamId)}`);
-                        return;
+                    userProfile = await User.findById(socket.userId).lean();
+                    if (userProfile) {
+                        redis.set(`user_profile:${socket.userId}`, JSON.stringify(userProfile), { ex: 60 });
                     }
-
-                    // They are a member but profile roles were missing, find role from DB
-                    senderRole = await determineRoleFromDB(socket.userId, teamId) || "member";
                 }
 
-                // 4. Persist message to database
-                const newMessage = await (await import("../../modules/chat/chat.model.js")).default.create({
-                    team: teamId,
-                    sender: socket.userId,
-                    senderName: userProfile?.username || "Team Member",
-                    senderAvatar: userProfile?.avatar || "",
-                    senderRole,
-                    content: content.trim().substring(0, 1000),
+                if (!userProfile) return;
+
+                // 3. Persist and Broadcast via Service
+                const newMessage = await ChatService.createMessage({
+                    scope,
+                    targetId,
+                    senderId: socket.userId,
+                    senderName: userProfile.username || "Member",
+                    senderAvatar: userProfile.avatar || "",
+                    content
                 });
 
-                // 5. Broadcast to the team room
-                io.to(`team:${teamId}`).emit("chat:message", newMessage);
+                // 4. Broadcast to the generic room
+                const room = `chat:${scope}:${targetId}`;
+                io.to(room).emit("chat:message", newMessage);
 
-                logger.info(`Chat message sent by ${maskId(socket.userId)} to team ${maskId(teamId)}`);
+                logger.info(`Chat message sent by ${maskId(socket.userId)} to ${room}`);
             } catch (error) {
-                logger.error(`Error in chat:message for team ${maskId(teamId)}:`, error.message);
+                logger.error(`Error in chat:message for ${scope}:${maskId(targetId)}:`, error.message);
                 socket.emit("error", { message: "Failed to send message" });
             }
         });

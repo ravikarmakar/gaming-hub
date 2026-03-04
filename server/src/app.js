@@ -90,7 +90,7 @@ v1Router.use("/auth", authRouter);
 v1Router.use("/teams", teamRouter);
 v1Router.use("/teams", joinRequestRouter); // Join request routes (decoupled from team router)
 v1Router.use("/teams", chatRouter);
-v1Router.use("/teams", chatRouter);
+v1Router.use("/organizers", chatRouter);
 v1Router.use("/notifications", notificationRouter);
 v1Router.use("/organizers", organizerRouter);
 v1Router.use("/invitations", invitationRouter);

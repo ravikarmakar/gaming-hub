@@ -1,37 +1,31 @@
 import Chat from "./chat.model.js";
+import ChatService from "./chat.service.js";
 import { TryCatchHandler } from "../../shared/middleware/error.middleware.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
-import Team from "../team/team.model.js";
 
 /**
- * Fetch chat message history for a team
- * GET /api/v1/teams/:teamId/chat
+ * Fetch chat message history for any registered scope
+ * GET /api/v1/teams/:targetId/chat?scope=team
+ * GET /api/v1/organizers/:targetId/chat?scope=organizer
  */
-export const getTeamChatHistory = TryCatchHandler(async (req, res, next) => {
-    const { teamId } = req.params;
+export const getChatHistory = TryCatchHandler(async (req, res, next) => {
+    const { targetId } = req.params;
+    const { scope = "team" } = req.query;
     const userId = req.user._id;
 
-    // 1. Verify user is a member of the team
-    const isMember = await Team.exists({
-        _id: teamId,
-        "teamMembers.user": userId,
-        isDeleted: false,
-    });
-
-    if (!isMember) {
-        return next(new CustomError("You are not a member of this team", 403));
+    if (!["team", "organizer"].includes(scope)) {
+        return next(new CustomError("Invalid scope parameter", 400));
     }
 
-    // 2. Fetch last 50 messages
-    const messages = await Chat.find({
-        team: teamId,
-        isDeleted: false,
-    })
-        .sort({ createdAt: -1 })
-        .limit(50)
-        .lean();
+    // 1. Authorization check
+    const hasAccess = await ChatService.checkAccess(scope, userId, targetId);
+    if (!hasAccess) {
+        return next(new CustomError(`You are not authorized to access this ${scope} chat`, 403));
+    }
 
-    // Return in chronological order
+    // 2. Fetch history via service
+    const messages = await ChatService.getHistory(scope, targetId);
+
     res.status(200).json({
         status: "success",
         data: messages.reverse(),
@@ -40,35 +34,18 @@ export const getTeamChatHistory = TryCatchHandler(async (req, res, next) => {
 
 /**
  * Update a chat message
- * PATCH /api/v1/teams/:teamId/chat/:messageId
  */
 export const updateChatMessage = TryCatchHandler(async (req, res, next) => {
-    const { teamId, messageId } = req.params;
+    const { messageId } = req.params;
     const { content } = req.body;
     const userId = req.user._id;
-
-    // 1. Verify user is a member of the team
-    const isMember = await Team.exists({
-        _id: teamId,
-        "teamMembers.user": userId,
-        isDeleted: false,
-    });
-
-    if (!isMember) {
-        return next(new CustomError("You are not a member of this team", 403));
-    }
 
     if (!content || content.trim().length === 0) {
         return next(new CustomError("Message content is required", 400));
     }
 
-    if (content.length > 1000) {
-        return next(new CustomError("Message content too long (max 1000 characters)", 400));
-    }
-
     const message = await Chat.findOne({
         _id: messageId,
-        team: teamId,
         sender: userId,
         isDeleted: false,
     });
@@ -81,10 +58,15 @@ export const updateChatMessage = TryCatchHandler(async (req, res, next) => {
     message.isEdited = true;
     await message.save();
 
+    if (!message.scope || !message.targetId) {
+        return next(new CustomError("Invalid message format: missing room tracking data", 500));
+    }
+
     // Broadcast update via Socket.IO
     const { getIO } = await import("../../shared/config/socket.config.js");
     const io = getIO();
-    io.to(`team:${teamId}`).emit("chat:update", message);
+    const room = `chat:${message.scope}:${message.targetId}`;
+    io.to(room).emit("chat:update", message);
 
     res.status(200).json({
         status: "success",
@@ -94,15 +76,13 @@ export const updateChatMessage = TryCatchHandler(async (req, res, next) => {
 
 /**
  * Delete a chat message (soft delete)
- * DELETE /api/v1/teams/:teamId/chat/:messageId
  */
 export const deleteChatMessage = TryCatchHandler(async (req, res, next) => {
-    const { teamId, messageId } = req.params;
+    const { messageId } = req.params;
     const userId = req.user._id;
 
     const message = await Chat.findOne({
         _id: messageId,
-        team: teamId,
         isDeleted: false,
     });
 
@@ -110,19 +90,13 @@ export const deleteChatMessage = TryCatchHandler(async (req, res, next) => {
         return next(new CustomError("Message not found", 404));
     }
 
-    // Authorization: Sender can delete their own, Owner/Manager can delete any
-    let canDelete = message.sender && message.sender.toString() === userId.toString();
+    // Authorization: Sender can delete their own, or someone with elevated role in the scope
+    let canDelete = message.sender?.toString() === userId.toString();
 
     if (!canDelete) {
-        const team = await Team.findById(teamId).select("captain teamMembers").lean();
-        if (team) {
-            const isOwner = team.captain && team.captain.toString() === userId.toString();
-            const member = team.teamMembers?.find(m => m.user && m.user.toString() === userId.toString());
-            const isManager = member && member.roleInTeam === "manager";
-
-            if (isOwner || isManager) {
-                canDelete = true;
-            }
+        const senderRole = await ChatService.getSenderRole(message.scope, userId, message.targetId);
+        if (["owner", "manager", "admin"].includes(senderRole)) {
+            canDelete = true;
         }
     }
 
@@ -133,10 +107,19 @@ export const deleteChatMessage = TryCatchHandler(async (req, res, next) => {
     message.isDeleted = true;
     await message.save();
 
+    if (!message.scope || !message.targetId) {
+        return next(new CustomError("Invalid message format: missing room tracking data", 500));
+    }
+
     // Broadcast delete via Socket.IO
     const { getIO } = await import("../../shared/config/socket.config.js");
     const io = getIO();
-    io.to(`team:${teamId}`).emit("chat:delete", { messageId, teamId });
+    const room = `chat:${message.scope}:${message.targetId}`;
+    io.to(room).emit("chat:delete", {
+        messageId,
+        targetId: message.targetId,
+        scope: message.scope
+    });
 
     res.status(200).json({
         status: "success",

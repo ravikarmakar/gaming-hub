@@ -9,6 +9,7 @@ import {
   PlusCircle,
   Settings,
   UserPlus,
+  MessageSquare,
 } from "lucide-react";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -62,6 +63,12 @@ const organizerSidebarLinks = [
     icon: BarChart2,
     href: ORGANIZER_ROUTES.ANALYTICS,
     access: ORG_ACCESS.analytics,
+  },
+  {
+    label: "Organization Chat",
+    icon: MessageSquare,
+    href: ORGANIZER_ROUTES.CHAT,
+    access: ORG_ACCESS.dashboard,
   },
   {
     label: "Notifications",

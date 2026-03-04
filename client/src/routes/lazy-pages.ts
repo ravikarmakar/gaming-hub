@@ -24,6 +24,7 @@ export const pages = {
     OrganizerJoinRequests: lazy(() => import("@/features/organizer/ui/pages/OrganizerJoinRequestsPage")),
     OrganizerNotifications: lazy(() => import("@/features/organizer/ui/pages/OrganizerNotificationsPage")),
     OrganizerTournamentDashboard: lazy(() => import("@/features/tournaments/ui/pages/TournamentDashboard")),
+    OrganizerChat: lazy(() => import("@/features/organizer/ui/pages/OrganizerChatPage")),
     FindOrganizers: lazy(() => import("@/features/organizer/ui/pages/FindOrganizers")),
     GroupTeamList: lazy(() => import("@/features/tournaments/ui/pages/GroupTeamList")),
 

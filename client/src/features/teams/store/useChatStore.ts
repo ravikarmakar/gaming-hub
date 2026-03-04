@@ -1,15 +1,15 @@
 import { create } from "zustand";
 import { axiosInstance } from "@/lib/axios";
-import { TEAM_ENDPOINTS } from "../lib/endpoints";
 import { getErrorMessage } from "@/lib/utils";
 
 export interface ChatMessage {
     _id: string;
-    team: string;
+    targetId: string;
+    scope: string;
     sender: string;
     senderName: string;
     senderAvatar: string;
-    senderRole: "owner" | "manager" | "member";
+    senderRole: string;
     content: string;
     createdAt: string;
     updatedAt: string;
@@ -25,10 +25,10 @@ interface ChatState {
     editingMessage: ChatMessage | null;
     setEditingMessage: (message: ChatMessage | null) => void;
 
-    fetchHistory: (teamId: string) => Promise<void>;
+    fetchHistory: (targetId: string, scope: "team" | "organizer") => Promise<void>;
     addMessage: (message: ChatMessage) => void;
-    updateMessage: (teamId: string, messageId: string, content: string) => Promise<void>;
-    deleteMessage: (teamId: string, messageId: string) => Promise<void>;
+    updateMessage: (messageId: string, content: string) => Promise<void>;
+    deleteMessage: (messageId: string) => Promise<void>;
 
     // Real-time synchronization methods
     handleRemoteUpdate: (updatedMessage: ChatMessage) => void;
@@ -45,10 +45,13 @@ export const useChatStore = create<ChatState>((set) => ({
 
     setEditingMessage: (message) => set({ editingMessage: message }),
 
-    fetchHistory: async (teamId) => {
+    fetchHistory: async (targetId, scope) => {
         set({ isLoading: true, error: null });
         try {
-            const response = await axiosInstance.get(TEAM_ENDPOINTS.CHAT_HISTORY(teamId));
+            const baseUrl = scope === "team" ? "/teams" : "/organizers";
+            const response = await axiosInstance.get(`${baseUrl}/${targetId}/chat`, {
+                params: { scope }
+            });
             set({ messages: response.data.data, isLoading: false });
         } catch (error) {
             const errMsg = getErrorMessage(error, "Failed to load chat history");
@@ -62,9 +65,10 @@ export const useChatStore = create<ChatState>((set) => ({
         }));
     },
 
-    updateMessage: async (teamId, messageId, content) => {
+    updateMessage: async (messageId, content) => {
         try {
-            await axiosInstance.patch(TEAM_ENDPOINTS.CHAT_MESSAGE_ACTION(teamId, messageId), { content });
+            // Scope-agnostic patch route (could be under /teams or /organizers, but we generalized it)
+            await axiosInstance.patch(`/teams/chat/${messageId}`, { content });
             // Local update is handled by socket event chat:update
         } catch (error) {
             console.error("Failed to update message:", error);
@@ -72,9 +76,9 @@ export const useChatStore = create<ChatState>((set) => ({
         }
     },
 
-    deleteMessage: async (teamId, messageId) => {
+    deleteMessage: async (messageId) => {
         try {
-            await axiosInstance.delete(TEAM_ENDPOINTS.CHAT_MESSAGE_ACTION(teamId, messageId));
+            await axiosInstance.delete(`/teams/chat/${messageId}`);
             // Local update is handled by socket event chat:delete
         } catch (error) {
             console.error("Failed to delete message:", error);

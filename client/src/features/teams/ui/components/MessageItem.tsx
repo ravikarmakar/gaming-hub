@@ -11,38 +11,54 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { ChatMessage, useChatStore } from "@/features/teams/store/useChatStore";
-import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { ConfirmActionDialog } from "@/features/teams/ui/components/ConfirmActionDialog";
 import { cn } from "@/lib/utils";
 
 interface MessageItemProps {
     message: ChatMessage;
     isOwnMessage: boolean;
+    canDeleteParent?: boolean; // Admin/Owner can delete
 }
 
-export const MessageItem = ({ message, isOwnMessage }: MessageItemProps) => {
+export const MessageItem = ({ message, isOwnMessage, canDeleteParent }: MessageItemProps) => {
     const { deleteMessage, setEditingMessage } = useChatStore();
-    const { currentTeam } = useTeamManagementStore();
-    const { user } = useAuthStore();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-    // No local state needed for editing as it's handled by global store
-
-    const isOwner = (typeof currentTeam?.captain === 'string' ? currentTeam?.captain : (currentTeam?.captain as any)?._id) === user?._id;
-    const isManager = currentTeam?.teamMembers?.find(m =>
-        (typeof m.user === 'string' ? m.user : (m.user as any)?._id) === user?._id
-    )?.roleInTeam === "manager";
-    const canDelete = isOwnMessage || isOwner || isManager;
+    const canDelete = isOwnMessage || canDeleteParent;
 
 
     const handleDelete = async () => {
         try {
-            await deleteMessage(message.team, message._id);
+            await deleteMessage(message._id);
         } catch (error) {
             console.error("Failed to delete message:", error);
         } finally {
             setIsDeleteDialogOpen(false);
+        }
+    };
+
+    const getRoleBadge = (role: string) => {
+        switch (role) {
+            case "owner":
+                return (
+                    <span className="px-1.5 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[8px] font-black uppercase tracking-wider">
+                        Owner
+                    </span>
+                );
+            case "manager":
+                return (
+                    <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[8px] font-black uppercase tracking-wider">
+                        Manager
+                    </span>
+                );
+            case "staff":
+                return (
+                    <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] font-black uppercase tracking-wider">
+                        Staff
+                    </span>
+                );
+            default:
+                return null;
         }
     };
 
@@ -65,38 +81,19 @@ export const MessageItem = ({ message, isOwnMessage }: MessageItemProps) => {
                     "flex flex-col min-w-0 max-w-[85%] md:max-w-[70%] w-fit",
                     isOwnMessage ? "ml-auto items-end" : "mr-auto items-start"
                 )}>
-                    {isOwnMessage && (message.senderRole === "owner" || message.senderRole === "manager") && (
+                    {isOwnMessage ? (
                         <div className="flex items-center gap-2 mr-2 mb-0.5">
-                            {message.senderRole === "owner" && (
-                                <span className="px-1.5 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[8px] font-black uppercase tracking-wider">
-                                    Owner
-                                </span>
-                            )}
-                            {message.senderRole === "manager" && (
-                                <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[8px] font-black uppercase tracking-wider">
-                                    Manager
-                                </span>
-                            )}
+                            {getRoleBadge(message.senderRole)}
                             <span className="text-[10px] font-bold text-gray-400">
                                 You
                             </span>
                         </div>
-                    )}
-                    {!isOwnMessage && (
+                    ) : (
                         <div className="flex items-center gap-2 ml-2 mb-0.5">
                             <span className="text-[10px] font-bold text-gray-400">
                                 {message.senderName}
                             </span>
-                            {message.senderRole === "owner" && (
-                                <span className="px-1.5 py-0.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[8px] font-black uppercase tracking-wider">
-                                    Owner
-                                </span>
-                            )}
-                            {message.senderRole === "manager" && (
-                                <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[8px] font-black uppercase tracking-wider">
-                                    Manager
-                                </span>
-                            )}
+                            {getRoleBadge(message.senderRole)}
                         </div>
                     )}
 
@@ -168,7 +165,7 @@ export const MessageItem = ({ message, isOwnMessage }: MessageItemProps) => {
                 open={isDeleteDialogOpen}
                 onOpenChange={setIsDeleteDialogOpen}
                 title="Delete Message?"
-                description="This action cannot be undone. This will permanently delete this message from the team chat."
+                description="This action cannot be undone. This will permanently delete this message from the chat."
                 actionLabel="Delete Message"
                 onConfirm={handleDelete}
                 variant="danger"

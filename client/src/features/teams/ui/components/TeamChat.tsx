@@ -1,138 +1,20 @@
-import { useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Loader2 } from "lucide-react";
-
-import { useSocket } from "@/contexts/SocketContext";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { useChatStore, ChatMessage } from "@/features/teams/store/useChatStore";
-import { MessageItem } from "@/features/teams/ui/components/MessageItem";
-import { MessageInput } from "@/features/teams/ui/components/MessageInput";
+import { ChatWindow } from "./ChatWindow";
 
 interface TeamChatProps {
     teamId: string;
     teamName: string;
+    canDeleteParent?: boolean;
+    variant?: "window" | "page";
 }
 
-export const TeamChat = ({ teamId, teamName }: TeamChatProps) => {
-    const { socket, isConnected } = useSocket();
-    const { user } = useAuthStore();
-    const { messages, isLoading, fetchHistory, addMessage } = useChatStore();
-    const scrollRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        // 1. Fetch chat history
-        fetchHistory(teamId);
-
-        // 2. Join team room
-        if (socket && isConnected) {
-            socket.emit("join:team", teamId);
-
-            // 3. Listen for new messages
-            socket.on("chat:message", (message: ChatMessage) => {
-                addMessage(message);
-            });
-
-            socket.on("chat:update", (message: ChatMessage) => {
-                useChatStore.getState().handleRemoteUpdate(message);
-            });
-
-            socket.on("chat:delete", ({ messageId }: { messageId: string }) => {
-                useChatStore.getState().handleRemoteDelete(messageId);
-            });
-
-            return () => {
-                socket.off("chat:message");
-                socket.off("chat:update");
-                socket.off("chat:delete");
-                socket.emit("leave:team", teamId);
-            };
-        }
-    }, [teamId, socket, isConnected, fetchHistory, addMessage]);
-
-    useEffect(() => {
-        // Auto-scroll to bottom on new messages
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    }, [messages]);
-
-    const handleSendMessage = (content: string) => {
-        if (socket && isConnected) {
-            socket.emit("chat:message", { teamId, content });
-        }
-    };
-
-    if (isLoading && messages.length === 0) {
-        return (
-            <div className="h-[500px] flex items-center justify-center bg-[#0F111A]/40 border border-white/10 rounded-2xl backdrop-blur-xl">
-                <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
-            </div>
-        );
-    }
-
+export const TeamChat = ({ teamId, teamName, canDeleteParent, variant }: TeamChatProps) => {
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex flex-col h-full overflow-hidden"
-        >
-            {/* Custom Integrated Header */}
-            <div className="pb-6 mb-6 border-b border-white/10 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <div className="p-3 bg-purple-500/10 rounded-2xl border border-purple-500/20 shadow-lg shadow-purple-500/5">
-                        <MessageSquare className="w-6 h-6 text-purple-400" />
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-bold text-white tracking-tight">
-                            {teamName}
-                        </h3>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                            <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-emerald-500" : "bg-red-500"}`} />
-                            <span className="text-xs text-gray-400">
-                                {isConnected ? "Online" : "Offline"}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Messages Area - Edge-to-edge to match header */}
-            <div className="flex-1 overflow-hidden flex flex-col w-full">
-                <div
-                    ref={scrollRef}
-                    className="w-full flex-1 overflow-y-auto pr-0 md:pr-2 scrollbar-hide md:scrollbar-thin md:scrollbar-thumb-purple-500/20 md:scrollbar-track-transparent"
-                >
-                    <AnimatePresence initial={false}>
-                        {messages.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                                    <MessageSquare className="w-6 h-6 text-gray-500" />
-                                </div>
-                                <p className="text-gray-400 text-sm">No messages yet. Start the conversation!</p>
-                            </div>
-                        ) : (
-                            messages.map((msg) => (
-                                <motion.div
-                                    key={msg._id}
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    layout
-                                >
-                                    <MessageItem
-                                        message={msg}
-                                        isOwnMessage={msg.sender === user?._id}
-                                    />
-                                </motion.div>
-                            ))
-                        )}
-                    </AnimatePresence>
-                </div>
-            </div>
-
-            {/* Input - Full width container */}
-            <div className="w-full">
-                <MessageInput onSendMessage={handleSendMessage} isLoading={!isConnected} />
-            </div>
-        </motion.div>
+        <ChatWindow
+            targetId={teamId}
+            targetName={teamName}
+            scope="team"
+            canDeleteParent={canDeleteParent}
+            variant={variant}
+        />
     );
 };
