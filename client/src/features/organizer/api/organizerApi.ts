@@ -71,6 +71,11 @@ export const organizerApi = {
         return response.data.success;
     },
 
+    leaveOrg: async (orgId: string): Promise<boolean> => {
+        const response = await axiosInstance.delete(`/organizer/${orgId}/leave`);
+        return response.data.success;
+    },
+
     addStaffs: async ({ orgId, data }: { orgId: string, data: { staff: string[] } }): Promise<boolean> => {
         const response = await axiosInstance.put(ORGANIZER_ENDPOINTS.ADD_STAFF(orgId), data);
         return response.data.success;

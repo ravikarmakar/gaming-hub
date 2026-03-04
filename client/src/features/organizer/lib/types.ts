@@ -19,6 +19,7 @@ export interface Organizer {
     members: Member[];
     isVerified: boolean;
     isHiring: boolean;
+    hasPendingRequest?: boolean;
     tag: string;
     socialLinks?: {
         discord?: string;

@@ -122,6 +122,11 @@ export const useOrgNotificationsQuery = (
         queryKey: organizerKeys.notifications(orgId),
         queryFn: () => organizerApi.fetchNotifications(orgId),
         enabled: !!orgId,
+        retry: (failureCount, error: any) => {
+            // Don't retry on authorization errors
+            if (error?.response?.status === 403) return false;
+            return failureCount < 2;
+        },
         ...options,
     });
 };

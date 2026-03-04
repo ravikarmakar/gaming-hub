@@ -1,4 +1,5 @@
 import { Building2, Globe } from "lucide-react";
+import { REGIONS } from "@/constants/regions";
 import { useFormContext } from "react-hook-form";
 import {
     FormControl,
@@ -96,11 +97,11 @@ export const ProfileInfoForm = ({ disabled }: ProfileInfoFormProps) => {
                                     </SelectTrigger>
                                 </FormControl>
                                 <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
-                                    <SelectItem value="India">India (IND)</SelectItem>
-                                    <SelectItem value="Brazil">Brazil (BR)</SelectItem>
-                                    <SelectItem value="Indonesia">Indonesia (ID)</SelectItem>
-                                    <SelectItem value="MENA">Middle East & North Africa (MENA)</SelectItem>
-                                    <SelectItem value="LATAM">Latin America (LATAM)</SelectItem>
+                                    {REGIONS.map((region) => (
+                                        <SelectItem key={region.value} value={region.value}>
+                                            {region.label}
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                             <FormMessage />

@@ -75,6 +75,24 @@ export const useDeleteOrgMutation = (
     });
 };
 
+// --- LEAVE ORG ---
+export const useLeaveOrgMutation = (
+    options?: UseMutationOptions<boolean, AxiosError, string>
+) => {
+    const queryClient = useQueryClient();
+    const invalidate = useInvalidateOrg();
+
+    return useMutation({
+        mutationFn: organizerApi.leaveOrg,
+        ...options,
+        onSuccess: async (data, orgId, context) => {
+            await invalidate();
+            queryClient.invalidateQueries({ queryKey: ["user-profile"] });
+            if (options?.onSuccess) (options.onSuccess as any)(data, orgId, context);
+        }
+    });
+};
+
 // --- ADD STAFF ---
 export const useAddStaffMutation = (
     options?: UseMutationOptions<boolean, AxiosError, { orgId: string, data: { staff: string[] } }>

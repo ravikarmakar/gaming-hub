@@ -1,4 +1,4 @@
-import { Award, MapPin, Calendar, Star, Share2, MessageCircle, Loader2 } from "lucide-react";
+import { Award, MapPin, Calendar, Star, Share2, MessageCircle, Loader2, CheckCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useState } from "react";
 
@@ -98,7 +98,7 @@ export const OrganizerProfileHeader = ({ organizer, stats = mockStats }: Organiz
             actions={
                 <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4">
                     {organizer.isHiring && (
-                        <JoinOrgButton orgId={organizer._id!} orgName={organizer.name} />
+                        <JoinOrgButton organizer={organizer} />
                     )}
                     <button className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm sm:text-base font-bold transition-all duration-200 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg active:scale-95">
                         Follow
@@ -125,7 +125,9 @@ export const OrganizerProfileHeader = ({ organizer, stats = mockStats }: Organiz
 
 
 
-const JoinOrgButton = ({ orgId, orgName }: { orgId: string, orgName: string }) => {
+const JoinOrgButton = ({ organizer }: { organizer: Organizer }) => {
+    const orgId = organizer._id!;
+    const orgName = organizer.name;
     const { user } = useAuthStore();
     const joinMutation = useJoinOrgMutation();
     const [isOpen, setIsOpen] = useState(false);
@@ -158,12 +160,25 @@ const JoinOrgButton = ({ orgId, orgName }: { orgId: string, orgName: string }) =
 
     return (
         <>
-            <button
-                onClick={() => setIsOpen(true)}
-                className="w-full sm:w-auto px-4 py-2 sm:px-6 sm:py-3 rounded-xl text-sm sm:text-base font-medium transition-all duration-200 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+            <Button
+                onClick={() => !organizer.hasPendingRequest && setIsOpen(true)}
+                disabled={organizer.hasPendingRequest || joinMutation.isPending}
+                className={`w-full sm:w-auto h-12 px-6 rounded-xl font-bold text-base transition-all duration-200 shadow-lg flex items-center justify-center gap-2 ${organizer.hasPendingRequest
+                        ? "bg-emerald-500/20 text-emerald-400 cursor-default hover:translate-y-0 shadow-none border-emerald-500/20"
+                        : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.2)] active:scale-95 border-0 hover:-translate-y-0.5"
+                    }`}
             >
-                Join Organization
-            </button>
+                {joinMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                ) : organizer.hasPendingRequest ? (
+                    <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Request Sent
+                    </>
+                ) : (
+                    "Join Organization"
+                )}
+            </Button>
 
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
                 <DialogContent className="bg-[#1a1b2e] border-white/10 text-white sm:max-w-md">

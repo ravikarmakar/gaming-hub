@@ -46,7 +46,7 @@ export const acceptJoinRequest = async (requesterId, orgId, handledBy, session =
         $push: {
             roles: {
                 scope: Scopes.ORG,
-                role: Roles.ORG.PLAYER,
+                role: Roles.ORG.STAFF,
                 scopeId: orgId,
                 scopeModel: "Organizer",
             }

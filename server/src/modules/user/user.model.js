@@ -98,7 +98,7 @@ const userSchema = new mongoose.Schema(
     region: {
       type: String,
       default: "global",
-      enum: ["na", "eu", "sea", "sa", "mea", "global"],
+      enum: ["na", "eu", "sea", "sa", "mena", "asia", "india", "oce", "latam", "brazil", "global"],
     },
     country: { type: String, default: "" },
     countryCode: { type: String, default: "" },

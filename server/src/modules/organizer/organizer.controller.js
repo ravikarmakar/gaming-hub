@@ -34,12 +34,11 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
       new CustomError("You are not allowed to create an organization", 403)
     );
 
-  // Check for duplicate name, email, or tag pre-emptively (Case Insensitive)
+  // Check for duplicate name or tag pre-emptively (Case Insensitive)
   const existingOrg = await Organizer.findOne({
     isDeleted: false,
     $or: [
       { name: { $regex: `^${escapeRegex(name)}$`, $options: "i" } },
-      { region: { $regex: `^${escapeRegex(region)}$`, $options: "i" } },
       { tag: tag?.toUpperCase() }
     ]
   });
@@ -47,8 +46,6 @@ export const createOrg = TryCatchHandler(async (req, res, next) => {
   if (existingOrg) {
     if (existingOrg.name.toLowerCase() === name.toLowerCase())
       return next(new CustomError("Organization name is already in use", 400));
-    if (existingOrg.region.toLowerCase() === region.toLowerCase())
-      return next(new CustomError("Organization region is already in use", 400));
     if (existingOrg.tag === tag?.toUpperCase())
       return next(new CustomError("Organization tag is already in use", 400));
   }
@@ -150,6 +147,18 @@ export const getOrgDetails = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Organization not found", 404));
   }
 
+  // Check if current user has a pending join request
+  let hasPendingRequest = false;
+  if (req.user?.userId) {
+    const JoinRequest = (await import("../join-request/join-request.model.js")).default;
+    const pendingRequest = await JoinRequest.findOne({
+      requester: req.user.userId,
+      target: orgId,
+      status: "pending"
+    });
+    hasPendingRequest = !!pendingRequest;
+  }
+
   // Search & Pagination for members
   const search = req.query.search || "";
   const page = parseInt(req.query.page) || 1;
@@ -206,6 +215,7 @@ export const getOrgDetails = TryCatchHandler(async (req, res, next) => {
 
   const orgWithMembers = organization.toObject();
   orgWithMembers.members = members;
+  orgWithMembers.hasPendingRequest = hasPendingRequest;
 
   res.status(200).json({
     success: true,
@@ -242,17 +252,15 @@ export const updateOrg = TryCatchHandler(async (req, res, next) => {
   }
 
   // Check unique constraints if fields are changing
-  if (name || region || tag) {
+  if (name || tag) {
     const query = { _id: { $ne: orgId }, isDeleted: false, $or: [] };
     if (name) query.$or.push({ name: { $regex: `^${escapeRegex(name)}$`, $options: "i" } });
-    if (region) query.$or.push({ region: { $regex: `^${escapeRegex(region)}$`, $options: "i" } });
     if (tag) query.$or.push({ tag: tag.toUpperCase() });
 
     if (query.$or.length > 0) {
       const duplicate = await Organizer.findOne(query);
       if (duplicate) {
         if (name && duplicate.name.toLowerCase() === name.toLowerCase()) return next(new CustomError("Organization name is already in use", 400));
-        if (region && duplicate.region.toLowerCase() === region.toLowerCase()) return next(new CustomError("Organization region is already in use", 400));
         if (tag && duplicate.tag === tag.toUpperCase()) return next(new CustomError("Organization tag is already in use", 400));
       }
     }
@@ -464,7 +472,7 @@ export const updateStaffRole = TryCatchHandler(async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(orgId)) return next(new CustomError("Invalid Organization ID format", 400));
 
   // Validate newRole to prevent privilege escalation
-  const allowedRoles = [Roles.ORG.CO_OWNER, Roles.ORG.MANAGER, Roles.ORG.STAFF, Roles.ORG.PLAYER];
+  const allowedRoles = [Roles.ORG.CO_OWNER, Roles.ORG.MANAGER, Roles.ORG.STAFF];
   if (!allowedRoles.includes(newRole)) {
     return next(new CustomError("Invalid role or insufficient permissions to assign this role", 400));
   }
@@ -503,7 +511,7 @@ export const updateStaffRole = TryCatchHandler(async (req, res, next) => {
   const formattedMembers = members.map(m => {
     const mObj = m.toObject();
     const roleRecord = m.roles.find(r => r.scopeId?.toString() === orgId.toString());
-    return { ...mObj, role: roleRecord ? roleRecord.role : "org:player" };
+    return { ...mObj, role: roleRecord ? roleRecord.role : "org:staff" };
   });
 
   res.status(200).json({
@@ -558,13 +566,56 @@ export const removeStaff = TryCatchHandler(async (req, res, next) => {
   const formattedMembers = members.map(m => {
     const mObj = m.toObject();
     const roleRecord = m.roles.find(r => r.scopeId?.toString() === orgId.toString());
-    return { ...mObj, role: roleRecord ? roleRecord.role : "org:player" };
+    return { ...mObj, role: roleRecord ? roleRecord.role : "org:staff" };
   });
 
   res.status(200).json({
     success: true,
     message: "Staff removed from organization successfully",
     data: { ...updatedOrg.toObject(), members: formattedMembers }
+  });
+});
+
+export const leaveOrg = TryCatchHandler(async (req, res, next) => {
+  const orgId = req.params.orgId || req.orgContext?.orgId;
+  const { userId } = req.user;
+
+  if (!orgId) return next(new CustomError("Organization ID is required", 400));
+
+  const org = await Organizer.findById(orgId);
+  if (!org) return next(new CustomError("Organization not found", 404));
+
+  // Protection against owner leaving
+  if (org.ownerId.toString() === userId.toString()) {
+    return next(new CustomError("Owners cannot leave. Please transfer ownership or delete the organization.", 403));
+  }
+
+  const user = await User.findById(userId);
+  if (!user) return next(new CustomError("User not found", 404));
+
+  const hasOrgRole = user.roles.some(
+    (r) => r.scope === "org" && r.scopeId?.toString() === orgId.toString()
+  );
+
+  if (!hasOrgRole)
+    return next(new CustomError("You are not part of this organization", 403));
+
+  // Remove the org role
+  user.roles = user.roles.filter(
+    (r) => !(r.scope === "org" && r.scopeId?.toString() === orgId.toString())
+  );
+
+  // Clear the user's orgId if it matches
+  if (user.orgId?.toString() === orgId.toString()) {
+    user.orgId = null;
+  }
+
+  await user.save();
+  await redis.del(`user_profile:${userId}`);
+
+  res.status(200).json({
+    success: true,
+    message: "You have left the organization successfully"
   });
 });
 

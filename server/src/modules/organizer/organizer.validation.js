@@ -9,6 +9,7 @@ export const createOrgValidation = {
         region: Joi.string().min(2).required(),
         description: Joi.string().max(1000).required(),
         tag: Joi.string().min(2).max(6).required(),
+        isHiring: Joi.boolean().optional(),
     }),
 };
 

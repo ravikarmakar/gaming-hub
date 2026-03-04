@@ -6,9 +6,12 @@ import {
     useRemoveStaffMutation,
     useUpdateStaffRoleMutation,
     useTransferOwnershipMutation,
+    useLeaveOrgMutation,
 } from "./useOrganizerMutations";
+import { useNavigate } from "react-router-dom";
 
 export const useManageOrgMembers = (orgId?: string) => {
+    const navigate = useNavigate();
     const handleError = (err: unknown, fallback: string) => {
         const axiosError = err as AxiosError<{ message: string }>;
         toast.error(axiosError.response?.data?.message || axiosError.message || fallback);
@@ -37,6 +40,15 @@ export const useManageOrgMembers = (orgId?: string) => {
         onError: (err) => handleError(err, "Failed to transfer ownership"),
     });
 
+    const { mutate: leaveOrg, isPending: isLeavingOrg } = useLeaveOrgMutation({
+        onSuccess: () => {
+            toast.success("You have left the organization");
+            useAuthStore.getState().checkAuth();
+            navigate("/");
+        },
+        onError: (err) => handleError(err, "Failed to leave organization"),
+    });
+
     const handleAddSelectedMembers = (ids: string[]) => {
         if (!orgId) return;
         addStaffs({ orgId, data: { staff: ids } });
@@ -45,6 +57,13 @@ export const useManageOrgMembers = (orgId?: string) => {
     const handleStaffRemove = (id: string) => {
         if (!orgId) return;
         removeStaff({ orgId, id });
+    };
+
+    const handleLeaveOrg = () => {
+        if (!orgId) return;
+        if (confirm("Are you sure you want to leave this organization?")) {
+            leaveOrg(orgId);
+        }
     };
 
     const handleUpdateRole = (memberId: string, newRole: string) => {
@@ -61,14 +80,17 @@ export const useManageOrgMembers = (orgId?: string) => {
         (isRemovingStaff ? removeVars?.id : null) ||
         (isUpdatingRole ? updateVars?.userId : null) ||
         (isTransferringOwnership ? transferVars?.userId : null) ||
+        (isLeavingOrg ? orgId : null) ||
         null;
 
     return {
         handleAddSelectedMembers,
         handleStaffRemove,
+        handleLeaveOrg,
         handleUpdateRole,
         handleTransferOwnership,
         isAddingStaff,
+        isLeavingOrg,
         pendingMemberId,
     };
 };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
@@ -33,9 +33,27 @@ const OrganizerMemberPage = () => {
   const currentOrg = orgData?.data;
   const memberPagination = orgData?.pagination;
 
+  // Role priority mapping for sorting
+  const rolePriority: Record<string, number> = {
+    "org:owner": 1,
+    "org:co_owner": 2,
+    "org:manager": 3,
+    "org:staff": 4,
+  };
+
+  const sortedMembers = React.useMemo(() => {
+    if (!currentOrg?.members) return [];
+    return [...currentOrg.members].sort((a, b) => {
+      const priorityA = rolePriority[a.role] || 99;
+      const priorityB = rolePriority[b.role] || 99;
+      return priorityA - priorityB;
+    });
+  }, [currentOrg?.members]);
+
   const {
     handleAddSelectedMembers,
     handleStaffRemove,
+    handleLeaveOrg,
     handleUpdateRole,
     handleTransferOwnership,
     isAddingStaff,
@@ -47,6 +65,7 @@ const OrganizerMemberPage = () => {
   const canRemove = can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.removeMember]);
   const canUpdateRole = can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.updateRole]);
   const canTransfer = can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.transferOwnership]);
+  const canLeave = can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.leaveOrg]);
 
   const handleViewProfile = (id: string) => {
     navigate(PLAYER_ROUTES.PLAYER_DETAILS.replace(":id", id));
@@ -58,15 +77,18 @@ const OrganizerMemberPage = () => {
         memberCount={currentOrg?.members?.length || 0}
         onAddMember={() => setIsInviteOpen(true)}
         canInvite={canInvite}
+        onLeave={handleLeaveOrg}
+        canLeave={canLeave}
       />
 
       <div className="space-y-6">
         <OrganizerMemberList
-          members={currentOrg?.members || []}
+          members={sortedMembers}
           onRemove={handleStaffRemove}
           onUpdateRole={handleUpdateRole}
           onViewProfile={handleViewProfile}
           onTransferOwnership={handleTransferOwnership}
+          onLeave={handleLeaveOrg}
           canManage={canUpdateRole}
           canRemove={canRemove}
           canTransfer={canTransfer}

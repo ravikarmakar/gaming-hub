@@ -7,6 +7,7 @@ import {
   addStaff,
   updateStaffRole,
   removeStaff,
+  leaveOrg,
   getDashboardStats,
   transferOwnership,
   getOrganizers,
@@ -58,6 +59,7 @@ router.put("/:orgId/add-staff", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.OR
 router.put("/:orgId/update-staff-role", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER], { attachDoc: true }), validateRequest(updateStaffRoleValidation), updateStaffRole);
 router.put("/:orgId/transfer-ownership", authorize(Scopes.ORG, [Roles.ORG.OWNER], { attachDoc: true }), validateRequest(transferOwnershipValidation), transferOwnership);
 router.delete("/:orgId/remove-staff/:id", authorize(Scopes.ORG, [Roles.ORG.MANAGER, Roles.ORG.OWNER, Roles.ORG.CO_OWNER], { attachDoc: true }), validateRequest(removeStaffValidation), removeStaff);
+router.delete("/:orgId/leave", leaveOrg);
 
 // Join Requests Management (Generic)
 router.post("/:orgId/join", authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), validateRequest(joinOrgValidation), sendJoinRequest);

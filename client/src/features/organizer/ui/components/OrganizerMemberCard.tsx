@@ -48,9 +48,11 @@ interface OrganizerMemberCardProps {
     onUpdateRole: (id: string, role: string) => void;
     onViewProfile: (id: string) => void;
     onTransferOwnership?: (id: string) => void;
+    onLeave?: () => void;
     canManage: boolean;
     canRemove: boolean;
     canTransfer?: boolean;
+    canLeave?: boolean;
     isSelf: boolean;
     isLoading: boolean;
 }
@@ -67,9 +69,11 @@ export const OrganizerMemberCard = memo(({
     onUpdateRole,
     onViewProfile,
     onTransferOwnership,
+    onLeave,
     canManage,
     canRemove,
     canTransfer,
+    canLeave,
     isSelf,
     isLoading,
 }: OrganizerMemberCardProps) => {
@@ -204,6 +208,32 @@ export const OrganizerMemberCard = memo(({
                                             </DropdownMenuItem>
                                         </>
                                     )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+
+                        {isSelf && canLeave && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0 hover:bg-white/10"
+                                    >
+                                        <MoreVertical className="w-4 h-4 text-gray-400" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                    align="end"
+                                    className="bg-[#1A1C2E] border-white/10 shadow-2xl min-w-[180px]"
+                                >
+                                    <DropdownMenuItem
+                                        onClick={() => onLeave?.()}
+                                        className="text-red-400 hover:bg-red-500/10 focus:bg-red-500/10 transition-colors cursor-pointer"
+                                    >
+                                        <Trash className="w-4 h-4 mr-2" />
+                                        Leave Organization
+                                    </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         )}

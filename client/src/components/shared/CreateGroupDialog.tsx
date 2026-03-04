@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { Building2, Globe, Tag, FileText, CheckCircle2, ArrowRight, Loader2, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { REGIONS } from "@/constants/regions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,14 +215,11 @@ const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({
                                                             </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
-                                                            <SelectItem value="INDIA">India (IND)</SelectItem>
-                                                            <SelectItem value="NA">North America (NA)</SelectItem>
-                                                            <SelectItem value="EU">Europe (EU)</SelectItem>
-                                                            <SelectItem value="ASIA">Asia (ASIA)</SelectItem>
-                                                            <SelectItem value="SEA">Southeast Asia (SEA)</SelectItem>
-                                                            <SelectItem value="SA">South America (SA)</SelectItem>
-                                                            <SelectItem value="OCE">Oceania (OCE)</SelectItem>
-                                                            <SelectItem value="MENA">Middle East & North Africa (MENA)</SelectItem>
+                                                            {REGIONS.map((region) => (
+                                                                <SelectItem key={region.value} value={region.value}>
+                                                                    {region.label}
+                                                                </SelectItem>
+                                                            ))}
                                                         </SelectContent>
                                                     </Select>
                                                     <FormMessage className="text-[9px] font-bold text-rose-500" />
