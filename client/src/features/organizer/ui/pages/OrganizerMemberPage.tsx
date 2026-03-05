@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ErrorBoundary } from "react-error-boundary";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useAccess } from "@/features/auth/hooks/useAccess";
@@ -13,12 +14,28 @@ import { OrganizerMemberList } from "../components/OrganizerMemberList";
 import { ORG_ACTIONS, ORG_ACTIONS_ACCESS } from "../../lib/access";
 import { PLAYER_ROUTES } from "@/features/player/lib/routes";
 
-const OrganizerMemberPage = () => {
+import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import { ErrorFallback } from "@/components/ErrorFallback";
+import { OrganizerError } from "../components/OrganizerError";
+
+export const OrganizerMemberPageContent = () => {
   const navigate = useNavigate();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
+
+  // Confirmation Dialog State
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    type: "remove" | "transfer" | "leave" | null;
+    memberId: string | null;
+    username?: string;
+  }>({
+    open: false,
+    type: null,
+    memberId: null,
+  });
 
   const { user } = useAuthStore();
   const { can } = useAccess();
@@ -26,12 +43,74 @@ const OrganizerMemberPage = () => {
   const {
     data: orgData,
     isLoading,
+    isError,
+    error,
+    refetch,
   } = useGetOrgByIdQuery(user?.orgId as string, page, 20, searchQuery, {
     enabled: !!user?.orgId,
   });
 
   const currentOrg = orgData?.data;
   const memberPagination = orgData?.pagination;
+
+  const {
+    handleAddSelectedMembers,
+    handleStaffRemove,
+    handleLeaveOrg,
+    handleUpdateRole,
+    handleTransferOwnership,
+    isAddingStaff,
+    pendingMemberId,
+  } = useManageOrgMembers(currentOrg?._id);
+
+  const handleConfirmAction = () => {
+    if (!confirmState.type) return;
+
+    if (confirmState.type === "remove" && confirmState.memberId) {
+      handleStaffRemove(confirmState.memberId);
+    } else if (confirmState.type === "transfer" && confirmState.memberId) {
+      handleTransferOwnership(confirmState.memberId);
+    } else if (confirmState.type === "leave") {
+      handleLeaveOrg();
+    }
+
+    setConfirmState({ open: false, type: null, memberId: null });
+  };
+
+  const getDialogContent = () => {
+    switch (confirmState.type) {
+      case "remove":
+        return {
+          title: "Remove Member",
+          description: `Are you sure you want to remove ${confirmState.username} from the organization? They will lose all access immediately.`,
+          actionLabel: "Remove Member",
+          variant: "danger" as const
+        };
+      case "transfer":
+        return {
+          title: "Transfer Ownership",
+          description: `Are you sure you want to transfer ownership to ${confirmState.username}? You will be demoted to a Manager and this action cannot be undone.`,
+          actionLabel: "Transfer Ownership",
+          variant: "warning" as const
+        };
+      case "leave":
+        return {
+          title: "Leave Organization",
+          description: "Are you sure you want to leave this organization? You will need an invite to rejoin.",
+          actionLabel: "Leave Organization",
+          variant: "danger" as const
+        };
+      default:
+        return {
+          title: "",
+          description: "",
+          actionLabel: "Confirm",
+          variant: "default" as const
+        };
+    }
+  };
+
+  const dialogContent = getDialogContent();
 
   // Role priority mapping for sorting
   const rolePriority: Record<string, number> = {
@@ -50,16 +129,6 @@ const OrganizerMemberPage = () => {
     });
   }, [currentOrg?.members]);
 
-  const {
-    handleAddSelectedMembers,
-    handleStaffRemove,
-    handleLeaveOrg,
-    handleUpdateRole,
-    handleTransferOwnership,
-    isAddingStaff,
-    pendingMemberId,
-  } = useManageOrgMembers(currentOrg?._id);
-
   // RBAC
   const canInvite = can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.inviteMember]);
   const canRemove = can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.removeMember]);
@@ -71,24 +140,51 @@ const OrganizerMemberPage = () => {
     navigate(PLAYER_ROUTES.PLAYER_DETAILS.replace(":id", id));
   };
 
+  if (isError && !currentOrg) {
+    return (
+      <OrganizerError
+        title="Failed to load members"
+        message={error?.message || "Something went wrong while fetching the organization members."}
+        onRetry={refetch}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
+      <ConfirmActionDialog
+        open={confirmState.open}
+        onOpenChange={(open) => setConfirmState(prev => ({ ...prev, open }))}
+        title={dialogContent.title}
+        description={dialogContent.description}
+        actionLabel={dialogContent.actionLabel}
+        variant={dialogContent.variant}
+        onConfirm={handleConfirmAction}
+        isLoading={isLoading}
+      />
+
       <OrganizerMemberHeader
         memberCount={currentOrg?.members?.length || 0}
         onAddMember={() => setIsInviteOpen(true)}
         canInvite={canInvite}
-        onLeave={handleLeaveOrg}
+        onLeave={() => setConfirmState({ open: true, type: "leave", memberId: null })}
         canLeave={canLeave}
       />
 
       <div className="space-y-6">
         <OrganizerMemberList
           members={sortedMembers}
-          onRemove={handleStaffRemove}
+          onRemove={(id) => {
+            const member = currentOrg?.members?.find((m: any) => m._id === id);
+            setConfirmState({ open: true, type: "remove", memberId: id, username: member?.username });
+          }}
           onUpdateRole={handleUpdateRole}
           onViewProfile={handleViewProfile}
-          onTransferOwnership={handleTransferOwnership}
-          onLeave={handleLeaveOrg}
+          onTransferOwnership={(id) => {
+            const member = currentOrg?.members?.find((m: any) => m._id === id);
+            setConfirmState({ open: true, type: "transfer", memberId: id, username: member?.username });
+          }}
+          onLeave={() => setConfirmState({ open: true, type: "leave", memberId: null })}
           canManage={canUpdateRole}
           canRemove={canRemove}
           canTransfer={canTransfer}
@@ -111,7 +207,7 @@ const OrganizerMemberPage = () => {
         onOpenChange={setIsSearchOpen}
         onAddSelected={handleAddSelectedMembers}
         isLoading={isLoading || isAddingStaff}
-        existingMemberIds={currentOrg?.members?.map((m) => m._id) || []}
+        existingMemberIds={currentOrg?.members?.map((m: any) => m._id) || []}
       />
 
       {currentOrg?._id && (
@@ -122,6 +218,14 @@ const OrganizerMemberPage = () => {
         />
       )}
     </div>
+  );
+};
+
+export const OrganizerMemberPage = () => {
+  return (
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <OrganizerMemberPageContent />
+    </ErrorBoundary>
   );
 };
 

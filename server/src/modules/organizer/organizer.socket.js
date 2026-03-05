@@ -16,11 +16,11 @@ export const ORG_SOCKET_EVENTS = {
 /**
  * Emit when a new member joins the organization
  */
-export const emitOrgMemberJoined = (orgId, memberId) => {
+export const emitOrgMemberJoined = (orgId, memberIds) => {
     try {
         emitToOrg(orgId, ORG_SOCKET_EVENTS.MEMBER_JOINED, {
             orgId,
-            memberId,
+            memberIds: Array.isArray(memberIds) ? memberIds : [memberIds],
             timestamp: new Date().toISOString(),
         });
     } catch (error) {

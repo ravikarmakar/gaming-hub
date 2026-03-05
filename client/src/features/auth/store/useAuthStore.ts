@@ -18,6 +18,7 @@ interface AuthStateTypes {
   checkingAuth: boolean;
   isLoading: boolean;
   isVerifying: boolean;
+  isRefreshing: boolean; // Flag to deduplicate checkAuth calls
   register: (
     username: string,
     email: string,
@@ -54,6 +55,7 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
   isLoading: true,
   isVerifying: false,
   checkingAuth: true,
+  isRefreshing: false,
 
   register: async (username, email, password) => {
     const { data } = await runAsync(set, async () => {
@@ -95,7 +97,13 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
   },
 
   checkAuth: async (skipCache = false) => {
-    const { user, checkingAuth } = get();
+    const { user, checkingAuth, isRefreshing } = get();
+
+    // Deduplicate calls to avoid thundering herd problem during rapid state updates
+    if (isRefreshing) {
+      console.log("⏭️ checkAuth already in progress, skipping...");
+      return;
+    }
 
     // Only show global loading during initial app load (no user yet)
     // Don't change checkingAuth if already false - prevents UI freezes on profile refresh
@@ -104,7 +112,7 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
     if (isInitialLoad) {
       set({ checkingAuth: true, isLoading: true });
     }
-    set({ error: null });
+    set({ error: null, isRefreshing: true });
 
     try {
       const url = skipCache ? `${AUTH_ENDPOINTS.GET_PROFILE}?skipCache=true` : AUTH_ENDPOINTS.GET_PROFILE;
@@ -125,6 +133,9 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
         set({ checkingAuth: false, isLoading: false });
       }
     } finally {
+      // Clear refreshing flag
+      set({ isRefreshing: false });
+
       // Only update checkingAuth if this was the initial load
       if (isInitialLoad) {
         set({ checkingAuth: false, isLoading: false });

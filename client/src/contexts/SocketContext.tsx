@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface SocketContextType {
     socket: Socket | null;
@@ -24,11 +25,31 @@ interface SocketProviderProps {
 export const SocketProvider = ({ children }: SocketProviderProps) => {
     const [socket, setSocket] = useState<Socket | null>(null);
     const [isConnected, setIsConnected] = useState(false);
-    const { user } = useAuthStore();
+
+    // Use a SELECTOR to only subscribe to the user's _id, NOT the full user object.
+    // This prevents the entire SocketProvider (and all its children) from re-rendering
+    // every time any user property changes (e.g., roles, XP, avatar).
+    const userId = useAuthStore((state) => state.user?._id);
+
+    const queryClient = useQueryClient();
+    const hasConnected = useRef(false);
+    const profileRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Debounced profile refresh to coalesce rapid-fire profile_updated events
+    const debouncedCheckAuth = useCallback(() => {
+        if (profileRefreshTimer.current) {
+            clearTimeout(profileRefreshTimer.current);
+        }
+        profileRefreshTimer.current = setTimeout(() => {
+            const { checkAuth } = useAuthStore.getState();
+            checkAuth(true);
+            profileRefreshTimer.current = null;
+        }, 300); // Wait 300ms for events to settle before refreshing
+    }, []);
 
     useEffect(() => {
         // Only connect if user is authenticated
-        if (!user) {
+        if (!userId) {
             if (socket) {
                 socket.disconnect();
                 setSocket(null);
@@ -59,6 +80,13 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
         newSocket.on("connect", () => {
             console.log("✅ Socket.IO connected:", newSocket.id);
             setIsConnected(true);
+
+            // Failure Mode Scenario B: Resync state on reconnection to fix missed events
+            if (hasConnected.current) {
+                console.log("🔄 Socket reconnected: invalidating queries to sync state");
+                queryClient.invalidateQueries({ refetchType: 'active' });
+            }
+            hasConnected.current = true;
         });
 
         newSocket.on("disconnect", (reason) => {
@@ -71,21 +99,22 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
             setIsConnected(false);
         });
 
-        // Global User Listeners
-        newSocket.on("user:profile_updated", async (data) => {
+        // Global User Listeners — debounced to prevent thundering herd
+        newSocket.on("user:profile_updated", (data) => {
             console.log("👤 Profile update received:", data);
-            // Refresh auth store to get latest teamId and roles
-            const { checkAuth } = useAuthStore.getState();
-            await checkAuth();
+            debouncedCheckAuth();
         });
 
         setSocket(newSocket);
 
-        // Cleanup on unmount or user change
+        // Cleanup on unmount or user identity change
         return () => {
+            if (profileRefreshTimer.current) {
+                clearTimeout(profileRefreshTimer.current);
+            }
             newSocket.disconnect();
         };
-    }, [user]);
+    }, [userId]); // Only reconnect if user identity changes (login/logout)
 
     return (
         <SocketContext.Provider value={{ socket, isConnected }}>

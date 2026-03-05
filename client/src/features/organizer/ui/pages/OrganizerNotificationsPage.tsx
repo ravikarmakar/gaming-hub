@@ -13,7 +13,7 @@ import {
     useMarkNotificationReadMutation
 } from "../../hooks/useOrganizerMutations";
 
-const OrganizerNotificationsPage: React.FC = () => {
+export const OrganizerNotificationsPage: React.FC = () => {
     const { user } = useAuthStore();
     const orgId = user?.orgId;
 

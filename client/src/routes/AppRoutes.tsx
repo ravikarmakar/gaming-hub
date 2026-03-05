@@ -85,7 +85,6 @@ const AppRoutes = () => {
                             <Route path={ORGANIZER_ROUTES.TOURNAMENT_DASHBOARD} element={<pages.OrganizerTournamentDashboard />} />
                             <Route path={ORGANIZER_ROUTES.ADD_TOURNAMENTS} element={<pages.CreateTournament />} />
                             <Route path={ORGANIZER_ROUTES.EDIT_TOURNAMENT} element={<pages.CreateTournament />} />
-                            <Route path={ORGANIZER_ROUTES.ANALYTICS} element={<div>Analytics</div>} />
                             <Route path={ORGANIZER_ROUTES.NOTIFICATIONS} element={<pages.OrganizerNotifications />} />
                             <Route path={ORGANIZER_ROUTES.JOIN_REQUESTS} element={<pages.OrganizerJoinRequests />} />
                             <Route path={ORGANIZER_ROUTES.CHAT} element={<pages.OrganizerChat />} />

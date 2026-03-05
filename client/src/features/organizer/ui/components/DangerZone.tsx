@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Trash2, AlertTriangle } from "lucide-react";
 import {
     Card,
@@ -6,18 +7,8 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 
 interface DangerZoneProps {
     orgName?: string;
@@ -26,6 +17,8 @@ interface DangerZoneProps {
 }
 
 export const DangerZone = ({ orgName, onDelete, isDeleting }: DangerZoneProps) => {
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+
     return (
         <Card className="border-red-500/20 bg-red-500/5 shadow-inner">
             <CardHeader>
@@ -41,36 +34,31 @@ export const DangerZone = ({ orgName, onDelete, isDeleting }: DangerZoneProps) =
                     <strong className="text-red-400">Warning:</strong> Dissolving this organization will terminate all hosted events, revoke staff credentials, and purge your metrics. This metadata cannot be recovered.
                 </p>
 
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button
-                            variant="destructive"
-                            disabled={isDeleting}
-                            className="bg-red-600/10 hover:bg-red-600 border border-red-500/30 text-red-500 hover:text-white font-black px-8"
-                        >
-                            Terminate Organization
-                            <Trash2 className="size-4 ml-2" />
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-[#0F0720] border-red-500/20 text-white shadow-2xl max-w-lg">
-                        <AlertDialogHeader>
-                            <AlertDialogTitle className="text-2xl font-black text-red-400">Irreversible Action</AlertDialogTitle>
-                            <AlertDialogDescription className="text-gray-400 py-2">
-                                You are about to dissolve <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">"{orgName}"</span>.
-                                This will permanently erase all history, events, and rosters associated with this organization.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter className="gap-3 mt-4">
-                            <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 font-bold">Abandon</AlertDialogCancel>
-                            <AlertDialogAction
-                                onClick={onDelete}
-                                className="bg-red-600 hover:bg-red-700 text-white font-black px-10"
-                            >
-                                {isDeleting ? "Dissolving..." : "Dissolve Now"}
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+                <ConfirmActionDialog
+                    open={isDialogOpen}
+                    onOpenChange={setIsDialogOpen}
+                    title="Terminate Organization"
+                    description={
+                        <>
+                            You are about to dissolve <span className="text-white font-bold bg-white/5 px-2 py-1 rounded">"{orgName}"</span>.
+                            This will permanently erase all history, events, and rosters associated with this organization.
+                        </>
+                    }
+                    actionLabel={isDeleting ? "Dissolving..." : "Dissolve Now"}
+                    onConfirm={onDelete}
+                    isLoading={isDeleting}
+                    variant="danger"
+                />
+
+                <Button
+                    variant="destructive"
+                    onClick={() => setIsDialogOpen(true)}
+                    disabled={isDeleting}
+                    className="bg-red-600/10 hover:bg-red-600 border border-red-500/30 text-red-500 hover:text-white font-black px-8"
+                >
+                    Terminate Organization
+                    <Trash2 className="size-4 ml-2" />
+                </Button>
             </CardContent>
         </Card>
     );

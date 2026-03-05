@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
-import { ConfirmActionDialog } from "./ConfirmActionDialog";
+import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 
 export const DeleteTeamSection = () => {
     const navigate = useNavigate();

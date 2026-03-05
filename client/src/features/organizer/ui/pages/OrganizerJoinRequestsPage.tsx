@@ -14,9 +14,9 @@ import {
 import {
     useManageJoinRequestMutation
 } from "../../hooks/useOrganizerMutations";
-import { JoinRequest } from "../../lib/types";
+import { JoinRequest } from "../../types";
 
-const OrganizerJoinRequestsPage = () => {
+export const OrganizerJoinRequestsPage = () => {
     const [page, setPage] = useState(1);
     const { user } = useAuthStore();
     const orgId = user?.orgId;

@@ -2,7 +2,7 @@ import { Award, MapPin, Calendar, Star, Share2, MessageCircle, Loader2, CheckCir
 import { toast } from "react-hot-toast";
 import { useState } from "react";
 
-import { Organizer } from "@/features/organizer/lib/types";
+import { Organizer } from "@/features/organizer/types";
 import { UnifiedProfileHeader } from "@/components/shared/UnifiedProfileHeader";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useJoinOrgMutation } from "../../../hooks/useOrganizerMutations";

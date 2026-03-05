@@ -26,7 +26,7 @@ import { RecentArenas } from "../components/dashboard/RecentArenas";
 import { QuickAccess } from "../components/dashboard/QuickAccess";
 import { ActivityLog } from "../components/dashboard/ActivityLog";
 
-const OrganizerDashboard = () => {
+export const OrganizerDashboard = () => {
   const { user } = useAuthStore();
   const orgId = user?.orgId;
 

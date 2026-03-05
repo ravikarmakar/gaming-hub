@@ -15,7 +15,7 @@ import { useGetOrgByIdQuery } from "@/features/organizer/hooks/useOrganizerQueri
 // Extracted sub-components
 import { ReviewsTab } from "../components/profile/ReviewsTab";
 
-const OrganizerProfile = () => {
+export const OrganizerProfile = () => {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<string>("events");
 

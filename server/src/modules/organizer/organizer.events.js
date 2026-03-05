@@ -11,6 +11,7 @@ import {
     emitOrgUpdated,
     emitOrgDeleted
 } from "./organizer.socket.js";
+import { emitProfileUpdate } from "../user/user.socket.js";
 
 /**
  * OrganizerEventEmitter handles internal events within the Organizer module.
@@ -118,6 +119,7 @@ export const initOrganizerListeners = () => {
             `chat_role:organizer:${memberId}:${org._id}`
         ]);
         emitOrgMemberLeft(org._id, memberId);
+        emitProfileUpdate(memberId, { orgId: org._id, action: "left" });
 
         // Notifications
         try {
@@ -146,6 +148,7 @@ export const initOrganizerListeners = () => {
             `chat_role:organizer:${memberId}:${org._id}`
         ]);
         emitOrgMemberLeft(org._id, memberId);
+        emitProfileUpdate(memberId, { orgId: org._id, action: "left" });
     });
 
     // 7. Role Updated
@@ -170,6 +173,9 @@ export const initOrganizerListeners = () => {
                 message: `Your role in organization ${org.name} has been updated to ${(newRole || '').replace('org:', '')}.`,
                 relatedData: { orgId: org._id },
             });
+
+            // Emit profile update so the user's menu/permissions refresh
+            emitProfileUpdate(memberId, { orgId: org._id, action: "role_updated", newRole });
         } catch (error) {
             logger.error("Notification failed for ORG_ROLE_UPDATE event:", error);
         }
@@ -194,6 +200,10 @@ export const initOrganizerListeners = () => {
                 message: `You are now the Owner of the organization ${org.name}.`,
                 relatedData: { orgId: org._id },
             });
+
+            // Emit profile updates so both users refresh their roles/menu
+            emitProfileUpdate(newOwnerId, { orgId: org._id, action: "ownership_received" });
+            emitProfileUpdate(oldOwnerId, { orgId: org._id, action: "ownership_transferred" });
         } catch (error) {
             logger.error("Notification failed for ORG_OWNERSHIP_TRANSFERRED event:", error);
         }

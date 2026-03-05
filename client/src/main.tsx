@@ -15,7 +15,10 @@ setupAxiosInterceptors(() => useAuthStore.getState().refreshToken());
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false, // Prevents auto-refetching when window regains focus for standard behavior
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      staleTime: 60000, // 1 minute
+      gcTime: 300000,   // 5 minutes
     },
   },
 });

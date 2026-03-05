@@ -8,7 +8,7 @@ import OrganizerCard from "../components/OrganizerCard";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ResourceGridWrapper } from "@/components/shared/ResourceGridWrapper";
 
-const FindOrganizers = () => {
+export const FindOrganizers = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const debouncedSearchQuery = useDebounce(searchQuery, 500);
 

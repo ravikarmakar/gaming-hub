@@ -183,11 +183,7 @@ export const OrganizerMemberCard = memo(({
 
                                     {canTransfer && onTransferOwnership && (
                                         <DropdownMenuItem
-                                            onClick={() => {
-                                                if (confirm("Are you sure you want to transfer ownership? You will become a Manager.")) {
-                                                    onTransferOwnership(member._id);
-                                                }
-                                            }}
+                                            onClick={() => onTransferOwnership(member._id)}
                                             className="text-orange-400 hover:bg-orange-500/10 focus:bg-orange-500/10 transition-colors cursor-pointer"
                                         >
                                             <ShieldAlert className="w-4 h-4 mr-2" />

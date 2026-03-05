@@ -1,6 +1,6 @@
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useGetOrgByIdQuery } from "@/features/organizer/hooks/useOrganizerQueries";
-import { ChatWindow } from "@/features/teams/ui/components/ChatWindow";
+import { ChatWindow } from "@/features/chat";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { ORG_ACTIONS, ORG_ACTIONS_ACCESS } from "../../lib/access";
 

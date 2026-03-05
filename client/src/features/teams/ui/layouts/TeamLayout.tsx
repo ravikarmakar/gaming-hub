@@ -82,7 +82,6 @@ const TeamLayout = () => {
   const refreshTeamData = useCallback(async () => {
     if (teamId) {
       await getTeamById(teamId, true, true);
-      useAuthStore.getState().checkAuth(true);
     }
   }, [teamId, getTeamById]);
 
@@ -90,17 +89,8 @@ const TeamLayout = () => {
     const currentTeamState = useTeamManagementStore.getState().currentTeam;
     if (teamId && currentTeamState) {
       await getTeamById(teamId, true, true);
-      useAuthStore.getState().checkAuth(true);
     }
   }, [teamId, getTeamById]);
-
-  const handleTeamDeleted = useCallback(async () => {
-    await useAuthStore.getState().checkAuth(true);
-  }, []);
-
-  const handleProfileUpdated = useCallback(async () => {
-    await useAuthStore.getState().checkAuth(true);
-  }, []);
 
   const handleTeamUpdated = useCallback(() => {
     if (teamId) {
@@ -113,8 +103,7 @@ const TeamLayout = () => {
   useSocketEvent("team:member:left", handleMemberLeft);
   useSocketEvent("team:role:updated", refreshTeamData);
   useSocketEvent("team:owner:transferred", handleMemberLeft);
-  useSocketEvent("team:deleted", handleTeamDeleted);
-  useSocketEvent("user:profile_updated", handleProfileUpdated);
+  useSocketEvent("team:deleted", refreshTeamData);
   useSocketEvent("team:updated", handleTeamUpdated);
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { axiosInstance } from "@/lib/axios";
 import { ORGANIZER_ENDPOINTS, PLAYER_ENDPOINTS } from "../lib/endpoints";
-import { Organizer, DashboardStats, Invite, JoinRequest } from "../lib/types";
+import { Organizer, DashboardStats, Invite, JoinRequest } from "../types";
 import { User } from "@/features/auth/lib/types";
 import { Notification } from "@/features/notifications/store/useNotificationStore";
 
@@ -72,7 +72,7 @@ export const organizerApi = {
     },
 
     leaveOrg: async (orgId: string): Promise<boolean> => {
-        const response = await axiosInstance.delete(`/organizer/${orgId}/leave`);
+        const response = await axiosInstance.delete(ORGANIZER_ENDPOINTS.LEAVE_ORG(orgId));
         return response.data.success;
     },
 

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
 import { cn } from "@/lib/utils";
-import { useChatStore } from "@/features/teams/store/useChatStore";
+import { useChatStore } from "../../store/useChatStore";
 
 const messageSchema = z.object({
     content: z.string().min(1).max(1000),

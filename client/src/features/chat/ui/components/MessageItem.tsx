@@ -10,8 +10,8 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 
-import { ChatMessage, useChatStore } from "@/features/teams/store/useChatStore";
-import { ConfirmActionDialog } from "@/features/teams/ui/components/ConfirmActionDialog";
+import { useChatStore, ChatMessage } from "../../store/useChatStore";
+import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { cn } from "@/lib/utils";
 
 interface MessageItemProps {

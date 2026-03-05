@@ -41,7 +41,7 @@ import { ProfileInfoForm } from "../components/ProfileInfoForm";
 import { SocialLinksForm } from "../components/SocialLinksForm";
 import { DangerZone } from "../components/DangerZone";
 
-const OrganizerSettingsPage = () => {
+export const OrganizerSettingsPage = () => {
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const { can } = useAccess();

@@ -1,4 +1,4 @@
-import { Pagination } from "@/features/organizer/lib/types";
+import { Pagination } from "@/features/organizer/types";
 
 export interface ApiListResponse<T> {
     success: boolean;

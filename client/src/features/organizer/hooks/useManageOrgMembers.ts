@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import toast from "react-hot-toast";
 import { AxiosError } from "axios";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
@@ -36,20 +37,8 @@ export const useManageOrgMembers = (orgId?: string) => {
         onSuccess: () => {
             toast.success("Ownership transferred successfully");
 
-            // Replicate Team's optimistic local update for instant UI feedback
-            const authStore = useAuthStore.getState();
-            if (authStore.user) {
-                useAuthStore.setState({
-                    user: {
-                        ...authStore.user,
-                        roles: authStore.user.roles.map((r) =>
-                            r.scope === "org" && r.scopeId === orgId ? { ...r, role: "org:co_owner" } : r
-                        ),
-                    },
-                });
-            }
-
-            useAuthStore.getState().checkAuth(true); // Pass true to skip local stale cache, ensuring the new role is fetched from DB
+            // The Granular Optimistic Update for orgData is now handled in useTransferOwnershipMutation.onMutate
+            // SocketContext handles the global profile refresh via user:profile_updated
         },
         onError: (err) => handleError(err, "Failed to transfer ownership"),
     });
@@ -63,32 +52,30 @@ export const useManageOrgMembers = (orgId?: string) => {
         onError: (err) => handleError(err, "Failed to leave organization"),
     });
 
-    const handleAddSelectedMembers = (ids: string[]) => {
+    const handleAddSelectedMembers = useCallback((ids: string[]) => {
         if (!orgId) return;
         addStaffs({ orgId, data: { staff: ids } });
-    };
+    }, [orgId, addStaffs]);
 
-    const handleStaffRemove = (id: string) => {
+    const handleStaffRemove = useCallback((id: string) => {
         if (!orgId) return;
         removeStaff({ orgId, id });
-    };
+    }, [orgId, removeStaff]);
 
-    const handleLeaveOrg = () => {
+    const handleLeaveOrg = useCallback(() => {
         if (!orgId) return;
-        if (confirm("Are you sure you want to leave this organization?")) {
-            leaveOrg(orgId);
-        }
-    };
+        leaveOrg(orgId);
+    }, [orgId, leaveOrg]);
 
-    const handleUpdateRole = (memberId: string, newRole: string) => {
+    const handleUpdateRole = useCallback((memberId: string, newRole: string) => {
         if (!orgId) return;
         updateStaffRole({ orgId, userId: memberId, role: newRole });
-    };
+    }, [orgId, updateStaffRole]);
 
-    const handleTransferOwnership = (memberId: string) => {
+    const handleTransferOwnership = useCallback((memberId: string) => {
         if (!orgId) return;
         transferOwnership({ orgId, userId: memberId });
-    };
+    }, [orgId, transferOwnership]);
 
     const pendingMemberId =
         (isRemovingStaff ? removeVars?.id : null) ||

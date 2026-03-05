@@ -5,9 +5,9 @@ import { MessageSquare, Loader2, Maximize2 } from "lucide-react";
 
 import { useSocket } from "@/contexts/SocketContext";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { useChatStore, ChatMessage } from "@/features/teams/store/useChatStore";
-import { MessageItem } from "@/features/teams/ui/components/MessageItem";
-import { MessageInput } from "@/features/teams/ui/components/MessageInput";
+import { useChatStore, ChatMessage } from "../../store/useChatStore";
+import { MessageItem } from "./MessageItem";
+import { MessageInput } from "./MessageInput";
 import { cn } from "@/lib/utils";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";

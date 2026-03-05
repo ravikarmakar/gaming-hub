@@ -3,7 +3,7 @@ import { useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react
 
 import { organizerApi } from "../api/organizerApi";
 import { organizerKeys } from "./organizerKeys";
-import { Organizer } from "../lib/types";
+import { Organizer } from "../types";
 
 // --- HELPERS ---
 const useInvalidateOrg = () => {

@@ -99,20 +99,36 @@ export const handleJoinRequestService = async (requestId, action, userId) => {
         }
 
         if (strategyResult.socketData) {
-            emitMemberJoined(strategyResult.socketData.teamId, strategyResult.socketData.memberData);
+            if (joinRequest.targetModel === "Team") {
+                emitMemberJoined(strategyResult.socketData.teamId, strategyResult.socketData.memberData);
+            } else if (joinRequest.targetModel === "Organizer") {
+                try {
+                    const { default: organizerEvents, ORG_EVENT_TYPES } = await import("../organizer/organizer.events.js");
+                    organizerEvents.emit(ORG_EVENT_TYPES.MEMBER_JOINED, strategyResult.socketData);
+                } catch (err) {
+                    logger.warn(`Failed to emit organizer member joined event: ${err.message}`);
+                }
+            }
         }
 
         // Notify the requester to update their own profile/dashboard
         try {
             if (joinRequest?.requester) {
                 const { emitProfileUpdate } = await import("../user/user.socket.js");
-                emitProfileUpdate(joinRequest.requester, {
-                    teamId: strategyResult.socketData?.teamId || strategyResult.socketData?.org?._id || strategyResult.requesterId,
+                const targetId = strategyResult.socketData?.teamId ||
+                    strategyResult.socketData?.orgId ||
+                    strategyResult.teamId ||
+                    strategyResult.orgId ||
+                    joinRequest.target._id;
+
+                emitProfileUpdate(joinRequest.requester.toString(), {
+                    targetId,
+                    targetModel: joinRequest.targetModel,
                     action: "joined"
                 });
             }
         } catch (err) {
-            logger.warn("Failed to emit profile update for join request requester:", err.message);
+            logger.warn(`Failed to emit profile update for join request requester: ${err.message}`);
         }
     }
 

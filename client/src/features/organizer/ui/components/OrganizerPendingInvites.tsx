@@ -13,7 +13,7 @@ import {
 import {
     useCancelInviteMutation
 } from "../../hooks/useOrganizerMutations";
-import { Invite } from "@/features/organizer/lib/types";
+import { Invite } from "@/features/organizer/types";
 
 interface OrganizerPendingInvitesProps {
     orgId: string;

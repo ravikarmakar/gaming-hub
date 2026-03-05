@@ -60,9 +60,13 @@ export const acceptJoinRequest = async (requesterId, orgId, handledBy, session =
     // Defer emission so the caller handles it post-transaction
     return {
         responseData: null,
-        socketData: payload,
+        socketData: {
+            org: org,
+            memberIds: [requesterId],
+            handledById: handledBy
+        },
         requesterId,
-        cacheKeys: []
+        cacheKeys: [`user_profile:${requesterId}`]
     };
 };
 
@@ -123,7 +127,11 @@ export const acceptInvitation = async (inviteeId, orgId, role, session = null) =
 
     return {
         resultMessage: `You have successfully joined ${org.name}`,
-        socketData: payload,
-        cacheKeys: [] // Deprecated in favor of the async event listener doing the invalidation
+        socketData: {
+            org: org,
+            memberIds: [inviteeId],
+            handledById: org.ownerId
+        },
+        cacheKeys: [`user_profile:${inviteeId}`]
     };
 };

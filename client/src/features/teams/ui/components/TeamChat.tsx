@@ -1,4 +1,4 @@
-import { ChatWindow } from "./ChatWindow";
+import { ChatWindow } from "@/features/chat";
 
 interface TeamChatProps {
     teamId: string;

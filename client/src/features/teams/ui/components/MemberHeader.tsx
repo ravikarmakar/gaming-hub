@@ -5,7 +5,7 @@ import { Info, LogOut, UserPlus, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-import { ConfirmActionDialog } from "./ConfirmActionDialog";
+import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 import { TeamPageHeader } from "./TeamPageHeader";
 import { PlayerSearchCommand } from "@/features/player/ui/components/PlayerSearchCommand";
 import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
