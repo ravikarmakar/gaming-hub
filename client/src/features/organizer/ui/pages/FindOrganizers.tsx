@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { AnimatePresence } from "framer-motion";
 import { Building, Search } from "lucide-react";
 
 import { useInfiniteOrganizersQuery } from "../../hooks/useOrganizerQueries";
 import { Input } from "@/components/ui/input";
 import OrganizerCard from "../components/OrganizerCard";
 import { useDebounce } from "@/hooks/useDebounce";
-import { ResourceGridWrapper } from "@/components/shared/ResourceGridWrapper";
+import { DiscoveryPage } from "@/components/shared/DiscoveryPage";
 
 export const FindOrganizers = () => {
     const [searchQuery, setSearchQuery] = useState("");
@@ -30,7 +29,7 @@ export const FindOrganizers = () => {
     };
 
     return (
-        <ResourceGridWrapper
+        <DiscoveryPage
             title={
                 <div className="flex flex-col gap-2">
                     <div className="inline-flex items-center gap-2 px-4 py-2 w-max rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-sm font-medium mb-2">
@@ -63,13 +62,9 @@ export const FindOrganizers = () => {
                     {/* Placeholder for future filters to maintain layout consistency if needed */}
                 </div>
             }
-        >
-            <AnimatePresence mode="popLayout">
-                {organizers.map((org: any, index: number) => (
-                    <OrganizerCard key={org._id} org={org} index={index} />
-                ))}
-            </AnimatePresence>
-        </ResourceGridWrapper >
+            items={organizers}
+            renderItem={(org, index) => <OrganizerCard key={org._id} org={org} index={index} />}
+        />
     );
 };
 

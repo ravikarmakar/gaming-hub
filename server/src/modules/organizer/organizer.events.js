@@ -70,10 +70,19 @@ export const initOrganizerListeners = () => {
     });
 
     // 3. Organization Deleted
-    organizerEvents.on(ORG_EVENT_TYPES.ORG_DELETED, async ({ orgId, ownerId }) => {
+    organizerEvents.on(ORG_EVENT_TYPES.ORG_DELETED, async ({ orgId, ownerId, memberIds = [] }) => {
         logger.info(`Organization deleted: ${orgId}`);
-        await invalidateCache([`user_profile:${ownerId}`, `org_details:${orgId}`]);
+
+        // Invalidate caches for all affected members
+        const cacheKeys = [`org_details:${orgId}`, ...memberIds.map(id => `user_profile:${id}`)];
+        await invalidateCache(cacheKeys);
+
         emitOrgDeleted(orgId);
+
+        // Emit profile update for every member so their UI refreshes
+        for (const memberId of memberIds) {
+            emitProfileUpdate(memberId, { orgId, action: "org_deleted" });
+        }
     });
 
     // 4. Member Joined (Staff added or accepted proxy)
@@ -81,7 +90,11 @@ export const initOrganizerListeners = () => {
         logger.info(`Members joined Organization: ${org._id} (${memberIds.length} members)`);
 
         // Cache Invalidation
-        const cacheKeys = memberIds.map(uid => `user_profile:${uid}`);
+        const cacheKeys = memberIds.flatMap(uid => [
+            `user_profile:${uid}`,
+            `chat_access:organizer:${uid}:${org._id}`,
+            `chat_role:organizer:${uid}:${org._id}`
+        ]);
         cacheKeys.push(`org_details:${org._id}`);
         await invalidateCache(cacheKeys);
 

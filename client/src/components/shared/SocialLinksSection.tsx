@@ -1,42 +1,38 @@
-import { Globe, MessageCircle, Twitter, Instagram } from "lucide-react";
-import { useFormContext } from "react-hook-form";
-import {
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
+import { Control, FieldPath, FieldValues } from "react-hook-form";
+import { Globe, Twitter, Instagram, Youtube, MessageCircle } from "lucide-react";
+import { FormField, FormItem, FormControl, FormMessage, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import { OrgSettingsFormSchema } from "../../lib/orgSchemas";
+import { FormSection } from "./FormSection";
 
-interface SocialLinksFormProps {
+interface SocialLinksSectionProps<T extends FieldValues> {
+    control: Control<T>;
     disabled?: boolean;
+    // Map of platform to field name in the form
+    fields: {
+        twitter?: FieldPath<T>;
+        discord?: FieldPath<T>;
+        youtube?: FieldPath<T>;
+        instagram?: FieldPath<T>;
+        website?: FieldPath<T>;
+    };
 }
 
-export const SocialLinksForm = ({ disabled }: SocialLinksFormProps) => {
-    const { control } = useFormContext<OrgSettingsFormSchema>();
-
+export function SocialLinksSection<T extends FieldValues>({
+    control,
+    disabled,
+    fields,
+}: SocialLinksSectionProps<T>) {
     return (
-        <Card className="bg-[#0B0C1A] border-white/5 shadow-xl">
-            <CardHeader className="border-b border-white/5 pb-4">
-                <CardTitle className="text-white flex items-center gap-2">
-                    <Globe className="size-5 text-blue-400" /> Social Presence
-                </CardTitle>
-                <CardDescription>Connect your official social media channels.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6 pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <FormSection
+            title="Social Presence"
+            description="Connect your official social media channels."
+            icon={Globe}
+        >
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {fields.website && (
                     <FormField
                         control={control}
-                        name="socialLinks.website"
+                        name={fields.website}
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="text-xs font-black text-gray-500 uppercase tracking-widest">Website</FormLabel>
@@ -45,10 +41,9 @@ export const SocialLinksForm = ({ disabled }: SocialLinksFormProps) => {
                                         <Globe className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
                                         <Input
                                             {...field}
-                                            className="bg-white/5 border-white/10 text-white pl-10 h-11"
+                                            className="bg-black/20 border-purple-500/20 text-white pl-10 h-11"
                                             placeholder="https://yourorg.com"
                                             disabled={disabled}
-                                            value={field.value || ""}
                                         />
                                     </div>
                                 </FormControl>
@@ -56,9 +51,11 @@ export const SocialLinksForm = ({ disabled }: SocialLinksFormProps) => {
                             </FormItem>
                         )}
                     />
+                )}
+                {fields.discord && (
                     <FormField
                         control={control}
-                        name="socialLinks.discord"
+                        name={fields.discord}
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="text-xs font-black text-gray-500 uppercase tracking-widest">Discord Invite</FormLabel>
@@ -67,10 +64,9 @@ export const SocialLinksForm = ({ disabled }: SocialLinksFormProps) => {
                                         <MessageCircle className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
                                         <Input
                                             {...field}
-                                            className="bg-white/5 border-white/10 text-white pl-10 h-11"
+                                            className="bg-black/20 border-purple-500/20 text-white pl-10 h-11"
                                             placeholder="discord.gg/xyz"
                                             disabled={disabled}
-                                            value={field.value || ""}
                                         />
                                     </div>
                                 </FormControl>
@@ -78,9 +74,11 @@ export const SocialLinksForm = ({ disabled }: SocialLinksFormProps) => {
                             </FormItem>
                         )}
                     />
+                )}
+                {fields.twitter && (
                     <FormField
                         control={control}
-                        name="socialLinks.twitter"
+                        name={fields.twitter}
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="text-xs font-black text-gray-500 uppercase tracking-widest">Twitter (X)</FormLabel>
@@ -89,10 +87,9 @@ export const SocialLinksForm = ({ disabled }: SocialLinksFormProps) => {
                                         <Twitter className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
                                         <Input
                                             {...field}
-                                            className="bg-white/5 border-white/10 text-white pl-10 h-11"
+                                            className="bg-black/20 border-purple-500/20 text-white pl-10 h-11"
                                             placeholder="@YourOrg"
                                             disabled={disabled}
-                                            value={field.value || ""}
                                         />
                                     </div>
                                 </FormControl>
@@ -100,9 +97,11 @@ export const SocialLinksForm = ({ disabled }: SocialLinksFormProps) => {
                             </FormItem>
                         )}
                     />
+                )}
+                {fields.instagram && (
                     <FormField
                         control={control}
-                        name="socialLinks.instagram"
+                        name={fields.instagram}
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="text-xs font-black text-gray-500 uppercase tracking-widest">Instagram</FormLabel>
@@ -111,10 +110,9 @@ export const SocialLinksForm = ({ disabled }: SocialLinksFormProps) => {
                                         <Instagram className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
                                         <Input
                                             {...field}
-                                            className="bg-white/5 border-white/10 text-white pl-10 h-11"
+                                            className="bg-black/20 border-purple-500/20 text-white pl-10 h-11"
                                             placeholder="username"
                                             disabled={disabled}
-                                            value={field.value || ""}
                                         />
                                     </div>
                                 </FormControl>
@@ -122,8 +120,31 @@ export const SocialLinksForm = ({ disabled }: SocialLinksFormProps) => {
                             </FormItem>
                         )}
                     />
-                </div>
-            </CardContent>
-        </Card>
+                )}
+                {fields.youtube && (
+                    <FormField
+                        control={control}
+                        name={fields.youtube}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-xs font-black text-gray-500 uppercase tracking-widest">YouTube Channel</FormLabel>
+                                <FormControl>
+                                    <div className="relative">
+                                        <Youtube className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                                        <Input
+                                            {...field}
+                                            className="bg-black/20 border-purple-500/20 text-white pl-10 h-11"
+                                            placeholder="YouTube Channel"
+                                            disabled={disabled}
+                                        />
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
+            </div>
+        </FormSection>
     );
-};
+}

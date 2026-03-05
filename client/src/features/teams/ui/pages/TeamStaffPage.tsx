@@ -188,47 +188,49 @@ const TeamStaffPage = () => {
                                             </div>
 
                                             {canManageStaff && !isMemberOwner && (
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
-                                                        >
-                                                            <UserCog className="w-4 h-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="bg-zinc-950 border-white/10 text-gray-200 shadow-2xl min-w-[180px]">
-                                                        <DropdownMenuLabel className="text-xs font-bold text-gray-500 uppercase">System Team Roles</DropdownMenuLabel>
-                                                        <DropdownMenuSeparator className="bg-white/10" />
-                                                        <DropdownMenuItem
-                                                            onClick={() => confirmAction(member, "promote")}
-                                                            className="focus:bg-green-500/10 focus:text-green-400 cursor-pointer h-10"
-                                                        >
-                                                            <BadgeCheck className="w-4 h-4 mr-2" />
-                                                            Promote to Manager
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={() => confirmAction(member, "demote")}
-                                                            className="focus:bg-red-500/10 focus:text-red-400 cursor-pointer h-10"
-                                                        >
-                                                            <ShieldAlert className="w-4 h-4 mr-2" />
-                                                            Demote to Player
-                                                        </DropdownMenuItem>
-                                                        {canTransferOwnerShip && (
-                                                            <>
-                                                                <DropdownMenuSeparator className="bg-white/10" />
-                                                                <DropdownMenuItem
-                                                                    onClick={() => confirmAction(member, "transfer")}
-                                                                    className="focus:bg-amber-500/10 focus:text-amber-400 cursor-pointer text-amber-500 h-10"
-                                                                >
-                                                                    <Crown className="w-4 h-4 mr-2" />
-                                                                    Transfer Ownership
-                                                                </DropdownMenuItem>
-                                                            </>
-                                                        )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                <div className="absolute top-4 right-4">
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
+                                                            >
+                                                                <UserCog className="w-4 h-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="bg-zinc-950 border-white/10 text-gray-200 shadow-2xl min-w-[180px]">
+                                                            <DropdownMenuLabel className="text-xs font-bold text-gray-500 uppercase">System Team Roles</DropdownMenuLabel>
+                                                            <DropdownMenuSeparator className="bg-white/10" />
+                                                            <DropdownMenuItem
+                                                                onClick={() => confirmAction(member, "promote")}
+                                                                className="focus:bg-green-500/10 focus:text-green-400 cursor-pointer h-10"
+                                                            >
+                                                                <BadgeCheck className="w-4 h-4 mr-2" />
+                                                                Promote to Manager
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={() => confirmAction(member, "demote")}
+                                                                className="focus:bg-red-500/10 focus:text-red-400 cursor-pointer h-10"
+                                                            >
+                                                                <ShieldAlert className="w-4 h-4 mr-2" />
+                                                                Demote to Player
+                                                            </DropdownMenuItem>
+                                                            {canTransferOwnerShip && (
+                                                                <>
+                                                                    <DropdownMenuSeparator className="bg-white/10" />
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => confirmAction(member, "transfer")}
+                                                                        className="focus:bg-amber-500/10 focus:text-amber-400 cursor-pointer text-amber-500 h-10"
+                                                                    >
+                                                                        <Crown className="w-4 h-4 mr-2" />
+                                                                        Transfer Ownership
+                                                                    </DropdownMenuItem>
+                                                                </>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
                                             )}
                                         </div>
 

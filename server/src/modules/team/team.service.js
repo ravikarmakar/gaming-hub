@@ -569,12 +569,9 @@ export const manageMemberRoleService = async (teamId, memberId, role) => {
     member.roleInTeam = role;
     await team.save({ session });
 
-    // SYNC: Update user's system role as well if it's a staff/owner role change
-    // If promoting to IGL/Captain (owner handled elsewhere, but IGL/Sub/Support are roster-only)
-    // However, if it's a system-relevant role like Manager vs Player, we should sync.
-    // manageTeamStaffService handles promote/demote to MANAGER specifically.
-    // This endpoint handles IG/RUSHER/etc which are all mapped to TEAM.PLAYER in RBAC.
-    await UserGateway.updateMemberSystemRole(memberId, team._id, Roles.TEAM.PLAYER, session);
+    // Note: We DO NOT sync the user's system role here (e.g. Roles.TEAM.PLAYER).
+    // The system roles (manager, owner) are managed by dedicated services (manageTeamStaffService, etc)
+    // and should not be downgraded when a user simply changes their in-game role (e.g. igl to support).
 
     return team;
   });

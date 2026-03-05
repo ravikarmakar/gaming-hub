@@ -86,9 +86,9 @@ export const organizerApi = {
         return response.data.data;
     },
 
-    transferOwnership: async ({ orgId, userId }: { orgId: string, userId: string }): Promise<Organizer> => {
+    transferOwnership: async ({ orgId, userId }: { orgId: string, userId: string }): Promise<boolean> => {
         const response = await axiosInstance.put(ORGANIZER_ENDPOINTS.TRANSFER_OWNERSHIP(orgId), { newOwnerId: userId });
-        return response.data.data;
+        return response.data.success;
     },
 
     removeStaff: async ({ orgId, id }: { orgId: string, id: string }): Promise<Organizer> => {

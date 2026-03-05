@@ -98,7 +98,7 @@ export const updateProfileValidation = {
         esportsRole: Joi.string().valid("rusher", "sniper", "support", "igl", "coach", "player").optional().messages({
             "any.only": "Please select a valid esports role",
         }),
-        region: Joi.string().valid("na", "eu", "sea", "sa", "mea", "global").optional().messages({
+        region: Joi.string().valid("INDIA", "NA", "EU", "ASIA", "SEA", "SA", "OCE", "MENA", "GLOBAL").optional().messages({
             "any.only": "Please select a valid region",
         }),
         country: Joi.string().max(100).optional().allow(""),

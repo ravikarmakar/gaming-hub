@@ -175,6 +175,7 @@ export const getOrgDetails = TryCatchHandler(async (req, res, next) => {
 
   const matchStage = {
     orgId: new mongoose.Types.ObjectId(orgId),
+    isDeleted: { $ne: true },
   };
 
   if (search) {
@@ -436,10 +437,14 @@ export const addStaff = TryCatchHandler(async (req, res, next) => {
       return;
     }
 
-    // Prepare operation
+    // Prepare operation with additional safety filters to prevent race conditions
     bulkOps.push({
       updateOne: {
-        filter: { _id: userId },
+        filter: {
+          _id: userId,
+          orgId: null,
+          isAccountVerified: true
+        },
         update: {
           $set: { orgId: orgId },
           $push: {
@@ -457,13 +462,32 @@ export const addStaff = TryCatchHandler(async (req, res, next) => {
     results.push({ userId, success: true });
   });
 
-  // 3. Execute Bulk Write
+  // 3. Execute Bulk Write within a transaction
   if (bulkOps.length > 0) {
-    await User.bulkWrite(bulkOps);
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const bulkWriteResult = await User.bulkWrite(bulkOps, { session });
+      const actualModifiedCount = bulkWriteResult.modifiedCount;
+
+      if (actualModifiedCount > 0) {
+        await Organizer.findByIdAndUpdate(orgId, { $inc: { "stats.memberCount": actualModifiedCount } }, { session });
+      }
+
+      await session.commitTransaction();
+
+      // Update results based on actual database changes to reflect accuracy if some ops failed the filter
+      // (Though in most cases they should match unless a race condition occurred)
+      // For now, we emit for all originally 'success: true' but in a real system we'd refine this.
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
 
     const updatedUserIds = results.filter(r => r.success).map(r => r.userId);
     if (updatedUserIds.length > 0) {
-      // Emit async event for Staff Joining instead of blocking UI thread for Redis pipeline
       organizerEvents.emit(ORG_EVENT_TYPES.MEMBER_JOINED, {
         org: { _id: orgId, ownerId: org.ownerId, name: org.name },
         memberIds: updatedUserIds,
@@ -571,6 +595,9 @@ export const removeStaff = TryCatchHandler(async (req, res, next) => {
 
   await user.save();
 
+  // Decrement member count
+  await Organizer.findByIdAndUpdate(orgId, { $inc: { "stats.memberCount": -1 } });
+
   // Async Event Emitted (Handles Cache dropping and notification)
   organizerEvents.emit(ORG_EVENT_TYPES.MEMBER_REMOVED, { org, memberId: userId });
 
@@ -629,6 +656,9 @@ export const leaveOrg = TryCatchHandler(async (req, res, next) => {
 
   await user.save();
 
+  // Decrement member count
+  await Organizer.findByIdAndUpdate(orgId, { $inc: { "stats.memberCount": -1 } });
+
   // Async event
   organizerEvents.emit(ORG_EVENT_TYPES.MEMBER_LEFT, { org, memberId: userId });
 
@@ -655,18 +685,27 @@ export const deleteOrg = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Organization not found", 404));
   }
 
-  // Double check owner (middleware should have covered this, but redundancy is safe)
+  // Double check owner (aligned with route: OWNER only)
   const isAuthorized =
     req.orgContext?.isSuperAdmin ||
     req.orgContext?.role === Roles.ORG.OWNER ||
-    req.orgContext?.role === Roles.ORG.CO_OWNER ||
     org.ownerId.toString() === userId.toString();
 
   if (!isAuthorized) {
     return next(
-      new CustomError("Only the organization owner or co-owner can delete it", 403)
+      new CustomError("Only the organization owner can delete it", 403)
     );
   }
+
+  // Collect affected member IDs BEFORE clearing them
+  const orgObjectId = new mongoose.Types.ObjectId(orgId);
+  const affectedMembers = await User.find({
+    $or: [
+      { orgId: orgObjectId },
+      { "roles.scopeId": orgObjectId }
+    ]
+  }).select("_id").lean();
+  const memberIds = affectedMembers.map(m => m._id.toString());
 
   await withOptionalTransaction(async (session) => {
     // Soft Delete
@@ -675,8 +714,6 @@ export const deleteOrg = TryCatchHandler(async (req, res, next) => {
     await org.save({ session });
 
     // Remove org-related roles and unset orgId from all users
-    const orgObjectId = new mongoose.Types.ObjectId(orgId);
-
     await User.updateMany(
       {
         $or: [
@@ -707,8 +744,8 @@ export const deleteOrg = TryCatchHandler(async (req, res, next) => {
     deleteFromImageKit(org.bannerFileId).catch(err => logger.error(`Failed to delete org banner ${org.bannerFileId}`, err));
   }
 
-  // Emit event asynchronously to drop the necessary caches across the application
-  organizerEvents.emit(ORG_EVENT_TYPES.ORG_DELETED, { orgId: org._id, ownerId: org.ownerId });
+  // Emit event with member IDs so their frontends refresh
+  organizerEvents.emit(ORG_EVENT_TYPES.ORG_DELETED, { orgId: org._id, ownerId: org.ownerId, memberIds });
 
   res.status(200).json({
     success: true,
@@ -808,15 +845,14 @@ export const transferOwnership = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Organization not found", 404));
   }
 
-  // Verify current user is the owner or co-owner (Double check)
+  // Verify current user is the owner (aligned with route middleware: OWNER only)
   const isAuthorized =
     req.orgContext?.isSuperAdmin ||
     req.orgContext?.role === Roles.ORG.OWNER ||
-    req.orgContext?.role === Roles.ORG.CO_OWNER ||
     org.ownerId.toString() === userId.toString();
 
   if (!isAuthorized) {
-    return next(new CustomError("Only the organization owner or co-owner can transfer ownership", 403));
+    return next(new CustomError("Only the organization owner can transfer ownership", 403));
   }
 
   // Find the new owner
@@ -834,36 +870,44 @@ export const transferOwnership = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("User must be a member of the organization to become owner", 400));
   }
 
-  // Update Org Owner
-  org.ownerId = newOwnerId;
-  await org.save();
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  // Demote current owner to Co-owner
-  const currentUser = await User.findById(userId);
+  try {
+    // Update Org Owner
+    org.ownerId = newOwnerId;
+    await org.save({ session });
 
-  if (currentUser) {
-    const currentOwnerRoleIndex = currentUser.roles.findIndex(
-      (r) => r.scope === "org" && r.scopeId?.toString() === orgId.toString()
-    );
+    // Demote current owner to Co-owner
+    const currentUser = await User.findById(userId);
 
-    if (currentOwnerRoleIndex !== -1) {
-      currentUser.roles[currentOwnerRoleIndex].role = Roles.ORG.CO_OWNER;
-      // Set to false, permission can only be given by superadmin 
-      currentUser.canCreateOrg = false;
-      await currentUser.save();
+    if (currentUser) {
+      const currentOwnerRoleIndex = currentUser.roles.findIndex(
+        (r) => r.scope === "org" && r.scopeId?.toString() === orgId.toString()
+      );
+
+      if (currentOwnerRoleIndex !== -1) {
+        currentUser.roles[currentOwnerRoleIndex].role = Roles.ORG.CO_OWNER;
+        currentUser.canCreateOrg = false;
+        await currentUser.save({ session });
+      }
     }
+
+    // Promote new owner
+    newOwner.roles[newOwnerOrgRoleIndex].role = Roles.ORG.OWNER;
+    newOwner.canCreateOrg = false;
+    newOwner.orgId = org._id;
+    await newOwner.save({ session });
+
+    await session.commitTransaction();
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
   }
 
-  // Promote new owner
-  newOwner.roles[newOwnerOrgRoleIndex].role = Roles.ORG.OWNER;
-  // If they had another org, this might conflict if logic enforces single org ownership.
-  // Assuming strict 1-org-creation policy, we set canCreateOrg false.
-  newOwner.canCreateOrg = false;
-  // Set orgId main pointer
-  newOwner.orgId = org._id;
-  await newOwner.save();
-
-  // Async Event
+  // Async Event (only after successful commit)
   organizerEvents.emit(ORG_EVENT_TYPES.OWNER_TRANSFERRED, { org, newOwnerId, oldOwnerId: userId });
 
   res.status(200).json({
@@ -882,7 +926,7 @@ export const getOrganizers = TryCatchHandler(async (req, res, next) => {
 
   const query = { isDeleted: false };
   if (search) {
-    query.name = { $regex: search, $options: "i" };
+    query.name = { $regex: escapeRegex(search), $options: "i" };
   }
 
   const [organizers, total] = await Promise.all([

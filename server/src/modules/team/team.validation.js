@@ -28,7 +28,7 @@ export const updateTeamValidation = {
         discord: Joi.string().uri().allow("").optional(), // Discord invite link pattern could be stricter
         youtube: Joi.string().uri().allow("").optional(),
         instagram: Joi.string().uri().allow("").optional(),
-    }).unknown(true), // Content-Type multipart/form-data might send other fields or files, allow unknown
+    }),
 };
 
 export const addMembersValidation = {

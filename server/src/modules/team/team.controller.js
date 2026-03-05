@@ -287,6 +287,7 @@ export const removeMember = TryCatchHandler(async (req, res, next) => {
 
   // Emit socket event for member removal
   emitMemberLeft(team._id, memberId, "removed");
+  emitProfileUpdate(memberId, { teamId: team._id, action: "removed" });
 
   // Fetch updated team roster using helper
   const transformedTeam = await getTransformedTeam(team._id);
@@ -332,6 +333,7 @@ export const leaveMember = TryCatchHandler(async (req, res, next) => {
 
   // Emit socket event for member leaving
   emitMemberLeft(team._id, userId, "left");
+  emitProfileUpdate(userId, { teamId: team._id, action: "left" });
 
   res.status(200).json({
     success: true,
@@ -398,6 +400,16 @@ export const deleteTeam = TryCatchHandler(async (req, res, next) => {
 
   // Invalidate RBAC cache for the team
   invalidateRbacCache(Scopes.TEAM, team._id);
+
+  // Emit profile update to real-time sync for affected members
+  if (team.teamMembers && Array.isArray(team.teamMembers)) {
+    team.teamMembers.forEach(member => {
+      const uId = member.user?._id || member.user;
+      if (uId) {
+        emitProfileUpdate(uId.toString(), { teamId: team._id, action: "team_deleted" });
+      }
+    });
+  }
 
   res.status(200).json({
     success: true,

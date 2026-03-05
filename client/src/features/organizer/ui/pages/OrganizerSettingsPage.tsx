@@ -1,16 +1,14 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Save, Tag, Briefcase, X, Loader2 } from "lucide-react";
+import { Tag, Briefcase } from "lucide-react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
     Card,
     CardContent,
-    CardFooter,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
@@ -38,8 +36,9 @@ import { prepareOrgUpdateFormData } from "../../lib/orgUtils";
 
 // New sub-components
 import { ProfileInfoForm } from "../components/ProfileInfoForm";
-import { SocialLinksForm } from "../components/SocialLinksForm";
 import { DangerZone } from "../components/DangerZone";
+import { SettingsFormActions } from "@/components/shared/SettingsFormActions";
+import { SocialLinksSection } from "@/components/shared/SocialLinksSection";
 
 export const OrganizerSettingsPage = () => {
     const navigate = useNavigate();
@@ -257,37 +256,27 @@ export const OrganizerSettingsPage = () => {
                             <ProfileInfoForm disabled={!canUpdate} />
 
                             {/* Social Links Form */}
-                            <SocialLinksForm disabled={!canUpdate} />
+                            <SocialLinksSection
+                                control={form.control}
+                                disabled={!canUpdate}
+                                fields={{
+                                    website: "socialLinks.website",
+                                    discord: "socialLinks.discord",
+                                    twitter: "socialLinks.twitter",
+                                    instagram: "socialLinks.instagram",
+                                    youtube: "socialLinks.youtube"
+                                }}
+                            />
 
                             {/* Save Button (Conditional) */}
-                            {canUpdate && isDirty && (
-                                <Card className="bg-[#0B0C1A] border-white/5 shadow-xl overflow-hidden">
-                                    <CardFooter className="py-4 border-t border-white/5 flex justify-end gap-3 sticky bottom-4 z-10 animate-in slide-in-from-bottom-4 duration-300">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => reset()}
-                                            disabled={updateMutation.isPending}
-                                            className="bg-white/5 border-white/10 text-white hover:bg-white/10 px-6 font-bold"
-                                        >
-                                            Cancel
-                                            <X className="size-4 ml-2" />
-                                        </Button>
-                                        <Button type="submit" disabled={updateMutation.isPending} className="bg-purple-600 hover:bg-purple-500 text-white px-10 font-bold transition-all shadow-lg shadow-purple-900/40 active:scale-95">
-                                            {updateMutation.isPending ? (
-                                                <>
-                                                    Saving...
-                                                    <Loader2 className="size-4 ml-2 animate-spin" />
-                                                </>
-                                            ) : (
-                                                <>
-                                                    Save Settings
-                                                    <Save className="size-4 ml-2" />
-                                                </>
-                                            )}
-                                        </Button>
-                                    </CardFooter>
-                                </Card>
+                            {canUpdate && (
+                                <SettingsFormActions
+                                    isDirty={isDirty}
+                                    isLoading={updateMutation.isPending}
+                                    onReset={() => reset()}
+                                    saveLabel="Save Settings"
+                                    className="sticky bottom-4 z-10 p-4 bg-[#0B0C1A] border border-white/5 rounded-xl shadow-xl justify-end"
+                                />
                             )}
 
                             {/* Danger Zone */}

@@ -42,7 +42,7 @@ export const updateStaffRoleValidation = {
     }),
     body: Joi.object({
         userId: objectId.required(),
-        newRole: Joi.string().valid(...Object.values(Roles.ORG)).required(),
+        newRole: Joi.string().valid(Roles.ORG.CO_OWNER, Roles.ORG.MANAGER, Roles.ORG.STAFF).required(),
     }),
 };
 

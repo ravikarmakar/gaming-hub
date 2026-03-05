@@ -1,14 +1,13 @@
 export const REGIONS = [
-    { value: "india", label: "India (IND)" },
-    { value: "na", label: "North America (NA)" },
-    { value: "eu", label: "Europe (EU)" },
-    { value: "asia", label: "Asia (ASIA)" },
-    { value: "sea", label: "Southeast Asia (SEA)" },
-    { value: "sa", label: "South America (SA)" },
-    { value: "oce", label: "Oceania (OCE)" },
-    { value: "mena", label: "Middle East & North Africa (MENA)" },
-    { value: "latam", label: "Latin America (LATAM)" },
-    { value: "brazil", label: "Brazil (BR)" },
+    { value: "INDIA", label: "India (IND)" },
+    { value: "NA", label: "North America (NA)" },
+    { value: "EU", label: "Europe (EU)" },
+    { value: "ASIA", label: "Asia (ASIA)" },
+    { value: "SEA", label: "Southeast Asia (SEA)" },
+    { value: "SA", label: "South America (SA)" },
+    { value: "OCE", label: "Oceania (OCE)" },
+    { value: "MENA", label: "Middle East & North Africa (MENA)" },
+    { value: "GLOBAL", label: "Global (GLOBAL)" },
 ] as const;
 
 export type RegionValue = typeof REGIONS[number]["value"];

@@ -6,14 +6,10 @@ import toast from "react-hot-toast";
 import {
     Settings,
     LayoutDashboard,
-    Save,
-    Loader2,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Select,
     SelectContent,
@@ -40,7 +36,9 @@ import { DeleteTeamSection } from "../components/DeleteTeamSection";
 import { TeamPageHeader } from "../components/TeamPageHeader";
 import { teamSchema, TeamForm } from "@/features/teams/lib/teamSchema";
 import { BrandingForm } from "../components/settings/BrandingForm";
-import { SocialsForm } from "../components/settings/SocialsForm";
+import { SettingsFormActions } from "@/components/shared/SettingsFormActions";
+import { FormSection } from "@/components/shared/FormSection";
+import { SocialLinksSection } from "@/components/shared/SocialLinksSection";
 
 const TeamSettings = () => {
     const { updateTeam, isLoading, currentTeam, getTeamById } = useTeamManagementStore();
@@ -165,103 +163,31 @@ const TeamSettings = () => {
                         title="Team Settings"
                         subtitle="Manage your team's identity and professional presence"
                         actions={
-                            (isDirty || isLoading) && (
-                                <div className="flex items-center gap-2 sm:gap-3 duration-300 animate-in fade-in slide-in-from-right-4">
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        disabled={isLoading}
-                                        className="text-gray-400 h-9 transition-all border border-transparent hover:text-white hover:bg-white/5 hover:border-white/10"
-                                        onClick={handleReset}
-                                    >
-                                        Reset
-                                    </Button>
-                                    <Button
-                                        type="submit"
-                                        size="sm"
-                                        disabled={isLoading}
-                                        className="bg-purple-600 hover:bg-purple-700 text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] border border-purple-500/50 h-9 px-4 transition-all font-bold"
-                                    >
-                                        {isLoading ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                <span className="hidden sm:inline">Saving...</span>
-                                                <span className="sm:hidden">...</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Save className="w-4 h-4 sm:mr-2" />
-                                                <span className="hidden sm:inline">Save Changes</span>
-                                                <span className="sm:hidden">Save</span>
-                                            </>
-                                        )}
-                                    </Button>
-                                </div>
-                            )
+                            <SettingsFormActions
+                                isDirty={isDirty}
+                                isLoading={isLoading}
+                                onReset={handleReset}
+                            />
                         }
                     />
 
                     <BrandingForm control={form.control} currentTeam={currentTeam} />
 
-                    {/* General Information */}
-                    <Card className="bg-[#0F111A]/60 border-white/10 backdrop-blur-xl shadow-2xl shadow-purple-500/5">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-white">
-                                <LayoutDashboard className="w-5 h-5 text-purple-400" />
-                                General Information
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                <FormField
-                                    control={form.control}
-                                    name="teamName"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-gray-300">Team Name</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    className="text-white bg-black/20 border-purple-500/20 placeholder:text-gray-400 focus:border-purple-500/50"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
-                                    name="tag"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-gray-300">Team Tag (Max 5 chars)</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    maxLength={5}
-                                                    className="uppercase text-white bg-black/20 border-purple-500/20 placeholder:text-gray-400 focus:border-purple-500/50"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-
+                    <FormSection
+                        title="General Information"
+                        icon={LayoutDashboard}
+                    >
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                             <FormField
                                 control={form.control}
-                                name="bio"
+                                name="teamName"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-gray-300">Team Bio</FormLabel>
+                                        <FormLabel className="text-gray-300">Team Name</FormLabel>
                                         <FormControl>
-                                            <Textarea
+                                            <Input
                                                 {...field}
-                                                rows={4}
                                                 className="text-white bg-black/20 border-purple-500/20 placeholder:text-gray-400 focus:border-purple-500/50"
-                                                placeholder="Tell the world about your team..."
                                             />
                                         </FormControl>
                                         <FormMessage />
@@ -269,53 +195,98 @@ const TeamSettings = () => {
                                 )}
                             />
 
-                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                <FormField
-                                    control={form.control}
-                                    name="region"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel className="text-gray-300">Region</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                                                <FormControl>
-                                                    <SelectTrigger className="text-white bg-black/20 border-purple-500/20">
-                                                        <SelectValue placeholder="Select region" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent className="bg-[#0F111A] border-white/10 text-white">
-                                                    {["NA", "EU", "ASIA", "SEA", "SA", "OCE", "MENA", "INDIA"].map((reg) => (
-                                                        <SelectItem key={reg} value={reg} className="focus:bg-purple-500/10 cursor-pointer">{reg}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                            <FormField
+                                control={form.control}
+                                name="tag"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-gray-300">Team Tag (Max 5 chars)</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                {...field}
+                                                maxLength={5}
+                                                className="uppercase text-white bg-black/20 border-purple-500/20 placeholder:text-gray-400 focus:border-purple-500/50"
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
 
-                                <FormField
-                                    control={form.control}
-                                    name="isRecruiting"
-                                    render={({ field }) => (
-                                        <FormItem className="flex items-center justify-between p-4 border rounded-lg bg-black/20 border-purple-500/10">
-                                            <div className="space-y-0.5">
-                                                <FormLabel className="text-gray-300">Recruitment Status</FormLabel>
-                                                <p className="text-xs text-gray-500">Allow other players to see you're looking for members</p>
-                                            </div>
+                        <FormField
+                            control={form.control}
+                            name="bio"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-gray-300">Team Bio</FormLabel>
+                                    <FormControl>
+                                        <Textarea
+                                            {...field}
+                                            rows={4}
+                                            className="text-white bg-black/20 border-purple-500/20 placeholder:text-gray-400 focus:border-purple-500/50"
+                                            placeholder="Tell the world about your team..."
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                            <FormField
+                                control={form.control}
+                                name="region"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-gray-300">Region</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                             <FormControl>
-                                                <Switch
-                                                    checked={field.value || false}
-                                                    onCheckedChange={field.onChange}
-                                                />
+                                                <SelectTrigger className="text-white bg-black/20 border-purple-500/20">
+                                                    <SelectValue placeholder="Select region" />
+                                                </SelectTrigger>
                                             </FormControl>
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
+                                            <SelectContent className="bg-[#0F111A] border-white/10 text-white">
+                                                {["NA", "EU", "ASIA", "SEA", "SA", "OCE", "MENA", "INDIA"].map((reg) => (
+                                                    <SelectItem key={reg} value={reg} className="focus:bg-purple-500/10 cursor-pointer">{reg}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
-                    <SocialsForm control={form.control} />
+                            <FormField
+                                control={form.control}
+                                name="isRecruiting"
+                                render={({ field }) => (
+                                    <FormItem className="flex items-center justify-between p-4 border rounded-lg bg-black/20 border-purple-500/10">
+                                        <div className="space-y-0.5">
+                                            <FormLabel className="text-gray-300">Recruitment Status</FormLabel>
+                                            <p className="text-xs text-gray-500">Allow other players to see you're looking for members</p>
+                                        </div>
+                                        <FormControl>
+                                            <Switch
+                                                checked={field.value || false}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    </FormSection>
+
+                    <SocialLinksSection
+                        control={form.control}
+                        fields={{
+                            twitter: "twitter",
+                            discord: "discord",
+                            youtube: "youtube",
+                            instagram: "instagram"
+                        }}
+                    />
                 </form>
             </Form>
 

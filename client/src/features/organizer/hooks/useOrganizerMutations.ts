@@ -127,7 +127,7 @@ export const useUpdateStaffRoleMutation = (
 
 // --- TRANSFER OWNERSHIP ---
 export const useTransferOwnershipMutation = (
-    options?: UseMutationOptions<Organizer, AxiosError, { orgId: string, userId: string }>
+    options?: UseMutationOptions<boolean, AxiosError, { orgId: string, userId: string }>
 ) => {
     const invalidate = useInvalidateOrg();
 
