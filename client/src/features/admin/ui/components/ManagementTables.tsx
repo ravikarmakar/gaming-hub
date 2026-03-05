@@ -17,7 +17,7 @@ const ManagementTables = () => {
                     {["User", "Team", "Organizer"].map((tab) => (
                         <button
                             key={tab}
-                            onClick={() => setActiveTab(tab as any)}
+                            onClick={() => setActiveTab(tab as "User" | "Team" | "Organizer")}
                             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === tab
                                 ? "bg-purple-600 text-white shadow-lg shadow-purple-900/40"
                                 : "text-gray-400 hover:text-white"

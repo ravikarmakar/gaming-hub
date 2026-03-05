@@ -167,14 +167,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
                     }
                 } else if (notification.type === "ORGANIZATION_INVITE") {
                     const { useAuthStore } = await import("@/features/auth/store/useAuthStore");
-                    const { useOrganizerStore } = await import("@/features/organizer/store/useOrganizerStore");
 
                     await useAuthStore.getState().checkAuth();
 
                     const rawOrgId = notification.relatedData?.orgId;
                     const orgId = rawOrgId?._id ? String(rawOrgId._id) : rawOrgId ? String(rawOrgId) : null;
                     if (orgId) {
-                        await useOrganizerStore.getState().getOrgById(orgId);
+                        await import("@/features/organizer/api/organizerApi").then(api => api.organizerApi.getOrgById(orgId));
                     }
                 }
             }

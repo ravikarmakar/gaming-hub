@@ -6,21 +6,20 @@ export const ORG_ROLE = {
     CO_OWNER: "org:co_owner",
     MANAGER: "org:manager",
     STAFF: "org:staff",
-    PLAYER: "org:player",
 } as const;
 
 export const ORG_ACCESS = {
     dashboard: {
         scope: SCOPES.ORG,
-        roles: [ORG_ROLE.OWNER, ORG_ROLE.CO_OWNER, ORG_ROLE.MANAGER, ORG_ROLE.STAFF, ORG_ROLE.PLAYER],
+        roles: [ORG_ROLE.OWNER, ORG_ROLE.CO_OWNER, ORG_ROLE.MANAGER, ORG_ROLE.STAFF],
     },
     members: {
         scope: SCOPES.ORG,
-        roles: [ORG_ROLE.OWNER, ORG_ROLE.CO_OWNER, ORG_ROLE.MANAGER, ORG_ROLE.STAFF, ORG_ROLE.PLAYER],
+        roles: [ORG_ROLE.OWNER, ORG_ROLE.CO_OWNER, ORG_ROLE.MANAGER, ORG_ROLE.STAFF],
     },
     tournaments: {
         scope: SCOPES.ORG,
-        roles: [ORG_ROLE.OWNER, ORG_ROLE.CO_OWNER, ORG_ROLE.MANAGER, ORG_ROLE.STAFF, ORG_ROLE.PLAYER],
+        roles: [ORG_ROLE.OWNER, ORG_ROLE.CO_OWNER, ORG_ROLE.MANAGER, ORG_ROLE.STAFF],
     },
     createTournament: {
         scope: SCOPES.ORG,
@@ -36,7 +35,7 @@ export const ORG_ACCESS = {
     },
     notifications: {
         scope: SCOPES.ORG,
-        roles: [ORG_ROLE.OWNER, ORG_ROLE.CO_OWNER, ORG_ROLE.MANAGER, ORG_ROLE.STAFF, ORG_ROLE.PLAYER],
+        roles: [ORG_ROLE.OWNER, ORG_ROLE.CO_OWNER, ORG_ROLE.MANAGER, ORG_ROLE.STAFF],
     },
     settings: {
         scope: SCOPES.ORG,
@@ -64,12 +63,13 @@ export const ORG_ACTIONS = {
     updateOrg: "updateOrg",
     deleteOrg: "deleteOrg",
     transferOwnership: "transferOwnership",
+    leaveOrg: "leaveOrg",
 } as const;
 
 export const ORG_ACTIONS_ACCESS = {
     [ORG_ACTIONS.viewDashboardButton]: {
         scope: SCOPES.ORG,
-        roles: [ORG_ROLE.OWNER, ORG_ROLE.CO_OWNER, ORG_ROLE.MANAGER, ORG_ROLE.STAFF, ORG_ROLE.PLAYER],
+        roles: [ORG_ROLE.OWNER, ORG_ROLE.CO_OWNER, ORG_ROLE.MANAGER, ORG_ROLE.STAFF],
     },
     [ORG_ACTIONS.inviteMember]: {
         scope: SCOPES.ORG,
@@ -98,5 +98,9 @@ export const ORG_ACTIONS_ACCESS = {
     [ORG_ACTIONS.transferOwnership]: {
         scope: SCOPES.ORG,
         roles: [ORG_ROLE.OWNER],
+    },
+    [ORG_ACTIONS.leaveOrg]: {
+        scope: SCOPES.ORG,
+        roles: [ORG_ROLE.CO_OWNER, ORG_ROLE.MANAGER, ORG_ROLE.STAFF],
     },
 };

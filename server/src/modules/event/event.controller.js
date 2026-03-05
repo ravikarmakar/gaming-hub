@@ -52,7 +52,7 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
       (r) =>
         r.scope === "org" &&
         r.scopeModel === "Organizer" &&
-        (r.role === "org:owner" || r.role === "org:manager") &&
+        (r.role === Roles.ORG.OWNER || r.role === Roles.ORG.CO_OWNER || r.role === Roles.ORG.MANAGER) &&
         r.scopeId.toString() === user.orgId.toString()
     );
     if (!hasAuth) {
@@ -499,7 +499,7 @@ export const closeRegistration = TryCatchHandler(async (req, res) => {
       (r.scope === Scopes.PLATFORM && r.role === Roles.PLATFORM.SUPER_ADMIN) ||
       (r.scope === "org" &&
         r.scopeModel === "Organizer" &&
-        (r.role === "org:owner" || r.role === "org:manager") &&
+        (r.role === Roles.ORG.OWNER || r.role === Roles.ORG.CO_OWNER || r.role === Roles.ORG.MANAGER) &&
         r.scopeId.toString() === event.orgId.toString())
   );
   if (!isAuthorized) throw new CustomError("Not authorized to close registration for this event", 403);
@@ -535,7 +535,7 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
         (r.scope === Scopes.PLATFORM && r.role === Roles.PLATFORM.SUPER_ADMIN) ||
         (r.scope === "org" &&
           r.scopeModel === "Organizer" &&
-          (r.role === "org:owner" || r.role === "org:manager") &&
+          (r.role === Roles.ORG.OWNER || r.role === Roles.ORG.CO_OWNER || r.role === Roles.ORG.MANAGER) &&
           r.scopeId.toString() === event.orgId.toString())
     );
     if (!isAuthorized) {
@@ -670,7 +670,7 @@ export const deleteEvent = TryCatchHandler(async (req, res) => {
       (r.scope === Scopes.PLATFORM && r.role === Roles.PLATFORM.SUPER_ADMIN) ||
       (r.scope === "org" &&
         r.scopeModel === "Organizer" &&
-        (r.role === "org:owner" || r.role === "org:manager") &&
+        (r.role === Roles.ORG.OWNER || r.role === Roles.ORG.CO_OWNER || r.role === Roles.ORG.MANAGER) &&
         r.scopeId.toString() === event.orgId.toString())
   );
   if (!isAuthorized) throw new CustomError("Not authorized to delete this event", 403);
@@ -751,7 +751,7 @@ export const startEvent = TryCatchHandler(async (req, res, next) => {
     (r) =>
       r.scope === "org" &&
       r.scopeModel === "Organizer" &&
-      (r.role === "org:owner" || r.role === "org:manager") &&
+      (r.role === Roles.ORG.OWNER || r.role === Roles.ORG.CO_OWNER || r.role === Roles.ORG.MANAGER) &&
       r.scopeId.toString() === event.orgId.toString()
   );
   if (!isAuthorized) throw new CustomError("Not authorized to start this event", 403);
@@ -790,7 +790,7 @@ export const finishEvent = TryCatchHandler(async (req, res, next) => {
     (r) =>
       r.scope === "org" &&
       r.scopeModel === "Organizer" &&
-      (r.role === "org:owner" || r.role === "org:manager") &&
+      (r.role === Roles.ORG.OWNER || r.role === Roles.ORG.CO_OWNER || r.role === Roles.ORG.MANAGER) &&
       r.scopeId.toString() === event.orgId.toString()
   );
   if (!isAuthorized) throw new CustomError("Not authorized to finish this event", 403);

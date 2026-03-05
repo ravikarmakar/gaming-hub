@@ -8,6 +8,7 @@ import { withOptionalTransaction } from "../../shared/utils/withOptionalTransact
 import { invalidateCacheWithRetry } from "../../shared/utils/cache.js";
 import { logger } from "../../shared/utils/logger.js";
 import { getStrategy } from "./target.strategy.js";
+import { handleJoinRequestService } from "./join-request.service.js";
 
 // @desc    Send a request to join a Team, Organization, or Event
 // @route   POST /api/v1/teams/:teamId/join-request
@@ -141,92 +142,7 @@ export const handleJoinRequest = TryCatchHandler(async (req, res, next) => {
         throw new CustomError("Invalid action. Use 'accepted' or 'rejected'", 400);
     }
 
-    const { strategyResult, targetModel } = await withOptionalTransaction(async (session) => {
-        const jrQuery = JoinRequest.findById(requestId).populate("target");
-        if (session) jrQuery.session(session);
-        const joinRequest = await jrQuery;
-        if (!joinRequest) {
-            throw new CustomError("Join request not found", 404);
-        }
-
-        if (joinRequest.status !== "pending") {
-            throw new CustomError(`Request has already been ${joinRequest.status}`, 400);
-        }
-
-        let strategyResult = null;
-        const strategy = getStrategy(joinRequest.targetModel);
-
-        if (action === "accepted") {
-            // strategy handles specific logic (added to roster, notify, etc)
-            strategyResult = await strategy.acceptJoinRequest(joinRequest.requester, joinRequest.target._id, userId, session);
-
-            joinRequest.status = "accepted";
-            joinRequest.handledBy = userId;
-            joinRequest.handledAt = new Date();
-            await joinRequest.save({ session });
-
-            // Auto-reject other pending requests for same targetModel (Team/Org)
-            if (["Team", "Organizer"].includes(joinRequest.targetModel)) {
-                await JoinRequest.updateMany(
-                    {
-                        requester: joinRequest.requester,
-                        targetModel: joinRequest.targetModel,
-                        status: "pending",
-                        _id: { $ne: requestId }
-                    },
-                    {
-                        $set: {
-                            status: "rejected",
-                            message: `User has joined another ${joinRequest.targetModel.toLowerCase()}`,
-                            handledBy: userId,
-                            handledAt: new Date()
-                        }
-                    },
-                    { session }
-                );
-            }
-        } else {
-            joinRequest.status = "rejected";
-            joinRequest.handledBy = userId;
-            joinRequest.handledAt = new Date();
-            await joinRequest.save({ session });
-
-            await createNotification({
-                recipient: joinRequest.requester,
-                sender: userId,
-                type: "REQUEST_DECLINED",
-                content: {
-                    title: "Request Declined",
-                    message: `Your request for ${joinRequest.targetModel.toLowerCase()} access was declined.`,
-                },
-                relatedData: { targetId: joinRequest.target._id, model: joinRequest.targetModel },
-            }, { session });
-        }
-
-        return { strategyResult, targetModel: joinRequest.targetModel };
-    });
-
-    // Post-transaction consistency operations
-    if (action === "accepted" && strategyResult) {
-        if (strategyResult.cacheKeys?.length > 0) {
-            invalidateCacheWithRetry(strategyResult.cacheKeys).catch(err => logger.warn(`Cache invalidation failed: ${err.message}`));
-        }
-
-        if (strategyResult.socketEventData) {
-            emitMemberJoined(strategyResult.socketEventData.teamId, strategyResult.socketEventData.memberData);
-
-            // Notify the requester to update their own profile/dashboard
-            try {
-                const { emitProfileUpdate } = await import("../user/user.socket.js");
-                emitProfileUpdate(joinRequest.requester, {
-                    teamId: strategyResult.socketEventData.teamId,
-                    action: "joined"
-                });
-            } catch (err) {
-                logger.warn("Failed to emit profile update for join request requester:", err.message);
-            }
-        }
-    }
+    const { strategyResult } = await handleJoinRequestService(requestId, action, userId);
 
     res.status(200).json({
         success: true,

@@ -1,14 +1,13 @@
-import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import {
   Users,
   Trophy,
-  BarChart2,
   Bell,
   LayoutDashboard,
   PlusCircle,
   Settings,
   UserPlus,
+  MessageSquare,
 } from "lucide-react";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -18,9 +17,10 @@ import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { ORG_ACCESS } from "@/features/organizer/lib/access";
 import { useFilteredNavigation } from "@/hooks/useFilteredNavigation";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
+import { useGetOrgByIdQuery } from "@/features/organizer/hooks/useOrganizerQueries";
 import { OrganizerLoading } from "../components/OrganizerLoading";
 import { OrganizerError } from "../components/OrganizerError";
+import { useOrganizerSync } from "../../hooks/useOrganizerSync";
 
 const organizerSidebarLinks = [
   {
@@ -58,10 +58,10 @@ const organizerSidebarLinks = [
     access: ORG_ACCESS.joinRequests,
   },
   {
-    label: "Analytics",
-    icon: BarChart2,
-    href: ORGANIZER_ROUTES.ANALYTICS,
-    access: ORG_ACCESS.analytics,
+    label: "Chat",
+    icon: MessageSquare,
+    href: ORGANIZER_ROUTES.CHAT,
+    access: ORG_ACCESS.dashboard,
   },
   {
     label: "Notifications",
@@ -80,19 +80,19 @@ const organizerSidebarLinks = [
 const OrganizerLayout = () => {
   const filteredLinks = useFilteredNavigation(organizerSidebarLinks);
 
-  // Note: Initial auth check and org-dashboard access are now handled by 
-  // RoleGuard in App.tsx and ProtectedRoute, so we can simplify this.
   const { user } = useAuthStore();
-  const { getOrgById, isLoading, error, currentOrg, clearError } = useOrganizerStore();
+  const {
+    data: orgData,
+    isLoading,
+    error,
+    refetch
+  } = useGetOrgByIdQuery(user?.orgId as string);
 
-  useEffect(() => {
-    if (user?.orgId) {
-      getOrgById(user.orgId);
-    }
-    return () => {
-      clearError();
-    }
-  }, [user?.orgId, getOrgById, clearError]);
+  const currentOrg = orgData?.data;
+  const orgId = user?.orgId as string;
+
+  // 1. Join Socket.IO room & listen to incoming events cleanly
+  useOrganizerSync(orgId);
 
   return (
     <SidebarProvider>
@@ -109,8 +109,8 @@ const OrganizerLayout = () => {
               <OrganizerLoading />
             ) : error && !currentOrg ? (
               <OrganizerError
-                message={error}
-                onRetry={() => user?.orgId && getOrgById(user.orgId)}
+                message={error.message || "Failed to load organization"}
+                onRetry={() => refetch()}
               />
             ) : (
               <Outlet />

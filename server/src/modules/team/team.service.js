@@ -310,16 +310,19 @@ export const deleteTeamService = async (teamId) => {
   const team = await Team.findOne({ _id: teamId, isDeleted: false });
   if (!team) throw new CustomError("Team not found", 404);
 
-  // 1. Set teamId = null and remove team roles for all team members
   const memberIds = team.teamMembers.map((member) => member.user);
-  await UserGateway.bulkRemoveTeamFromUsers(memberIds, team._id);
 
-  // 2. Soft delete the team
-  await Team.findByIdAndUpdate(team._id, {
-    $set: {
-      isDeleted: true,
-      deletedAt: new Date()
-    }
+  await withOptionalTransaction(async (session) => {
+    // 1. Set teamId = null and remove team roles for all team members
+    await UserGateway.bulkRemoveTeamFromUsers(memberIds, team._id, session);
+
+    // 2. Soft delete the team
+    await Team.findByIdAndUpdate(team._id, {
+      $set: {
+        isDeleted: true,
+        deletedAt: new Date()
+      }
+    }, { session });
   });
 
   // 3. Invalidate Redis cache for all members
@@ -474,10 +477,16 @@ export const manageTeamStaffService = async (teamId, memberId, action) => {
 
       // Add Manager Role to User
       await UserGateway.updateMemberSystemRole(memberId, team._id, Roles.TEAM.MANAGER, session);
+      // SYNC: Update the team document roster too
+      team.teamMembers[memberIndex].roleInTeam = "manager";
+      await team.save({ session });
 
     } else if (action === "demote") {
       // Remove Manager Role
       await UserGateway.updateMemberSystemRole(memberId, team._id, Roles.TEAM.PLAYER, session);
+      // SYNC: Update the team document roster too
+      team.teamMembers[memberIndex].roleInTeam = "player";
+      await team.save({ session });
     }
 
     return { earlyReturn: false, teamId: team._id, team };
@@ -559,6 +568,11 @@ export const manageMemberRoleService = async (teamId, memberId, role) => {
 
     member.roleInTeam = role;
     await team.save({ session });
+
+    // Note: We DO NOT sync the user's system role here (e.g. Roles.TEAM.PLAYER).
+    // The system roles (manager, owner) are managed by dedicated services (manageTeamStaffService, etc)
+    // and should not be downgraded when a user simply changes their in-game role (e.g. igl to support).
+
     return team;
   });
 
@@ -906,15 +920,17 @@ export const removeMemberFromTeam = async ({ teamId, userId, session = null, act
   const memberObj = team.teamMembers.find(m => m.user.toString() === userId.toString());
   const memberName = memberObj?.username || "Unknown";
 
-  // 1. Remove from Team Roster
-  await Team.findByIdAndUpdate(
-    teamId,
-    { $pull: { teamMembers: { user: userId } } },
-    { session }
-  );
+  await withOptionalTransaction(async (session) => {
+    // 1. Remove from Team Roster
+    await Team.findByIdAndUpdate(
+      teamId,
+      { $pull: { teamMembers: { user: userId } } },
+      { session }
+    );
 
-  // 2. Clear User Team Data & Roles
-  await UserGateway.removeTeamFromUser(userId, teamId, session);
+    // 2. Clear User Team Data & Roles
+    await UserGateway.removeTeamFromUser(userId, teamId, session);
+  });
 
   // 3. Cache Invalidation (with retry logic)
   if (!session) {
@@ -1010,7 +1026,7 @@ export const acceptJoinRequest = async (requesterId, teamId, handledBy, session 
 
   const responseData = await getTransformedTeam(teamId, session);
 
-  const socketEventData = {
+  const socketData = {
     teamId,
     memberData: {
       userId: requesterId,
@@ -1022,7 +1038,7 @@ export const acceptJoinRequest = async (requesterId, teamId, handledBy, session 
 
   return {
     responseData,
-    socketEventData,
+    socketData,
     requesterId,
     teamId,
     cacheKeys: [`user_profile:${requesterId}`, `team_details:${teamId}`]

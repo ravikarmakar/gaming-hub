@@ -2,9 +2,13 @@ import mongoose from "mongoose";
 
 const chatSchema = new mongoose.Schema(
     {
-        team: {
+        targetId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Team",
+            required: true,
+            index: true,
+        },
+        scope: {
+            type: String,
             required: true,
             index: true,
         },
@@ -23,7 +27,6 @@ const chatSchema = new mongoose.Schema(
         },
         senderRole: {
             type: String,
-            enum: ["owner", "manager", "member"],
             default: "member",
         },
         content: {
@@ -47,8 +50,8 @@ const chatSchema = new mongoose.Schema(
     }
 );
 
-// Index for fetching message history efficiently
-chatSchema.index({ team: 1, createdAt: -1 });
+// Index for fetching message history efficiently across any scope
+chatSchema.index({ targetId: 1, scope: 1, createdAt: -1 });
 
 const Chat = mongoose.models.Chat || mongoose.model("Chat", chatSchema);
 

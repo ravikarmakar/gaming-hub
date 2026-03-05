@@ -1,5 +1,5 @@
 import express from "express";
-import { isAuthenticated } from "../../shared/middleware/auth.middleware.js";
+import { isAuthenticated, isVerified } from "../../shared/middleware/auth.middleware.js";
 import {
     getMyNotifications,
     markAsRead,
@@ -12,7 +12,7 @@ import {
 const router = express.Router();
 
 // All notification routes are protected
-router.use(isAuthenticated);
+router.use(isAuthenticated, isVerified);
 
 router.get("/", getMyNotifications);
 router.get("/org/:orgId", getOrgNotifications);

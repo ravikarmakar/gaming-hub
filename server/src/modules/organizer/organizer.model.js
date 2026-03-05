@@ -20,15 +20,11 @@ const organizerSchema = new mongoose.Schema(
       maxlength: 100,
     },
     slug: { type: String, lowercase: true, trim: true },
-    email: {
+    region: {
       type: String,
       required: true,
       trim: true,
-      lowercase: true,
-      match: [
-        /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/,
-        "Please enter valid email",
-      ],
+      minlength: 2,
     },
     tag: {
       type: String,

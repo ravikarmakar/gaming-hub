@@ -9,7 +9,7 @@ import { useJoinRequestStore } from '@/features/teams/store/useJoinRequestStore'
 import { useTeamManagementStore } from '@/features/teams/store/useTeamManagementStore';
 import { useSocket } from '@/contexts/SocketContext';
 import { TeamLoading } from './TeamLoading';
-import { ConfirmActionDialog } from './ConfirmActionDialog';
+import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 
 export const JoinRequestsList: React.FC = () => {
     const {

@@ -95,6 +95,6 @@ export const acceptJoinRequest = async (requesterId, eventId, handledBy, session
     responseData: null,
     socketEventData: null,
     requesterId,
-    cacheKeys: []
+    cacheKeys: [`user_profile:${requesterId}`]
   };
 };

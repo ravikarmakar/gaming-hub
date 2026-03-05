@@ -29,8 +29,10 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
     req.cookies.accessToken ||
     (req.headers.authorization && req.headers.authorization.split(" ")[1]);
 
-  if (!accessToken)
+  if (!accessToken) {
+    console.log("[AUTH] No token provided");
     return next(new CustomError("Unauthorized: No token provided", 401, AUTH_ERRORS.AUTH_TOKEN_REQUIRED));
+  }
 
   try {
     const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
@@ -62,8 +64,10 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
         return next(new CustomError("Authentication service unavailable. Please try again.", 503, AUTH_ERRORS.AUTH_SERVICE_UNAVAILABLE));
       }
 
-      if (isBlacklisted)
+      if (isBlacklisted) {
+        console.log("[AUTH] Token blacklisted");
         return next(new CustomError("Token blacklisted! Please login again", 401, AUTH_ERRORS.AUTH_TOKEN_BLACKLISTED));
+      }
 
       // Token is valid (not blacklisted). Add to L1 cache.
       blacklistCache.set(accessToken, Date.now() + BLACKLIST_L1_TTL);
@@ -111,10 +115,13 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
     next();
   } catch (error) {
     if (error.name === "TokenExpiredError") {
+      console.log("[AUTH] Token expired");
       return next(new CustomError("Unauthorized: Token has expired", 401, AUTH_ERRORS.AUTH_TOKEN_EXPIRED));
     } else if (error.name === "JsonWebTokenError") {
+      console.log("[AUTH] Invalid token:", error.message);
       return next(new CustomError("Unauthorized: Invalid token", 401, AUTH_ERRORS.AUTH_INVALID_TOKEN));
     } else {
+      console.log("[AUTH] Catch-all unauthorized:", error.message);
       return next(new CustomError("Unauthorized access", 401, AUTH_ERRORS.AUTH_UNAUTHORIZED));
     }
   }
@@ -151,6 +158,7 @@ export const optionalAuthenticate = TryCatchHandler(async (req, res, next) => {
 export const isVerified = TryCatchHandler(async (req, res, next) => {
   // Guard: Ensure req.user exists (should be set by isAuthenticated middleware)
   if (!req.user || !req.user.userId) {
+    console.log("[AUTH] isVerified: req.user missing");
     return next(new CustomError("Unauthorized: User not authenticated", 401, AUTH_ERRORS.AUTH_UNAUTHORIZED));
   }
 

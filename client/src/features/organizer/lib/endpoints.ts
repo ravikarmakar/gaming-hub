@@ -12,6 +12,7 @@ export const ORGANIZER_ENDPOINTS = {
     REMOVE_STAFF: (orgId: string, staffId: string) => `${ORGANIZER_BASE}/${orgId}/remove-staff/${staffId}`,
     GET_DASHBOARD_STATS: `${ORGANIZER_BASE}/dashboard`,
     TRANSFER_OWNERSHIP: (orgId: string) => `${ORGANIZER_BASE}/${orgId}/transfer-ownership`,
+    LEAVE_ORG: (orgId: string) => `${ORGANIZER_BASE}/${orgId}/leave`,
 
     // Join Requests
     JOIN_ORG: (orgId: string) => `${ORGANIZER_BASE}/${orgId}/join`,

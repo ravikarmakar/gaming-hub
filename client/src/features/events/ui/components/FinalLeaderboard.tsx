@@ -1,7 +1,7 @@
 
 import { Trophy, Medal, Star, Target } from "lucide-react";
 import { GlassCard } from "./ThemedComponents";
-import { Leaderboard } from "@/features/organizer/store/useTournamentStore";
+import { Leaderboard } from "@/features/tournaments/hooks/useTournamentStore";
 
 interface FinalLeaderboardProps {
     leaderboard: Leaderboard;

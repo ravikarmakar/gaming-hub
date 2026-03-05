@@ -90,10 +90,10 @@ const PlayerCard = React.forwardRef<HTMLDivElement, PlayerCardProps>(({ player, 
                         <span className="text-[10px] text-white/40 font-black">Team</span>
                     </div>
                     <span className="text-sm text-white font-bold">
-                        {(player as any).teamId ? (player as any).teamId.teamName : "Free Agent"}
+                        {typeof player.teamId !== "string" && player.teamId ? player.teamId.teamName : "Free Agent"}
                     </span>
-                    {(player as any).teamId && (
-                        <span className="text-[10px] font-bold text-violet-400/50">#{(player as any).teamId.tag}</span>
+                    {typeof player.teamId !== "string" && player.teamId && (
+                        <span className="text-[10px] font-bold text-violet-400/50">#{player.teamId.tag}</span>
                     )}
                 </div>
 

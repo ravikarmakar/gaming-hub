@@ -7,6 +7,7 @@ import {
   addStaff,
   updateStaffRole,
   removeStaff,
+  leaveOrg,
   getDashboardStats,
   transferOwnership,
   getOrganizers,
@@ -27,6 +28,7 @@ import {
 import { authorize } from "../../shared/middleware/rbac.middleware.js";
 import { Scopes, Roles } from "../../shared/constants/roles.js";
 import { upload } from "../../shared/middleware/multer.middleware.js";
+import { rateLimiter } from "../../shared/middleware/rateLimiter.middleware.js";
 import { validateRequest } from "../../shared/middleware/validate.middleware.js";
 import {
   createOrgValidation,
@@ -46,18 +48,19 @@ router.get("/", getOrganizers);
 router.use(isAuthenticated, isVerified);
 
 router.get("/dashboard", getDashboardStats);
-router.post("/create-org", authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), upload.single("image"), validateRequest(createOrgValidation), createOrg);
+router.post("/create-org", authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), rateLimiter({ limit: 5, timer: 60, key: "create-org" }), upload.single("image"), validateRequest(createOrgValidation), createOrg);
 
 router.get("/:orgId", authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER], { attachDoc: true }), getOrgDetails);
 
-router.put("/:orgId/update", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.MANAGER], { attachDoc: true }), upload.fields([{ name: "image", maxCount: 1 }, { name: "banner", maxCount: 1 }]), validateRequest(updateOrgValidation), updateOrg);
-router.delete("/:orgId/delete", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER], { attachDoc: true }), deleteOrg);
+router.put("/:orgId/update", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER], { attachDoc: true }), upload.fields([{ name: "image", maxCount: 1 }, { name: "banner", maxCount: 1 }]), validateRequest(updateOrgValidation), updateOrg);
+router.delete("/:orgId/delete", authorize(Scopes.ORG, [Roles.ORG.OWNER], { attachDoc: true }), deleteOrg);
 
 // Staff Management
-router.put("/:orgId/add-staff", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER], { attachDoc: true }), validateRequest(addStaffValidation), addStaff);
+router.put("/:orgId/add-staff", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER, Roles.ORG.MANAGER], { attachDoc: true }), rateLimiter({ limit: 10, timer: 60, key: "add-staff" }), validateRequest(addStaffValidation), addStaff);
 router.put("/:orgId/update-staff-role", authorize(Scopes.ORG, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER], { attachDoc: true }), validateRequest(updateStaffRoleValidation), updateStaffRole);
 router.put("/:orgId/transfer-ownership", authorize(Scopes.ORG, [Roles.ORG.OWNER], { attachDoc: true }), validateRequest(transferOwnershipValidation), transferOwnership);
 router.delete("/:orgId/remove-staff/:id", authorize(Scopes.ORG, [Roles.ORG.MANAGER, Roles.ORG.OWNER, Roles.ORG.CO_OWNER], { attachDoc: true }), validateRequest(removeStaffValidation), removeStaff);
+router.delete("/:orgId/leave", authorize(Scopes.ORG, [Roles.ORG.CO_OWNER, Roles.ORG.MANAGER, Roles.ORG.STAFF], { attachDoc: true }), leaveOrg);
 
 // Join Requests Management (Generic)
 router.post("/:orgId/join", authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), validateRequest(joinOrgValidation), sendJoinRequest);

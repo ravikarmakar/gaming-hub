@@ -2,8 +2,6 @@ import Organizer from "./organizer.model.js";
 import User from "../user/user.model.js";
 import { Roles, Scopes } from "../../shared/constants/roles.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
-import { createNotification } from "../notification/notification.controller.js";
-import { invalidateCacheWithRetry } from "../../shared/utils/cache.js";
 
 /**
  * Strategy methods for Join Requests and Invitations
@@ -46,7 +44,7 @@ export const acceptJoinRequest = async (requesterId, orgId, handledBy, session =
         $push: {
             roles: {
                 scope: Scopes.ORG,
-                role: Roles.ORG.PLAYER,
+                role: Roles.ORG.STAFF,
                 scopeId: orgId,
                 scopeModel: "Organizer",
             }
@@ -56,19 +54,19 @@ export const acceptJoinRequest = async (requesterId, orgId, handledBy, session =
     // Update Organizer Stats
     await Organizer.findByIdAndUpdate(orgId, { $inc: { "stats.memberCount": 1 } }, { session });
 
-    await createNotification({
-        recipient: requesterId,
-        sender: handledBy,
-        type: "ORG_JOIN_SUCCESS",
-        content: { title: "Request Accepted!", message: `Your request to join ${org.name} has been accepted. Welcome!` },
-        relatedData: { orgId: orgId },
-    }, { session });
+    // Emit only after transaction successfully commits (prevent race conditions/dirty db reads)
+    const payload = { org, memberIds: [requesterId], handledById: handledBy };
 
+    // Defer emission so the caller handles it post-transaction
     return {
-        responseData: null, // Organizers don't currently return transformed data here
-        socketEventData: null,
+        responseData: null,
+        socketData: {
+            org: org,
+            memberIds: [requesterId],
+            handledById: handledBy
+        },
         requesterId,
-        cacheKeys: [`user_profile:${requesterId}`, `org_details:${orgId}`]
+        cacheKeys: [`user_profile:${requesterId}`]
     };
 };
 
@@ -124,8 +122,16 @@ export const acceptInvitation = async (inviteeId, orgId, role, session = null) =
     // Update Organizer Stats
     await Organizer.findByIdAndUpdate(orgId, { $inc: { "stats.memberCount": 1 } }, { session });
 
+    // Return data for Post-commit socket emission
+    const payload = { org, memberIds: [inviteeId], handledById: org.ownerId };
+
     return {
         resultMessage: `You have successfully joined ${org.name}`,
-        cacheKeys: [`user_profile:${inviteeId}`, `org_details:${orgId}`]
+        socketData: {
+            org: org,
+            memberIds: [inviteeId],
+            handledById: org.ownerId
+        },
+        cacheKeys: [`user_profile:${inviteeId}`]
     };
 };

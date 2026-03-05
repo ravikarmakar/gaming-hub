@@ -11,6 +11,7 @@ const TeamChatPage = () => {
             <TeamChat
                 teamId={currentTeam._id}
                 teamName={currentTeam.teamName}
+                variant="page"
             />
         </div>
     );
