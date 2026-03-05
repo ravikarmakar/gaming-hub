@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import toast from "react-hot-toast";
+import { formatDate } from "@/lib/utils";
 import { useGetGroupDetailsQuery } from "../../hooks";
 
 export default function GroupTeamList() {
@@ -78,7 +79,7 @@ export default function GroupTeamList() {
                             <span className="text-xs font-bold uppercase tracking-wider">Scheduled Date</span>
                         </div>
                         <p className="text-xl font-bold">
-                            {new Date(group.matchTime).toLocaleDateString(undefined, { dateStyle: 'long' })}
+                            {formatDate(group.matchTime)}
                         </p>
                     </Card>
 

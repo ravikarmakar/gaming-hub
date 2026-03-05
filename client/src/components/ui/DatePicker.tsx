@@ -1,6 +1,6 @@
 import React from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatDateToLocalHTML } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 
 interface DatePickerProps {
@@ -9,11 +9,12 @@ interface DatePickerProps {
     label?: string;
     error?: string;
     icon?: React.ReactNode;
+    min?: string;
 }
 
-export function DatePicker({ value, onChange, label, error, icon }: DatePickerProps) {
-    // datetime-local expects YYYY-MM-DDTHH:mm
-    const formattedValue = value ? new Date(value).toISOString().slice(0, 16) : "";
+export function DatePicker({ value, onChange, label, error, icon, min }: DatePickerProps) {
+    // datetime-local expects YYYY-MM-DDTHH:mm in local time
+    const formattedValue = formatDateToLocalHTML(value);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
@@ -43,6 +44,7 @@ export function DatePicker({ value, onChange, label, error, icon }: DatePickerPr
                 <Input
                     type="datetime-local"
                     value={formattedValue}
+                    min={min}
                     onChange={handleInputChange}
                     className={cn(
                         "h-10 bg-white/5 border-white/10 text-sm text-white focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500/50 transition-all rounded-lg cursor-pointer",

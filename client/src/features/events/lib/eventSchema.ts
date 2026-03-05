@@ -6,22 +6,56 @@ const prizeDistributionItemSchema = z.object({
     label: z.string().optional(),
 });
 
+const roadmapItemSchema = z.object({
+    name: z.string().min(1, "Round name is required"),
+    title: z.string().min(1, "Round title is required"),
+    isFinale: z.boolean().optional(),
+    isLeague: z.boolean().optional(),
+    leagueType: z.enum(["12-teams", "18-teams"]).optional(),
+    grandFinaleType: z.string().optional(),
+    groups: z.string().optional(),
+});
+
 export const eventSchema = z.object({
-    title: z.string().min(3, "Mission title must be at least 3 characters"),
-    game: z.string().min(2, "Game title is mandatory"),
-    eventType: z.enum(["scrims", "tournament"]),
-    startDate: z.string().min(1, "Commencement date required"),
-    registrationEndsAt: z.string().min(1, "Registration lock date required"),
-    slots: z.string().min(1, "Slot count required").regex(/^\d+$/, "Must be a numeric value"),
+    title: z.string().min(3, "Tournament title must be at least 3 characters"),
+    game: z.string().min(2, "Game name is required"),
+    eventType: z.enum(["scrims", "tournament", "invited-tournament"]),
+    isPaid: z.boolean(),
+    startDate: z.string().min(1, "Start date is required"),
+    registrationEndsAt: z.string().min(1, "Registration deadline is required"),
+    slots: z.string().min(1, "Player/Team count is required").regex(/^\d+$/, "Must be a number"),
     category: z.enum(["solo", "duo", "squad"], {
-        errorMap: () => ({ message: "Select engagement format" }),
+        errorMap: () => ({ message: "Select tournament format" }),
     }),
     registrationMode: z.enum(["open", "invite-only"]),
-    prizePool: z.string().regex(/^\d*$/, "Must be numeric").optional(),
-    description: z.string().min(10, "Tactical description must be at least 10 characters"),
+    prizePool: z.union([z.string(), z.number()]).optional(),
+    entryFee: z.union([z.string(), z.number()]).optional(),
+    description: z.string().min(10, "Description must be at least 10 characters"),
     status: z.enum(["registration-open", "registration-closed", "live", "completed"]),
-    prizeDistribution: z.array(prizeDistributionItemSchema).min(1, "Reward matrix requires at least one entry"),
-    image: z.any().optional(),
+    prizeDistribution: z.array(prizeDistributionItemSchema).min(1, "Prize distribution is required"),
+    hasRoadmap: z.boolean().optional(),
+    roadmap: z.array(roadmapItemSchema).optional(),
+    hasInvitedTeams: z.boolean().optional(),
+    invitedTeams: z.array(z.object({
+        teamName: z.string().min(1, "Team name is required"),
+        email: z.string().email("Invalid email format").optional().or(z.literal("")),
+    })).optional(),
+    hasInvitedTeamsRoadmap: z.boolean().optional(),
+    invitedTeamsRoadmap: z.array(roadmapItemSchema).optional(),
+    image: z.any()
+        .refine((file) => {
+            if (!file || !(file instanceof File)) return true;
+            return file.size <= 10 * 1024 * 1024;
+        }, "File too large (max 10MB)")
+        .optional(),
+}).refine((data) => {
+    if (data.isPaid && !data.entryFee) {
+        return false;
+    }
+    return true;
+}, {
+    message: "Entry fee is required for paid events",
+    path: ["entryFee"],
 }).refine((data) => {
     const pool = Number(data.prizePool) || 0;
     const totalDistributed = data.prizeDistribution.reduce((acc, item) => acc + item.amount, 0);

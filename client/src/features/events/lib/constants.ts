@@ -7,6 +7,7 @@ export const registrationStatusOptions = [
 export const eventTypeOptions = [
     { value: "tournament", label: "Tournament" },
     { value: "scrims", label: "Scrims" },
+    { value: "invited-tournament", label: "Invited Tournament" },
 ];
 
 export const categoryOptions = [

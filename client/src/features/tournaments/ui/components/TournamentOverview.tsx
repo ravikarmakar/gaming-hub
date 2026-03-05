@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useEventStore } from "@/features/events/store/useEventStore";
+import { formatDate, formatCurrency } from "@/lib/utils";
 import { useGetRoundsQuery } from "../../hooks";
 
 export const TournamentOverview = () => {
@@ -68,7 +69,7 @@ export const TournamentOverview = () => {
                         </div>
                         <div>
                             <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Prize Pool</p>
-                            <h4 className="text-xl font-bold text-white">${stats.prizePool.toLocaleString()}</h4>
+                            <h4 className="text-xl font-bold text-white">₹{formatCurrency(stats.prizePool)}</h4>
                         </div>
                     </CardContent>
                 </Card>
@@ -133,7 +134,7 @@ export const TournamentOverview = () => {
                         <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
                             <span className="text-sm text-gray-400">Start Date</span>
                             <span className="text-sm font-bold text-white">
-                                {new Date(eventDetails.startDate).toLocaleDateString(undefined, { dateStyle: 'long' })}
+                                {formatDate(eventDetails.startDate)}
                             </span>
                         </div>
                         <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
@@ -159,7 +160,7 @@ export const TournamentOverview = () => {
                                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-tighter mb-1">
                                     {prize.label || `Rank ${prize.rank}`}
                                 </p>
-                                <p className="text-lg font-black text-white">${prize.amount.toLocaleString()}</p>
+                                <p className="text-lg font-black text-white">₹{formatCurrency(prize.amount)}</p>
                             </div>
                         ))}
                     </div>
