@@ -60,7 +60,7 @@ export const acceptJoinRequest = async (requesterId, eventId, handledBy, session
         ]
       }
     },
-    { $inc: { joinedSlots: 1 } },
+    { $inc: { joinedSlots: 1 }, $push: { registeredTeams: requester.teamId } },
     { new: true, session }
   );
 

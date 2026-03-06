@@ -26,11 +26,14 @@ import {
   RoadmapSection,
   InvitedTeamsRoadmapSection
 } from "../components/create-tournament";
+import { useCreateTournamentMutation } from "@/features/tournaments/hooks/useTournamentMutations";
 
 export default function CreateTournament() {
   const navigate = useNavigate();
   const { eventId } = useParams();
-  const { createEvent, updateEvent, deleteEvent, fetchEventDetailsById, eventDetails, isLoading } = useEventStore();
+  const { updateEvent, deleteEvent, fetchEventDetailsById, eventDetails, isLoading } = useEventStore();
+  const createTournamentMutation = useCreateTournamentMutation();
+  const isCreating = createTournamentMutation.isPending;
   const [isEditMode, setIsEditMode] = useState(false);
 
   const methods = useForm<EventFormValues>({
@@ -53,6 +56,65 @@ export default function CreateTournament() {
 
   const { handleSubmit, reset, setValue } = methods;
 
+  const fillDummyData = () => {
+    const now = new Date();
+    const deadline = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+    const start = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 days from now
+
+    reset({
+      title: "Pro Gaming Championship 2026",
+      game: "Free Fire",
+      eventType: "tournament",
+      isPaid: false,
+      status: "registration-open",
+      category: "squad",
+      registrationMode: "open",
+      hasRoadmap: true,
+      roadmap: [
+        { name: "Qualifiers", title: "Round 1" },
+        { name: "Semi Finals", title: "Round 2" },
+        { name: "Grand Finale", title: "Finals", isFinale: true }
+      ],
+      registrationEndsAt: formatDateToLocalHTML(deadline),
+      startDate: formatDateToLocalHTML(start),
+      slots: "100",
+      prizePool: "50000",
+      description: "Join the ultimate Pro Gaming Championship of 2026! Compete against the best teams for a massive prize pool and eternal glory. Registration is open for a limited time only.",
+      prizeDistribution: [
+        { rank: 1, amount: 25000, label: "Champion" },
+        { rank: 2, amount: 15000, label: "Runner Up" },
+        { rank: 3, amount: 10000, label: "3rd Place" }
+      ],
+      hasInvitedTeams: true,
+      invitedTeams: [
+        { teamName: "Team Alpha", email: "alpha@example.com" },
+        { teamName: "Team Beta", email: "beta@example.com" }
+      ],
+      hasInvitedTeamsRoadmap: true,
+      invitedTeamsRoadmap: [
+        { name: "Invited Group", title: "Round 1" },
+        { name: "Invited Finale", title: "Finals", isFinale: true }
+      ],
+    });
+    // @ts-ignore - Setting these manually since they are internal now
+    methods.setValue("roadmaps", [
+      {
+        type: "tournament", data: [
+          { name: "Qualifiers", title: "Round 1" },
+          { name: "Semi Finals", title: "Round 2" },
+          { name: "Grand Finale", title: "Finals", isFinale: true }
+        ]
+      },
+      {
+        type: "invitedTeams", data: [
+          { name: "Invited Group", title: "Round 1" },
+          { name: "Invited Finale", title: "Finals", isFinale: true }
+        ]
+      }
+    ]);
+    toast.success("Form filled with dummy data!");
+  };
+
   useEffect(() => {
     if (eventId) {
       setIsEditMode(true);
@@ -62,9 +124,8 @@ export default function CreateTournament() {
 
   useEffect(() => {
     if (isEditMode && eventDetails) {
-      const et = eventDetails.eventType as string;
-      const internalEventType = (et === "free-tournament" || et === "paid-tournament") ? "tournament" : et;
-      const internalIsPaid = et === "paid-tournament";
+      const internalEventType = eventDetails.eventType;
+      const internalIsPaid = !!eventDetails.isPaid;
 
       reset({
         title: eventDetails.title,
@@ -81,9 +142,11 @@ export default function CreateTournament() {
         description: eventDetails.description,
         status: eventDetails.registrationStatus as RegistrationStatus,
         prizeDistribution: eventDetails.prizeDistribution || [{ rank: 1, amount: 0, label: "Champion" }],
-        roadmap: eventDetails.roadmap || [],
+        roadmap: eventDetails.roadmaps?.find((r: any) => r.type === "tournament")?.data || [],
         hasInvitedTeams: !!eventDetails.invitedTeams?.length,
         invitedTeams: eventDetails.invitedTeams || [],
+        hasInvitedTeamsRoadmap: !!eventDetails.roadmaps?.find((r: any) => r.type === "invitedTeams")?.data?.length,
+        invitedTeamsRoadmap: eventDetails.roadmaps?.find((r: any) => r.type === "invitedTeams")?.data || [],
       });
       if (eventDetails.image) {
         setValue("image", eventDetails.image);
@@ -95,11 +158,8 @@ export default function CreateTournament() {
     try {
       const fd = new FormData();
 
-      // Determine backend eventType string
-      let backendEventType: string = data.eventType;
-      if (data.eventType === "tournament") {
-        backendEventType = data.isPaid ? "paid-tournament" : "free-tournament";
-      }
+      // Backend eventType remains as selected in form (scrims, tournament, invited-tournament)
+      const backendEventType = data.eventType;
 
       Object.entries(data).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -107,36 +167,44 @@ export default function CreateTournament() {
             fd.append("maxSlots", String(value));
             fd.append("slots", String(value));
           } else if (key === "prizeDistribution" || key === "roadmap" || key === "invitedTeams" || key === "invitedTeamsRoadmap") {
-            // Only append invitedTeams if hasInvitedTeams is true
             if (key === "invitedTeams" && !data.hasInvitedTeams) return;
-            // Only append invitedTeamsRoadmap if both are true
+
+            // Transform invitedTeams if they are objects with teamId
+            if (key === "invitedTeams" && Array.isArray(value)) {
+              const teamIds = value.map(t => (t.teamId || t._id || t));
+              fd.append(key, JSON.stringify(teamIds));
+              return;
+            }
+
             if (key === "invitedTeamsRoadmap" && (!data.hasInvitedTeams || !data.hasInvitedTeamsRoadmap)) return;
             fd.append(key, JSON.stringify(value));
           } else if (key === "image" && value instanceof File) {
             fd.append("image", value);
           } else if (key === "eventType") {
             fd.append(key, backendEventType.toLowerCase());
+          } else if (key === "isPaid") {
+            fd.append("isPaid", String(value));
           } else if (key === "category" || key === "status") {
             fd.append(key, String(value).toLowerCase());
-          } else if (key === "isPaid") {
-            // isPaid is a frontend helper, backend might not need it as a field
-            // but we can append it if necessary. For now, eventType carries the weight.
           } else if (key !== "image") {
             fd.append(key, String(value));
           }
         }
       });
 
-      let result;
       if (isEditMode && eventId) {
-        result = await updateEvent(eventId, fd);
+        const result = await updateEvent(eventId, fd);
+        if (result) {
+          toast.success("Tournament updated successfully!");
+          navigate(ORGANIZER_ROUTES.TOURNAMENTS, { replace: true });
+        }
       } else {
-        result = await createEvent(fd);
-      }
-
-      if (result) {
-        toast.success(isEditMode ? "Tournament updated successfully!" : "Tournament created successfully!");
-        navigate(ORGANIZER_ROUTES.TOURNAMENTS, { replace: true });
+        createTournamentMutation.mutate(fd, {
+          onSuccess: () => {
+            toast.success("Tournament created successfully!");
+            navigate(ORGANIZER_ROUTES.TOURNAMENTS, { replace: true });
+          }
+        });
       }
     } catch (error) {
       console.error("Submission error:", error);
@@ -183,10 +251,20 @@ export default function CreateTournament() {
             </div>
           )}
 
-          <div className="mb-8">
+          <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter mt-1">
               {isEditMode ? "Update Tournament" : "New Tournament"}
             </h1>
+            {!isEditMode && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={fillDummyData}
+                className="w-full md:w-auto border-purple-500/30 text-purple-400 hover:bg-purple-500/10 hover:text-purple-300 font-bold px-6 h-10 rounded-xl transition-all"
+              >
+                FILL DUMMY DATA
+              </Button>
+            )}
           </div>
 
           <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-8">
@@ -217,10 +295,10 @@ export default function CreateTournament() {
 
               <Button
                 type="submit"
-                disabled={methods.formState.isSubmitting || isLoading}
+                disabled={methods.formState.isSubmitting || isLoading || isCreating}
                 className="w-full md:w-[320px] h-14 bg-purple-600 hover:bg-purple-500 text-white font-black rounded-2xl flex items-center justify-center gap-2 shadow-glow hover:shadow-glow-lg transition-all"
               >
-                {(methods.formState.isSubmitting || isLoading) ? (
+                {(methods.formState.isSubmitting || isLoading || isCreating) ? (
                   <Loader2 className="animate-spin" />
                 ) : (
                   <>

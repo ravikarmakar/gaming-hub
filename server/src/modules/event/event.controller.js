@@ -142,6 +142,35 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
             return [];
           }
         })(),
+        hasRoadmap: req.body.hasRoadmap === 'true' || req.body.hasRoadmap === true,
+        roadmaps: (() => {
+          const roadmaps = [];
+          if (req.body.roadmap) {
+            try {
+              const data = typeof req.body.roadmap === 'string' ? JSON.parse(req.body.roadmap) : req.body.roadmap;
+              roadmaps.push({ type: "tournament", data });
+            } catch (e) { logger.error("Error parsing roadmap in createEvent:", e); }
+          }
+          if (req.body.invitedTeamsRoadmap) {
+            try {
+              const data = typeof req.body.invitedTeamsRoadmap === 'string' ? JSON.parse(req.body.invitedTeamsRoadmap) : req.body.invitedTeamsRoadmap;
+              roadmaps.push({ type: "invitedTeams", data });
+            } catch (e) { logger.error("Error parsing invitedTeamsRoadmap in createEvent:", e); }
+          }
+          return roadmaps;
+        })(),
+        hasInvitedTeams: req.body.hasInvitedTeams === 'true' || req.body.hasInvitedTeams === true,
+        invitedTeams: (() => {
+          if (!req.body.invitedTeams) return [];
+          try {
+            const teams = typeof req.body.invitedTeams === 'string' ? JSON.parse(req.body.invitedTeams) : req.body.invitedTeams;
+            // The user said "store the team id only". 
+            // If the incoming data is an array of objects like [{teamId: "..."}, ...], we should map it.
+            // If it's already an array of IDs, we use it directly.
+            return Array.isArray(teams) ? teams.map(t => (t.teamId || t._id || t)) : [];
+          } catch (e) { return []; }
+        })(),
+        registeredTeams: [],
       });
 
       res.status(201).json({
@@ -341,7 +370,7 @@ export const registerEvent = TryCatchHandler(async (req, res, next) => {
           registrationStatus: "registration-open",
           $expr: { $lt: ["$joinedSlots", "$maxSlots"] }
         },
-        { $inc: { joinedSlots: 1 } },
+        { $inc: { joinedSlots: 1 }, $push: { registeredTeams: team._id } },
         { new: true, session }
       );
 
@@ -568,7 +597,8 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
     const allowedFields = [
       "title", "game", "description", "startDate", "registrationEndsAt",
       "maxSlots", "registrationMode", "registrationStatus", "eventProgress",
-      "eventEndAt", "prizePool", "category", "eventType", "prizeDistribution"
+      "eventEndAt", "prizePool", "category", "eventType", "prizeDistribution",
+      "hasRoadmap", "roadmap", "hasInvitedTeams", "invitedTeams", "invitedTeamsRoadmap", "roadmaps", "registeredTeams"
     ];
 
     const updateData = {};
@@ -577,6 +607,40 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
         updateData[field] = req.body[field];
       }
     });
+
+    // Handle roadmaps consolidation in update
+    if (req.body.roadmap || req.body.invitedTeamsRoadmap) {
+      const roadmaps = event.roadmaps ? [...event.roadmaps] : [];
+
+      if (req.body.roadmap) {
+        try {
+          const data = typeof req.body.roadmap === 'string' ? JSON.parse(req.body.roadmap) : req.body.roadmap;
+          const idx = roadmaps.findIndex(r => r.type === "tournament");
+          if (idx !== -1) roadmaps[idx].data = data;
+          else roadmaps.push({ type: "tournament", data });
+        } catch (e) { logger.error("Error parsing roadmap in updateEvent:", e); }
+      }
+
+      if (req.body.invitedTeamsRoadmap) {
+        try {
+          const data = typeof req.body.invitedTeamsRoadmap === 'string' ? JSON.parse(req.body.invitedTeamsRoadmap) : req.body.invitedTeamsRoadmap;
+          const idx = roadmaps.findIndex(r => r.type === "invitedTeams");
+          if (idx !== -1) roadmaps[idx].data = data;
+          else roadmaps.push({ type: "invitedTeams", data });
+        } catch (e) { logger.error("Error parsing invitedTeamsRoadmap in updateEvent:", e); }
+      }
+
+      updateData.roadmaps = roadmaps;
+      delete updateData.roadmap;
+      delete updateData.invitedTeamsRoadmap;
+    }
+
+    if (updateData.invitedTeams) {
+      try {
+        const teams = typeof updateData.invitedTeams === 'string' ? JSON.parse(updateData.invitedTeams) : updateData.invitedTeams;
+        updateData.invitedTeams = Array.isArray(teams) ? teams.map(t => (t.teamId || t._id || t)) : [];
+      } catch (e) { delete updateData.invitedTeams; }
+    }
 
     if (imageUrl) updateData.image = imageUrl;
     if (imageFileId) updateData.imageFileId = imageFileId;
@@ -635,6 +699,32 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
         logger.error("Error parsing prizeDistribution in updateEvent:", e);
         delete updateData.prizeDistribution; // Don't update with invalid data
       }
+    }
+
+    if (updateData.hasRoadmap !== undefined) updateData.hasRoadmap = String(updateData.hasRoadmap) === 'true';
+    if (updateData.hasInvitedTeams !== undefined) updateData.hasInvitedTeams = String(updateData.hasInvitedTeams) === 'true';
+    if (updateData.hasInvitedTeamsRoadmap !== undefined) updateData.hasInvitedTeamsRoadmap = String(updateData.hasInvitedTeamsRoadmap) === 'true';
+
+    ['roadmap', 'invitedTeams', 'invitedTeamsRoadmap'].forEach(key => {
+      if (updateData[key]) {
+        try {
+          updateData[key] = typeof updateData[key] === 'string' ? JSON.parse(updateData[key]) : updateData[key];
+        } catch (e) {
+          delete updateData[key];
+        }
+      }
+    });
+
+    // Disallow editing roadmap once event has started
+    if (event.eventProgress !== "pending") {
+      delete updateData.roadmap;
+      delete updateData.hasRoadmap;
+      delete updateData.invitedTeams;
+      delete updateData.hasInvitedTeams;
+      delete updateData.invitedTeamsRoadmap;
+      delete updateData.hasInvitedTeamsRoadmap;
+      delete updateData.roadmaps;
+      delete updateData.registeredTeams;
     }
 
     const updatedEvent = await Event.findByIdAndUpdate(eventId, updateData, {
@@ -724,10 +814,10 @@ export const unregisterEvent = TryCatchHandler(async (req, res, next) => {
       throw new CustomError("You are not registered for this event", 400);
     }
 
-    // Atomic Slot Decrement
+    // Atomic Slot Decrement and Remove from registeredTeams
     await Event.updateOne(
       { _id: eventId, joinedSlots: { $gt: 0 } },
-      { $inc: { joinedSlots: -1 } },
+      { $inc: { joinedSlots: -1 }, $pull: { registeredTeams: user.teamId } },
       { session }
     );
   });

@@ -19,9 +19,10 @@ const eventSchema = new mongoose.Schema(
 
     eventType: {
       type: String,
-      enum: ["scrims", "tournament"],
+      enum: ["scrims", "tournament", "invited-tournament"],
       required: true,
     },
+    isPaid: { type: Boolean, default: false },
 
     category: {
       type: String,
@@ -89,6 +90,26 @@ const eventSchema = new mongoose.Schema(
         amount: { type: Number, required: true },
         label: { type: String, default: "" },
       },
+    ],
+    hasRoadmap: { type: Boolean, default: false },
+    hasInvitedTeams: { type: Boolean, default: false },
+    roadmaps: [
+      {
+        type: { type: String, enum: ["tournament", "invitedTeams"], required: true },
+        data: { type: mongoose.Schema.Types.Mixed, default: [] }
+      }
+    ],
+    invitedTeams: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Team",
+      }
+    ],
+    registeredTeams: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Team",
+      }
     ],
   },
   { timestamps: true }

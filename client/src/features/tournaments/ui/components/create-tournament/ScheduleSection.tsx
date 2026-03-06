@@ -17,23 +17,33 @@ export const ScheduleSection = () => {
             <SectionHeader title="Schedule & Slots" icon={Clock} />
 
             <Controller
-                name="startDate"
+                name="registrationEndsAt"
                 control={control}
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Start Date (DD/MM/YYYY)</Label>
-                        <DatePicker value={field.value} onChange={field.onChange} min={minDate} />
+                        <Label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Registration Deadline (DD/MM/YYYY)</Label>
+                        <DatePicker
+                            value={field.value}
+                            onChange={field.onChange}
+                            min={minDate}
+                            error={fieldState.error?.message}
+                        />
                     </div>
                 )}
             />
 
             <Controller
-                name="registrationEndsAt"
+                name="startDate"
                 control={control}
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                     <div className="space-y-2">
-                        <Label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Registration Deadline (DD/MM/YYYY)</Label>
-                        <DatePicker value={field.value} onChange={field.onChange} min={minDate} />
+                        <Label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Tournament Start Date (DD/MM/YYYY)</Label>
+                        <DatePicker
+                            value={field.value}
+                            onChange={field.onChange}
+                            min={minDate}
+                            error={fieldState.error?.message}
+                        />
                     </div>
                 )}
             />

@@ -3,6 +3,7 @@ import { axiosInstance } from '@/lib/axios';
 import { handleApiError } from '@/lib/api-helper';
 import { tournamentKeys } from './useTournamentQueries';
 import toast from 'react-hot-toast'; // Assuming toast is used for error/success reporting in UI normally handled by components, but we'll return promises so components can handle it
+import { tournamentApi } from '../api/tournamentApi';
 
 // ROUND MUTATIONS
 export const useCreateRoundMutation = () => {
@@ -105,8 +106,8 @@ export const useUpdateGroupMutation = () => {
     });
 };
 
-// EVENT MUTATIONS
-export const useStartEventMutation = () => {
+// TOURNAMENT MUTATIONS
+export const useStartTournamentMutation = () => {
     return useMutation({
         mutationFn: async (eventId: string) => {
             await axiosInstance.post(`/events/${eventId}/start`);
@@ -165,6 +166,30 @@ export const useUpdateGroupResultsMutation = () => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.groupDetails(variables.groupId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
             toast.success("Results submitted successfully");
+        }
+    });
+};
+
+export const useCreateTournamentMutation = () => {
+    return useMutation({
+        mutationFn: tournamentApi.createTournament,
+        onSuccess: () => {
+            // Success handled by component
+        },
+        onError: (err) => {
+            toast.error(handleApiError(err, "Failed to create tournament"));
+        }
+    });
+};
+
+export const useUpdateTournamentMutation = () => {
+    return useMutation({
+        // mutationFn: tournamentApi.updateTournament,
+        onSuccess: () => {
+            // Success handled by component
+        },
+        onError: (err) => {
+            toast.error(handleApiError(err, "Failed to update tournament"));
         }
     });
 };

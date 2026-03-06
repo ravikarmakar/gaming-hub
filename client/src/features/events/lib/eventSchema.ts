@@ -14,6 +14,7 @@ const roadmapItemSchema = z.object({
     leagueType: z.enum(["12-teams", "18-teams"]).optional(),
     grandFinaleType: z.string().optional(),
     groups: z.string().optional(),
+    // groupSize: z.union([z.string(), z.number()]).optional(),
 });
 
 export const eventSchema = z.object({
@@ -42,6 +43,10 @@ export const eventSchema = z.object({
     })).optional(),
     hasInvitedTeamsRoadmap: z.boolean().optional(),
     invitedTeamsRoadmap: z.array(roadmapItemSchema).optional(),
+    roadmaps: z.array(z.object({
+        type: z.enum(["tournament", "invitedTeams"]),
+        data: z.array(roadmapItemSchema)
+    })).optional(),
     image: z.any()
         .refine((file) => {
             if (!file || !(file instanceof File)) return true;
@@ -63,6 +68,13 @@ export const eventSchema = z.object({
 }, {
     message: "Total reward distribution exceeds total bounty",
     path: ["prizeDistribution"],
+}).refine((data) => {
+    const start = new Date(data.startDate);
+    const end = new Date(data.registrationEndsAt);
+    return end < start;
+}, {
+    message: "Tournament must start after the registration deadline",
+    path: ["startDate"],
 });
 
 export type EventFormValues = z.infer<typeof eventSchema>;

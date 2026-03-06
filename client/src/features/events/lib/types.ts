@@ -19,6 +19,7 @@ export interface Event {
     title: string;
     game: string;
     eventType: EventType;
+    isPaid?: boolean;
     category: Category;
     startDate: string;
     registrationEndsAt: string;
@@ -40,8 +41,10 @@ export interface Event {
     prizeDistribution?: Array<{ rank: number; amount: number; label?: string }>;
     location?: string; // Add location for UI compatibility
     roadmap?: RoadmapItem[];
-    invitedTeams?: Array<{ teamName: string; email?: string }>;
+    invitedTeams?: Array<{ teamName: string; email?: string; teamId?: string; _id?: string }>;
     invitedTeamsRoadmap?: RoadmapItem[];
+    roadmaps?: Array<{ type: "tournament" | "invitedTeams"; data: RoadmapItem[] }>;
+    registeredTeams?: string[];
     createdAt?: string;
     updatedAt?: string;
     attendees?: number; // UI compatibility
