@@ -7,8 +7,8 @@ const prizeDistributionItemSchema = z.object({
 });
 
 const roadmapItemSchema = z.object({
-    name: z.string().min(1, "Round name is required"),
-    title: z.string().min(1, "Round title is required"),
+    name: z.string().optional(),
+    title: z.string().optional(),
     isFinale: z.boolean().optional(),
     isLeague: z.boolean().optional(),
     leagueType: z.enum(["12-teams", "18-teams"]).optional(),
@@ -23,7 +23,7 @@ export const eventSchema = z.object({
     eventType: z.enum(["scrims", "tournament", "invited-tournament"]),
     isPaid: z.boolean(),
     startDate: z.string().min(1, "Start date is required"),
-    registrationEndsAt: z.string().min(1, "Registration deadline is required"),
+    registrationEndsAt: z.string().optional(),
     slots: z.string().min(1, "Player/Team count is required").regex(/^\d+$/, "Must be a number"),
     category: z.enum(["solo", "duo", "squad"], {
         errorMap: () => ({ message: "Select tournament format" }),
@@ -31,6 +31,8 @@ export const eventSchema = z.object({
     registrationMode: z.enum(["open", "invite-only"]),
     prizePool: z.union([z.string(), z.number()]).optional(),
     entryFee: z.union([z.string(), z.number()]).optional(),
+    matchCount: z.union([z.string(), z.number()]).optional(),
+    map: z.array(z.string()).optional(),
     description: z.string().min(10, "Description must be at least 10 characters"),
     status: z.enum(["registration-open", "registration-closed", "live", "completed"]),
     prizeDistribution: z.array(prizeDistributionItemSchema).min(1, "Prize distribution is required"),
@@ -41,7 +43,6 @@ export const eventSchema = z.object({
         teamName: z.string().min(1, "Team name is required"),
         email: z.string().email("Invalid email format").optional().or(z.literal("")),
     })).optional(),
-    hasInvitedTeamsRoadmap: z.boolean().optional(),
     invitedTeamsRoadmap: z.array(roadmapItemSchema).optional(),
     roadmaps: z.array(z.object({
         type: z.enum(["tournament", "invitedTeams"]),
@@ -69,12 +70,43 @@ export const eventSchema = z.object({
     message: "Total reward distribution exceeds total bounty",
     path: ["prizeDistribution"],
 }).refine((data) => {
+    if (data.eventType !== "scrims" && !data.registrationEndsAt) {
+        return false;
+    }
+    return true;
+}, {
+    message: "Registration deadline is required",
+    path: ["registrationEndsAt"],
+}).refine((data) => {
     const start = new Date(data.startDate);
-    const end = new Date(data.registrationEndsAt);
-    return end < start;
+    const registrationEnd = data.registrationEndsAt ? new Date(data.registrationEndsAt) : null;
+
+    if (data.eventType === "scrims") {
+        if (!registrationEnd) return true; // Scrims don't strictly require registrationEnd in UI
+        return registrationEnd <= start;
+    }
+
+    if (!registrationEnd) return false; // Should be caught by previous refine
+    return registrationEnd < start;
 }, {
     message: "Tournament must start after the registration deadline",
     path: ["startDate"],
+}).refine((data) => {
+    if (data.eventType !== "scrims" && data.hasRoadmap) {
+        return data.roadmap?.every(r => !!r.title?.trim());
+    }
+    return true;
+}, {
+    message: "All roadmap rounds must have a title",
+    path: ["roadmap"],
+}).refine((data) => {
+    if (data.eventType === "invited-tournament" && data.hasInvitedTeams) {
+        return data.invitedTeamsRoadmap?.every(r => !!r.title?.trim());
+    }
+    return true;
+}, {
+    message: "All invited teams roadmap rounds must have a title",
+    path: ["invitedTeamsRoadmap"],
 });
 
 export type EventFormValues = z.infer<typeof eventSchema>;

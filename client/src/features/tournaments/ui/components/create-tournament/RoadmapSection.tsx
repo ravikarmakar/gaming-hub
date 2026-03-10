@@ -31,14 +31,15 @@ export const RoadmapSection = () => {
         name: "roadmap",
     });
 
+    const eventType = watch("eventType");
     const roadmapData = watch("roadmap") || [];
 
-    // Initialize with at least one round
+    // Initialize with at least one round if not scrims
     useEffect(() => {
-        if (fields.length === 0) {
+        if (fields.length === 0 && eventType !== "scrims") {
             append({ name: "Round 1", title: "", isFinale: false, isLeague: false, leagueType: "12-teams", grandFinaleType: "Standard" });
         }
-    }, [fields.length, append]);
+    }, [fields.length, append, eventType]);
 
     const handleConfirmedToggle = () => {
         if (!isRoundsConfirmed) {
@@ -66,7 +67,6 @@ export const RoadmapSection = () => {
         }
     };
 
-    const eventType = watch("eventType");
     const hasRoadmapValue = watch("hasRoadmap");
     // Default to true for standard tournaments if not explicitly set
     const hasRoadmap = hasRoadmapValue ?? (eventType === "tournament");

@@ -17,7 +17,7 @@ import toast from "react-hot-toast";
 
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { useEventStore } from "@/features/events/store/useEventStore";
-import { useGetRoundsQuery, useFinishEventMutation, useStartEventMutation } from "../../hooks";
+import { useGetRoundsQuery, useFinishEventMutation, useStartTournamentMutation } from "../../hooks";
 import { RoundsManager } from "../components/RoundsManager";
 import { TournamentOverview } from "../components/TournamentOverview";
 import { RegisteredTeamsList } from "../components/RegisteredTeamsList";
@@ -32,7 +32,7 @@ export default function TournamentDashboard() {
     const { eventDetails, fetchEventDetailsById, deleteEvent } = useEventStore();
     const { data: rounds = [] } = useGetRoundsQuery(id || "");
     const { mutateAsync: finishEvent, isPending: isFinishing } = useFinishEventMutation();
-    const { mutateAsync: startEvent } = useStartEventMutation();
+    const { mutateAsync: startEvent } = useStartTournamentMutation();
 
     useEffect(() => {
         if (id) {

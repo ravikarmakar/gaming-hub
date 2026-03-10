@@ -33,12 +33,16 @@ export const InvitedTeamsRoadmapSection = () => {
 
     const roadmapData = watch("invitedTeamsRoadmap") || [];
 
-    // Initialize with at least one round if active
+    const eventType = watch("eventType");
+    const hasInvitedTeamsValue = watch("hasInvitedTeams");
+    const hasInvitedTeams = hasInvitedTeamsValue ?? false;
+
+    // Initialize with at least one round if active and not scrims
     useEffect(() => {
-        if (fields.length === 0 && watch("hasInvitedTeams")) {
+        if (fields.length === 0 && hasInvitedTeams && eventType !== "scrims") {
             append({ name: "Round 1", title: "", isFinale: false, isLeague: false, leagueType: "12-teams", grandFinaleType: "Standard" });
         }
-    }, [fields.length, append, watch("hasInvitedTeams")]);
+    }, [fields.length, append, hasInvitedTeams, eventType]);
 
     const handleConfirmedToggle = () => {
         if (!isRoundsConfirmed) {
@@ -66,10 +70,7 @@ export const InvitedTeamsRoadmapSection = () => {
         }
     };
 
-    const hasInvitedTeamsValue = watch("hasInvitedTeams");
-
-    // Default to false
-    const hasInvitedTeams = hasInvitedTeamsValue ?? false;
+    if (eventType === "scrims") return null;
 
     return (
         <div className="space-y-6">

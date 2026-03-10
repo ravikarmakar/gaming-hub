@@ -15,3 +15,14 @@ export const categoryOptions = [
     { value: "duo", label: "Duo" },
     { value: "squad", label: "Squad" },
 ];
+
+export const registrationModeOptions = [
+    { value: "open", label: "Open" },
+    { value: "invite-only", label: "Invite-only" },
+];
+
+export const GAMES_MAPS = {
+    "free fire": ["Bermuda", "Purgatory", "Kalahari", "Alpine", "Nexterra"],
+    "bgmi": ["Erangel", "Miramar", "Sanhok", "Vikendi", "Nusa", "Karakin"],
+    "valorant": ["Ascent", "Bind", "Haven", "Icebox", "Breeze", "Fracture", "Pearl", "Lotus", "Sunset"]
+} as const;

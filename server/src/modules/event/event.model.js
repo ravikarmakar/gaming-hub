@@ -1,16 +1,12 @@
 import mongoose from "mongoose";
-
-export const registrationStatusEnum = [
-  "registration-open",
-  "registration-closed",
-  "live",
-];
-
-export const eventProgressEnum = [
-  "pending",
-  "ongoing",
-  "completed",
-];
+import {
+  eventTypeEnum,
+  eventCategoryEnum,
+  registrationModeEnum,
+  registrationStatusEnum,
+  eventProgressEnum,
+  eventRoadmapTypeEnum
+} from "./event.constants.js";
 
 const eventSchema = new mongoose.Schema(
   {
@@ -19,14 +15,17 @@ const eventSchema = new mongoose.Schema(
 
     eventType: {
       type: String,
-      enum: ["scrims", "tournament", "invited-tournament"],
+      enum: eventTypeEnum,
       required: true,
     },
     isPaid: { type: Boolean, default: false },
+    entryFee: { type: Number, default: 0, min: [0, "Entry fee cannot be negative"] },
+    matchCount: { type: Number, default: 1, min: [1, "Match count must be at least 1"] },
+    map: { type: [String], default: [] },
 
     category: {
       type: String,
-      enum: ["solo", "duo", "squad"],
+      enum: eventCategoryEnum,
       required: true,
     },
 
@@ -51,7 +50,7 @@ const eventSchema = new mongoose.Schema(
 
     registrationMode: {
       type: String,
-      enum: ["open", "invite-only"],
+      enum: registrationModeEnum,
       default: "open",
     },
 
@@ -95,7 +94,7 @@ const eventSchema = new mongoose.Schema(
     hasInvitedTeams: { type: Boolean, default: false },
     roadmaps: [
       {
-        type: { type: String, enum: ["tournament", "invitedTeams"], required: true },
+        type: { type: String, enum: eventRoadmapTypeEnum, required: true },
         data: { type: mongoose.Schema.Types.Mixed, default: [] }
       }
     ],
@@ -123,5 +122,14 @@ eventSchema.index({ game: 1 });
 eventSchema.index({ category: 1 });
 eventSchema.index({ createdAt: -1 });
 eventSchema.index({ startDate: 1 });
+
+export {
+  eventTypeEnum,
+  eventCategoryEnum,
+  registrationModeEnum,
+  registrationStatusEnum,
+  eventProgressEnum,
+  eventRoadmapTypeEnum
+} from "./event.constants.js";
 
 export default mongoose.model("Event", eventSchema);

@@ -83,6 +83,35 @@ const createUnifiedRedis = () => {
     },
 
     /**
+     * DEL by prefix using SCAN
+     */
+    delByPrefix: async (prefix) => {
+      const n = native();
+      if (n) {
+        let cursor = "0";
+        let deletedCount = 0;
+        do {
+          const [nextCursor, keys] = await n.scan(cursor, "MATCH", `${prefix}*`, "COUNT", 100);
+          cursor = nextCursor;
+          if (keys.length > 0) {
+            deletedCount += await n.del(...keys);
+          }
+        } while (cursor !== "0");
+        return deletedCount;
+      }
+      if (upstashRedis) {
+        // Upstash doesn't have a direct scan in the same way for the JS client but we can use their API if needed
+        // For now, let's just attempt to use keys() on Upstash for simplicity if native is not available
+        const keys = await upstashRedis.keys(`${prefix}*`);
+        if (keys.length > 0) {
+          return await upstashRedis.del(...keys);
+        }
+        return 0;
+      }
+      throw new Error("No Redis client available");
+    },
+
+    /**
      * Pipeline — wraps ioredis pipeline to match Upstash result format.
      * Upstash pipeline: p.incr(key); p.ttl(key); results = await p.exec() → [val1, val2]
      * ioredis pipeline: p.incr(key); p.ttl(key); results = await p.exec() → [[err, val1], [err, val2]]

@@ -279,7 +279,22 @@ const TournamentById = () => {
                                         </div>
                                     </div>
 
-                                    {/* Rewards */}
+                                    {/* Map Rotation */}
+                                    {eventDetails.map && eventDetails.map.length > 0 && (
+                                        <div className="space-y-4 sm:space-y-6">
+                                            <SectionHeader title="Map Rotation" icon={Sword} />
+                                            <div className="flex flex-wrap gap-3 sm:gap-4">
+                                                {eventDetails.map.map((mapName, index) => (
+                                                    <GlassCard key={index} className="px-6 py-4 flex items-center gap-3 border-purple-500/10 hover:border-purple-500/30 transition-all group">
+                                                        <div className="h-2 w-2 rounded-full bg-purple-500/50 group-hover:bg-purple-500 group-hover:shadow-[0_0_10px_rgba(168,85,247,0.5)] transition-all" />
+                                                        <span className="text-sm sm:text-lg font-black text-white tracking-widest uppercase">{mapName}</span>
+                                                    </GlassCard>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Rank Rewards */}
                                     {eventDetails.prizeDistribution && eventDetails.prizeDistribution.length > 0 && (
                                         <div className="space-y-4 sm:space-y-6">
                                             <SectionHeader title="Rank Rewards" icon={Trophy} />

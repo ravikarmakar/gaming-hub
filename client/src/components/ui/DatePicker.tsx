@@ -14,14 +14,17 @@ interface DatePickerProps {
     error?: string;
     icon?: React.ReactNode;
     min?: string;
+    showTimeSelect?: boolean;
+    dateFormat?: string;
 }
 
-export function DatePicker({ value, onChange, label, error, icon, min }: DatePickerProps) {
+export function DatePicker({ value, onChange, label, error, icon, min, showTimeSelect, dateFormat }: DatePickerProps) {
     const selectedDate = value ? new Date(value) : null;
     const minDate = min ? new Date(min) : new Date();
 
     const handleDateChange = (date: Date | null) => {
         if (date) {
+            // Keep the output consistent with the input (ISO string)
             onChange(date.toISOString());
         } else {
             onChange("");
@@ -40,7 +43,11 @@ export function DatePicker({ value, onChange, label, error, icon, min }: DatePic
                 <ReactDatePicker
                     selected={selectedDate}
                     onChange={handleDateChange}
-                    dateFormat="dd/MM/yyyy"
+                    showTimeSelect={showTimeSelect}
+                    timeFormat="hh:mm aa"
+                    timeIntervals={15}
+                    timeCaption="Time"
+                    dateFormat={dateFormat || (showTimeSelect ? "dd/MM/yyyy h:mm aa" : "dd/MM/yyyy")}
                     minDate={minDate}
                     portalId="root-portal" /* Forces the calendar to escape overflow: hidden containers */
                     className={cn(

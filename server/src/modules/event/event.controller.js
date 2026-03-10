@@ -6,6 +6,7 @@ import Organizer from "../organizer/organizer.model.js";
 import { Roles, Scopes } from "../../shared/constants/roles.js";
 import User from "../user/user.model.js";
 import Event from "./event.model.js";
+import { GAMES_MAPS } from "./event.constants.js";
 import EventRegistration from "./models/event-registration.model.js";
 import JoinRequest from "../join-request/join-request.model.js";
 import Round from "./models/round.model.js";
@@ -22,6 +23,30 @@ import { logger } from "../../shared/utils/logger.js";
 import Team from "../team/team.model.js";
 import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
 import { getTournamentRegistrants } from "../../shared/utils/tournament.js";
+import { redis } from "../../shared/config/redis.js";
+
+
+/**
+ * Clear event related caches
+ * Invalidates all-events, org-specific events, and specific event details
+ */
+const clearEventCache = async (orgId, eventId = null) => {
+  try {
+    const prefixes = [
+      "__express__GET:/api/v1/events/all-events:",
+      `__express__GET:/api/v1/events/org-events/${orgId}:`
+    ];
+
+    if (eventId) {
+      prefixes.push(`__express__GET:/api/v1/events/event-details/${eventId}:`);
+    }
+
+    await Promise.all(prefixes.map(prefix => redis.delByPrefix(prefix)));
+    logger.info(`Cache cleared for org: ${orgId}${eventId ? `, event: ${eventId}` : ""}`);
+  } catch (err) {
+    logger.error("Error clearing event cache:", err);
+  }
+};
 
 
 const requiredFields = [
@@ -31,6 +56,7 @@ const requiredFields = [
   "registrationEndsAt",
   "slots",
   "category",
+  "registrationMode",
 ];
 
 const escapeRegex = (string) => {
@@ -78,8 +104,8 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
       throw new CustomError("Prize pool cannot be negative", 400);
     }
 
-    if (registrationEndsAt >= startDate) {
-      throw new CustomError("Registration must end before the event starts", 400);
+    if (registrationEndsAt > startDate) {
+      throw new CustomError("Registration must end before or at the start of the event", 400);
     }
 
     if (req.body.eventEndAt) {
@@ -114,6 +140,30 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
       }
     }
 
+    // Auto-assign maps for scrims
+    const eventType = (req.body.eventType || "tournament").toLowerCase();
+    let assignedMaps = [];
+    if (eventType === "scrims") {
+      const gameKey = req.body.game?.toLowerCase();
+      const availableMaps = GAMES_MAPS[gameKey] || [];
+      if (availableMaps.length > 0) {
+        const shuffled = [...availableMaps];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        const count = Number(req.body.matchCount) || 1;
+        assignedMaps = shuffled.slice(0, count);
+      }
+    } else {
+      if (typeof req.body.map === 'string') {
+        try { assignedMaps = JSON.parse(req.body.map); }
+        catch (e) { assignedMaps = []; }
+      } else {
+        assignedMaps = Array.isArray(req.body.map) ? req.body.map : [];
+      }
+    }
+
     try {
       const event = await Event.create({
         title: req.body.title,
@@ -128,6 +178,10 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
         orgId: user.orgId,
         description: req.body.description,
         prizePool: prizePool,
+        isPaid: req.body.isPaid === 'true' || req.body.isPaid === true,
+        entryFee: (req.body.isPaid === 'true' || req.body.isPaid === true) ? (Number(req.body.entryFee) || 0) : 0,
+        matchCount: Number(req.body.matchCount) || 1,
+        map: assignedMaps,
         image: imageUrl,
         imageFileId: imageFileId,
         eventEndAt: req.body.eventEndAt ? new Date(req.body.eventEndAt) : null,
@@ -172,6 +226,9 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
         })(),
         registeredTeams: [],
       });
+
+      // Clear cache after successful creation
+      await clearEventCache(user.orgId);
 
       res.status(201).json({
         success: true,
@@ -403,6 +460,9 @@ export const registerEvent = TryCatchHandler(async (req, res, next) => {
       );
     });
 
+    // Clear cache after successful registration
+    await clearEventCache(event.orgId, eventId);
+
     return res.status(200).json({
       success: true,
       message: "Your Team successfully registered for the tournament",
@@ -542,6 +602,9 @@ export const closeRegistration = TryCatchHandler(async (req, res) => {
   event.registrationStatus = "registration-closed";
   await event.save();
 
+  // Clear cache
+  await clearEventCache(event.orgId, eventId);
+
   res.status(200).json({
     message: "Registration closed successfully",
     event,
@@ -598,7 +661,8 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
       "title", "game", "description", "startDate", "registrationEndsAt",
       "maxSlots", "registrationMode", "registrationStatus", "eventProgress",
       "eventEndAt", "prizePool", "category", "eventType", "prizeDistribution",
-      "hasRoadmap", "roadmap", "hasInvitedTeams", "invitedTeams", "invitedTeamsRoadmap", "roadmaps", "registeredTeams"
+      "hasRoadmap", "roadmap", "hasInvitedTeams", "invitedTeams", "invitedTeamsRoadmap", "roadmaps", "registeredTeams",
+      "isPaid", "entryFee", "matchCount", "map"
     ];
 
     const updateData = {};
@@ -607,6 +671,18 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
         updateData[field] = req.body[field];
       }
     });
+
+    // Map 'status' from frontend to 'registrationStatus'
+    if (req.body.status) {
+      updateData.registrationStatus = req.body.status;
+    }
+
+    // Sync registrationStatus: live with eventProgress: ongoing
+    if (updateData.registrationStatus === 'live') {
+      updateData.eventProgress = 'ongoing';
+    } else if (updateData.eventProgress === 'ongoing') {
+      updateData.registrationStatus = 'live';
+    }
 
     // Handle roadmaps consolidation in update
     if (req.body.roadmap || req.body.invitedTeamsRoadmap) {
@@ -663,16 +739,6 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
       updateData.prizePool = prizePoolNum;
     }
 
-    if (updateData.registrationEndsAt && event.startDate) {
-      if (new Date(updateData.registrationEndsAt) >= new Date(event.startDate)) {
-        throw new CustomError("Registration must end before the event starts", 400);
-      }
-    }
-    if (updateData.startDate && event.registrationEndsAt && !updateData.registrationEndsAt) {
-      if (new Date(event.registrationEndsAt) >= new Date(updateData.startDate)) {
-        throw new CustomError("Registration must end before the event starts", 400);
-      }
-    }
     // Note: Comprehensive date checking when both change is implicitly handled if we check against the merged state, 
     // but here we check individually. For robust check we'd merge `event` and `updateData`.
     // Let's do a merged check for safety.
@@ -680,11 +746,11 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
     const newRegEnd = updateData.registrationEndsAt ? new Date(updateData.registrationEndsAt) : event.registrationEndsAt;
     const newEnd = updateData.eventEndAt ? new Date(updateData.eventEndAt) : event.eventEndAt;
 
-    if (newRegEnd >= newStart) {
-      throw new CustomError("Registration must end before the event starts", 400);
+    if (newRegEnd > newStart) {
+      throw new CustomError("Registration must end before or at the start of the event", 400);
     }
-    if (newEnd && newEnd <= newStart) {
-      throw new CustomError("Event must end after it starts", 400);
+    if (newEnd && newEnd < newStart) {
+      throw new CustomError("Event must end at or after it starts", 400);
     }
 
     if (updateData.category) updateData.category = updateData.category.toLowerCase();
@@ -703,7 +769,54 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
 
     if (updateData.hasRoadmap !== undefined) updateData.hasRoadmap = String(updateData.hasRoadmap) === 'true';
     if (updateData.hasInvitedTeams !== undefined) updateData.hasInvitedTeams = String(updateData.hasInvitedTeams) === 'true';
-    if (updateData.hasInvitedTeamsRoadmap !== undefined) updateData.hasInvitedTeamsRoadmap = String(updateData.hasInvitedTeamsRoadmap) === 'true';
+    if (updateData.isPaid !== undefined) {
+      updateData.isPaid = String(updateData.isPaid) === 'true';
+    }
+    const finalIsPaid = updateData.isPaid !== undefined ? updateData.isPaid : event.isPaid;
+    if (!finalIsPaid) {
+      updateData.entryFee = 0;
+    } else if (updateData.entryFee !== undefined) {
+      updateData.entryFee = Number(updateData.entryFee) || 0;
+    }
+    if (updateData.matchCount !== undefined) updateData.matchCount = Number(updateData.matchCount) || 1;
+
+    // Auto-assign maps for scrims in update
+    const currentEventType = updateData.eventType || event.eventType;
+    if (currentEventType === "scrims") {
+      const gameName = updateData.game || event.game;
+      const gameKey = gameName?.toLowerCase();
+      const availableMaps = GAMES_MAPS[gameKey] || [];
+      const matchCount = updateData.matchCount !== undefined ? updateData.matchCount : (event.matchCount || 1);
+
+      // Reshuffle only if game changed, matchCount changed, or map is currently empty, or event type just changed to scrims
+      const gameChanged = updateData.game && updateData.game !== event.game;
+      const matchCountChanged = updateData.matchCount !== undefined && updateData.matchCount !== event.matchCount;
+      const typeChangedToScrims = updateData.eventType === "scrims" && event.eventType !== "scrims";
+      const mapEmpty = !event.map || event.map.length === 0;
+
+      if (availableMaps.length > 0 && (gameChanged || matchCountChanged || mapEmpty || typeChangedToScrims)) {
+        const shuffled = [...availableMaps];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        updateData.map = shuffled.slice(0, matchCount);
+      }
+
+      // Cleanup tournament-specific fields if switching to scrims
+      if (typeChangedToScrims) {
+        updateData.roadmaps = [];
+        updateData.invitedTeams = [];
+        updateData.hasRoadmap = false;
+        updateData.hasInvitedTeams = false;
+      }
+    } else if (req.body.map) {
+      try {
+        updateData.map = Array.isArray(req.body.map) ? req.body.map : JSON.parse(req.body.map);
+      } catch (e) {
+        logger.error("Error parsing map in updateEvent:", e);
+      }
+    }
 
     ['roadmap', 'invitedTeams', 'invitedTeamsRoadmap'].forEach(key => {
       if (updateData[key]) {
@@ -722,7 +835,6 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
       delete updateData.invitedTeams;
       delete updateData.hasInvitedTeams;
       delete updateData.invitedTeamsRoadmap;
-      delete updateData.hasInvitedTeamsRoadmap;
       delete updateData.roadmaps;
       delete updateData.registeredTeams;
     }
@@ -731,6 +843,9 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
       new: true,
       runValidators: true,
     });
+
+    // Clear cache after successful registration
+    await clearEventCache(event.orgId, eventId);
 
     res.status(200).json({
       success: true,
@@ -789,6 +904,9 @@ export const deleteEvent = TryCatchHandler(async (req, res) => {
     );
   }
 
+  // Clear cache
+  await clearEventCache(event.orgId, eventId);
+
   res.status(200).json({
     success: true,
     message: "Event and associated data deleted successfully"
@@ -821,6 +939,12 @@ export const unregisterEvent = TryCatchHandler(async (req, res, next) => {
       { session }
     );
   });
+
+  const event = await Event.findById(eventId).select("orgId");
+  if (event) {
+    // Clear cache
+    await clearEventCache(event.orgId, eventId);
+  }
 
   res.status(200).json({
     success: true,
@@ -861,6 +985,9 @@ export const startEvent = TryCatchHandler(async (req, res, next) => {
 
   await event.save();
 
+  // Clear cache
+  await clearEventCache(event.orgId, eventId);
+
   res.status(200).json({
     success: true,
     message: "Event started successfully! Registration closed, progress set to ongoing.",
@@ -896,6 +1023,9 @@ export const finishEvent = TryCatchHandler(async (req, res, next) => {
   event.registrationStatus = "registration-closed";
 
   await event.save();
+
+  // Clear cache
+  await clearEventCache(event.orgId, eventId);
 
   res.status(200).json({
     success: true,

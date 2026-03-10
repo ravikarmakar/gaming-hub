@@ -3,6 +3,7 @@ export type EventProgress = "pending" | "ongoing" | "completed";
 export type EventType = "scrims" | "tournament" | "invited-tournament";
 export type Category = "solo" | "duo" | "squad";
 export type RegistrationMode = "open" | "invite-only";
+export type RoadmapType = "tournament" | "invitedTeams";
 
 export interface RoadmapItem {
     name: string;
@@ -38,12 +39,14 @@ export interface Event {
     trending?: boolean;
     eventEndAt?: string;
     slots?: number; // Adding slots for UI compatibility
+    matchCount?: number;
+    map?: string[];
     prizeDistribution?: Array<{ rank: number; amount: number; label?: string }>;
     location?: string; // Add location for UI compatibility
     roadmap?: RoadmapItem[];
     invitedTeams?: Array<{ teamName: string; email?: string; teamId?: string; _id?: string }>;
     invitedTeamsRoadmap?: RoadmapItem[];
-    roadmaps?: Array<{ type: "tournament" | "invitedTeams"; data: RoadmapItem[] }>;
+    roadmaps?: Array<{ type: RoadmapType; data: RoadmapItem[] }>;
     registeredTeams?: string[];
     createdAt?: string;
     updatedAt?: string;
