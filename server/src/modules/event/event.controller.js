@@ -224,6 +224,7 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
             return Array.isArray(teams) ? teams.map(t => (t.teamId || t._id || t)) : [];
           } catch (e) { return []; }
         })(),
+        maxInvitedSlots: Number(req.body.maxInvitedSlots) || 0,
         registeredTeams: [],
       });
 
@@ -530,7 +531,7 @@ export const isTeamRegistered = TryCatchHandler(async (req, res, next) => {
 export const fetchAllRegisteredTeams = TryCatchHandler(
   async (req, res, next) => {
     const { eventId } = req.params;
-    let { cursor, limit = 10 } = req.query;
+    let { cursor, limit = 10, search = "" } = req.query;
 
     if (!isValidObjectId(eventId)) {
       return next(new CustomError("Invalid Event ID", 400));
@@ -538,17 +539,33 @@ export const fetchAllRegisteredTeams = TryCatchHandler(
 
     limit = parseInt(limit);
     if (limit > 100) limit = 100;
-    let query = { eventId };
+
+    const pipeline = [
+      { $match: { eventId: new mongoose.Types.ObjectId(eventId), status: "approved" } },
+      {
+        $lookup: {
+          from: "teams",
+          localField: "teamId",
+          foreignField: "_id",
+          as: "teamDetails"
+        }
+      },
+      { $unwind: "$teamDetails" },
+      {
+        $match: {
+          "teamDetails.teamName": { $regex: escapeRegex(search), $options: "i" }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ];
 
     if (cursor) {
-      query._id = { $gt: cursor }; // Using $gt for chronological order (ASC) or matching the append logic
+      pipeline.push({ $match: { _id: { $gt: new mongoose.Types.ObjectId(cursor) } } });
     }
 
-    const registrations = await EventRegistration.find(query)
-      .sort({ _id: 1 }) // Sorting by ID to ensure consistent pagination
-      .limit(limit + 1)
-      .populate("teamId", "teamName imageUrl")
-      .lean();
+    pipeline.push({ $limit: limit + 1 });
+
+    const registrations = await EventRegistration.aggregate(pipeline);
 
     let nextCursor = null;
     let hasMore = false;
@@ -559,17 +576,82 @@ export const fetchAllRegisteredTeams = TryCatchHandler(
       hasMore = true;
     }
 
-    const teams = registrations.map(reg => reg.teamId);
+    const reversedTeams = registrations.map(reg => ({
+      ...reg.teamDetails,
+      registrationId: reg._id,
+      joinedAt: reg.createdAt
+    }));
 
     return res.status(200).json({
       success: true,
-      totalTeams: teams.length,
-      teams: teams,
+      totalTeams: reversedTeams.length,
+      teams: reversedTeams,
       nextCursor,
       hasMore
     });
   }
 );
+
+export const fetchInvitedTeams = TryCatchHandler(async (req, res, next) => {
+  const { eventId } = req.params;
+  let { cursor, limit = 10, search = "" } = req.query;
+
+  if (!isValidObjectId(eventId)) {
+    return next(new CustomError("Invalid Event ID", 400));
+  }
+
+  limit = parseInt(limit);
+  if (limit > 100) limit = 100;
+
+  const event = await Event.findById(eventId).select("invitedTeams");
+  if (!event) throw new CustomError("Event not found", 404);
+
+  const pipeline = [
+    { $match: { _id: new mongoose.Types.ObjectId(eventId) } },
+    { $unwind: "$invitedTeams" },
+    {
+      $lookup: {
+        from: "teams",
+        localField: "invitedTeams",
+        foreignField: "_id",
+        as: "teamDetails"
+      }
+    },
+    { $unwind: "$teamDetails" },
+    {
+      $match: {
+        "teamDetails.teamName": { $regex: escapeRegex(search), $options: "i" }
+      }
+    },
+    { $sort: { "teamDetails._id": 1 } }
+  ];
+
+  if (cursor) {
+    pipeline.push({ $match: { "teamDetails._id": { $gt: new mongoose.Types.ObjectId(cursor) } } });
+  }
+
+  pipeline.push({ $limit: limit + 1 });
+
+  const result = await Event.aggregate(pipeline);
+
+  let nextCursor = null;
+  let hasMore = false;
+
+  if (result.length > limit) {
+    const extraItem = result.pop();
+    nextCursor = extraItem.teamDetails._id;
+    hasMore = true;
+  }
+
+  const teams = result.map(entry => entry.teamDetails);
+
+  res.status(200).json({
+    success: true,
+    teams,
+    nextCursor,
+    hasMore
+  });
+});
 
 export const closeRegistration = TryCatchHandler(async (req, res) => {
   // Event ID from params
@@ -659,10 +741,9 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
     // Whitelist allowed fields to prevent mass assignment
     const allowedFields = [
       "title", "game", "description", "startDate", "registrationEndsAt",
-      "maxSlots", "registrationMode", "registrationStatus", "eventProgress",
       "eventEndAt", "prizePool", "category", "eventType", "prizeDistribution",
       "hasRoadmap", "roadmap", "hasInvitedTeams", "invitedTeams", "invitedTeamsRoadmap", "roadmaps", "registeredTeams",
-      "isPaid", "entryFee", "matchCount", "map"
+      "isPaid", "entryFee", "matchCount", "map", "invitedRoundMappings", "maxInvitedSlots"
     ];
 
     const updateData = {};
@@ -674,7 +755,12 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
 
     // Map 'status' from frontend to 'registrationStatus'
     if (req.body.status) {
-      updateData.registrationStatus = req.body.status;
+      if (req.body.status === 'completed') {
+        updateData.eventProgress = 'completed';
+        updateData.registrationStatus = 'registration-closed';
+      } else {
+        updateData.registrationStatus = req.body.status;
+      }
     }
 
     // Sync registrationStatus: live with eventProgress: ongoing
@@ -818,7 +904,7 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
       }
     }
 
-    ['roadmap', 'invitedTeams', 'invitedTeamsRoadmap'].forEach(key => {
+    ['roadmap', 'invitedTeams', 'invitedTeamsRoadmap', 'invitedRoundMappings'].forEach(key => {
       if (updateData[key]) {
         try {
           updateData[key] = typeof updateData[key] === 'string' ? JSON.parse(updateData[key]) : updateData[key];
@@ -837,6 +923,7 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
       delete updateData.invitedTeamsRoadmap;
       delete updateData.roadmaps;
       delete updateData.registeredTeams;
+      delete updateData.invitedRoundMappings;
     }
 
     const updatedEvent = await Event.findByIdAndUpdate(eventId, updateData, {

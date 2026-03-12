@@ -45,7 +45,9 @@ export interface Event {
     location?: string; // Add location for UI compatibility
     roadmap?: RoadmapItem[];
     invitedTeams?: Array<{ teamName: string; email?: string; teamId?: string; _id?: string }>;
+    maxInvitedSlots?: number;
     invitedTeamsRoadmap?: RoadmapItem[];
+    invitedRoundMappings?: Array<{ startRound: number; endRound: number; targetMainRound: number }>;
     roadmaps?: Array<{ type: RoadmapType; data: RoadmapItem[] }>;
     registeredTeams?: string[];
     createdAt?: string;

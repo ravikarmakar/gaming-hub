@@ -1,16 +1,16 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import LoadingSpinner from "@/components/LoadingSpinner";
-
-import { useEventStore } from "@/features/events/store/useEventStore";
 import { OrganizerProfileHeader } from "../components/profile/OrganizerProfileHeader";
 import { OrganizerEventsTab } from "../components/profile/OrganizerEventsTab";
 import { OrganizerAboutTab } from "../components/profile/OrganizerAboutTab";
 import { ProfileBannerLayout } from "@/components/shared/ProfileBannerLayout";
 import { useGetOrgByIdQuery } from "@/features/organizer/hooks/useOrganizerQueries";
+import { useGetOrgTournamentsQuery } from "@/features/tournaments/hooks/useTournamentQueries";
+import { skipToken } from "@tanstack/react-query";
 
 // Extracted sub-components
 import { ReviewsTab } from "../components/profile/ReviewsTab";
@@ -18,23 +18,17 @@ import { ReviewsTab } from "../components/profile/ReviewsTab";
 export const OrganizerProfile = () => {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<string>("events");
-
   const { data: orgData, isLoading: isOrgLoading } = useGetOrgByIdQuery(id as string, 1, 20, "", {
     enabled: !!id,
   });
   const currentOrg = orgData?.data;
-  const { orgEvents, fetchEventsByOrgId, isLoading: isEventsLoading } = useEventStore();
 
-  useEffect(() => {
-    if (id) {
-      fetchEventsByOrgId(id);
-    }
-  }, [id, fetchEventsByOrgId]);
+  const { data: orgEvents = [], isLoading: isEventsLoading } = useGetOrgTournamentsQuery(id ? id : (skipToken as unknown as string));
 
   // Mock stats - in a real app these would come from the backend or be calculated
   const stats = useMemo(() => ({
     totalEvents: orgEvents?.length || 0,
-    totalParticipants: orgEvents?.reduce((acc, event) => acc + (event.slots || 0), 0) || 0, // Using slots as proxy for participants for now
+    totalParticipants: orgEvents?.reduce((acc: number, event: any) => acc + (event.slots || 0), 0) || 0, // Using slots as proxy for participants for now
     rating: 4.9,
     reviewsCount: 234,
     joinedDate: currentOrg?.createdAt ? new Date(currentOrg.createdAt).toLocaleDateString() : "Recently",

@@ -28,7 +28,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import TeamList from "../components/TeamList";
-import { useGetRoundsQuery, useGetGroupsQuery, useGetLeaderboardQuery } from "@/features/tournaments/hooks";
+import { useGetRoundsQuery, useGetGroupsQuery, useGetLeaderboardQuery, useGetTournamentDetailsQuery } from "@/features/tournaments/hooks";
 import FinalLeaderboard from "../components/FinalLeaderboard";
 
 const TournamentById = () => {
@@ -36,12 +36,11 @@ const TournamentById = () => {
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const {
-        eventDetails,
-        fetchEventDetailsById,
-        isLoading,
         registerEvent,
         isTeamRegistered
     } = useEventStore();
+
+    const { data: eventDetails, isLoading } = useGetTournamentDetailsQuery(id || "");
 
     const [regStatus, setRegStatus] = useState<"approved" | "pending" | "none">("none");
 
@@ -54,12 +53,6 @@ const TournamentById = () => {
     const grandFinaleGroup = groups[0];
 
     const { data: leaderboard } = useGetLeaderboardQuery(grandFinaleGroup?._id || "");
-
-    useEffect(() => {
-        if (id) {
-            fetchEventDetailsById(id);
-        }
-    }, [id, fetchEventDetailsById]);
 
     useEffect(() => {
         const checkRegistrationStatus = async () => {

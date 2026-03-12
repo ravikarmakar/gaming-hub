@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import toast from "react-hot-toast";
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft,
@@ -6,39 +7,35 @@ import {
     Users,
     Swords,
     Settings,
-    Trash2,
-    Edit2,
-    AlertTriangle,
 } from "lucide-react";
+
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import toast from "react-hot-toast";
 
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
-import { useEventStore } from "@/features/events/store/useEventStore";
-import { useGetRoundsQuery, useFinishEventMutation, useStartTournamentMutation } from "../../hooks";
+import { useGetRoundsQuery, useFinishTournamentMutation, useStartTournamentMutation, useDeleteTournamentMutation, useGetTournamentDetailsQuery } from "../../hooks";
 import { RoundsManager } from "../components/RoundsManager";
 import { TournamentOverview } from "../components/TournamentOverview";
 import { RegisteredTeamsList } from "../components/RegisteredTeamsList";
+import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 
 // Extracted sub-components
 import { TournamentDashboardHeader } from "../components/tournaments/TournamentDashboardHeader";
+import { TournamentSettings } from "../components/tournaments/TournamentSettings";
 
 export default function TournamentDashboard() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("overview");
-    const { eventDetails, fetchEventDetailsById, deleteEvent } = useEventStore();
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isFinishDialogOpen, setIsFinishDialogOpen] = useState(false);
+    const { data: eventDetails, refetch: refetchEventDetails } = useGetTournamentDetailsQuery(id || "");
     const { data: rounds = [] } = useGetRoundsQuery(id || "");
-    const { mutateAsync: finishEvent, isPending: isFinishing } = useFinishEventMutation();
+    const { mutateAsync: finishEvent, isPending: isFinishing } = useFinishTournamentMutation();
     const { mutateAsync: startEvent } = useStartTournamentMutation();
-
-    useEffect(() => {
-        if (id) {
-            fetchEventDetailsById(id);
-        }
-    }, [id, fetchEventDetailsById]);
+    const { mutateAsync: deleteTournament } = useDeleteTournamentMutation();
 
     if (!id) {
         return <div className="p-6 text-white">Invalid Tournament ID</div>;
@@ -46,12 +43,17 @@ export default function TournamentDashboard() {
 
     const handleDelete = async () => {
         if (!id) return;
-        if (confirm("Are you sure you want to delete this tournament? This action cannot be undone.")) {
-            const success = await deleteEvent(id);
-            if (success) {
-                toast.success("Tournament deleted successfully");
-                navigate(ORGANIZER_ROUTES.TOURNAMENTS);
-            }
+        setIsDeleting(true);
+        try {
+            await deleteTournament(id);
+            toast.success("Tournament deleted successfully");
+            navigate(ORGANIZER_ROUTES.TOURNAMENTS);
+        } catch (error) {
+            console.error("Failed to delete tournament:", error);
+            toast.error("Failed to delete tournament. Please try again.");
+        } finally {
+            setIsDeleting(false);
+            setIsDeleteDialogOpen(false);
         }
     };
 
@@ -62,13 +64,13 @@ export default function TournamentDashboard() {
 
     const handleFinishTournament = async () => {
         if (!id) return;
-        if (!window.confirm("Are you sure you want to finish this tournament? This will publish the final leaderboard.")) return;
-
         try {
             await finishEvent(id);
-            fetchEventDetailsById(id); // Refresh status
+            refetchEventDetails(); // Refresh status
         } catch (error) {
             console.error(error);
+        } finally {
+            setIsFinishDialogOpen(false);
         }
     };
 
@@ -98,12 +100,12 @@ export default function TournamentDashboard() {
                     if (!id) return;
                     try {
                         await startEvent(id);
-                        fetchEventDetailsById(id);
+                        refetchEventDetails();
                     } catch (error) {
                         console.error(error);
                     }
                 }}
-                onFinishEvent={handleFinishTournament}
+                onFinishEvent={() => setIsFinishDialogOpen(true)}
                 canFinish={canFinish ?? false}
                 isFinishing={isFinishing}
             />
@@ -136,7 +138,7 @@ export default function TournamentDashboard() {
 
                 <Card className="min-h-[500px] border-white/5 bg-gray-900/20 backdrop-blur-md">
                     <TabsContent value="overview" className="m-0">
-                        <TournamentOverview />
+                        <TournamentOverview eventDetails={eventDetails} />
                     </TabsContent>
 
                     {!(eventDetails?.registrationStatus === "registration-open" && eventDetails?.eventProgress === "pending") && (
@@ -147,55 +149,37 @@ export default function TournamentDashboard() {
                     <TabsContent value="teams" className="m-0">
                         <RegisteredTeamsList eventId={id} />
                     </TabsContent>
-                    <TabsContent value="settings" className="m-0 p-6 space-y-8">
-                        {/* Actions Section */}
-                        <div>
-                            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                                <Settings className="w-5 h-5 text-gray-400" />
-                                General Actions
-                            </h3>
-                            <p className="text-xs mb-6 text-red-400/80 italic">
-                                <span className="font-bold not-italic text-red-500 mr-1">Note:</span>
-                                Tournament details cannot be modified once registration has closed. Subject to platform <span className="font-bold text-white hover:underline cursor-pointer" onClick={() => navigate('/terms')}>terms and conditions</span>.
-                            </p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <Button
-                                    onClick={handleEdit}
-                                    variant="outline"
-                                    disabled={eventDetails?.registrationStatus !== "registration-open"}
-                                    className="h-auto p-4 flex flex-col items-center justify-center gap-2 border-white/10 hover:bg-white/5 hover:border-purple-500/50 group disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <Edit2 className="w-6 h-6 text-purple-400 group-hover:scale-110 transition-transform" />
-                                    <span className="font-bold text-gray-300">Edit Details</span>
-                                    <span className="text-xs text-gray-500">Update Title, Description, Rules</span>
-                                </Button>
-                            </div>
-                        </div>
-
-                        {/* Danger Zone */}
-                        <div className="pt-8 border-t border-white/5">
-                            <h3 className="text-lg font-bold text-red-500 mb-4 flex items-center gap-2">
-                                <AlertTriangle className="w-5 h-5" />
-                                Danger Zone
-                            </h3>
-                            <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4 flex items-center justify-between">
-                                <div>
-                                    <h4 className="font-bold text-gray-200">Delete Tournament</h4>
-                                    <p className="text-sm text-gray-500">Permanently remove this tournament and all its data.</p>
-                                </div>
-                                <Button
-                                    variant="destructive"
-                                    className="bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20"
-                                    onClick={handleDelete}
-                                >
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    Delete Tournament
-                                </Button>
-                            </div>
-                        </div>
+                    <TabsContent value="settings" className="m-0 p-6">
+                        <TournamentSettings
+                            registrationStatus={eventDetails?.registrationStatus}
+                            onEdit={handleEdit}
+                            onDelete={() => setIsDeleteDialogOpen(true)}
+                        />
                     </TabsContent>
                 </Card>
             </Tabs>
+
+            <ConfirmActionDialog
+                open={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
+                title="Delete Tournament"
+                description="Are you sure you want to delete this tournament? This action cannot be undone and all associated data will be permanently removed."
+                actionLabel="Delete Tournament"
+                variant="danger"
+                isLoading={isDeleting}
+                onConfirm={handleDelete}
+            />
+
+            <ConfirmActionDialog
+                open={isFinishDialogOpen}
+                onOpenChange={setIsFinishDialogOpen}
+                title="Finish Tournament"
+                description="Are you sure you want to finish this tournament? This will publish the final leaderboard and mark the event as completed."
+                actionLabel="Finish"
+                variant="warning"
+                isLoading={isFinishing}
+                onConfirm={handleFinishTournament}
+            />
         </div>
     );
 }

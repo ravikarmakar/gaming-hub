@@ -48,6 +48,8 @@ const eventSchema = new mongoose.Schema(
       }
     },
 
+    maxInvitedSlots: { type: Number, default: 0 },
+
     registrationMode: {
       type: String,
       enum: registrationModeEnum,
@@ -108,6 +110,13 @@ const eventSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Team",
+      }
+    ],
+    invitedRoundMappings: [
+      {
+        startRound: { type: Number, required: true },
+        endRound: { type: Number, required: true },
+        targetMainRound: { type: Number, required: true },
       }
     ],
   },

@@ -87,12 +87,26 @@ export const ScheduleSection = () => {
                     <div className="relative">
                         <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                         <Input
-                            {...register("slots", { valueAsNumber: true })}
+                            {...register("slots")}
                             type="number"
                             className="bg-white/5 border-white/10 h-12 pl-12 rounded-xl font-black"
                         />
                     </div>
                 </div>
+
+                {(watch("eventType") === "invited-tournament" || watch("hasInvitedTeams")) && (
+                    <div className="space-y-2 pt-2">
+                        <Label className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Maximum Invited Teams</Label>
+                        <div className="relative">
+                            <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                            <Input
+                                {...register("maxInvitedSlots")}
+                                type="number"
+                                className="bg-white/5 border-white/10 h-12 pl-12 rounded-xl font-black"
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
         </GlassCard>
     );

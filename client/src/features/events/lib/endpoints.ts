@@ -10,6 +10,7 @@ export const EVENT_ENDPOINTS = {
     REGISTER: (id: string) => `${EVENT_BASE}/register-event/${id}`,
     IS_REGISTERED: (eventId: string, teamId: string) => `${EVENT_BASE}/is-registered/${eventId}/teams/${teamId}`,
     REGISTERED_TEAMS: (id: string) => `${EVENT_BASE}/registered-teams/${id}`,
+    INVITED_TEAMS: (id: string) => `${EVENT_BASE}/invited-teams/${id}`,
     UNREGISTER: (id: string) => `${EVENT_BASE}/unregister/${id}`,
     CLOSE_REGISTRATION: (id: string) => `${EVENT_BASE}/close-registration/${id}`,
     TEAM_EVENTS: (teamId: string) => `${EVENT_BASE}/team-events/${teamId}`,

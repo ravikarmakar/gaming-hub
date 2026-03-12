@@ -41,6 +41,32 @@ export const RoadmapSection = () => {
         }
     }, [fields.length, append, eventType]);
 
+    // Resync state when editing existing roadmap
+    useEffect(() => {
+        if (fields.length > 0 && roadmapData.every(r => r.title?.trim() !== "")) {
+            // Check if any round is marked as league or finale to auto-confirm & expand the config
+            const hasLeague = roadmapData.findIndex(r => r.isLeague);
+            const hasFinale = roadmapData.findIndex(r => r.isFinale);
+
+            if (hasLeague >= 0 || hasFinale >= 0) {
+                // To avoid flashing/resetting, only set these if they aren't already set
+                setIsRoundsConfirmed(true);
+            }
+
+            if (hasLeague >= 0) {
+                setIsLeagueEnabled(true);
+                setLeagueRoundIdx(hasLeague);
+                setIsLeagueSaved(true);
+            }
+
+            if (hasFinale >= 0) {
+                setIsFinaleEnabled(true);
+                setFinaleRoundIdx(hasFinale);
+                setIsFinaleSaved(true);
+            }
+        }
+    }, [fields.length]); // Only run on mount or fields initialization
+
     const handleConfirmedToggle = () => {
         if (!isRoundsConfirmed) {
             // Validation: Check if all rounds have titles
@@ -124,44 +150,66 @@ export const RoadmapSection = () => {
                             )}
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-1">
                             {fields.map((field, index) => (
-                                <div key={field.id} className="group/roadmap relative pb-4 border-b border-white/5 last:border-0 last:pb-0">
-                                    <div className="space-y-4">
-                                        <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/5 p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all ${isRoundsConfirmed ? "opacity-60 grayscale-[0.5]" : ""}`}>
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Round Number</Label>
-                                                <Input
-                                                    {...register(`roadmap.${index}.name` as const)}
-                                                    value={`Round ${index + 1}`}
-                                                    readOnly
-                                                    className="bg-white/10 border-white/10 h-10 rounded-lg text-sm font-bold cursor-not-allowed text-gray-400"
-                                                />
+                                <div key={field.id} className="group/roadmap relative">
+                                    {isRoundsConfirmed ? (
+                                        <div className="flex items-center gap-3 py-2 px-4 bg-white/[0.02] border border-transparent hover:border-white/5 rounded-lg transition-all group">
+                                            <div className="flex items-center gap-2 min-w-[80px]">
+                                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Round {index + 1}</span>
+                                                <span className="text-gray-700 font-bold">→</span>
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Round Name (e.g. Qualifiers)</Label>
-                                                <div className="flex gap-2">
-                                                    <Input
-                                                        {...register(`roadmap.${index}.title` as const)}
-                                                        placeholder="Enter round name..."
-                                                        readOnly={isRoundsConfirmed}
-                                                        className={`bg-white/5 border-white/10 h-10 rounded-lg text-sm font-bold flex-1 focus:border-purple-500/50 transition-colors ${isRoundsConfirmed ? "cursor-not-allowed" : ""}`}
-                                                    />
-                                                    {!isRoundsConfirmed && (
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => remove(index)}
-                                                            className="h-10 w-10 text-gray-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </Button>
-                                                    )}
+                                            <span className="text-[11px] font-bold text-white tracking-wide">
+                                                {watch(`roadmap.${index}.title`) || `Round ${index + 1}`}
+                                            </span>
+                                            <div className="flex items-center gap-2 ml-auto">
+                                                {watch(`roadmap.${index}.isLeague`) && (
+                                                    <span className="text-[8px] font-black px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-400 uppercase tracking-tighter">League Mode</span>
+                                                )}
+                                                {watch(`roadmap.${index}.isFinale`) && (
+                                                    <span className="text-[8px] font-black px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 uppercase tracking-tighter">Grand Finale</span>
+                                                )}
+                                                {!watch(`roadmap.${index}.isLeague`) && !watch(`roadmap.${index}.isFinale`) && (
+                                                    <span className="text-[8px] font-black px-2 py-0.5 rounded-md bg-white/5 text-gray-600 uppercase tracking-tighter">Standard</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="pb-4 border-b border-white/5 last:border-0 last:pb-0">
+                                            <div className="space-y-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/5 p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all">
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Round Number</Label>
+                                                        <Input
+                                                            {...register(`roadmap.${index}.name` as const)}
+                                                            value={`Round ${index + 1}`}
+                                                            readOnly
+                                                            className="bg-white/10 border-white/10 h-10 rounded-lg text-sm font-bold cursor-not-allowed text-gray-400"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Round Name (e.g. Qualifiers)</Label>
+                                                        <div className="flex gap-2">
+                                                            <Input
+                                                                {...register(`roadmap.${index}.title` as const)}
+                                                                placeholder="Enter round name..."
+                                                                className="bg-white/5 border-white/10 h-10 rounded-lg text-sm font-bold flex-1 focus:border-purple-500/50 transition-colors"
+                                                            />
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => remove(index)}
+                                                                className="h-10 w-10 text-gray-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </Button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             ))}
 
@@ -296,20 +344,15 @@ export const RoadmapSection = () => {
                                         {(() => {
                                             const leagueRound = leagueRoundIdx !== null ? roadmapData[leagueRoundIdx as number] : null;
                                             return isLeagueSaved ? (
-                                                <div className="flex items-center gap-4 bg-purple-500/5 border border-purple-500/10 rounded-xl p-4 animate-in slide-in-from-top-1 duration-300">
-                                                    <div className="p-2 bg-purple-500/10 rounded-lg">
-                                                        <Users size={16} className="text-purple-400" />
+                                                <div className="flex items-center gap-3 py-2 px-4 bg-purple-500/5 rounded-lg group">
+                                                    <div className="flex items-center gap-2">
+                                                        <Users size={12} className="text-purple-400" />
+                                                        <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest">League Config</span>
+                                                        <span className="text-gray-700 font-bold">→</span>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-[10px] font-black text-white uppercase tracking-tight">
-                                                            {leagueRoundIdx !== null ? `Round ${leagueRoundIdx + 1}: ${leagueRound?.title || "League Round"}` : "None"}
-                                                        </p>
-                                                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">
-                                                            {leagueRound?.leagueType === "18-teams"
-                                                                ? "18 Teams • 3 Groups (A vs B, B vs C, C vs A)"
-                                                                : "12 Teams • Single Group League"}
-                                                        </p>
-                                                    </div>
+                                                    <span className="text-[11px] font-bold text-gray-300">
+                                                        {leagueRoundIdx !== null ? `R${leagueRoundIdx + 1}: ${leagueRound?.title}` : "None"} • {leagueRound?.leagueType?.replace("-", " ")}
+                                                    </span>
                                                 </div>
                                             ) : (
                                                 leagueRoundIdx !== null && (
@@ -431,20 +474,15 @@ export const RoadmapSection = () => {
                                         {(() => {
                                             const finaleRound = finaleRoundIdx !== null ? roadmapData[finaleRoundIdx as number] : null;
                                             return isFinaleSaved ? (
-                                                <div className="flex items-center gap-4 bg-amber-500/5 border border-amber-500/10 rounded-xl p-4 animate-in slide-in-from-top-1 duration-300">
-                                                    <div className="p-2 bg-amber-500/10 rounded-lg">
-                                                        <Trophy size={16} className="text-amber-400" />
+                                                <div className="flex items-center gap-3 py-2 px-4 bg-amber-500/5 rounded-lg group">
+                                                    <div className="flex items-center gap-2">
+                                                        <Trophy size={12} className="text-amber-400" />
+                                                        <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Finale Config</span>
+                                                        <span className="text-gray-700 font-bold">→</span>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-[10px] font-black text-white uppercase tracking-tight">
-                                                            {finaleRoundIdx !== null ? `Round ${finaleRoundIdx + 1}: ${finaleRound?.title || "Grand Finale"}` : "None"}
-                                                        </p>
-                                                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">
-                                                            {finaleRound?.grandFinaleType === "18-teams"
-                                                                ? "18 Teams • 18 Team Finale (3 Groups)"
-                                                                : "12 Teams • 12 Team Grand Finale Stage"}
-                                                        </p>
-                                                    </div>
+                                                    <span className="text-[11px] font-bold text-gray-300">
+                                                        {finaleRoundIdx !== null ? `R${finaleRoundIdx + 1}: ${finaleRound?.title}` : "None"} • {finaleRound?.grandFinaleType?.replace("-", " ")}
+                                                    </span>
                                                 </div>
                                             ) : (
                                                 finaleRoundIdx !== null && (

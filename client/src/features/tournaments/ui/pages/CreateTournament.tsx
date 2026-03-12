@@ -1,22 +1,22 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { Trash2, Shield, ChevronLeft, Loader2, ChevronRight } from "lucide-react";
+import { Shield, ChevronLeft, Loader2, ChevronRight } from "lucide-react";
 import { useForm, FormProvider, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
+import { skipToken } from "@tanstack/react-query";
+
+import { Button } from "@/components/ui/button";
 
 import { formatDateToLocalHTML } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
-import { useEventStore } from "@/features/events/store/useEventStore";
 import {
   EventFormValues,
   eventSchema,
   Category,
   RegistrationStatus,
 } from "@/features/events/lib";
-
 import {
   BasicInfoSection,
   DescriptionSection,
@@ -26,14 +26,17 @@ import {
   RoadmapSection,
   InvitedTeamsRoadmapSection
 } from "../components/create-tournament";
-import { useCreateTournamentMutation } from "@/features/tournaments/hooks/useTournamentMutations";
+import { useCreateTournamentMutation, useUpdateTournamentMutation } from "@/features/tournaments/hooks/useTournamentMutations";
+import { useGetTournamentDetailsQuery } from "@/features/tournaments/hooks/useTournamentQueries";
 
 export default function CreateTournament() {
   const navigate = useNavigate();
   const { eventId } = useParams();
-  const { updateEvent, deleteEvent, fetchEventDetailsById, eventDetails, isLoading } = useEventStore();
+  const { data: eventDetails, isLoading } = useGetTournamentDetailsQuery(eventId ? eventId : (skipToken as unknown as string));
   const createTournamentMutation = useCreateTournamentMutation();
-  const isCreating = createTournamentMutation.isPending;
+  const updateTournamentMutation = useUpdateTournamentMutation();
+
+  const isCreating = createTournamentMutation.isPending || updateTournamentMutation.isPending;
   const [isEditMode, setIsEditMode] = useState(false);
 
   const methods = useForm<EventFormValues>({
@@ -50,6 +53,7 @@ export default function CreateTournament() {
       hasInvitedTeams: false,
       invitedTeams: [],
       invitedTeamsRoadmap: [],
+      maxInvitedSlots: "",
       prizeDistribution: [{ rank: 1, amount: 0, label: "Champion" }],
     },
   });
@@ -57,12 +61,12 @@ export default function CreateTournament() {
   const { handleSubmit, reset, setValue, watch } = methods;
 
 
+
   useEffect(() => {
     if (eventId) {
       setIsEditMode(true);
-      fetchEventDetailsById(eventId);
     }
-  }, [eventId, fetchEventDetailsById]);
+  }, [eventId]);
 
   useEffect(() => {
     if (isEditMode && eventDetails) {
@@ -88,6 +92,8 @@ export default function CreateTournament() {
         hasInvitedTeams: !!eventDetails.invitedTeams?.length || !!eventDetails.roadmaps?.find((r: any) => r.type === "invitedTeams")?.data?.length,
         invitedTeams: eventDetails.invitedTeams || [],
         invitedTeamsRoadmap: eventDetails.roadmaps?.find((r: any) => r.type === "invitedTeams")?.data || [],
+        invitedRoundMappings: eventDetails.invitedRoundMappings || [],
+        maxInvitedSlots: eventDetails.maxInvitedSlots?.toString() || "",
         map: eventDetails.map || [],
         matchCount: eventDetails.matchCount || 1,
       });
@@ -128,7 +134,7 @@ export default function CreateTournament() {
           if (key === "slots") {
             fd.append("maxSlots", String(value));
             fd.append("slots", String(value));
-          } else if (key === "prizeDistribution" || key === "roadmap" || key === "invitedTeams" || key === "invitedTeamsRoadmap") {
+          } else if (key === "prizeDistribution" || key === "roadmap" || key === "invitedTeams" || key === "invitedTeamsRoadmap" || key === "invitedRoundMappings") {
             if (key === "invitedTeams" && !data.hasInvitedTeams) return;
 
             // Transform invitedTeams if they are objects with teamId
@@ -140,7 +146,12 @@ export default function CreateTournament() {
 
             if (key === "roadmap" && !data.hasRoadmap) return;
             if (key === "invitedTeamsRoadmap" && !data.hasInvitedTeams) return;
+            if (key === "invitedRoundMappings" && !data.hasInvitedTeams) return;
+
             fd.append(key, JSON.stringify(value));
+          } else if (key === "maxInvitedSlots") {
+            if (!data.hasInvitedTeams) return;
+            fd.append("maxInvitedSlots", String(value || 0));
           } else if (key === "image" && value instanceof File) {
             fd.append("image", value);
           } else if (key === "eventType") {
@@ -158,11 +169,12 @@ export default function CreateTournament() {
       // No more testing logs needed here
 
       if (isEditMode && eventId) {
-        const result = await updateEvent(eventId, fd);
-        if (result) {
-          toast.success("Tournament updated successfully!");
-          navigate(ORGANIZER_ROUTES.TOURNAMENTS, { replace: true });
-        }
+        updateTournamentMutation.mutate({ eventId, payload: fd }, {
+          onSuccess: () => {
+            toast.success("Tournament updated successfully!");
+            navigate(ORGANIZER_ROUTES.TOURNAMENTS, { replace: true });
+          }
+        });
       } else {
         createTournamentMutation.mutate(fd, {
           onSuccess: () => {
@@ -174,17 +186,6 @@ export default function CreateTournament() {
     } catch (error) {
       console.error("Submission error:", error);
       toast.error("An error occurred during submission.");
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!eventId) return;
-    if (window.confirm("Are you sure you want to delete this tournament? This action cannot be undone.")) {
-      const success = await deleteEvent(eventId);
-      if (success) {
-        toast.success("Tournament deleted.");
-        navigate(ORGANIZER_ROUTES.TOURNAMENTS);
-      }
     }
   };
 
@@ -204,14 +205,6 @@ export default function CreateTournament() {
               >
                 <ChevronLeft size={16} />
                 Back to Tournaments
-              </Button>
-
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                className="px-4 py-2 text-xs font-black tracking-widest bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-all rounded-lg shadow-none"
-              >
-                <Trash2 size={14} className="mr-2" /> Delete Tournament
               </Button>
             </div>
           )}
