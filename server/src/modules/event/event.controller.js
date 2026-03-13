@@ -6,6 +6,7 @@ import Organizer from "../organizer/organizer.model.js";
 import { Roles, Scopes } from "../../shared/constants/roles.js";
 import User from "../user/user.model.js";
 import Event from "./event.model.js";
+import { GAMES_MAPS } from "./event.constants.js";
 import EventRegistration from "./models/event-registration.model.js";
 import JoinRequest from "../join-request/join-request.model.js";
 import Round from "./models/round.model.js";
@@ -22,6 +23,30 @@ import { logger } from "../../shared/utils/logger.js";
 import Team from "../team/team.model.js";
 import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
 import { getTournamentRegistrants } from "../../shared/utils/tournament.js";
+import { redis } from "../../shared/config/redis.js";
+
+
+/**
+ * Clear event related caches
+ * Invalidates all-events, org-specific events, and specific event details
+ */
+const clearEventCache = async (orgId, eventId = null) => {
+  try {
+    const prefixes = [
+      "__express__GET:/api/v1/events/all-events:",
+      `__express__GET:/api/v1/events/org-events/${orgId}:`
+    ];
+
+    if (eventId) {
+      prefixes.push(`__express__GET:/api/v1/events/event-details/${eventId}:`);
+    }
+
+    await Promise.all(prefixes.map(prefix => redis.delByPrefix(prefix)));
+    logger.info(`Cache cleared for org: ${orgId}${eventId ? `, event: ${eventId}` : ""}`);
+  } catch (err) {
+    logger.error("Error clearing event cache:", err);
+  }
+};
 
 
 const requiredFields = [
@@ -31,6 +56,7 @@ const requiredFields = [
   "registrationEndsAt",
   "slots",
   "category",
+  "registrationMode",
 ];
 
 const escapeRegex = (string) => {
@@ -78,8 +104,8 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
       throw new CustomError("Prize pool cannot be negative", 400);
     }
 
-    if (registrationEndsAt >= startDate) {
-      throw new CustomError("Registration must end before the event starts", 400);
+    if (registrationEndsAt > startDate) {
+      throw new CustomError("Registration must end before or at the start of the event", 400);
     }
 
     if (req.body.eventEndAt) {
@@ -114,6 +140,30 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
       }
     }
 
+    // Auto-assign maps for scrims
+    const eventType = (req.body.eventType || "tournament").toLowerCase();
+    let assignedMaps = [];
+    if (eventType === "scrims") {
+      const gameKey = req.body.game?.toLowerCase();
+      const availableMaps = GAMES_MAPS[gameKey] || [];
+      if (availableMaps.length > 0) {
+        const shuffled = [...availableMaps];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        const count = Number(req.body.matchCount) || 1;
+        assignedMaps = shuffled.slice(0, count);
+      }
+    } else {
+      if (typeof req.body.map === 'string') {
+        try { assignedMaps = JSON.parse(req.body.map); }
+        catch (e) { assignedMaps = []; }
+      } else {
+        assignedMaps = Array.isArray(req.body.map) ? req.body.map : [];
+      }
+    }
+
     try {
       const event = await Event.create({
         title: req.body.title,
@@ -128,6 +178,10 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
         orgId: user.orgId,
         description: req.body.description,
         prizePool: prizePool,
+        isPaid: req.body.isPaid === 'true' || req.body.isPaid === true,
+        entryFee: (req.body.isPaid === 'true' || req.body.isPaid === true) ? (Number(req.body.entryFee) || 0) : 0,
+        matchCount: Number(req.body.matchCount) || 1,
+        map: assignedMaps,
         image: imageUrl,
         imageFileId: imageFileId,
         eventEndAt: req.body.eventEndAt ? new Date(req.body.eventEndAt) : null,
@@ -142,7 +196,40 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
             return [];
           }
         })(),
+        hasRoadmap: req.body.hasRoadmap === 'true' || req.body.hasRoadmap === true,
+        roadmaps: (() => {
+          const roadmaps = [];
+          if (req.body.roadmap) {
+            try {
+              const data = typeof req.body.roadmap === 'string' ? JSON.parse(req.body.roadmap) : req.body.roadmap;
+              roadmaps.push({ type: "tournament", data });
+            } catch (e) { logger.error("Error parsing roadmap in createEvent:", e); }
+          }
+          if (req.body.invitedTeamsRoadmap) {
+            try {
+              const data = typeof req.body.invitedTeamsRoadmap === 'string' ? JSON.parse(req.body.invitedTeamsRoadmap) : req.body.invitedTeamsRoadmap;
+              roadmaps.push({ type: "invitedTeams", data });
+            } catch (e) { logger.error("Error parsing invitedTeamsRoadmap in createEvent:", e); }
+          }
+          return roadmaps;
+        })(),
+        hasInvitedTeams: req.body.hasInvitedTeams === 'true' || req.body.hasInvitedTeams === true,
+        invitedTeams: (() => {
+          if (!req.body.invitedTeams) return [];
+          try {
+            const teams = typeof req.body.invitedTeams === 'string' ? JSON.parse(req.body.invitedTeams) : req.body.invitedTeams;
+            // The user said "store the team id only". 
+            // If the incoming data is an array of objects like [{teamId: "..."}, ...], we should map it.
+            // If it's already an array of IDs, we use it directly.
+            return Array.isArray(teams) ? teams.map(t => (t.teamId || t._id || t)) : [];
+          } catch (e) { return []; }
+        })(),
+        maxInvitedSlots: Number(req.body.maxInvitedSlots) || 0,
+        registeredTeams: [],
       });
+
+      // Clear cache after successful creation
+      await clearEventCache(user.orgId);
 
       res.status(201).json({
         success: true,
@@ -235,6 +322,9 @@ export const fetchAllEvents = TryCatchHandler(async (req, res, next) => {
   if (status && status !== 'all') query.registrationStatus = status;
 
   if (cursor) {
+    if (!isValidObjectId(cursor)) {
+      return next(new CustomError("Invalid cursor ID", 400));
+    }
     query._id = { $lt: cursor };
   }
 
@@ -341,7 +431,7 @@ export const registerEvent = TryCatchHandler(async (req, res, next) => {
           registrationStatus: "registration-open",
           $expr: { $lt: ["$joinedSlots", "$maxSlots"] }
         },
-        { $inc: { joinedSlots: 1 } },
+        { $inc: { joinedSlots: 1 }, $push: { registeredTeams: team._id } },
         { new: true, session }
       );
 
@@ -373,6 +463,9 @@ export const registerEvent = TryCatchHandler(async (req, res, next) => {
         { session }
       );
     });
+
+    // Clear cache after successful registration
+    await clearEventCache(event.orgId, eventId);
 
     return res.status(200).json({
       success: true,
@@ -441,7 +534,7 @@ export const isTeamRegistered = TryCatchHandler(async (req, res, next) => {
 export const fetchAllRegisteredTeams = TryCatchHandler(
   async (req, res, next) => {
     const { eventId } = req.params;
-    let { cursor, limit = 10 } = req.query;
+    let { cursor, limit = 10, search = "" } = req.query;
 
     if (!isValidObjectId(eventId)) {
       return next(new CustomError("Invalid Event ID", 400));
@@ -449,17 +542,36 @@ export const fetchAllRegisteredTeams = TryCatchHandler(
 
     limit = parseInt(limit);
     if (limit > 100) limit = 100;
-    let query = { eventId };
+
+    const pipeline = [
+      { $match: { eventId: new mongoose.Types.ObjectId(eventId), status: "approved" } },
+      {
+        $lookup: {
+          from: "teams",
+          localField: "teamId",
+          foreignField: "_id",
+          as: "teamDetails"
+        }
+      },
+      { $unwind: "$teamDetails" },
+      {
+        $match: {
+          "teamDetails.teamName": { $regex: escapeRegex(search), $options: "i" }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ];
 
     if (cursor) {
-      query._id = { $gt: cursor }; // Using $gt for chronological order (ASC) or matching the append logic
+      if (!isValidObjectId(cursor)) {
+        return next(new CustomError("Invalid cursor ID", 400));
+      }
+      pipeline.push({ $match: { _id: { $gt: new mongoose.Types.ObjectId(cursor) } } });
     }
 
-    const registrations = await EventRegistration.find(query)
-      .sort({ _id: 1 }) // Sorting by ID to ensure consistent pagination
-      .limit(limit + 1)
-      .populate("teamId", "teamName imageUrl")
-      .lean();
+    pipeline.push({ $limit: limit + 1 });
+
+    const registrations = await EventRegistration.aggregate(pipeline);
 
     let nextCursor = null;
     let hasMore = false;
@@ -470,17 +582,85 @@ export const fetchAllRegisteredTeams = TryCatchHandler(
       hasMore = true;
     }
 
-    const teams = registrations.map(reg => reg.teamId);
+    const reversedTeams = registrations.map(reg => ({
+      ...reg.teamDetails,
+      registrationId: reg._id,
+      joinedAt: reg.createdAt
+    }));
 
     return res.status(200).json({
       success: true,
-      totalTeams: teams.length,
-      teams: teams,
+      totalTeams: reversedTeams.length,
+      teams: reversedTeams,
       nextCursor,
       hasMore
     });
   }
 );
+
+export const fetchInvitedTeams = TryCatchHandler(async (req, res, next) => {
+  const { eventId } = req.params;
+  let { cursor, limit = 10, search = "" } = req.query;
+
+  if (!isValidObjectId(eventId)) {
+    return next(new CustomError("Invalid Event ID", 400));
+  }
+
+  limit = parseInt(limit);
+  if (limit > 100) limit = 100;
+
+  const event = await Event.findById(eventId).select("invitedTeams");
+  if (!event) throw new CustomError("Event not found", 404);
+
+  const pipeline = [
+    { $match: { _id: new mongoose.Types.ObjectId(eventId) } },
+    { $unwind: "$invitedTeams" },
+    {
+      $lookup: {
+        from: "teams",
+        localField: "invitedTeams",
+        foreignField: "_id",
+        as: "teamDetails"
+      }
+    },
+    { $unwind: "$teamDetails" },
+    {
+      $match: {
+        "teamDetails.teamName": { $regex: escapeRegex(search), $options: "i" }
+      }
+    },
+    { $sort: { "teamDetails._id": 1 } }
+  ];
+
+  if (cursor) {
+    if (!isValidObjectId(cursor)) {
+      throw new CustomError("Invalid cursor ID", 400);
+    }
+    pipeline.push({ $match: { "teamDetails._id": { $gt: new mongoose.Types.ObjectId(cursor) } } });
+  }
+
+  pipeline.push({ $limit: limit + 1 });
+
+  const result = await Event.aggregate(pipeline);
+
+  let nextCursor = null;
+  let hasMore = false;
+
+  if (result.length > limit) {
+    const extraItem = result.pop();
+    nextCursor = extraItem.teamDetails._id;
+    hasMore = true;
+  }
+
+  const teams = result.map(entry => entry.teamDetails);
+
+  res.status(200).json({
+    success: true,
+    teams,
+    nextCursor,
+    hasMore
+  });
+});
 
 export const closeRegistration = TryCatchHandler(async (req, res) => {
   // Event ID from params
@@ -512,6 +692,9 @@ export const closeRegistration = TryCatchHandler(async (req, res) => {
   // Registration close karna
   event.registrationStatus = "registration-closed";
   await event.save();
+
+  // Clear cache
+  await clearEventCache(event.orgId, eventId);
 
   res.status(200).json({
     message: "Registration closed successfully",
@@ -567,8 +750,9 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
     // Whitelist allowed fields to prevent mass assignment
     const allowedFields = [
       "title", "game", "description", "startDate", "registrationEndsAt",
-      "maxSlots", "registrationMode", "registrationStatus", "eventProgress",
-      "eventEndAt", "prizePool", "category", "eventType", "prizeDistribution"
+      "eventEndAt", "prizePool", "category", "eventType", "prizeDistribution",
+      "hasRoadmap", "roadmap", "hasInvitedTeams", "invitedTeams", "invitedTeamsRoadmap", "roadmaps", "registeredTeams",
+      "isPaid", "entryFee", "matchCount", "map", "invitedRoundMappings", "maxInvitedSlots"
     ];
 
     const updateData = {};
@@ -577,6 +761,57 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
         updateData[field] = req.body[field];
       }
     });
+
+    // Map 'status' from frontend to 'registrationStatus'
+    if (req.body.status) {
+      if (req.body.status === 'completed') {
+        updateData.eventProgress = 'completed';
+        updateData.registrationStatus = 'registration-closed';
+      } else {
+        updateData.registrationStatus = req.body.status;
+      }
+    }
+
+    // Sync registrationStatus: live with eventProgress: ongoing
+    if (updateData.registrationStatus === 'live') {
+      updateData.eventProgress = 'ongoing';
+    } else if (updateData.eventProgress === 'ongoing') {
+      updateData.registrationStatus = 'live';
+    }
+
+    // Handle roadmaps consolidation in update
+    if (req.body.roadmap || req.body.invitedTeamsRoadmap) {
+      const roadmaps = event.roadmaps ? [...event.roadmaps] : [];
+
+      if (req.body.roadmap) {
+        try {
+          const data = typeof req.body.roadmap === 'string' ? JSON.parse(req.body.roadmap) : req.body.roadmap;
+          const idx = roadmaps.findIndex(r => r.type === "tournament");
+          if (idx !== -1) roadmaps[idx].data = data;
+          else roadmaps.push({ type: "tournament", data });
+        } catch (e) { logger.error("Error parsing roadmap in updateEvent:", e); }
+      }
+
+      if (req.body.invitedTeamsRoadmap) {
+        try {
+          const data = typeof req.body.invitedTeamsRoadmap === 'string' ? JSON.parse(req.body.invitedTeamsRoadmap) : req.body.invitedTeamsRoadmap;
+          const idx = roadmaps.findIndex(r => r.type === "invitedTeams");
+          if (idx !== -1) roadmaps[idx].data = data;
+          else roadmaps.push({ type: "invitedTeams", data });
+        } catch (e) { logger.error("Error parsing invitedTeamsRoadmap in updateEvent:", e); }
+      }
+
+      updateData.roadmaps = roadmaps;
+      delete updateData.roadmap;
+      delete updateData.invitedTeamsRoadmap;
+    }
+
+    if (updateData.invitedTeams) {
+      try {
+        const teams = typeof updateData.invitedTeams === 'string' ? JSON.parse(updateData.invitedTeams) : updateData.invitedTeams;
+        updateData.invitedTeams = Array.isArray(teams) ? teams.map(t => (t.teamId || t._id || t)) : [];
+      } catch (e) { delete updateData.invitedTeams; }
+    }
 
     if (imageUrl) updateData.image = imageUrl;
     if (imageFileId) updateData.imageFileId = imageFileId;
@@ -599,16 +834,6 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
       updateData.prizePool = prizePoolNum;
     }
 
-    if (updateData.registrationEndsAt && event.startDate) {
-      if (new Date(updateData.registrationEndsAt) >= new Date(event.startDate)) {
-        throw new CustomError("Registration must end before the event starts", 400);
-      }
-    }
-    if (updateData.startDate && event.registrationEndsAt && !updateData.registrationEndsAt) {
-      if (new Date(event.registrationEndsAt) >= new Date(updateData.startDate)) {
-        throw new CustomError("Registration must end before the event starts", 400);
-      }
-    }
     // Note: Comprehensive date checking when both change is implicitly handled if we check against the merged state, 
     // but here we check individually. For robust check we'd merge `event` and `updateData`.
     // Let's do a merged check for safety.
@@ -616,11 +841,11 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
     const newRegEnd = updateData.registrationEndsAt ? new Date(updateData.registrationEndsAt) : event.registrationEndsAt;
     const newEnd = updateData.eventEndAt ? new Date(updateData.eventEndAt) : event.eventEndAt;
 
-    if (newRegEnd >= newStart) {
-      throw new CustomError("Registration must end before the event starts", 400);
+    if (newRegEnd > newStart) {
+      throw new CustomError("Registration must end before or at the start of the event", 400);
     }
-    if (newEnd && newEnd <= newStart) {
-      throw new CustomError("Event must end after it starts", 400);
+    if (newEnd && newEnd < newStart) {
+      throw new CustomError("Event must end at or after it starts", 400);
     }
 
     if (updateData.category) updateData.category = updateData.category.toLowerCase();
@@ -637,10 +862,86 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
       }
     }
 
+    if (updateData.hasRoadmap !== undefined) updateData.hasRoadmap = String(updateData.hasRoadmap) === 'true';
+    if (updateData.hasInvitedTeams !== undefined) updateData.hasInvitedTeams = String(updateData.hasInvitedTeams) === 'true';
+    if (updateData.isPaid !== undefined) {
+      updateData.isPaid = String(updateData.isPaid) === 'true';
+    }
+    const finalIsPaid = updateData.isPaid !== undefined ? updateData.isPaid : event.isPaid;
+    if (!finalIsPaid) {
+      updateData.entryFee = 0;
+    } else if (updateData.entryFee !== undefined) {
+      updateData.entryFee = Number(updateData.entryFee) || 0;
+    }
+    if (updateData.matchCount !== undefined) updateData.matchCount = Number(updateData.matchCount) || 1;
+
+    // Auto-assign maps for scrims in update
+    const currentEventType = updateData.eventType || event.eventType;
+    if (currentEventType === "scrims") {
+      const gameName = updateData.game || event.game;
+      const gameKey = gameName?.toLowerCase();
+      const availableMaps = GAMES_MAPS[gameKey] || [];
+      const matchCount = updateData.matchCount !== undefined ? updateData.matchCount : (event.matchCount || 1);
+
+      // Reshuffle only if game changed, matchCount changed, or map is currently empty, or event type just changed to scrims
+      const gameChanged = updateData.game && updateData.game !== event.game;
+      const matchCountChanged = updateData.matchCount !== undefined && updateData.matchCount !== event.matchCount;
+      const typeChangedToScrims = updateData.eventType === "scrims" && event.eventType !== "scrims";
+      const mapEmpty = !event.map || event.map.length === 0;
+
+      if (availableMaps.length > 0 && (gameChanged || matchCountChanged || mapEmpty || typeChangedToScrims)) {
+        const shuffled = [...availableMaps];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        updateData.map = shuffled.slice(0, matchCount);
+      }
+
+      // Cleanup tournament-specific fields if switching to scrims
+      if (typeChangedToScrims) {
+        updateData.roadmaps = [];
+        updateData.invitedTeams = [];
+        updateData.hasRoadmap = false;
+        updateData.hasInvitedTeams = false;
+      }
+    } else if (req.body.map) {
+      try {
+        updateData.map = Array.isArray(req.body.map) ? req.body.map : JSON.parse(req.body.map);
+      } catch (e) {
+        logger.error("Error parsing map in updateEvent:", e);
+      }
+    }
+
+    ['roadmap', 'invitedTeams', 'invitedTeamsRoadmap', 'invitedRoundMappings'].forEach(key => {
+      if (updateData[key]) {
+        try {
+          updateData[key] = typeof updateData[key] === 'string' ? JSON.parse(updateData[key]) : updateData[key];
+        } catch (e) {
+          delete updateData[key];
+        }
+      }
+    });
+
+    // Disallow editing roadmap once event has started
+    if (event.eventProgress !== "pending") {
+      delete updateData.roadmap;
+      delete updateData.hasRoadmap;
+      delete updateData.invitedTeams;
+      delete updateData.hasInvitedTeams;
+      delete updateData.invitedTeamsRoadmap;
+      delete updateData.roadmaps;
+      delete updateData.registeredTeams;
+      delete updateData.invitedRoundMappings;
+    }
+
     const updatedEvent = await Event.findByIdAndUpdate(eventId, updateData, {
       new: true,
       runValidators: true,
     });
+
+    // Clear cache after successful registration
+    await clearEventCache(event.orgId, eventId);
 
     res.status(200).json({
       success: true,
@@ -699,6 +1000,9 @@ export const deleteEvent = TryCatchHandler(async (req, res) => {
     );
   }
 
+  // Clear cache
+  await clearEventCache(event.orgId, eventId);
+
   res.status(200).json({
     success: true,
     message: "Event and associated data deleted successfully"
@@ -724,13 +1028,19 @@ export const unregisterEvent = TryCatchHandler(async (req, res, next) => {
       throw new CustomError("You are not registered for this event", 400);
     }
 
-    // Atomic Slot Decrement
+    // Atomic Slot Decrement and Remove from registeredTeams
     await Event.updateOne(
       { _id: eventId, joinedSlots: { $gt: 0 } },
-      { $inc: { joinedSlots: -1 } },
+      { $inc: { joinedSlots: -1 }, $pull: { registeredTeams: user.teamId } },
       { session }
     );
   });
+
+  const event = await Event.findById(eventId).select("orgId");
+  if (event) {
+    // Clear cache
+    await clearEventCache(event.orgId, eventId);
+  }
 
   res.status(200).json({
     success: true,
@@ -771,6 +1081,9 @@ export const startEvent = TryCatchHandler(async (req, res, next) => {
 
   await event.save();
 
+  // Clear cache
+  await clearEventCache(event.orgId, eventId);
+
   res.status(200).json({
     success: true,
     message: "Event started successfully! Registration closed, progress set to ongoing.",
@@ -806,6 +1119,9 @@ export const finishEvent = TryCatchHandler(async (req, res, next) => {
   event.registrationStatus = "registration-closed";
 
   await event.save();
+
+  // Clear cache
+  await clearEventCache(event.orgId, eventId);
 
   res.status(200).json({
     success: true,
@@ -846,6 +1162,67 @@ export const fetchTournamentsByTeam = TryCatchHandler(async (req, res, next) => 
   res.status(200).json({
     success: true,
     data: tournaments,
+  });
+});
+
+export const fetchT1SpecialTeams = TryCatchHandler(async (req, res, next) => {
+  const { eventId } = req.params;
+  let { cursor, limit = 10, search = "" } = req.query;
+
+  if (!isValidObjectId(eventId)) {
+    return next(new CustomError("Invalid Event ID", 400));
+  }
+
+  limit = parseInt(limit);
+  if (limit > 100) limit = 100;
+
+  const event = await Event.findById(eventId).select("t1SpecialTeams");
+  if (!event) throw new CustomError("Event not found", 404);
+
+  const pipeline = [
+    { $match: { _id: new mongoose.Types.ObjectId(eventId) } },
+    { $unwind: "$t1SpecialTeams" },
+    {
+      $lookup: {
+        from: "teams",
+        localField: "t1SpecialTeams",
+        foreignField: "_id",
+        as: "teamDetails"
+      }
+    },
+    { $unwind: "$teamDetails" },
+    {
+      $match: {
+        "teamDetails.teamName": { $regex: escapeRegex(search), $options: "i" }
+      }
+    },
+    { $sort: { "teamDetails._id": 1 } }
+  ];
+
+  if (cursor) {
+    pipeline.push({ $match: { "teamDetails._id": { $gt: new mongoose.Types.ObjectId(cursor) } } });
+  }
+
+  pipeline.push({ $limit: limit + 1 });
+
+  const result = await Event.aggregate(pipeline);
+
+  let nextCursor = null;
+  let hasMore = false;
+
+  if (result.length > limit) {
+    const extraItem = result.pop();
+    nextCursor = extraItem.teamDetails._id;
+    hasMore = true;
+  }
+
+  const teams = result.map(entry => entry.teamDetails);
+
+  res.status(200).json({
+    success: true,
+    teams,
+    nextCursor,
+    hasMore
   });
 });
 

@@ -8,6 +8,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/utils";
 import { Round } from "../../../hooks";
 
 interface RoundInfoDialogProps {
@@ -36,7 +37,7 @@ export const RoundInfoDialog = ({ round, open, onOpenChange }: RoundInfoDialogPr
                     <div className="bg-white/5 p-4 rounded-lg space-y-1">
                         <span className="text-xs text-gray-400 uppercase tracking-wider">Start Date</span>
                         <div className="font-medium text-white">
-                            {round.startTime ? new Date(round.startTime).toLocaleDateString() : 'Not scheduled'}
+                            {round.startTime ? formatDate(round.startTime) : 'Not scheduled'}
                         </div>
                     </div>
 

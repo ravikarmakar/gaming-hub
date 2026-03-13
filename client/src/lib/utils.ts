@@ -41,9 +41,25 @@ export function throttle<T extends (...args: any[]) => any>(func: T, limit: numb
 }
 
 export const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
+  return new Date(dateString).toLocaleDateString('en-GB');
+};
+
+/**
+ * Formats a date or ISO string to the local datetime-local input format (YYYY-MM-DDTHH:mm)
+ */
+export const formatDateToLocalHTML = (date: string | Date | undefined) => {
+  if (!date) return "";
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "";
+
+  const offset = d.getTimezoneOffset() * 60000;
+  const localISOTime = new Date(d.getTime() - offset).toISOString().slice(0, 16);
+  return localISOTime;
+};
+
+export const formatCurrency = (amount: number | string | undefined) => {
+  if (amount === undefined || amount === null) return "0";
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (isNaN(num)) return "0";
+  return num.toLocaleString('en-IN');
 };

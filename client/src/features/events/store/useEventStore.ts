@@ -28,12 +28,6 @@ interface EventStateTypes {
   teamsCursor: string | null;
   teamsLimit: number;
 
-  createEvent: (eventData: FormData) => Promise<Event | null>;
-  fetchEventsByOrgId: (orgId: string) => Promise<void>;
-  fetchEventDetailsById: (eventId: string) => Promise<void>;
-  getOneEvent: (id: string) => Promise<void>; // Alias for fetchEventDetailsById
-  fetchAllEvents: () => Promise<void>;
-
   // Paginated Fetch
   fetchEvents: (params?: {
     search?: string;
@@ -53,8 +47,6 @@ interface EventStateTypes {
   isTeamRegistered: (eventId: string, teamId: string) => Promise<{ registered: boolean; status: "approved" | "pending" | "none" }>;
   fetchRegisteredTeams: (eventId: string, params?: { append?: boolean, limit?: number }) => Promise<void>;
   resetRegisteredTeams: () => void;
-  updateEvent: (eventId: string, eventData: FormData) => Promise<Event | null>;
-  deleteEvent: (eventId: string) => Promise<boolean>;
   cancelRegistration: (id: string) => Promise<void>;
 }
 
@@ -79,62 +71,6 @@ export const useEventStore = create<EventStateTypes>((set, get) => ({
   hasMoreTeams: true,
   teamsCursor: null,
   teamsLimit: 10,
-
-  createEvent: async (eventData) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await axiosInstance.post(
-        EVENT_ENDPOINTS.CREATE,
-        eventData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-      const newEvent = response.data.data;
-      set((state) => ({
-        events: [newEvent, ...state.events],
-        orgEvents: [newEvent, ...state.orgEvents],
-        isLoading: false
-      }));
-      return newEvent;
-    } catch (err) {
-      const message = handleApiError(err, "Failed to create event");
-      set({ isLoading: false, error: message });
-      return null;
-    }
-  },
-  fetchEventsByOrgId: async (orgId) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await axiosInstance.get(EVENT_ENDPOINTS.ORG_EVENTS(orgId));
-      set({ orgEvents: response.data.data, isLoading: false });
-    } catch (err) {
-      const message = handleApiError(err, "Failed to fetch org events");
-      set({ isLoading: false, error: message });
-    }
-  },
-  fetchEventDetailsById: async (eventId) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await axiosInstance.get(EVENT_ENDPOINTS.DETAILS(eventId));
-      const details = response.data.data;
-      set({ eventDetails: details, selectedEvent: details, isLoading: false });
-    } catch (err) {
-      const message = handleApiError(err, "Failed to fetch event details");
-      set({ isLoading: false, error: message });
-    }
-  },
-  getOneEvent: async (id) => {
-    return get().fetchEventDetailsById(id);
-  },
-  fetchAllEvents: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await axiosInstance.get(EVENT_ENDPOINTS.ALL);
-      set({ events: response.data.data, isLoading: false });
-    } catch (err) {
-      const message = handleApiError(err, "Failed to fetch events");
-      set({ isLoading: false, error: message });
-    }
-  },
 
   fetchEvents: async (params = {}) => {
     const {
@@ -285,45 +221,6 @@ export const useEventStore = create<EventStateTypes>((set, get) => ({
       hasMoreTeams: true,
       isTeamsLoading: false
     });
-  },
-  updateEvent: async (eventId, eventData) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await axiosInstance.put(EVENT_ENDPOINTS.UPDATE(eventId), eventData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      const updatedEvent: Event = response.data.data;
-      set((state) => ({
-        isLoading: false,
-        events: state.events.map((e) => (e._id === eventId ? updatedEvent : e)),
-        orgEvents: state.orgEvents.map((e) => (e._id === eventId ? updatedEvent : e)),
-        eventDetails: state.eventDetails?._id === eventId ? updatedEvent : state.eventDetails,
-        selectedEvent: state.selectedEvent?._id === eventId ? updatedEvent : state.selectedEvent,
-      }));
-      return updatedEvent;
-    } catch (err) {
-      const message = handleApiError(err, "Failed to update event");
-      set({ isLoading: false, error: message });
-      return null;
-    }
-  },
-  deleteEvent: async (eventId) => {
-    set({ isLoading: true, error: null });
-    try {
-      await axiosInstance.delete(EVENT_ENDPOINTS.DELETE(eventId));
-      set((state) => ({
-        isLoading: false,
-        events: state.events.filter((e) => e._id !== eventId),
-        orgEvents: state.orgEvents.filter((e) => e._id !== eventId),
-        eventDetails: state.eventDetails?._id === eventId ? null : state.eventDetails,
-        selectedEvent: state.selectedEvent?._id === eventId ? null : state.selectedEvent,
-      }));
-      return true;
-    } catch (err) {
-      const message = handleApiError(err, "Failed to delete event");
-      set({ isLoading: false, error: message });
-      return false;
-    }
   },
   cancelRegistration: async (id) => {
     set({ isLoading: true, error: null });

@@ -174,6 +174,7 @@ export const fetchAllTeams = TryCatchHandler(async (req, res) => {
         teamName: 1,
         slug: 1,
         tag: 1,
+        captain: 1,
         imageUrl: 1,
         isVerified: 1,
         isRecruiting: 1,

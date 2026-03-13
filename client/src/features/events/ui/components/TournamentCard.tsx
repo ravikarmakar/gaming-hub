@@ -24,7 +24,7 @@ import {
 import { GlassCard, NeonBadge } from "./ThemedComponents";
 import { Event, EVENT_ROUTES } from "@/features/events/lib";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
-import { cn } from "@/lib/utils";
+import { cn, formatDate, formatCurrency } from "@/lib/utils";
 
 interface TournamentCardProps {
     event: Event;
@@ -186,7 +186,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
                             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">
                                 <TrendingUp size={10} className="text-emerald-400" /> Prize Pool
                             </p>
-                            <p className="text-lg font-black text-white tracking-tight">₹{event.prizePool?.toLocaleString() || "0"}</p>
+                            <p className="text-lg font-black text-white tracking-tight">₹{formatCurrency(event.prizePool)}</p>
                         </div>
                         <div className="bg-white/5 p-3 rounded-xl border border-white/5 group/metric hover:bg-white/10 transition-all">
                             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">
@@ -207,7 +207,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2 text-xs text-gray-400">
                                 <Clock size={12} />
-                                <span>{new Date(event.startDate).toLocaleDateString()}</span>
+                                <span>{formatDate(event.startDate)}</span>
                             </div>
                         </div>
                         {!hideViewDetails && (

@@ -12,7 +12,7 @@ export const initializeNativeRedis = () => {
     const redisUrl = process.env.REDIS_URL;
 
     if (!redisUrl) {
-        logger.info("[NativeRedis] REDIS_URL not set — using Upstash (HTTP) for caching.");
+        logger.info("[NativeRedis] REDIS_URL not set — native Redis will not be used.");
         return null;
     }
 
@@ -29,7 +29,7 @@ export const initializeNativeRedis = () => {
         });
 
         nativeRedis.on("connect", () => {
-            logger.info("[NativeRedis] Connected — using native Redis for caching (~1ms vs ~50-100ms HTTP).");
+            logger.info("[NativeRedis] Connected — using native Redis for caching.");
         });
 
         return nativeRedis;

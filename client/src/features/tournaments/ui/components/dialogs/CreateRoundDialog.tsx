@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
+
 import {
     Dialog,
     DialogContent,
@@ -11,26 +13,33 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import toast from "react-hot-toast";
+
 import { useCreateRoundMutation } from "../../../hooks";
 
 interface CreateRoundDialogProps {
     eventId: string;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    type: "tournament" | "invited-tournament" | "t1-special";
+    roadmapIndex?: number;
+    initialName?: string;
 }
 
-export const CreateRoundDialog = ({ eventId, open, onOpenChange }: CreateRoundDialogProps) => {
-    const [newRoundName, setNewRoundName] = useState("");
+export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIndex, initialName }: CreateRoundDialogProps) => {
+    const [newRoundName, setNewRoundName] = useState(initialName || "");
     const [newStartDate, setNewStartDate] = useState("");
     const [newDailyStartTime, setNewDailyStartTime] = useState("13:00");
     const [newDailyEndTime, setNewDailyEndTime] = useState("21:00");
     const [newGapMinutes, setNewGapMinutes] = useState(30);
     const [newMatches, setNewMatches] = useState(1);
     const [newQualify, setNewQualify] = useState(1);
-    const [isGrandFinal, setIsGrandFinal] = useState(false);
-    const [newMatchTime, setNewMatchTime] = useState("18:00");
+
+    // Update name if initialName changes
+    useEffect(() => {
+        if (initialName && !newRoundName) {
+            setNewRoundName(initialName);
+        }
+    }, [initialName, newRoundName]);
 
     const { mutateAsync: createRound, isPending: isCreating } = useCreateRoundMutation();
 
@@ -46,9 +55,6 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange }: CreateRoundDi
         }
 
         let startTime = newStartDate;
-        if (isGrandFinal && newMatchTime) {
-            startTime = `${newStartDate}T${newMatchTime}:00`;
-        }
 
         try {
             await createRound({
@@ -56,11 +62,13 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange }: CreateRoundDi
                 params: {
                     roundName: newRoundName,
                     startTime,
-                    dailyStartTime: isGrandFinal ? "" : newDailyStartTime,
-                    dailyEndTime: isGrandFinal ? "" : newDailyEndTime,
-                    gapMinutes: isGrandFinal ? 0 : newGapMinutes,
+                    dailyStartTime: newDailyStartTime,
+                    dailyEndTime: newDailyEndTime,
+                    gapMinutes: newGapMinutes,
                     matchesPerGroup: newMatches,
-                    qualifyingTeams: newQualify
+                    qualifyingTeams: newQualify,
+                    type: type || "tournament",
+                    roadmapIndex
                 }
             });
             onOpenChange(false);
@@ -69,8 +77,6 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange }: CreateRoundDi
             setNewDailyStartTime("13:00");
             setNewDailyEndTime("21:00");
             setNewGapMinutes(30);
-            setIsGrandFinal(false);
-            setNewMatchTime("18:00");
         } catch (error) {
             console.error(error);
         }
@@ -86,23 +92,6 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange }: CreateRoundDi
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                    <div className="flex items-center justify-between p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                        <div className="space-y-0.5">
-                            <Label className="text-purple-300 font-bold">Grand Finale</Label>
-                            <p className="text-[10px] text-purple-300/60 leading-tight">Simplified scheduling for the final match.</p>
-                        </div>
-                        <Switch
-                            checked={isGrandFinal}
-                            onCheckedChange={(checked) => {
-                                setIsGrandFinal(checked);
-                                if (checked) {
-                                    setNewRoundName("Grand Finale");
-                                    setNewMatches(1);
-                                    setNewQualify(0);
-                                }
-                            }}
-                        />
-                    </div>
 
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="name" className="text-right text-gray-300">Name</Label>
@@ -124,17 +113,6 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange }: CreateRoundDi
                         />
                     </div>
 
-                    {isGrandFinal ? (
-                        <div className="grid grid-cols-4 items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300">
-                            <Label className="text-right text-gray-300">Match Time</Label>
-                            <Input
-                                type="time"
-                                value={newMatchTime}
-                                onChange={(e) => setNewMatchTime(e.target.value)}
-                                className="col-span-3 bg-white/5 border-white/10 text-white border-purple-500/30 focus:border-purple-500"
-                            />
-                        </div>
-                    ) : (
                         <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label className="text-right text-gray-300">Daily Start</Label>
@@ -165,7 +143,6 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange }: CreateRoundDi
                                 />
                             </div>
                         </div>
-                    )}
 
                     <div className="space-y-4 pt-2 border-t border-white/5">
                         <div className="grid grid-cols-4 items-center gap-4">
@@ -186,7 +163,7 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange }: CreateRoundDi
                                 value={newQualify}
                                 onChange={(e) => setNewQualify(parseInt(e.target.value) || 0)}
                                 className="col-span-3 bg-white/5 border-white/10 text-white"
-                                placeholder={isGrandFinal ? "e.g. 1 for winner" : ""}
+                                placeholder=""
                             />
                         </div>
                     </div>

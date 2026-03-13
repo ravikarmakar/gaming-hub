@@ -1,16 +1,12 @@
 import mongoose from "mongoose";
-
-export const registrationStatusEnum = [
-  "registration-open",
-  "registration-closed",
-  "live",
-];
-
-export const eventProgressEnum = [
-  "pending",
-  "ongoing",
-  "completed",
-];
+import {
+  eventTypeEnum,
+  eventCategoryEnum,
+  registrationModeEnum,
+  registrationStatusEnum,
+  eventProgressEnum,
+  eventRoadmapTypeEnum
+} from "./event.constants.js";
 
 const eventSchema = new mongoose.Schema(
   {
@@ -19,13 +15,17 @@ const eventSchema = new mongoose.Schema(
 
     eventType: {
       type: String,
-      enum: ["scrims", "tournament"],
+      enum: eventTypeEnum,
       required: true,
     },
+    isPaid: { type: Boolean, default: false },
+    entryFee: { type: Number, default: 0, min: [0, "Entry fee cannot be negative"] },
+    matchCount: { type: Number, default: 1, min: [1, "Match count must be at least 1"] },
+    map: { type: [String], default: [] },
 
     category: {
       type: String,
-      enum: ["solo", "duo", "squad"],
+      enum: eventCategoryEnum,
       required: true,
     },
 
@@ -48,9 +48,11 @@ const eventSchema = new mongoose.Schema(
       }
     },
 
+    maxInvitedSlots: { type: Number, default: 0 },
+
     registrationMode: {
       type: String,
-      enum: ["open", "invite-only"],
+      enum: registrationModeEnum,
       default: "open",
     },
 
@@ -90,6 +92,47 @@ const eventSchema = new mongoose.Schema(
         label: { type: String, default: "" },
       },
     ],
+    hasRoadmap: { type: Boolean, default: false },
+    hasInvitedTeams: { type: Boolean, default: false },
+    hasT1SpecialTeams: { type: Boolean, default: false },
+    roadmaps: [
+      {
+        type: { type: String, enum: eventRoadmapTypeEnum, required: true },
+        data: { type: mongoose.Schema.Types.Mixed, default: [] }
+      }
+    ],
+    invitedTeams: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Team",
+      }
+    ],
+    registeredTeams: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Team",
+      }
+    ],
+    t1SpecialTeams: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Team",
+      }
+    ],
+    invitedRoundMappings: [
+      {
+        startRound: { type: Number, required: true },
+        endRound: { type: Number, required: true },
+        targetMainRound: { type: Number, required: true },
+      }
+    ],
+    t1SpecialRoundMappings: [
+      {
+        startRound: { type: Number, required: true },
+        endRound: { type: Number, required: true },
+        targetMainRound: { type: Number, required: true },
+      }
+    ],
   },
   { timestamps: true }
 );
@@ -102,5 +145,14 @@ eventSchema.index({ game: 1 });
 eventSchema.index({ category: 1 });
 eventSchema.index({ createdAt: -1 });
 eventSchema.index({ startDate: 1 });
+
+export {
+  eventTypeEnum,
+  eventCategoryEnum,
+  registrationModeEnum,
+  registrationStatusEnum,
+  eventProgressEnum,
+  eventRoadmapTypeEnum
+} from "./event.constants.js";
 
 export default mongoose.model("Event", eventSchema);

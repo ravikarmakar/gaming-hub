@@ -63,6 +63,91 @@ class ChatService {
                 return "staff";
             }
         });
+
+        // Group Scope Handler
+        this.registerScopeHandler("group", {
+            checkAccess: async (userId, targetId) => {
+                const Group = (await import("../event/models/group.model.js")).default;
+                const Team = (await import("../team/team.model.js")).default;
+
+                // ⚡ Optimization: Single query with deep population to fetch all needed context
+                const group = await Group.findById(targetId)
+                    .populate({
+                        path: "roundId",
+                        select: "eventId",
+                        populate: {
+                            path: "eventId",
+                            select: "orgId"
+                        }
+                    })
+                    .lean();
+
+                if (!group) return false;
+
+                // 1. Check if user is in one of the teams
+                const isTeamMember = await Team.exists({
+                    _id: { $in: group.teams },
+                    $or: [{ captain: userId }, { "teamMembers.user": userId }],
+                    isDeleted: false
+                });
+                if (isTeamMember) return true;
+
+                // 2. Check if user is a high official of the organizer
+                // Context is already loaded via populate
+                const orgId = group.roundId?.eventId?.orgId;
+                if (!orgId) return false;
+
+                const user = await User.findById(userId).select("roles").lean();
+                if (!user) return false;
+
+                // ⚡ FIX: Role names must match Roles.ORG constants (underscore, org: prefix)
+                return user?.roles?.some(r =>
+                    r.scope === "org" &&
+                    r.scopeId?.toString() === orgId.toString() &&
+                    ["org:owner", "org:co_owner", "org:manager"].includes(r.role)
+                ) || false;
+            },
+            getSenderRole: async (userId, targetId) => {
+                const Group = (await import("../event/models/group.model.js")).default;
+                const Team = (await import("../team/team.model.js")).default;
+
+                const group = await Group.findById(targetId)
+                    .select("teams roundId")
+                    .populate({
+                        path: "roundId",
+                        select: "eventId",
+                        populate: {
+                            path: "eventId",
+                            select: "orgId"
+                        }
+                    })
+                    .lean();
+
+                if (!group) return "member";
+
+                const isTeamMember = await Team.exists({
+                    _id: { $in: group.teams },
+                    $or: [{ captain: userId }, { "teamMembers.user": userId }],
+                    isDeleted: false
+                });
+
+                if (isTeamMember) return "member";
+
+                const orgId = group.roundId?.eventId?.orgId;
+                if (!orgId) return "member";
+
+                const user = await User.findById(userId).select("roles").lean();
+
+                // ⚡ FIX: Role names must match Roles.ORG constants
+                const isOfficial = user?.roles?.some(r =>
+                    r.scope === "org" &&
+                    r.scopeId?.toString() === orgId.toString() &&
+                    ["org:owner", "org:co_owner", "org:manager"].includes(r.role)
+                );
+
+                return isOfficial ? "official" : "member";
+            }
+        });
     }
 
     /**

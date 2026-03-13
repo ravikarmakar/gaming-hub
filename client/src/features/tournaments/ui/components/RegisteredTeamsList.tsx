@@ -1,140 +1,132 @@
-import { useEffect, useState } from "react";
-import {
-    Users,
-    Search,
-    ExternalLink,
-    MoreHorizontal,
-    Mail,
-    Shield,
-    Loader2
-} from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { Users, Search, ExternalLink, Loader2 } from "lucide-react";
+import debounce from "lodash.debounce";
+import { useInView } from "react-intersection-observer";
+import { AutoSizer as _AutoSizer } from "react-virtualized-auto-sizer";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useEventStore } from "@/features/events/store/useEventStore";
-import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import { useGetInfiniteRegisteredTeamsQuery, useGetInfiniteInvitedTeamsQuery, useGetInfiniteT1SpecialTeamsQuery } from "../../hooks/useTournamentQueries";
 
 interface RegisteredTeamsListProps {
     eventId: string;
 }
 
 export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
-    const { registerdTeams, fetchRegisteredTeams, isTeamsLoading } = useEventStore();
+    const [activeTab, setActiveTab] = useState<"registered" | "invited" | "t1-special">("registered");
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
 
-    useEffect(() => {
-        if (eventId) {
-            fetchRegisteredTeams(eventId);
-        }
-    }, [eventId, fetchRegisteredTeams]);
-
-    const filteredTeams = registerdTeams.filter(team =>
-        team.teamName.toLowerCase().includes(searchQuery.toLowerCase())
+    const handleSearch = useCallback(
+        debounce((val: string) => {
+            setDebouncedSearch(val);
+        }, 500),
+        []
     );
 
-    if (isTeamsLoading && registerdTeams.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-                <Loader2 className="w-12 h-12 text-purple-500 animate-spin mb-4" />
-                <p className="text-gray-400 font-medium">Retrieving registered rosters...</p>
-            </div>
-        );
-    }
+    useEffect(() => {
+        handleSearch(searchQuery);
+        return () => handleSearch.cancel(); // Cancel debounce on unmount/re-render
+    }, [searchQuery, handleSearch]);
+
+    const registeredQuery = useGetInfiniteRegisteredTeamsQuery(eventId, debouncedSearch);
+    const invitedQuery = useGetInfiniteInvitedTeamsQuery(eventId, debouncedSearch);
+    const t1SpecialQuery = useGetInfiniteT1SpecialTeamsQuery(eventId, debouncedSearch);
+
+    const activeQuery = activeTab === "registered" ? registeredQuery : activeTab === "invited" ? invitedQuery : t1SpecialQuery;
+    const { ref, inView } = useInView();
+
+    const { hasNextPage, isFetchingNextPage, fetchNextPage } = activeQuery;
+    useEffect(() => {
+        if (inView && hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    const allTeams = useMemo(() => {
+        return activeQuery.data?.pages.flatMap((page) => page.teams) || [];
+    }, [activeQuery.data]);
 
     return (
-        <div className="p-6 space-y-6">
-            {/* Toolbar */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-                <div className="relative w-full sm:w-80 group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
-                    <Input
-                        placeholder="Search teams..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-gray-400 focus:ring-purple-500/20"
-                    />
-                </div>
-                <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest">
-                    <Users className="w-4 h-4" />
-                    Total Verified: {registerdTeams.length}
+        <div className="flex flex-col" style={{ height: '700px', minWidth: '300px' }}>
+            <div className="p-6 border-b border-white/5 space-y-6 bg-gray-900/40">
+                <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
+                    <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full md:w-auto">
+                        <TabsList className="bg-black/40 border border-white/10 p-1">
+                            <TabsTrigger value="registered" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white uppercase text-[10px] font-black tracking-widest px-6">
+                                Registered
+                            </TabsTrigger>
+                            <TabsTrigger value="invited" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white uppercase text-[10px] font-black tracking-widest px-6">
+                                Invited
+                            </TabsTrigger>
+                            <TabsTrigger value="t1-special" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white uppercase text-[10px] font-black tracking-widest px-6">
+                                T1 Special
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+
+                    <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-center">
+                        <div className="relative w-full sm:w-80 group">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
+                            <Input
+                                placeholder="Search recruitment..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-10 h-10 bg-white/5 border-white/10 text-white placeholder:text-gray-400 focus:ring-purple-500/20"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2 px-4 h-10 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                            <Users className="w-3.5 h-3.5 text-purple-400" />
+                            Loaded: {allTeams.length}
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Teams Grid */}
-            {filteredTeams.length === 0 ? (
-                <div className="py-24 text-center rounded-2xl border-2 border-dashed border-white/5 bg-gray-900/10">
-                    <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Users className="w-8 h-8 text-gray-700" />
+            <div className="flex-1 min-h-0 bg-black/20 w-full relative">
+                {activeQuery.isLoading ? (
+                    <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+                        <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-4" />
+                        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Assembling Squads...</p>
                     </div>
-                    <h3 className="text-xl font-bold text-gray-300">No Teams Recruited</h3>
-                    <p className="text-gray-500 max-w-xs mx-auto mt-1">
-                        {searchQuery ? "No teams match your current search criteria." : "Once teams register for the tournament, they will appear in this roster."}
-                    </p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredTeams.map((team) => (
-                        <Card key={team._id} className="group relative overflow-hidden bg-white/5 border-white/10 hover:border-purple-500/30 transition-all duration-300">
-                            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-white">
-                                            <MoreHorizontal className="w-4 h-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="bg-gray-900 border-white/10 text-white">
-                                        <DropdownMenuItem className="focus:bg-white/10 text-xs">
-                                            <Mail className="w-3.5 h-3.5 mr-2" /> Message Captain
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem className="focus:bg-white/10 text-xs text-red-400">
-                                            <Shield className="w-3.5 h-3.5 mr-2" /> DQ Team
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-
-                            <CardContent className="p-5 flex items-center gap-4">
-                                <Avatar className="h-14 w-14 border-2 border-white/10 shadow-lg group-hover:scale-105 transition-transform">
-                                    <AvatarImage src={team.imageUrl || undefined} alt={team.teamName} />
-                                    <AvatarFallback className="bg-purple-600/20 text-purple-300 font-bold text-xl">
-                                        {team.teamName[0].toUpperCase()}
-                                    </AvatarFallback>
-                                </Avatar>
-
-                                <div className="space-y-1 min-w-0 flex-1">
-                                    <h4 className="font-black text-white truncate leading-tight group-hover:text-purple-400 transition-colors">
-                                        {team.teamName}
-                                    </h4>
-                                    <div className="flex items-center gap-2">
-                                        {team.tag && (
-                                            <Badge variant="outline" className="text-[9px] uppercase tracking-tighter border-white/10 text-gray-400">
-                                                {team.tag}
-                                            </Badge>
-                                        )}
-                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                            {team.teamMembers?.length || 0} Members
-                                        </span>
+                ) : (
+                    <div className="absolute inset-0 overflow-y-auto p-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {allTeams.map((team: any, idx: number) => (
+                                <div key={team._id || idx} className="bg-white/5 border border-white/10 p-4 rounded-xl flex items-center gap-4">
+                                    <Avatar className="h-12 w-12 border border-white/10 shadow-lg">
+                                        <AvatarImage src={team.imageUrl} />
+                                        <AvatarFallback className="bg-purple-600/20 text-purple-300 font-bold">
+                                            {team.teamName?.[0]?.toUpperCase()}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-bold text-white truncate">{team.teamName}</h4>
+                                        <p className="text-[10px] text-gray-500 uppercase tracking-widest">{team.tag || 'NO TAG'} • {team.teamMembers?.length || 0} Members</p>
                                     </div>
+                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-white">
+                                        <ExternalLink className="w-4 h-4" />
+                                    </Button>
                                 </div>
+                            ))}
+                        </div>
+                        {activeQuery.isFetchingNextPage && (
+                            <div className="py-8 flex justify-center">
+                                <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
+                            </div>
+                        )}
+                        <div ref={ref} className="h-10" />
+                    </div>
+                )}
+            </div>
 
-                                <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-9 w-9 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-xl"
-                                    title="View Team Profile"
-                                >
-                                    <ExternalLink className="w-4 h-4" />
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    ))}
+            {activeQuery.isFetchingNextPage && (
+                <div className="py-4 flex justify-center bg-gray-900/40 border-t border-white/5">
+                    <Loader2 className="w-5 h-5 text-purple-500 animate-spin mr-2" />
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Loading more...</span>
                 </div>
             )}
         </div>
