@@ -187,15 +187,17 @@ export const useSearchTeamsQuery = (search: string) => {
     });
 };
 
-export const useGetT1SpecialTeamsQuery = (eventId: string, search = "") => {
-    return useQuery({
+export const useGetInfiniteT1SpecialTeamsQuery = (eventId: string, search = "") => {
+    return useInfiniteQuery({
         queryKey: tournamentKeys.t1SpecialTeams(eventId, search),
-        queryFn: async () => {
+        queryFn: async ({ pageParam = null }) => {
             const res = await axiosInstance.get(`/events/t1-special-teams/${eventId}`, {
-                params: { search, limit: 100 }
+                params: { cursor: pageParam, limit: 20, search, skipCache: true }
             });
-            return res.data.teams;
+            return res.data;
         },
+        initialPageParam: null,
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
         enabled: !!eventId,
     });
 };

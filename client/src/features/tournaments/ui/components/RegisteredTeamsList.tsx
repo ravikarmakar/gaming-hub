@@ -9,14 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { useGetInfiniteRegisteredTeamsQuery, useGetInfiniteInvitedTeamsQuery } from "../../hooks/useTournamentQueries";
+import { useGetInfiniteRegisteredTeamsQuery, useGetInfiniteInvitedTeamsQuery, useGetInfiniteT1SpecialTeamsQuery } from "../../hooks/useTournamentQueries";
 
 interface RegisteredTeamsListProps {
     eventId: string;
 }
 
 export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
-    const [activeTab, setActiveTab] = useState<"registered" | "invited">("registered");
+    const [activeTab, setActiveTab] = useState<"registered" | "invited" | "t1-special">("registered");
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -34,8 +34,9 @@ export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
 
     const registeredQuery = useGetInfiniteRegisteredTeamsQuery(eventId, debouncedSearch);
     const invitedQuery = useGetInfiniteInvitedTeamsQuery(eventId, debouncedSearch);
+    const t1SpecialQuery = useGetInfiniteT1SpecialTeamsQuery(eventId, debouncedSearch);
 
-    const activeQuery = activeTab === "registered" ? registeredQuery : invitedQuery;
+    const activeQuery = activeTab === "registered" ? registeredQuery : activeTab === "invited" ? invitedQuery : t1SpecialQuery;
     const { ref, inView } = useInView();
 
     const { hasNextPage, isFetchingNextPage, fetchNextPage } = activeQuery;
@@ -60,6 +61,9 @@ export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
                             </TabsTrigger>
                             <TabsTrigger value="invited" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white uppercase text-[10px] font-black tracking-widest px-6">
                                 Invited
+                            </TabsTrigger>
+                            <TabsTrigger value="t1-special" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white uppercase text-[10px] font-black tracking-widest px-6">
+                                T1 Special
                             </TabsTrigger>
                         </TabsList>
                     </Tabs>
