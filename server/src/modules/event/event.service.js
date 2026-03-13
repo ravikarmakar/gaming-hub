@@ -60,7 +60,7 @@ export const acceptJoinRequest = async (requesterId, eventId, handledBy, session
         ]
       }
     },
-    { $inc: { joinedSlots: 1 } },
+    { $inc: { joinedSlots: 1 }, $push: { registeredTeams: requester.teamId } },
     { new: true, session }
   );
 
@@ -95,6 +95,6 @@ export const acceptJoinRequest = async (requesterId, eventId, handledBy, session
     responseData: null,
     socketEventData: null,
     requesterId,
-    cacheKeys: []
+    cacheKeys: [`user_profile:${requesterId}`]
   };
 };

@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, LogOut, PlusCircle, User, Settings, Bell, UserCog, Building, LayoutDashboard, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,6 @@ import {
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/routes";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { useTeamStore } from "@/features/teams/store/useTeamStore";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
@@ -40,7 +39,16 @@ interface MenuOption {
 const ProfileMenu = () => {
   const navigate = useNavigate();
   const { user, logout, isLoading } = useAuthStore();
-  const { setIsCreateOrgOpen } = useOrganizerStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const setIsCreateOrgOpen = (open: boolean) => {
+    if (open) {
+      searchParams.set("modal", "create-org");
+    } else {
+      searchParams.delete("modal");
+    }
+    setSearchParams(searchParams);
+  };
   const { setIsCreateTeamOpen } = useTeamStore();
 
   const { can } = useAccess();

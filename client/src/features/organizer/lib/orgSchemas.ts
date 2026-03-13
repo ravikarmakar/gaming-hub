@@ -11,10 +11,10 @@ export const orgSettingsSchema = z.object({
         .regex(/^[A-Z0-9]{2,5}$/, "Tag must be 2-5 uppercase letters/numbers")
         .nonempty("Organization tag is required"),
 
-    email: z
+    region: z
         .string()
-        .email("Please enter a valid email address")
-        .nonempty("Email is required"),
+        .min(2, "Region must be at least 2 characters")
+        .nonempty("Region is required"),
 
     description: z
         .string()
@@ -51,10 +51,10 @@ export const orgSchema = z.object({
         .regex(/^[A-Z]{2,5}$/, "Tag must be 2-5 uppercase letters (e.g. 'KRM')")
         .nonempty("Organization tag is required"),
 
-    email: z
+    region: z
         .string()
-        .email("Please enter a valid email address")
-        .nonempty("Email is required"),
+        .min(2, "Region must be at least 2 characters")
+        .nonempty("Region is required"),
 
     image: z.custom<File>((file) => file instanceof File, {
         message: "Organization logo is required",

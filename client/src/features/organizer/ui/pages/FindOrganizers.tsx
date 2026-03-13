@@ -1,39 +1,35 @@
-import { useEffect, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { useState } from "react";
 import { Building, Search } from "lucide-react";
 
-import { useOrganizerStore } from "../../store/useOrganizerStore";
+import { useInfiniteOrganizersQuery } from "../../hooks/useOrganizerQueries";
 import { Input } from "@/components/ui/input";
 import OrganizerCard from "../components/OrganizerCard";
 import { useDebounce } from "@/hooks/useDebounce";
-import { ResourceGridWrapper } from "@/components/shared/ResourceGridWrapper";
+import { DiscoveryPage } from "@/components/shared/DiscoveryPage";
 
-const FindOrganizers = () => {
-    const { organizers, isLoading, fetchOrganizers, organizersPagination } = useOrganizerStore();
+export const FindOrganizers = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-    useEffect(() => {
-        fetchOrganizers(1, 20, debouncedSearchQuery);
-    }, [fetchOrganizers, debouncedSearchQuery]);
+    const {
+        data: organizersData,
+        isLoading,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage
+    } = useInfiniteOrganizersQuery(20, debouncedSearchQuery);
+
+    const organizers = organizersData?.pages.flatMap((page: any) => page.data) || [];
+    const firstPagePagination = organizersData?.pages[0]?.pagination;
 
     const handleLoadMore = () => {
-        // Robust hasMore check
-        const safeHasMore = organizersPagination
-            ? (organizersPagination.page < organizersPagination.pages) || (organizersPagination.total > organizersPagination.page * organizersPagination.limit)
-            : false;
-
-        if (safeHasMore && !isLoading) {
-            fetchOrganizers(organizersPagination!.page + 1, 20, debouncedSearchQuery, true);
+        if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
         }
     };
 
-    const hasMore = organizersPagination
-        ? organizersPagination.page < organizersPagination.pages
-        : false;
-
     return (
-        <ResourceGridWrapper
+        <DiscoveryPage
             title={
                 <div className="flex flex-col gap-2">
                     <div className="inline-flex items-center gap-2 px-4 py-2 w-max rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-sm font-medium mb-2">
@@ -46,10 +42,10 @@ const FindOrganizers = () => {
                 </div>
             }
             description="Discover and follow the most influential organizations driving the future of competitive gaming. Join their community and compete in elite tournaments."
-            stats={{ label: "Active Orgs", value: organizersPagination?.total || 0 }}
-            isLoading={isLoading}
-            isEmpty={!isLoading && (!organizers || organizers.length === 0)}
-            hasMore={hasMore}
+            stats={{ label: "Active Orgs", value: firstPagePagination?.total || 0 }}
+            isLoading={isLoading || isFetchingNextPage}
+            isEmpty={!isLoading && organizers.length === 0}
+            hasMore={!!hasNextPage}
             onLoadMore={handleLoadMore}
             emptyMessage="No Organizers Found"
             filters={
@@ -66,13 +62,9 @@ const FindOrganizers = () => {
                     {/* Placeholder for future filters to maintain layout consistency if needed */}
                 </div>
             }
-        >
-            <AnimatePresence mode="popLayout">
-                {organizers && organizers.map((org, index) => (
-                    <OrganizerCard key={org._id} org={org} index={index} />
-                ))}
-            </AnimatePresence>
-        </ResourceGridWrapper >
+            items={organizers}
+            renderItem={(org, index) => <OrganizerCard key={org._id} org={org} index={index} />}
+        />
     );
 };
 

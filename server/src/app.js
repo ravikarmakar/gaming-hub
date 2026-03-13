@@ -62,23 +62,15 @@ app.use(cookieParese());
 if (process.env.NODE_ENV === "production") {
     app.set("trust proxy", 1);
 }
+
 app.use(helmet());
 app.use(mongoSanitize());
 // Note: xss-clean is deprecated. Helmet provides some XSS protection via CSP.
 // Consider using express-xss-sanitizer if additional XSS sanitization is needed.
 app.use(hpp());
-app.use(rateLimiter({ limit: 300, timer: 15 * 60, key: "global" }));
-// Trust proxy if we are behind a reverse proxy (e.g. Nginx, Heroku, etc.)
-// This is necessary for rate limiting and logging to get the correct client IP.
-if (process.env.NODE_ENV === "production") {
-    app.set("trust proxy", 1);
-}
-app.use(helmet());
-app.use(mongoSanitize());
-// Note: xss-clean is deprecated. Helmet provides some XSS protection via CSP.
-// Consider using express-xss-sanitizer if additional XSS sanitization is needed.
-app.use(hpp());
-app.use(rateLimiter({ limit: 300, timer: 15 * 60, key: "global" }));
+// Rate limiting: 1000 requests per 15 mins (approx 1.1 req/sec)
+// This is a generous limit to accommodate multi-tab usage while preventing brute force.
+app.use(rateLimiter({ limit: 1000, timer: 15 * 60, key: "global" }));
 
 app.get("/", (req, res) => {
     res.send("This is calling from KRM Esports backend");
@@ -90,14 +82,15 @@ v1Router.use("/auth", authRouter);
 v1Router.use("/teams", teamRouter);
 v1Router.use("/teams", joinRequestRouter); // Join request routes (decoupled from team router)
 v1Router.use("/teams", chatRouter);
-v1Router.use("/teams", chatRouter);
 v1Router.use("/notifications", notificationRouter);
 v1Router.use("/organizers", organizerRouter);
+v1Router.use("/organizers", chatRouter);
 v1Router.use("/invitations", invitationRouter);
 v1Router.use("/players", userRouter);
 v1Router.use("/events", eventRouter);
 v1Router.use("/rounds", roundsRouter);
 v1Router.use("/groups", groupsRouter);
+v1Router.use("/groups", chatRouter);
 v1Router.use("/leaderboards", leaderboardRouter);
 v1Router.use("/admin", adminRouter);
 

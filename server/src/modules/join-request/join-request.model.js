@@ -45,6 +45,9 @@ joinRequestSchema.index({ requester: 1, target: 1, status: 1 }, {
     partialFilterExpression: { status: "pending" }
 });
 
+// TTL index to expire join requests after 10 days
+joinRequestSchema.index({ createdAt: 1 }, { expireAfterSeconds: 864000 });
+
 const JoinRequest = mongoose.models.JoinRequest || mongoose.model("JoinRequest", joinRequestSchema);
 
 export default JoinRequest;

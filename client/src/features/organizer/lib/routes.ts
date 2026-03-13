@@ -13,4 +13,5 @@ export const ORGANIZER_ROUTES = {
     JOIN_REQUESTS: `${ORGANIZER_BASE}/join-requests`,
     PROFILE: "/organizer/:id",
     ORGANIZERS: "/organizers",
+    CHAT: `${ORGANIZER_BASE}/chat`,
 } as const;

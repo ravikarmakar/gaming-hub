@@ -1,10 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
-import { AnimatePresence } from "framer-motion";
 
 import { useTeamListStore } from "../../store/useTeamListStore";
 import TeamCard from "../components/TeamCard";
 import TeamFilters from "../components/TeamFilters";
-import { ResourceGridWrapper } from "@/components/shared/ResourceGridWrapper";
+import { DiscoveryPage } from "@/components/shared/DiscoveryPage";
 
 const FindTeams: React.FC = () => {
     const { paginatedTeamIds, teamsById, pagination, isLoading, fetchTeams } = useTeamListStore();
@@ -49,7 +48,7 @@ const FindTeams: React.FC = () => {
     };
 
     return (
-        <ResourceGridWrapper
+        <DiscoveryPage
             title={
                 <div className="flex flex-col gap-2">
                     <h1 className="text-4xl md:text-6xl font-black mb-2 bg-clip-text text-transparent bg-gradient-to-r from-white via-purple-100 to-purple-400">
@@ -76,15 +75,11 @@ const FindTeams: React.FC = () => {
                     onVerifiedChange={setIsVerified}
                 />
             }
-        >
-
-            <AnimatePresence mode="popLayout">
-                {paginatedTeams.map((team, index) => (
-                    <TeamCard key={team._id} team={team} index={index} />
-                ))}
-            </AnimatePresence>
-        </ResourceGridWrapper>
+            items={paginatedTeams}
+            renderItem={(team, index) => <TeamCard key={team._id} team={team} index={index} />}
+        />
     );
 };
 
 export default FindTeams;
+

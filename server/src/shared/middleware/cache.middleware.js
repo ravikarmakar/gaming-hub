@@ -46,7 +46,7 @@ export const cache = (duration) => async (req, res, next) => {
         const startTime = performance.now();
         const cachedBody = await Promise.race([
             redis.get(key),
-            new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 1000))
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 200))
         ]);
         const endTime = performance.now();
 

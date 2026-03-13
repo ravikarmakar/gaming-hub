@@ -28,7 +28,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import TeamList from "../components/TeamList";
-import { useTournamentStore } from "@/features/organizer/store/useTournamentStore";
+import { useGetRoundsQuery, useGetGroupsQuery, useGetLeaderboardQuery, useGetTournamentDetailsQuery } from "@/features/tournaments/hooks";
 import FinalLeaderboard from "../components/FinalLeaderboard";
 
 const TournamentById = () => {
@@ -36,63 +36,36 @@ const TournamentById = () => {
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const {
-        eventDetails,
-        fetchEventDetailsById,
-        isLoading,
         registerEvent,
         isTeamRegistered
     } = useEventStore();
 
+    const { data: eventDetails, isLoading } = useGetTournamentDetailsQuery(id || "");
+
     const [regStatus, setRegStatus] = useState<"approved" | "pending" | "none">("none");
 
     // Final Results State
-    const {
-        rounds,
-        fetchRounds,
-        fetchGroups,
-        groups,
-        fetchLeaderboard,
-        leaderboard,
-    } = useTournamentStore();
+    const { data: rounds = [] } = useGetRoundsQuery(id || "");
+    const lastRound = rounds[rounds.length - 1];
 
-    useEffect(() => {
-        if (id) {
-            fetchEventDetailsById(id);
-        }
-    }, [id, fetchEventDetailsById]);
+    const { data: groupsData } = useGetGroupsQuery(lastRound?._id || "", 1, 20);
+    const groups = groupsData?.groups || [];
+    const grandFinaleGroup = groups[0];
+
+    const { data: leaderboard } = useGetLeaderboardQuery(grandFinaleGroup?._id || "");
 
     useEffect(() => {
         const checkRegistrationStatus = async () => {
             if (eventDetails && user?.teamId) {
-                const result = await isTeamRegistered(eventDetails._id, user.teamId);
-                setRegStatus(result.status);
+                const teamIdStr = typeof user.teamId === 'string' ? user.teamId : user.teamId?._id;
+                if (teamIdStr) {
+                    const result = await isTeamRegistered(eventDetails._id, teamIdStr);
+                    setRegStatus(result.status);
+                }
             }
         };
         checkRegistrationStatus();
     }, [eventDetails, user, isTeamRegistered]);
-
-    // Fetch Final Results if event is completed
-    useEffect(() => {
-        if (eventDetails?.eventProgress === 'completed' && id) {
-            fetchRounds(id);
-        }
-    }, [eventDetails?.eventProgress, id, fetchRounds]);
-
-    useEffect(() => {
-        if (eventDetails?.eventProgress === 'completed' && rounds.length > 0) {
-            const lastRound = rounds[rounds.length - 1];
-            if (lastRound) {
-                fetchGroups(lastRound._id);
-            }
-        }
-    }, [eventDetails?.eventProgress, rounds]);
-
-    useEffect(() => {
-        if (eventDetails?.eventProgress === 'completed' && groups.length > 0) {
-            const grandFinaleGroup = groups[0];
-            fetchLeaderboard(grandFinaleGroup._id);
-        }
-    }, [eventDetails?.eventProgress, groups]);
 
     if (isLoading) {
         return (
@@ -113,12 +86,15 @@ const TournamentById = () => {
 
     const handleRegister = async () => {
         if (id) {
+            const teamIdStr = typeof user?.teamId === 'string' ? user.teamId : user?.teamId?._id;
             const result = await registerEvent(id);
             if (result?.success) {
                 toast.success(result.message || "Successfully deployed to arena!");
                 // Refresh status
-                const statusResult = await isTeamRegistered(id, user?.teamId || "");
-                setRegStatus(statusResult.status);
+                if (teamIdStr) {
+                    const statusResult = await isTeamRegistered(id, teamIdStr);
+                    setRegStatus(statusResult.status);
+                }
             } else {
                 toast.error(result?.message || "Deployment failed. Request backup.");
             }
@@ -296,7 +272,22 @@ const TournamentById = () => {
                                         </div>
                                     </div>
 
-                                    {/* Rewards */}
+                                    {/* Map Rotation */}
+                                    {eventDetails.map && eventDetails.map.length > 0 && (
+                                        <div className="space-y-4 sm:space-y-6">
+                                            <SectionHeader title="Map Rotation" icon={Sword} />
+                                            <div className="flex flex-wrap gap-3 sm:gap-4">
+                                                {eventDetails.map.map((mapName, index) => (
+                                                    <GlassCard key={index} className="px-6 py-4 flex items-center gap-3 border-purple-500/10 hover:border-purple-500/30 transition-all group">
+                                                        <div className="h-2 w-2 rounded-full bg-purple-500/50 group-hover:bg-purple-500 group-hover:shadow-[0_0_10px_rgba(168,85,247,0.5)] transition-all" />
+                                                        <span className="text-sm sm:text-lg font-black text-white tracking-widest uppercase">{mapName}</span>
+                                                    </GlassCard>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Rank Rewards */}
                                     {eventDetails.prizeDistribution && eventDetails.prizeDistribution.length > 0 && (
                                         <div className="space-y-4 sm:space-y-6">
                                             <SectionHeader title="Rank Rewards" icon={Trophy} />

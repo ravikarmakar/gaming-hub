@@ -122,6 +122,7 @@ export const handleNotificationAction = TryCatchHandler(async (req, res, next) =
             }
             notification.content.message = resultMessage;
         } catch (error) {
+            logger.error("Notification handler execution failed:", error);
             return next(error);
         }
     } else {
@@ -155,7 +156,9 @@ export const getOrgNotifications = TryCatchHandler(async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     // Authorization: Check if user has access to this organization
-    const userHasOrgAccess = req.user.roles?.some(
+    // Prefer roles from fresh profile (cached in Redis) to avoid stale roles from JWT
+    const roles = req.user.cachedProfile?.roles || req.user.roles || [];
+    const userHasOrgAccess = roles.some(
         (role) => role.scope === "org" && role.scopeId?.toString() === orgId
     );
 

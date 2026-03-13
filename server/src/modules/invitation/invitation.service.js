@@ -65,6 +65,14 @@ export const acceptInvitationService = async (invitationId, userId) => {
             // Also notify the joining user to update their own profile/dashboard
             const { emitProfileUpdate } = await import("../user/user.socket.js");
             emitProfileUpdate(userId, { teamId: socketData.teamId, action: "joined" });
+        } else if (socketData && entityModel === "Organizer") {
+            // Push to the organizer event pipeline instead of triggering sockets manually
+            const { default: organizerEvents, ORG_EVENT_TYPES } = await import("../organizer/organizer.events.js");
+            organizerEvents.emit(ORG_EVENT_TYPES.MEMBER_JOINED, socketData);
+
+            // Also notify the joining user to update their own profile/dashboard
+            const { emitProfileUpdate } = await import("../user/user.socket.js");
+            emitProfileUpdate(userId, { orgId: socketData.org?._id, action: "joined" });
         }
     } catch (e) {
         logger.warn("Post-commit operations failed in acceptInvitationService", e);

@@ -27,7 +27,12 @@ const TeamTournamentsPage = () => {
 
     useEffect(() => {
         if (user?.teamId) {
-            fetchTeamTournaments(user.teamId);
+            const teamId = typeof user.teamId === 'string'
+                ? user.teamId
+                : user.teamId._id;
+            if (teamId) {
+                fetchTeamTournaments(teamId as string);
+            }
         }
     }, [user?.teamId, fetchTeamTournaments]);
 

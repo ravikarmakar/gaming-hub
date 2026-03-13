@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Trophy, Users, ArrowRight } from "lucide-react";
+import { Trophy, Users, ArrowRight, Briefcase } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -35,9 +35,16 @@ const OrganizerCard = React.memo(React.forwardRef<HTMLDivElement, OrganizerCardP
                             {org.name.charAt(0).toUpperCase()}
                         </AvatarFallback>
                     </Avatar>
-                    <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20 rounded-full py-1">
-                        Active
-                    </Badge>
+                    <div className="flex flex-col items-end gap-2">
+                        <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20 rounded-full py-1">
+                            Active
+                        </Badge>
+                        {org.isHiring && (
+                            <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 rounded-full py-1 animate-pulse">
+                                <Briefcase className="w-3 h-3 mr-1" /> Hiring
+                            </Badge>
+                        )}
+                    </div>
                 </div>
 
                 {/* Info */}

@@ -49,7 +49,7 @@ export const ProfileSettingsForm: React.FC = () => {
             username: user?.username || "",
             bio: user?.bio || "",
             esportsRole: user?.esportsRole || "player",
-            region: user?.region || "global",
+            region: user?.region || "GLOBAL",
             country: user?.country || "",
             isLookingForTeam: user?.isLookingForTeam ?? true,
             gameIgn: user?.gameIgn || "",
@@ -76,7 +76,7 @@ export const ProfileSettingsForm: React.FC = () => {
             username: user?.username || "",
             bio: user?.bio || "",
             esportsRole: user?.esportsRole || "player",
-            region: user?.region || "global",
+            region: user?.region || "GLOBAL",
             country: user?.country || "",
             isLookingForTeam: user?.isLookingForTeam ?? true,
             gameIgn: user?.gameIgn || "",
@@ -389,12 +389,15 @@ export const ProfileSettingsForm: React.FC = () => {
                                                 </FormControl>
                                                 <SelectContent className="bg-[#0d0b14] border-white/10 text-zinc-200 rounded-xl overflow-hidden backdrop-blur-xl">
                                                     {[
-                                                        { label: "NA - North America", value: "na" },
-                                                        { label: "EU - Europe", value: "eu" },
-                                                        { label: "SEA - SE Asia", value: "sea" },
-                                                        { label: "SA - South America", value: "sa" },
-                                                        { label: "MEA - Mid East", value: "mea" },
-                                                        { label: "Global Node", value: "global" }
+                                                        { label: "NA - North America", value: "NA" },
+                                                        { label: "EU - Europe", value: "EU" },
+                                                        { label: "ASIA - Asia", value: "ASIA" },
+                                                        { label: "SEA - SE Asia", value: "SEA" },
+                                                        { label: "SA - South America", value: "SA" },
+                                                        { label: "OCE - Oceania", value: "OCE" },
+                                                        { label: "MENA - Middle East & North Africa", value: "MENA" },
+                                                        { label: "INDIA - India", value: "INDIA" },
+                                                        { label: "Global Node", value: "GLOBAL" }
                                                     ].map((reg) => (
                                                         <SelectItem key={reg.value} value={reg.value} className="py-3 focus:bg-purple-500/10 focus:text-white transition-colors cursor-pointer font-bold text-xs tracking-widest">
                                                             {reg.label}
@@ -672,6 +675,6 @@ export const ProfileSettingsForm: React.FC = () => {
                     )}
                 </form>
             </Form>
-        </div>
+        </div >
     );
 };

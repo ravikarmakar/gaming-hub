@@ -88,7 +88,7 @@ const invitationSchema = new mongoose.Schema(
     entityModel: {
       type: String,
       required: true,
-      enum: ["Team", "Event", "Tournament", "Organizer"],
+      enum: ["Team", "Event", "Tournament", "Organizer", "Group"],
       default: "Team",
     },
     receiver: {

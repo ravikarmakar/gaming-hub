@@ -9,7 +9,6 @@ export const Roles = {
     CO_OWNER: "org:co_owner",
     MANAGER: "org:manager",
     STAFF: "org:staff",
-    PLAYER: "org:player",
   },
   TEAM: {
     OWNER: "team:owner",

@@ -1,6 +1,7 @@
 import { ValidationError } from "express-validation";
 import AppError from "../utils/AppError.js";
 import { logger } from "../utils/logger.js";
+import { cleanupRequestFiles } from "./fileCleanup.middleware.js";
 
 const handleCastErrorDB = (err) => {
   const message = `Invalid ${err.path}: ${err.value}.`;
@@ -50,6 +51,9 @@ const sendErrorProd = (err, res) => {
 };
 
 export const errorHandle = (err, req, res, next) => {
+  // Gracefully clean up any uploaded files if the request errors out
+  cleanupRequestFiles(req);
+
   err.statusCode = err.statusCode || 500;
   err.status = err.status || "error";
 

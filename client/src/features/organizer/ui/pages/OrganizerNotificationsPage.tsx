@@ -1,21 +1,29 @@
-import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 
 import { Bell, Check, Clock, ShieldAlert, Users, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
-import { useOrganizerStore } from "@/features/organizer/store/useOrganizerStore";
+import {
+    useOrgNotificationsQuery
+} from "../../hooks/useOrganizerQueries";
+import {
+    useMarkNotificationReadMutation
+} from "../../hooks/useOrganizerMutations";
 
-const OrganizerNotificationsPage: React.FC = () => {
-    const { currentOrg, notifications, fetchNotifications, markNotificationAsRead, isLoading } = useOrganizerStore();
+export const OrganizerNotificationsPage: React.FC = () => {
+    const { user } = useAuthStore();
+    const orgId = user?.orgId;
 
-    useEffect(() => {
-        if (currentOrg?._id) {
-            fetchNotifications(currentOrg._id);
-        }
-    }, [currentOrg?._id, fetchNotifications]);
+    const { data: notifications, isLoading } = useOrgNotificationsQuery(orgId as string);
+    const readMutation = useMarkNotificationReadMutation();
+
+    const markAsRead = (notificationId: string) => {
+        if (!orgId) return;
+        readMutation.mutate({ notificationId, orgId });
+    };
 
     const getIcon = (type: string) => {
         switch (type) {
@@ -106,7 +114,7 @@ const OrganizerNotificationsPage: React.FC = () => {
                                             <Button
                                                 size="icon"
                                                 variant="ghost"
-                                                onClick={() => markNotificationAsRead(notification._id)}
+                                                onClick={() => markAsRead(notification._id)}
                                                 className="w-10 h-10 rounded-xl bg-violet-600/10 text-violet-400 hover:bg-violet-600 hover:text-white transition-all active:scale-90"
                                             >
                                                 <Check className="w-4 h-4" />

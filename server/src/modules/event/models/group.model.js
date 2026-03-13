@@ -21,6 +21,10 @@ const groupSchema = new mongoose.Schema(
       type: Date,
       default: () => new Date(Date.now() + 24 * 60 * 60 * 1000), // ⚡ Default: Next day
     },
+    groupSize: {
+      type: Number,
+      default: 0,
+    },
     teams: [
       {
         type: mongoose.Schema.Types.ObjectId,

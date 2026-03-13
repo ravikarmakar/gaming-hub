@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 import { TeamMembersTypes } from '@/features/teams/lib/types';
+import { MemberList } from '@/components/shared/MemberList';
 
 interface TeamMembersListProps {
     members: TeamMembersTypes[];
@@ -29,9 +30,11 @@ export const TeamMembersList: React.FC<TeamMembersListProps> = React.memo(({ mem
                 </Badge>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {members.map((member) => (
-                    <Card key={member.user} className="bg-[#0F111A]/60 border-white/10 hover:border-purple-500/50 hover:bg-[#121421]/80 transition-all duration-500 backdrop-blur-xl shadow-2xl shadow-purple-500/5 group border-white/10 transition-colors">
+            <MemberList
+                items={members}
+                keyExtractor={(member) => member.user}
+                renderItem={(member) => (
+                    <Card className="bg-[#0F111A]/60 border-white/10 hover:border-purple-500/50 hover:bg-[#121421]/80 transition-all duration-500 backdrop-blur-xl shadow-2xl shadow-purple-500/5 group transition-colors">
                         <div className="p-4 flex items-center gap-4">
                             <div className="relative">
                                 <div className="w-14 h-14 rounded-full bg-zinc-800 border-2 border-white/5 overflow-hidden shadow-lg group-hover:shadow-purple-500/20 transition-all duration-300">
@@ -69,8 +72,9 @@ export const TeamMembersList: React.FC<TeamMembersListProps> = React.memo(({ mem
                             </div>
                         </div>
                     </Card>
-                ))}
-            </div>
+                )}
+            />
         </div>
     );
 });
+

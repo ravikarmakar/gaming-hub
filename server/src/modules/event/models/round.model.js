@@ -20,6 +20,11 @@ const roundSchema = new mongoose.Schema(
       enum: ["pending", "ongoing", "completed"],
       default: "pending",
     },
+    type: {
+      type: String,
+      enum: ["tournament", "invited-tournament", "t1-special"],
+      default: "tournament",
+    },
     // Configuration for Groups
     startTime: {
       type: Date, // When the first match starts

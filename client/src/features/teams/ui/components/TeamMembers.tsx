@@ -7,9 +7,9 @@ import { AutoSizer } from "react-virtualized-auto-sizer";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
-import { MemberCard, roleIcons, formatJoinedDate } from "@/features/teams/ui/components/MemberCard";
+import { MemberCard, roleIcons, formatJoinedDate } from "@/components/shared/MemberCard";
 import { TeamMembersTypes } from "@/features/teams/lib/types";
-import { roleColors } from "@/features/teams/lib/constants";
+import { roleColors, roles } from "@/features/teams/lib/constants";
 import { useMemberPermissions } from "../../hooks/useMemberPermissions";
 
 interface TeamMembersProps {
@@ -75,12 +75,13 @@ const MemberCellContent = React.memo(({
   const RoleIcon = roleIcons[member.roleInTeam];
 
   return (
-    <MemberCard key={member.user} member={member} isLoading={isLoading} className="h-full">
+    <MemberCard key={member.user} member={member} variant="team" isLoading={isLoading} className="h-full">
       {editingMemberId === member.user ? (
         <MemberCard.RoleSelector
           currentRole={member.roleInTeam}
           memberUser={member.user}
           allMembers={allMembers}
+          roles={roles}
           onCancel={() => setEditingMemberId(null)}
           onSave={(role) => {
             onEditRole(role, member.user);

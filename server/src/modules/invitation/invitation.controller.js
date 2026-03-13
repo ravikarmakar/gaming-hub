@@ -71,12 +71,14 @@ export const inviteMember = TryCatchHandler(async (req, res) => {
   });
 
   // 6. Notify Invitee
+  const displayRole = invitedRole.includes(':') ? invitedRole.split(':')[1] : invitedRole;
+
   await createNotificationWithActions({
     recipient: inviteeId,
     sender: userId,
     type: targetModel === "Team" ? "TEAM_INVITE" : "ORGANIZATION_INVITE",
     title: `New Invitation`,
-    message: `You have been invited to join ${resource?.name || resource?.teamName || "Unknown Resource"} as ${invitedRole}.`,
+    message: `You have been invited to join ${resource?.name || resource?.teamName || "Unknown Resource"} as ${displayRole}.`,
     relatedData: {
       inviteId: invitation._id,
       [targetModel === "Team" ? "teamId" : "orgId"]: targetId

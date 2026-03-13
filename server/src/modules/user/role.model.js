@@ -31,7 +31,7 @@ export const roleSchema = new mongoose.Schema(
         Roles.ORG.CO_OWNER,
         Roles.ORG.MANAGER,
         Roles.ORG.STAFF,
-        Roles.ORG.PLAYER,
+        Roles.ORG.STAFF,
         Roles.TEAM.OWNER,
         Roles.TEAM.MANAGER,
         Roles.TEAM.PLAYER,
@@ -78,7 +78,6 @@ roleSchema.pre("validate", function (next) {
       Roles.ORG.CO_OWNER,
       Roles.ORG.MANAGER,
       Roles.ORG.STAFF,
-      Roles.ORG.PLAYER,
     ];
     if (!orgRoles.includes(role)) {
       return next(new Error(`Role "${role}" is not valid for org scope`));

@@ -46,9 +46,13 @@ export const DashboardNavbar = () => {
     // Build href for this segment
     let href = '/' + pathSegments.slice(0, index + 1).join('/');
 
-    // Fix for "Dashboard" segment pointing to invalid /dashboard route
-    if (segment === 'dashboard') {
-      return { label: "Dashboard", href: "" }; // Make it non-clickable
+    // Fix for segments pointing to invalid/partial routes
+    const nonClickableSegments = ['dashboard', 'edit-tournament'];
+    if (nonClickableSegments.includes(segment)) {
+      return {
+        label: ROUTE_NAME_MAP[segment] || segment.charAt(0).toUpperCase() + segment.slice(1),
+        href: ""
+      };
     }
 
     return {
