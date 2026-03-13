@@ -254,7 +254,7 @@ export const initializeSocket = async (httpServer) => {
         // Generic Chat Join handler
         socket.on("join:chat", async ({ targetId, scope }) => {
             if (!targetId || !scope) return;
-            if (!["team", "organizer"].includes(scope)) return;
+            if (!["team", "organizer", "group"].includes(scope)) return;
             if (!mongoose.Types.ObjectId.isValid(targetId)) return;
 
             try {
@@ -278,7 +278,7 @@ export const initializeSocket = async (httpServer) => {
         // Generic Chat Leave handler
         socket.on("leave:chat", ({ targetId, scope }) => {
             if (!targetId || !scope) return;
-            if (!["team", "organizer"].includes(scope)) return;
+            if (!["team", "organizer", "group"].includes(scope)) return;
             const room = `chat:${scope}:${targetId}`;
             socket.leave(room);
             logger.info(`User ${maskId(socket.userId)} left chat room: ${room}`);

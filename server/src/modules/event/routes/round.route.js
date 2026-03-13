@@ -5,6 +5,7 @@ import {
   getRoundDetails,
   updateRound,
   deleteRound,
+  resetRound,
 } from "../controllers/round.controller.js";
 import { authorize } from "../../../shared/middleware/rbac.middleware.js";
 import { isAuthenticated } from "../../../shared/middleware/auth.middleware.js";
@@ -31,6 +32,13 @@ router.delete(
   isAuthenticated,
   authorize(Scopes.EVENT, [Roles.ORG.OWNER, Roles.ORG.CO_OWNER], { parentScope: Scopes.ORG }),
   deleteRound
+);
+
+router.post(
+  "/:roundId/reset",
+  isAuthenticated,
+  authorize(Scopes.EVENT, [Roles.ORG.OWNER, Roles.ORG.MANAGER], { parentScope: Scopes.ORG }),
+  resetRound
 );
 
 router.get("/:roundId", isAuthenticated, authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), getRoundDetails);

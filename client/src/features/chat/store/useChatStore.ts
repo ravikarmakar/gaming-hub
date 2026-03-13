@@ -25,7 +25,7 @@ interface ChatState {
     editingMessage: ChatMessage | null;
     setEditingMessage: (message: ChatMessage | null) => void;
 
-    fetchHistory: (targetId: string, scope: "team" | "organizer") => Promise<void>;
+    fetchHistory: (targetId: string, scope: "team" | "organizer" | "group") => Promise<void>;
     addMessage: (message: ChatMessage) => void;
     updateMessage: (messageId: string, content: string) => Promise<void>;
     deleteMessage: (messageId: string) => Promise<void>;
@@ -48,7 +48,10 @@ export const useChatStore = create<ChatState>((set) => ({
     fetchHistory: async (targetId, scope) => {
         set({ isLoading: true, error: null });
         try {
-            const baseUrl = scope === "team" ? "/teams" : "/organizers";
+            let baseUrl = "/teams";
+            if (scope === "organizer") baseUrl = "/organizers";
+            else if (scope === "group") baseUrl = "/groups";
+
             const response = await axiosInstance.get(`${baseUrl}/${targetId}/chat`, {
                 params: { scope }
             });
@@ -66,9 +69,16 @@ export const useChatStore = create<ChatState>((set) => ({
     },
 
     updateMessage: async (messageId, content) => {
+        const { messages } = useChatStore.getState();
+        const message = messages.find(m => m._id === messageId);
+        if (!message) return;
+
+        let baseUrl = "/teams";
+        if (message.scope === "organizer") baseUrl = "/organizers";
+        else if (message.scope === "group") baseUrl = "/groups";
+
         try {
-            // Scope-agnostic patch route (could be under /teams or /organizers, but we generalized it)
-            await axiosInstance.patch(`/teams/chat/${messageId}`, { content });
+            await axiosInstance.patch(`${baseUrl}/chat/${messageId}`, { content });
             // Local update is handled by socket event chat:update
         } catch (error) {
             console.error("Failed to update message:", error);
@@ -77,8 +87,16 @@ export const useChatStore = create<ChatState>((set) => ({
     },
 
     deleteMessage: async (messageId) => {
+        const { messages } = useChatStore.getState();
+        const message = messages.find(m => m._id === messageId);
+        if (!message) return;
+
+        let baseUrl = "/teams";
+        if (message.scope === "organizer") baseUrl = "/organizers";
+        else if (message.scope === "group") baseUrl = "/groups";
+
         try {
-            await axiosInstance.delete(`/teams/chat/${messageId}`);
+            await axiosInstance.delete(`${baseUrl}/chat/${messageId}`);
             // Local update is handled by socket event chat:delete
         } catch (error) {
             console.error("Failed to delete message:", error);

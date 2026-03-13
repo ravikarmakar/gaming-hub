@@ -1,12 +1,14 @@
 import * as TeamService from "../team/team.service.js";
 import * as OrganizerService from "../organizer/organizer.service.js";
 import * as EventService from "../event/event.service.js";
+import * as GroupService from "../event/group.service.js";
 import { CustomError } from "../../shared/utils/CustomError.js";
 
 const strategies = {
     Team: TeamService,
     Organizer: OrganizerService,
-    Event: EventService
+    Event: EventService,
+    Group: GroupService
 };
 
 /**

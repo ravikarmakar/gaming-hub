@@ -1,14 +1,18 @@
-import { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { FixedSizeGrid, GridChildComponentProps } from "react-window";
 import { AutoSizer } from "react-virtualized-auto-sizer";
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronLeft, ChevronRight, Edit2, ArrowLeft } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, Edit2, ArrowLeft, UserPlus, GitMerge } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { GroupCard } from "./GroupCard";
 import { EditGroupDialog } from "./dialogs/EditGroupDialog";
+import { DeleteGroupDialog } from "./dialogs/DeleteGroupDialog";
 import { SubmitResultsDialog } from "./dialogs/SubmitResultsDialog";
-import { useGetRoundsQuery, useGetGroupsQuery, useGetLeaderboardQuery, useUpdateGroupResultsMutation, Group } from "../../hooks";
+import { GroupChatDialog } from "./dialogs/GroupChatDialog";
+import { AddTeamDialog } from "./dialogs/AddTeamDialog";
+import { MergeTeamToGroupDialog } from "./dialogs/MergeTeamToGroupDialog";
+import { useGetRoundsQuery, useGetGroupsQuery, useGetLeaderboardQuery, useUpdateGroupResultsMutation, Group, useRoundsSidebar } from "../../hooks";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 interface GroupsGridProps {
     roundId: string;
@@ -17,6 +21,7 @@ interface GroupsGridProps {
 
 export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
     const [currentPage, setCurrentPage] = useState(1);
+    const { activeRoundTab } = useRoundsSidebar(eventId);
 
     const { data: rounds = [] } = useGetRoundsQuery(eventId);
     const { data, isLoading } = useGetGroupsQuery(roundId, currentPage);
@@ -31,8 +36,20 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
     const [editingGroup, setEditingGroup] = useState<Group | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
 
+    const [chatGroup, setChatGroup] = useState<Group | null>(null);
+    const [isChatOpen, setIsChatOpen] = useState(false);
+
+    const [inviteGroup, setInviteGroup] = useState<Group | null>(null);
+    const [isInviteOpen, setIsInviteOpen] = useState(false);
+
+    const [deletingGroup, setDeletingGroup] = useState<Group | null>(null);
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+    const [mergeTeam, setMergeTeam] = useState<any>(null);
+    const [isMergeOpen, setIsMergeOpen] = useState(false);
+
     // ✅ Memoized Selectors for performance
-    const { currentGroup, effectiveTotalMatch, isGroupCompleted, roundMatches, currentRoundObject } = useMemo(() => {
+    const { currentGroup, effectiveTotalMatch, isGroupCompleted, roundMatches } = useMemo(() => {
         const round = rounds.find(r => r._id === roundId);
         const group = groups.find(g => g._id === selectedGroupId);
         const rm = round?.matchesPerGroup;
@@ -41,8 +58,7 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
             currentGroup: group,
             effectiveTotalMatch: totalMatch,
             isGroupCompleted: group?.status === 'completed',
-            roundMatches: rm,
-            currentRoundObject: round
+            roundMatches: rm
         };
     }, [rounds, groups, roundId, selectedGroupId]);
 
@@ -55,6 +71,21 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
     const openEditModal = useCallback((group: Group) => {
         setEditingGroup(group);
         setIsEditOpen(true);
+    }, []);
+
+    const openChatModal = useCallback((group: Group) => {
+        setChatGroup(group);
+        setIsChatOpen(true);
+    }, []);
+
+    const openInviteModal = useCallback((group: Group) => {
+        setInviteGroup(group);
+        setIsInviteOpen(true);
+    }, []);
+
+    const openDeleteModal = useCallback((group: Group) => {
+        setDeletingGroup(group);
+        setIsDeleteOpen(true);
     }, []);
 
     // ✅ Initialize tempResults when leaderboard loads or results mode is toggled
@@ -154,88 +185,115 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
             {selectedGroupId && leaderboard ? (
                 // FULL VIEW: Group Details Table
                 <div className="space-y-4">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
                             <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
                                 onClick={() => setSelectedGroupId(null)}
-                                className="text-gray-400 hover:text-white"
+                                className="h-8 w-8 text-gray-400 hover:text-white hover:bg-white/5"
+                                title="Back to Groups"
                             >
-                                <ArrowLeft className="w-4 h-4 mr-2" />
-                                Back to Groups
+                                <ArrowLeft className="w-4 h-4" />
                             </Button>
-                            <h3 className="text-xl font-bold text-white flex items-center gap-3">
-                                Group Details
-                                {isGroupCompleted && (
-                                    <div className="flex items-center gap-2">
-                                        <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Completed</Badge>
-                                        <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-[10px] font-black uppercase tracking-tighter">
-                                            {leaderboard.teamScore.filter(t => t.isQualified).length} Qualified
+
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-2">
+                                    <h3 className="text-lg font-black text-white uppercase tracking-tight">{currentGroup?.groupName || "Group Details"}</h3>
+                                    <div className="flex items-center gap-1 ml-1">
+                                        <Badge className={`h-4 px-1.5 text-[10px] font-black uppercase border shadow-sm ${currentGroup?.status === 'completed' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                                            currentGroup?.status === 'ongoing' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                                                'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'
+                                            }`}>
+                                            {currentGroup?.status || 'Pending'}
                                         </Badge>
+                                        <Badge variant="outline" className="h-4 px-1.5 text-[10px] text-gray-400 border-white/10 font-black uppercase tracking-tighter">
+                                            {currentGroup?.matchesPlayed || 0}/{effectiveTotalMatch} Matches
+                                        </Badge>
+                                        {isGroupCompleted && (
+                                            <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-purple-500/10 text-purple-400 border-purple-500/20 font-black uppercase tracking-tighter">
+                                                {leaderboard.teamScore.filter(t => t.isQualified).length} Qualified
+                                            </Badge>
+                                        )}
                                     </div>
+                                </div>
+                                {currentGroup?.matchTime && (
+                                    <span className="text-[10px] text-gray-500 font-medium flex items-center gap-1.5 uppercase tracking-wide">
+                                        <span className="w-1 h-1 rounded-full bg-purple-500" />
+                                        Match Time: {new Date(currentGroup.matchTime).toLocaleString(undefined, {
+                                            dateStyle: 'medium',
+                                            timeStyle: 'short'
+                                        })}
+                                    </span>
                                 )}
-                            </h3>
-                            {currentGroup?.matchTime && (
-                                <span className="text-xs text-gray-400 flex items-center gap-1.5 mt-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                                    Match Time: {new Date(currentGroup.matchTime).toLocaleString(undefined, {
-                                        dateStyle: 'medium',
-                                        timeStyle: 'short'
-                                    })}
-                                </span>
-                            )}
+                            </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                             {/* ✅ Qualification Stats */}
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10">
-                                <span className="text-xs text-gray-400 uppercase tracking-wider">Qualified:</span>
-                                <span className={`text-sm font-bold ${leaderboard.teamScore.filter(t => t.isQualified).length === (rounds.find(r => r._id === roundId)?.qualifyingTeams || 0) ? 'text-green-400' : 'text-white'}`}>
-                                    {leaderboard.teamScore.filter(t => t.isQualified).length} <span className="text-gray-500">/ {rounds.find(r => r._id === roundId)?.qualifyingTeams || 0}</span>
+                            <div className="flex items-center gap-2 px-2.5 py-1 bg-white/5 rounded-lg border border-white/10">
+                                <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Qualified:</span>
+                                <span className={`text-sm font-black ${leaderboard.teamScore.filter(t => t.isQualified).length === (rounds.find(r => r._id === roundId)?.qualifyingTeams || 0) ? 'text-green-400' : 'text-white'}`}>
+                                    {leaderboard.teamScore.filter(t => t.isQualified).length}
+                                    <span className="text-gray-600 mx-1">/</span>
+                                    {rounds.find(r => r._id === roundId)?.qualifyingTeams || 0}
                                 </span>
                             </div>
 
-                            {/* ✅ Results Mode Toggle */}
+                            {/* ✅ Results Mode Actions */}
                             {!isGroupCompleted && (
                                 <div className="flex items-center gap-2">
-                                    <Label className="text-gray-400 text-sm">
-                                        {isResultsMode ? `Match ${(currentGroup?.matchesPlayed || 0) + 1} of ${effectiveTotalMatch}` : "Results Entry"}
-                                    </Label>
                                     <Button
                                         size="sm"
                                         variant={isResultsMode ? "default" : "outline"}
                                         onClick={() => setIsResultsMode(!isResultsMode)}
-                                        className={isResultsMode ? "bg-purple-600 hover:bg-purple-700" : "border-white/10 text-gray-400"}
+                                        className={`h-8 text-xs font-bold ${isResultsMode
+                                            ? "bg-purple-600 hover:bg-purple-700 text-white border-none"
+                                            : "bg-purple-900/20 text-purple-400 border-purple-500/30 hover:bg-purple-500/30 hover:text-purple-300"
+                                            }`}
                                     >
-                                        {isResultsMode ? "Cancel" : "Enter Match Results"}
+                                        {isResultsMode ? "Cancel Entry" : "Enter Results"}
                                     </Button>
-                                </div>
-                            )}
 
-                            {isResultsMode && (
-                                <Button
-                                    onClick={handleSubmitResults}
-                                    disabled={isSaving}
-                                    className="bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-900/20"
-                                >
-                                    {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Edit2 className="w-4 h-4 mr-2" />}
-                                    Submit Results
-                                </Button>
+                                    {isResultsMode ? (
+                                        <Button
+                                            size="sm"
+                                            onClick={handleSubmitResults}
+                                            disabled={isSaving}
+                                            className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white font-bold"
+                                        >
+                                            {isSaving ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Edit2 className="w-3.5 h-3.5 mr-1.5" />}
+                                            Submit
+                                        </Button>
+                                    ) : (
+                                        (currentGroup?.teams?.length || 0) < 12 && (
+                                            <Button
+                                                size="sm"
+                                                onClick={() => currentGroup && openInviteModal(currentGroup)}
+                                                className="h-8 text-xs bg-purple-600 hover:bg-purple-700 text-white font-bold"
+                                            >
+                                                <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+                                                Add Team
+                                            </Button>
+                                        )
+                                    )}
+                                </div>
                             )}
                         </div>
                     </div>
+
 
                     <div className="bg-gray-900/40 border border-white/5 rounded-xl overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left text-gray-400">
                                 <thead className="text-xs text-gray-200 uppercase bg-black/40 border-b border-white/10">
                                     <tr>
-                                        <th className="px-6 py-3">Rank</th>
+                                        <th className="px-6 py-3 text-center">Rank</th>
                                         <th className="px-6 py-3">Team</th>
                                         <th className="px-6 py-3 text-center">Match Rank</th>
                                         <th className="px-6 py-3 text-center">Kills</th>
                                         <th className="px-6 py-3 text-center">Total Pts</th>
+                                        {activeRoundTab === 't1-special' && <th className="px-6 py-3 text-center">Actions</th>}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -324,6 +382,22 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
                                                 <td className="px-6 py-4 text-center font-bold text-white text-lg">
                                                     {entry.totalPoints}
                                                 </td>
+                                                {activeRoundTab === 't1-special' && (
+                                                    <td className="px-6 py-4 text-center">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => {
+                                                                setMergeTeam(entry.teamId);
+                                                                setIsMergeOpen(true);
+                                                            }}
+                                                            className="h-8 px-3 text-[10px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 hover:text-blue-300 transition-all shadow-sm"
+                                                        >
+                                                            <GitMerge className="w-3.5 h-3.5 mr-1.5" />
+                                                            Merge
+                                                        </Button>
+                                                    </td>
+                                                )}
                                             </tr>
                                         );
                                     })}
@@ -342,31 +416,6 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
             ) : (
                 // GRID VIEW: Groups Cards
                 <div className="space-y-4">
-                    {/* ✅ Round Completion Summary */}
-                    {currentRoundObject?.status === 'completed' && (
-                        <div className="p-6 bg-purple-500/10 border border-purple-500/20 rounded-xl flex flex-col md:flex-row items-center justify-between gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
-                            <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Badge className="bg-purple-500 text-white border-transparent text-[10px] font-black uppercase">Round Finalized</Badge>
-                                    <h3 className="text-xl font-black text-white uppercase tracking-tight">{currentRoundObject.roundName}</h3>
-                                </div>
-                                <p className="text-sm text-gray-400">This round has concluded. Teams listed below as <span className="text-purple-400 font-bold">"Q"</span> have advanced.</p>
-                            </div>
-                            <div className="flex items-center gap-8 bg-black/40 px-6 py-3 rounded-xl border border-white/5">
-                                <div className="text-center">
-                                    <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-1">Total Groups</p>
-                                    <p className="text-2xl font-black text-white">{currentRoundObject.groups?.length || 0}</p>
-                                </div>
-                                <div className="h-10 w-px bg-white/10" />
-                                <div className="text-center">
-                                    <p className="text-[10px] text-purple-400 uppercase font-black tracking-widest mb-1">Total Qualified</p>
-                                    <p className="text-3xl font-black text-purple-400 drop-shadow-[0_0_10px_rgba(168,85,247,0.3)]">
-                                        {currentRoundObject.groups?.reduce((acc, g) => acc + (g.totalSelectedTeam || 0), 0) || 0}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
 
                     <div className="rounded-xl border border-white/5 bg-gray-900/40 overflow-hidden h-[600px]">
                         <AutoSizer renderProp={({ width, height }) => {
@@ -386,13 +435,16 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
                                 if (!group) return null;
 
                                 return (
-                                    <div style={{ ...style, padding: '8px', boxSizing: 'border-box' }}>
+                                    <div style={{ ...style, padding: '0 12px', boxSizing: 'border-box' }}>
                                         <div className="h-full">
                                             <GroupCard
                                                 group={group}
                                                 roundMatches={roundMatches}
                                                 onSelect={setSelectedGroupId}
                                                 onEdit={openEditModal}
+                                                onDelete={openDeleteModal}
+                                                onChat={openChatModal}
+                                                onInvite={openInviteModal}
                                             />
                                         </div>
                                     </div>
@@ -404,7 +456,7 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
                                     columnCount={columnCount}
                                     columnWidth={columnWidth}
                                     rowCount={rowCount}
-                                    rowHeight={160} // Approximate height of GroupCard
+                                    rowHeight={280} // Increased to accommodate all card content and buttons
                                     height={height || 600}
                                     width={width || 800}
                                     style={{ overflowX: 'hidden' }}
@@ -450,6 +502,24 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
             {/* ✅ Dialogs are outside conditional view so they are ALWAYS rendered */}
             <EditGroupDialog open={isEditOpen} onOpenChange={setIsEditOpen} eventId={eventId} group={editingGroup} />
 
+            <DeleteGroupDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen} eventId={eventId} group={deletingGroup} />
+
+            <GroupChatDialog
+                open={isChatOpen}
+                onOpenChange={setIsChatOpen}
+                groupId={chatGroup?._id || null}
+                groupName={chatGroup?.groupName || ""}
+            />
+
+            <AddTeamDialog
+                open={isInviteOpen}
+                onOpenChange={setIsInviteOpen}
+                groupId={inviteGroup?._id || null}
+                groupName={inviteGroup?.groupName || ""}
+                eventId={eventId}
+                isT1Special={activeRoundTab === 't1-special'}
+            />
+
             <SubmitResultsDialog
                 open={isConfirmOpen}
                 onOpenChange={setIsConfirmOpen}
@@ -458,98 +528,14 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
                 onConfirm={handleConfirmSubmit}
                 isSaving={isSaving}
             />
+
+            <MergeTeamToGroupDialog
+                open={isMergeOpen}
+                onOpenChange={setIsMergeOpen}
+                eventId={eventId}
+                team={mergeTeam}
+                sourceRoundId={roundId}
+            />
         </div>
     );
 };
-
-interface GroupCardProps {
-    group: Group;
-    roundMatches?: number;
-    onSelect: (id: string) => void;
-    onEdit: (group: Group) => void;
-}
-
-const GroupCard = memo(({ group, roundMatches, onSelect, onEdit }: GroupCardProps) => {
-    return (
-        <div
-            onClick={() => onSelect(group._id)}
-            className="bg-black/40 border border-white/5 p-4 rounded-lg hover:border-purple-500/30 transition-colors group cursor-pointer"
-        >
-            <div className="flex justify-between items-center mb-3">
-                <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-gray-200">{group.groupName}</h4>
-                    {group.status === 'completed' && (
-                        <div className="flex items-center gap-1.5">
-                            <Badge className="text-[10px] h-5 px-1.5 bg-green-500/20 text-green-400 border-green-500/30">
-                                Done
-                            </Badge>
-                            <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20">
-                                {group.totalSelectedTeam || 0} Q
-                            </span>
-                        </div>
-                    )}
-                    {group.status === 'ongoing' && (
-                        <Badge className="text-[10px] h-5 px-1.5 bg-yellow-500/20 text-yellow-400 border-yellow-500/30 animate-pulse">
-                            Live
-                        </Badge>
-                    )}
-                    {(!group.status || group.status === 'pending') && (
-                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 text-gray-500 border-gray-700">
-                            Pending
-                        </Badge>
-                    )}
-                </div>
-                {group.matchTime && (
-                    <div className="text-[10px] text-purple-400 font-medium bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
-                        {new Date(group.matchTime).toLocaleString(undefined, {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        })}
-                    </div>
-                )}
-                <div className="flex items-center gap-2">
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6 text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                        disabled={group.status === 'completed'}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit(group);
-                        }}
-                    >
-                        <Edit2 className="w-3 h-3" />
-                    </Button>
-                    <Badge variant="secondary" className="text-[10px] bg-white/5 text-gray-400 group-hover:bg-purple-500/10 group-hover:text-purple-300">
-                        {(group.teams || []).length} Teams
-                    </Badge>
-                    <Badge variant="outline" className="text-[10px] border-white/5 text-gray-500">
-                        {group.matchesPlayed || 0} / {roundMatches || group.totalMatch} Matches
-                    </Badge>
-                </div>
-            </div>
-
-            <div className="space-y-1 mb-4">
-                {group.teams?.slice(0, 3).map((team) => (
-                    <div key={team._id} className="text-xs text-gray-500 flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-gray-700" />
-                        {team.teamName}
-                    </div>
-                ))}
-                {(group.teams?.length || 0) > 3 && (
-                    <div className="text-xs text-gray-400 pl-3.5">
-                        + {(group.teams?.length || 0) - 3} more
-                    </div>
-                )}
-            </div>
-
-            <Button size="sm" className="w-full h-8 text-xs bg-white/5 hover:bg-white/10 text-gray-300">
-                View Details
-            </Button>
-        </div>
-    );
-});
-
-GroupCard.displayName = 'GroupCard';

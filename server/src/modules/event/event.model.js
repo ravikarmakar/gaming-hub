@@ -94,6 +94,7 @@ const eventSchema = new mongoose.Schema(
     ],
     hasRoadmap: { type: Boolean, default: false },
     hasInvitedTeams: { type: Boolean, default: false },
+    hasT1SpecialTeams: { type: Boolean, default: false },
     roadmaps: [
       {
         type: { type: String, enum: eventRoadmapTypeEnum, required: true },
@@ -112,7 +113,20 @@ const eventSchema = new mongoose.Schema(
         ref: "Team",
       }
     ],
+    t1SpecialTeams: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Team",
+      }
+    ],
     invitedRoundMappings: [
+      {
+        startRound: { type: Number, required: true },
+        endRound: { type: Number, required: true },
+        targetMainRound: { type: Number, required: true },
+      }
+    ],
+    t1SpecialRoundMappings: [
       {
         startRound: { type: Number, required: true },
         endRound: { type: Number, required: true },

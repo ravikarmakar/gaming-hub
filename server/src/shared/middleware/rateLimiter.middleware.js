@@ -51,7 +51,7 @@ export const rateLimiter =
           logger.debug(`>>> [RATE LIMITER REDIS] ${key}: ${(endTime - startTime).toFixed(2)}ms`);
         }
 
-        // @upstash/redis results are [res, res]
+        // results are [count, ttl]
         const [requestCount, ttl] = results;
 
         // If newly created key (TTL will be -1), set expiration

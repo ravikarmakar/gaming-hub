@@ -13,6 +13,7 @@ export const tournamentKeys = {
     leaderboard: (groupId: string) => [...tournamentKeys.all, 'leaderboard', groupId] as const,
     registeredTeams: (eventId: string, search: string) => [...tournamentKeys.all, 'registered-teams', eventId, search] as const,
     invitedTeams: (eventId: string, search: string) => [...tournamentKeys.all, 'invited-teams', eventId, search] as const,
+    t1SpecialTeams: (eventId: string, search: string) => [...tournamentKeys.all, 't1-special-teams', eventId, search] as const,
 };
 
 // Types from the store
@@ -60,6 +61,7 @@ export interface Round {
     roundName: string;
     roundNumber: number;
     status: "pending" | "ongoing" | "completed";
+    type?: "tournament" | "invited-tournament" | "t1-special";
     eventId: string;
     groups?: Group[];
     startTime?: string;
@@ -68,6 +70,8 @@ export interface Round {
     gapMinutes?: number;
     matchesPerGroup?: number;
     qualifyingTeams?: number;
+    isPlaceholder?: boolean;
+    roadmapIndex?: number;
 }
 
 // Queries
@@ -169,3 +173,30 @@ export const useGetInfiniteInvitedTeamsQuery = (eventId: string, search = "") =>
         enabled: !!eventId,
     });
 };
+
+export const useSearchTeamsQuery = (search: string) => {
+    return useQuery({
+        queryKey: ['teams', 'search', search],
+        queryFn: async () => {
+            const res = await axiosInstance.get('/teams', {
+                params: { search, limit: 10 }
+            });
+            return res.data.data;
+        },
+        enabled: search.length >= 2,
+    });
+};
+
+export const useGetT1SpecialTeamsQuery = (eventId: string, search = "") => {
+    return useQuery({
+        queryKey: tournamentKeys.t1SpecialTeams(eventId, search),
+        queryFn: async () => {
+            const res = await axiosInstance.get(`/events/t1-special-teams/${eventId}`, {
+                params: { search, limit: 100 }
+            });
+            return res.data.teams;
+        },
+        enabled: !!eventId,
+    });
+};
+

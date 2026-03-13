@@ -103,12 +103,18 @@ export const createGroups = async (req, res) => {
     let allTeams = [];
 
     if (round.roundNumber === 1) {
-      // Fetch Approved Teams from Registrations for Round 1
-      const registrations = await EventRegistration.find({
-        eventId: eventId,
-        status: "approved"
-      });
-      allTeams = registrations.map((reg) => reg.teamId);
+      if (round.type === "t1-special") {
+        allTeams = round.eventId.t1SpecialTeams || [];
+      } else if (round.type === "invited-tournament") {
+        allTeams = round.eventId.invitedTeams || [];
+      } else {
+        // Fetch Approved Teams from Registrations for Round 1
+        const registrations = await EventRegistration.find({
+          eventId: eventId,
+          status: "approved"
+        });
+        allTeams = registrations.map((reg) => reg.teamId);
+      }
     } else {
       // Fetch Qualified Teams from the Previous Round
       const prevRoundNumber = round.roundNumber - 1;
@@ -344,6 +350,82 @@ export const createGroups = async (req, res) => {
   }
 };
 
+// ➕ Create a Single Group Manually
+export const createSingleGroup = async (req, res) => {
+  try {
+    const { roundId, eventId, groupName, matchTime } = req.body;
+
+    if (!roundId || !eventId) {
+      return res.status(400).json({ message: "Round ID and Event ID are required!" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(roundId) || !mongoose.Types.ObjectId.isValid(eventId)) {
+      return res.status(400).json({ message: "Invalid Round ID or Event ID format!" });
+    }
+
+    const round = await Round.findOne({ _id: roundId, eventId });
+    if (!round) {
+      return res.status(404).json({ message: "Round not found for this event!" });
+    }
+
+    // Handle Auto Group Name if not provided
+    let finalGroupName = groupName;
+    if (!finalGroupName) {
+      const groupCount = await Group.countDocuments({ roundId });
+      
+      const generateGroupName = (index) => {
+        let name = "";
+        while (index >= 0) {
+          name = String.fromCharCode((index % 26) + 65) + name;
+          index = Math.floor(index / 26) - 1;
+        }
+        return `Group ${name}`;
+      };
+      
+      finalGroupName = generateGroupName(groupCount);
+
+      // Verify name uniqueness in this round to prevent race condition
+      let nameCollision = await Group.findOne({ roundId, groupName: finalGroupName }).session(session);
+      let suffix = 1;
+      while (nameCollision) {
+          finalGroupName = `${generateGroupName(groupCount)} (${suffix})`;
+          nameCollision = await Group.findOne({ roundId, groupName: finalGroupName }).session(session);
+          suffix++;
+      }
+    }
+
+    const result = await withOptionalTransaction(async (session) => {
+      const group = await Group.create([{
+        roundId,
+        groupName: finalGroupName,
+        matchTime: matchTime || new Date(Date.now() + 24 * 60 * 60 * 1000),
+        totalMatch: round.matchesPerGroup || 1,
+        totalSelectedTeam: round.qualifyingTeams || 1,
+        teams: [],
+      }], { session });
+
+      const createdGroup = group[0];
+
+      // Create a corresponding Leaderboard
+      await Leaderboard.create([{
+        groupId: createdGroup._id,
+        teamScore: [],
+      }], { session });
+
+      return createdGroup;
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Group created successfully!",
+      group: result,
+    });
+  } catch (error) {
+    logger.error("Error in createSingleGroup:", error);
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+};
+
 export const updateGroup = async (req, res) => {
   try {
     const { groupId } = req.params;
@@ -388,5 +470,117 @@ export const updateGroup = async (req, res) => {
   } catch (error) {
     logger.error("Error updating group:", error);
     res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const deleteGroup = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+
+    if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
+      return res.status(400).json({ message: "Invalid Group ID" });
+    }
+
+    const result = await withOptionalTransaction(async (session) => {
+      const group = await Group.findById(groupId).session(session);
+      if (!group) {
+        const error = new Error("Group not found");
+        error.status = 404;
+        throw error;
+      }
+
+      // Delete associated Leaderboard
+      await Leaderboard.deleteMany({ groupId }, { session });
+
+      // Delete Group
+      await Group.findByIdAndDelete(groupId, { session });
+
+      return true;
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Group and associated leaderboard deleted successfully",
+    });
+  } catch (error) {
+    logger.error("Error deleting group:", error);
+    const status = error.status || 500;
+    res.status(status).json({ message: error.message || "Internal Server Error" });
+  }
+};
+export const injectTeam = async (req, res) => {
+  try {
+    const { groupId, teamId, eventId } = req.body;
+
+    if (!groupId || !teamId || !eventId) {
+      return res.status(400).json({ message: "Group ID, Team ID, and Event ID are required!" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(groupId) || !mongoose.Types.ObjectId.isValid(teamId)) {
+      return res.status(400).json({ message: "Invalid Group ID or Team ID format!" });
+    }
+
+    const result = await withOptionalTransaction(async (session) => {
+      // 1. Atomic Team Addition with Event/Group Verification
+      const group = await Group.findOneAndUpdate(
+        { 
+          _id: groupId, 
+          teams: { $ne: teamId } 
+        },
+        { $push: { teams: teamId } },
+        { session, new: true }
+      ).populate('roundId');
+
+      if (!group) {
+        // Find out why it failed
+        const existingGroup = await Group.findById(groupId).session(session);
+        if (!existingGroup) throw new Error("Group not found");
+        if (existingGroup.teams.some(id => id.equals(teamId))) {
+            throw new Error("Team already exists in this group");
+        }
+        throw new Error("Inject team failed");
+      }
+
+      // Verify group belongs to the specified event
+      const round = await Round.findById(group.roundId).session(session);
+      if (!round || round.eventId.toString() !== eventId) {
+          throw new Error("Group/Event mismatch");
+      }
+
+      // 2. Add team to leaderboard atomically
+      const leaderboard = await Leaderboard.findOneAndUpdate(
+        { groupId },
+        {
+          $push: {
+            teamScore: {
+              teamId,
+              score: 0,
+              kills: 0,
+              wins: 0,
+              totalPoints: 0,
+              matchesPlayed: 0,
+              isQualified: false
+            }
+          }
+        },
+        { session, new: true }
+      );
+
+      if (!leaderboard) {
+        throw new Error("Leaderboard not found for this group");
+      }
+
+      return group;
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Team injected into group successfully!",
+      group: result
+    });
+  } catch (error) {
+    logger.error("Error in injectTeam:", error);
+    const status = error.status || 500;
+    res.status(status).json({ message: error.message || "Internal Server Error" });
   }
 };

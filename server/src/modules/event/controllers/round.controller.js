@@ -35,7 +35,7 @@ export const getRounds = TryCatchHandler(async (req, res) => {
 });
 
 export const createRound = TryCatchHandler(async (req, res) => {
-  const { eventId, roundName, startTime, dailyStartTime, dailyEndTime, gapMinutes, matchesPerGroup, qualifyingTeams } = req.body;
+  const { eventId, roundName, startTime, dailyStartTime, dailyEndTime, gapMinutes, matchesPerGroup, qualifyingTeams, type, roadmapIndex } = req.body;
 
   // Event ID check
   if (!eventId || !mongoose.Types.ObjectId.isValid(eventId)) {
@@ -48,23 +48,27 @@ export const createRound = TryCatchHandler(async (req, res) => {
     if (session) eventQuery.session(session);
     const event = await eventQuery;
     if (!event) {
-      return res.status(404).json({ message: "Event not found!" });
+      const error = new Error("Event not found!");
+      error.status = 404;
+      throw error;
     }
 
     const totalTeamsQuery = EventRegistration.countDocuments({ eventId, status: "approved" });
     if (session) totalTeamsQuery.session(session);
     const totalTeams = await totalTeamsQuery;
     if (totalTeams === 0) {
-      return res.status(400).json({
-        message: "Cannot create a round. No teams have approved registrations in this event!",
-      });
+      const error = new Error("Cannot create a round. No teams have approved registrations in this event!");
+      error.status = 400;
+      throw error;
     }
 
     const ongoingQuery = Round.findOne({ eventId, status: "ongoing" });
     if (session) ongoingQuery.session(session);
     const existingOngoingRound = await ongoingQuery;
     if (existingOngoingRound) {
-      return res.status(400).json({ message: "An ongoing round already exists!" });
+      const error = new Error("An ongoing round already exists!");
+      error.status = 400;
+      throw error;
     }
 
     const updatedEvent = await Event.findByIdAndUpdate(
@@ -85,8 +89,21 @@ export const createRound = TryCatchHandler(async (req, res) => {
       dailyEndTime,
       gapMinutes,
       matchesPerGroup,
-      qualifyingTeams
+      qualifyingTeams,
+      type: type || "tournament"
     }], { session });
+
+    // Update Roadmap if roadmapIndex is provided
+    if (roadmapIndex !== undefined) {
+      const roadmapType = type === "invited-tournament" ? "invitedTeams" : "tournament";
+      const roadmap = event.roadmaps.find(r => r.type === roadmapType);
+      if (roadmap && roadmap.data && roadmapIndex >= 0 && roadmapIndex < roadmap.data.length) {
+        roadmap.data[roadmapIndex].status = "ongoing";
+        roadmap.data[roadmapIndex].roundId = newRound._id;
+        event.markModified('roadmaps');
+        await event.save({ session });
+      }
+    }
 
     return newRound;
   });
@@ -163,7 +180,7 @@ export const getRoundDetails = TryCatchHandler(async (req, res) => {
 
 export const updateRound = TryCatchHandler(async (req, res) => {
   const { roundId } = req.params;
-  const { roundName, startTime, dailyStartTime, dailyEndTime, gapMinutes, matchesPerGroup, qualifyingTeams, status } = req.body;
+  const { eventId, roundName, startTime, dailyStartTime, dailyEndTime, gapMinutes, matchesPerGroup, qualifyingTeams, status } = req.body;
 
   if (!roundId || !mongoose.Types.ObjectId.isValid(roundId)) {
     return res.status(400).json({ message: "Valid Round ID required" });
@@ -191,10 +208,105 @@ export const updateRound = TryCatchHandler(async (req, res) => {
 
   if (!round) return res.status(404).json({ message: "Round not found" });
 
+  // Update roadmap status if eventId is provided
+  if (eventId && status && mongoose.Types.ObjectId.isValid(eventId)) {
+    const event = await Event.findById(eventId);
+    if (event && event.roadmaps) {
+      let modified = false;
+      event.roadmaps.forEach(roadmap => {
+        if (Array.isArray(roadmap.data)) {
+          roadmap.data.forEach(item => {
+            if (item.roundId && item.roundId.toString() === roundId) {
+              item.status = status;
+              modified = true;
+            }
+          });
+        }
+      });
+      if (modified) {
+        event.markModified('roadmaps');
+        await event.save();
+      }
+    }
+  }
+
   res.status(200).json({
     success: true,
     message: "Round updated successfully",
     round // Return specific round or handle in store
+  });
+});
+
+export const resetRound = TryCatchHandler(async (req, res) => {
+  const { roundId } = req.params;
+  const { eventId } = req.body;
+
+  if (!roundId || !mongoose.Types.ObjectId.isValid(roundId)) {
+    return res.status(400).json({ message: "Valid Round ID required" });
+  }
+
+  await withOptionalTransaction(async (session) => {
+    // 1. Reset Round Status
+    const roundQuery = Round.findByIdAndUpdate(
+      roundId, 
+      { status: "pending" }, 
+      { new: true, session }
+    );
+    const round = await roundQuery;
+    if (!round) {
+      const error = new Error("Round not found");
+      error.status = 404;
+      throw error;
+    }
+
+    // 2. Find all groups for this round
+    const groupsQuery = mongoose.model("Group").find({ roundId });
+    if (session) groupsQuery.session(session);
+    const groups = await groupsQuery;
+    const groupIds = groups.map(g => g._id);
+
+    // 3. Delete Leaderboards for these groups
+    if (groupIds.length > 0) {
+      const delLbQuery = mongoose.model("Leaderboard").deleteMany({ groupId: { $in: groupIds } });
+      if (session) delLbQuery.session(session);
+      await delLbQuery;
+    }
+
+    // 4. Delete Groups
+    const delGroupsQuery = mongoose.model("Group").deleteMany({ roundId });
+    if (session) delGroupsQuery.session(session);
+    await delGroupsQuery;
+
+    // 5. Update Roadmap in Event
+    if (eventId && mongoose.Types.ObjectId.isValid(eventId)) {
+      const eventQuery = Event.findById(eventId);
+      if (session) eventQuery.session(session);
+      const event = await eventQuery;
+      if (event && event.roadmaps) {
+        let modified = false;
+        event.roadmaps.forEach(roadmap => {
+          if (Array.isArray(roadmap.data)) {
+            roadmap.data.forEach(item => {
+              if (item.roundId && item.roundId.toString() === roundId) {
+                item.status = "pending";
+                modified = true;
+              }
+            });
+          }
+        });
+        if (modified) {
+          event.markModified('roadmaps');
+          await event.save({ session });
+        }
+      }
+    }
+  });
+
+  if (res.headersSent) return;
+
+  res.status(200).json({
+    success: true,
+    message: "Round reset successfully. Groups and leaderboards cleared.",
   });
 });
 
@@ -210,7 +322,9 @@ export const deleteRound = TryCatchHandler(async (req, res) => {
     if (session) roundQuery.session(session);
     const round = await roundQuery;
     if (!round) {
-      return res.status(404).json({ message: "Round not found" });
+      const error = new Error("Round not found");
+      error.status = 404;
+      throw error;
     }
 
     // 1. Find all groups for this round

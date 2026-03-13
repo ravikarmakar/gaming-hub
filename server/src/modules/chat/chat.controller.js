@@ -13,7 +13,7 @@ export const getChatHistory = TryCatchHandler(async (req, res, next) => {
     const { scope = "team" } = req.query;
     const userId = req.user._id;
 
-    if (!["team", "organizer"].includes(scope)) {
+    if (!["team", "organizer", "group"].includes(scope)) {
         return next(new CustomError("Invalid scope parameter", 400));
     }
 

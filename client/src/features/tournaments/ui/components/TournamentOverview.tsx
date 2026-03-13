@@ -10,7 +10,8 @@ import {
     Ticket,
     Map,
     Plus,
-    ArrowRight
+    ArrowRight,
+    CheckCircle2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -55,13 +56,42 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
 
     const activeRoadmap = useMemo(() => {
         if (!eventDetails) return [];
-        return eventDetails.roadmaps?.find(r => r.type === 'tournament')?.data || eventDetails.roadmap || [];
-    }, [eventDetails]);
+        const roadmapData = eventDetails.roadmaps?.find(r => r.type === 'tournament')?.data || eventDetails.roadmap || [];
+        
+        return roadmapData.map((item: any) => {
+            const actualRound = rounds.find(r => 
+                (item.roundId && r._id === item.roundId) || 
+                (!item.roundId && r.roundName === item.title)
+            );
+            return { ...item, status: actualRound?.status || 'pending' };
+        });
+    }, [eventDetails, rounds]);
 
     const activeInvitedRoadmap = useMemo(() => {
         if (!eventDetails) return [];
-        return eventDetails.roadmaps?.find(r => r.type === 'invitedTeams')?.data || eventDetails.invitedTeamsRoadmap || [];
-    }, [eventDetails]);
+        const roadmapData = eventDetails.roadmaps?.find(r => r.type === 'invitedTeams')?.data || eventDetails.invitedTeamsRoadmap || [];
+        
+        return roadmapData.map((item: any) => {
+            const actualRound = rounds.find(r => 
+                (item.roundId && r._id === item.roundId) || 
+                (!item.roundId && r.roundName === item.title)
+            );
+            return { ...item, status: actualRound?.status || 'pending' };
+        });
+    }, [eventDetails, rounds]);
+
+    const activeT1Roadmap = useMemo(() => {
+        if (!eventDetails) return [];
+        const roadmapData = eventDetails.roadmaps?.find(r => r.type === 't1-special')?.data || [];
+        
+        return roadmapData.map((item: any) => {
+            const actualRound = rounds.find(r => 
+                (item.roundId && r._id === item.roundId) || 
+                (!item.roundId && r.roundName === item.title)
+            );
+            return { ...item, status: actualRound?.status || 'pending' };
+        });
+    }, [eventDetails, rounds]);
 
     if (!eventDetails || !stats) {
         return (
@@ -245,7 +275,7 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
             )}
 
             {/* Roadmap Section */}
-            {(activeRoadmap.length > 0 || activeInvitedRoadmap.length > 0) && (
+            {(activeRoadmap.length > 0 || activeInvitedRoadmap.length > 0 || activeT1Roadmap.length > 0) && (
                 <div className="space-y-4">
                     <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
                         <Map className="w-4 h-4 text-purple-400" />
@@ -263,11 +293,16 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
                                         Invited Roadmap
                                     </TabsTrigger>
                                 )}
+                                {activeT1Roadmap.length > 0 && (
+                                    <TabsTrigger value="t1-special" className="text-[10px] font-black uppercase tracking-widest px-4 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">
+                                        T1 Special
+                                    </TabsTrigger>
+                                )}
                             </TabsList>
 
-                            {activeInvitedRoadmap.length > 0 && (
+                            {(activeInvitedRoadmap.length > 0 || activeT1Roadmap.length > 0) && (
                                 <Badge variant="outline" className="border-emerald-500/20 text-emerald-400 bg-emerald-500/5 text-[9px] font-black uppercase tracking-tighter h-7">
-                                    Dual-Roadmap Active
+                                    {(activeRoadmap.length > 0 ? 1 : 0) + (activeInvitedRoadmap.length > 0 ? 1 : 0) + (activeT1Roadmap.length > 0 ? 1 : 0)} Tracks Active
                                 </Badge>
                             )}
                         </div>
@@ -283,11 +318,28 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
                                                 </div>
                                                 <div className="bg-white/[0.03] hover:bg-white/[0.05] border border-white/5 rounded-2xl p-5 transition-all duration-300">
                                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                                        <div>
-                                                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{step.name}</p>
-                                                            <h4 className="text-lg font-black text-white tracking-tight">{step.title}</h4>
+                                                        <div className="flex items-center gap-4">
+                                                            <div>
+                                                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{step.name}</p>
+                                                                <h4 className="text-lg font-black text-white tracking-tight">{step.title}</h4>
+                                                            </div>
+                                                            {step.status === 'completed' && (
+                                                                <div className="bg-emerald-500/10 p-1 rounded-full border border-emerald-500/20">
+                                                                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                                                </div>
+                                                            )}
                                                         </div>
                                                         <div className="flex flex-wrap gap-2">
+                                                            {step.status === 'completed' && (
+                                                                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 uppercase text-[9px] font-black">
+                                                                    Completed
+                                                                </Badge>
+                                                            )}
+                                                            {step.status === 'ongoing' && (
+                                                                <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 uppercase text-[9px] font-black animate-pulse">
+                                                                    Live now
+                                                                </Badge>
+                                                            )}
                                                             {step.isLeague && (
                                                                 <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 uppercase text-[9px] font-black">
                                                                     {step.leagueType?.replace("-", " ") || "League Mode"}
@@ -326,25 +378,43 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
                                                     </div>
                                                     <div className="bg-white/[0.03] hover:bg-white/[0.05] border border-white/5 rounded-2xl p-5 transition-all duration-300">
                                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                                            <div>
-                                                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{step.name}</p>
-                                                                <h4 className="text-lg font-black text-white tracking-tight">{step.title}</h4>
+                                                            <div className="flex items-center gap-4">
+                                                                <div>
+                                                                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{step.name}</p>
+                                                                    <h4 className="text-lg font-black text-white tracking-tight">{step.title}</h4>
+                                                                </div>
+                                                                {step.status === 'completed' && (
+                                                                    <div className="bg-emerald-500/10 p-1 rounded-full border border-emerald-500/20">
+                                                                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                             <div className="flex flex-wrap gap-2">
+                                                                {step.status === 'completed' && (
+                                                                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 uppercase text-[9px] font-black">
+                                                                        Completed
+                                                                    </Badge>
+                                                                )}
                                                                 {/* Mapping Logic */}
                                                                 {(() => {
                                                                     const mapping = eventDetails.invitedRoundMappings?.find(m => idx >= m.startRound && idx <= m.endRound);
                                                                     if (mapping) {
-                                                                        const targetRound = activeRoadmap[mapping.targetMainRound];
+                                                                        const targetRound = activeRoadmap[mapping.targetMainRound - 1];
+                                                                        const roundLabel = targetRound?.name || `Round ${mapping.targetMainRound}`;
                                                                         return (
                                                                             <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 uppercase text-[9px] font-black flex items-center gap-1">
-                                                                                Merges to: {targetRound?.name || `Round ${mapping.targetMainRound + 1}`}
+                                                                                Merges to: {roundLabel} {targetRound?.title && <span className="text-amber-400 font-bold ml-0.5">({targetRound.title})</span>}
                                                                                 <ArrowRight size={8} />
                                                                             </Badge>
                                                                         );
                                                                     }
                                                                     return null;
                                                                 })()}
+                                                                {step.status === 'ongoing' && (
+                                                                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 uppercase text-[9px] font-black animate-pulse">
+                                                                        Live now
+                                                                    </Badge>
+                                                                )}
                                                                 {step.isLeague && (
                                                                     <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20 uppercase text-[9px] font-black">
                                                                         {step.leagueType?.replace("-", " ")}
@@ -353,6 +423,74 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
                                                                 {step.isFinale && (
                                                                     <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 uppercase text-[9px] font-black">
                                                                         {step.grandFinaleType?.replace("-", " ")}
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Card>
+                                </TabsContent>
+                            )}
+
+                            {activeT1Roadmap.length > 0 && (
+                                <TabsContent value="t1-special" className="m-0 focus-visible:ring-0">
+                                    <Card className="bg-black/20 border-white/5 p-6 rounded-2xl">
+                                        <div className="relative pl-8 space-y-8 before:absolute before:inset-y-0 before:left-[15px] before:w-[2px] before:bg-gradient-to-b before:from-blue-500/50 before:via-blue-500/10 before:to-transparent">
+                                            {activeT1Roadmap.map((step, idx) => (
+                                                <div key={idx} className="relative group">
+                                                    <div className={`absolute -left-[38px] w-6 h-6 rounded-lg border-4 border-brand-black flex items-center justify-center z-10 transition-transform group-hover:scale-110 ${step.isFinale ? 'bg-amber-500 text-brand-black' : 'bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.3)]'}`}>
+                                                        {step.isFinale ? <Trophy size={10} /> : <Zap size={10} />}
+                                                    </div>
+                                                    <div className="bg-white/[0.03] hover:bg-white/[0.05] border border-white/5 rounded-2xl p-5 transition-all duration-300">
+                                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                            <div className="flex items-center gap-4">
+                                                                <div>
+                                                                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{step.name}</p>
+                                                                    <h4 className="text-lg font-black text-white tracking-tight">{step.title}</h4>
+                                                                </div>
+                                                                {step.status === 'completed' && (
+                                                                    <div className="bg-emerald-500/10 p-1 rounded-full border border-emerald-500/20">
+                                                                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {step.status === 'completed' && (
+                                                                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 uppercase text-[9px] font-black">
+                                                                        Completed
+                                                                    </Badge>
+                                                                )}
+                                                                {/* Mapping Logic */}
+                                                                {(() => {
+                                                                    const mapping = eventDetails.t1SpecialRoundMappings?.find(m => idx >= m.startRound && idx <= m.endRound);
+                                                                    if (mapping) {
+                                                                        const targetRound = activeRoadmap[mapping.targetMainRound - 1];
+                                                                        const roundLabel = targetRound?.name || `Round ${mapping.targetMainRound}`;
+                                                                        return (
+                                                                            <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 uppercase text-[9px] font-black flex items-center gap-1">
+                                                                                Merges to: {roundLabel} {targetRound?.title && <span className="text-amber-400 font-bold ml-0.5">({targetRound.title})</span>}
+                                                                                <ArrowRight size={8} />
+                                                                            </Badge>
+                                                                        );
+                                                                    }
+                                                                    return null;
+                                                                })()}
+                                                                {step.status === 'ongoing' && (
+                                                                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 uppercase text-[9px] font-black animate-pulse">
+                                                                        Live now
+                                                                    </Badge>
+                                                                )}
+                                                                {step.isLeague && (
+                                                                    <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 uppercase text-[9px] font-black">
+                                                                        {step.leagueType?.replace("-", " ") || "League Mode"}
+                                                                    </Badge>
+                                                                )}
+                                                                {step.isFinale && (
+                                                                    <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 uppercase text-[9px] font-black">
+                                                                        {step.grandFinaleType?.replace("-", " ") || "Grand Finale"}
                                                                     </Badge>
                                                                 )}
                                                             </div>

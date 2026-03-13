@@ -1,9 +1,9 @@
 export type RegistrationStatus = "registration-open" | "registration-closed" | "live";
 export type EventProgress = "pending" | "ongoing" | "completed";
-export type EventType = "scrims" | "tournament" | "invited-tournament";
+export type EventType = "scrims" | "tournament" | "invited-tournament" | "t1-special";
 export type Category = "solo" | "duo" | "squad";
 export type RegistrationMode = "open" | "invite-only";
-export type RoadmapType = "tournament" | "invitedTeams";
+export type RoadmapType = "tournament" | "invitedTeams" | "t1-special";
 
 export interface RoadmapItem {
     name: string;
@@ -13,6 +13,8 @@ export interface RoadmapItem {
     leagueType?: "12-teams" | "18-teams";
     grandFinaleType?: string;
     groups?: string;
+    roundId?: string;
+    status?: string;
 }
 
 export interface Event {
@@ -47,12 +49,20 @@ export interface Event {
     invitedTeams?: Array<{ teamName: string; email?: string; teamId?: string; _id?: string }>;
     maxInvitedSlots?: number;
     invitedTeamsRoadmap?: RoadmapItem[];
-    invitedRoundMappings?: Array<{ startRound: number; endRound: number; targetMainRound: number }>;
+    invitedRoundMappings?: {
+        startRound: number;
+        endRound: number;
+        targetMainRound: number;
+    }[];
+    t1SpecialRoundMappings?: {
+        startRound: number;
+        endRound: number;
+        targetMainRound: number;
+    }[];
     roadmaps?: Array<{ type: RoadmapType; data: RoadmapItem[] }>;
     registeredTeams?: string[];
+    t1SpecialTeams?: string[];
     createdAt?: string;
     updatedAt?: string;
     attendees?: number; // UI compatibility
 }
-
-

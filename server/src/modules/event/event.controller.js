@@ -322,6 +322,9 @@ export const fetchAllEvents = TryCatchHandler(async (req, res, next) => {
   if (status && status !== 'all') query.registrationStatus = status;
 
   if (cursor) {
+    if (!isValidObjectId(cursor)) {
+      return next(new CustomError("Invalid cursor ID", 400));
+    }
     query._id = { $lt: cursor };
   }
 
@@ -560,6 +563,9 @@ export const fetchAllRegisteredTeams = TryCatchHandler(
     ];
 
     if (cursor) {
+      if (!isValidObjectId(cursor)) {
+        return next(new CustomError("Invalid cursor ID", 400));
+      }
       pipeline.push({ $match: { _id: { $gt: new mongoose.Types.ObjectId(cursor) } } });
     }
 
@@ -627,6 +633,9 @@ export const fetchInvitedTeams = TryCatchHandler(async (req, res, next) => {
   ];
 
   if (cursor) {
+    if (!isValidObjectId(cursor)) {
+      throw new CustomError("Invalid cursor ID", 400);
+    }
     pipeline.push({ $match: { "teamDetails._id": { $gt: new mongoose.Types.ObjectId(cursor) } } });
   }
 
@@ -1153,6 +1162,67 @@ export const fetchTournamentsByTeam = TryCatchHandler(async (req, res, next) => 
   res.status(200).json({
     success: true,
     data: tournaments,
+  });
+});
+
+export const fetchT1SpecialTeams = TryCatchHandler(async (req, res, next) => {
+  const { eventId } = req.params;
+  let { cursor, limit = 10, search = "" } = req.query;
+
+  if (!isValidObjectId(eventId)) {
+    return next(new CustomError("Invalid Event ID", 400));
+  }
+
+  limit = parseInt(limit);
+  if (limit > 100) limit = 100;
+
+  const event = await Event.findById(eventId).select("t1SpecialTeams");
+  if (!event) throw new CustomError("Event not found", 404);
+
+  const pipeline = [
+    { $match: { _id: new mongoose.Types.ObjectId(eventId) } },
+    { $unwind: "$t1SpecialTeams" },
+    {
+      $lookup: {
+        from: "teams",
+        localField: "t1SpecialTeams",
+        foreignField: "_id",
+        as: "teamDetails"
+      }
+    },
+    { $unwind: "$teamDetails" },
+    {
+      $match: {
+        "teamDetails.teamName": { $regex: escapeRegex(search), $options: "i" }
+      }
+    },
+    { $sort: { "teamDetails._id": 1 } }
+  ];
+
+  if (cursor) {
+    pipeline.push({ $match: { "teamDetails._id": { $gt: new mongoose.Types.ObjectId(cursor) } } });
+  }
+
+  pipeline.push({ $limit: limit + 1 });
+
+  const result = await Event.aggregate(pipeline);
+
+  let nextCursor = null;
+  let hasMore = false;
+
+  if (result.length > limit) {
+    const extraItem = result.pop();
+    nextCursor = extraItem.teamDetails._id;
+    hasMore = true;
+  }
+
+  const teams = result.map(entry => entry.teamDetails);
+
+  res.status(200).json({
+    success: true,
+    teams,
+    nextCursor,
+    hasMore
   });
 });
 

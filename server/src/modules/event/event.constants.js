@@ -14,6 +14,7 @@ export const eventTypeEnum = [
     "scrims",
     "tournament",
     "invited-tournament",
+    "t1-special",
 ];
 
 export const eventCategoryEnum = [
@@ -30,6 +31,7 @@ export const registrationModeEnum = [
 export const eventRoadmapTypeEnum = [
     "tournament",
     "invitedTeams",
+    "t1-special",
 ];
 
 export const GAMES_MAPS = {

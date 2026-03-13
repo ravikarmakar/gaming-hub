@@ -2,7 +2,6 @@ import { useState } from 'react';
 import toast from "react-hot-toast";
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    ArrowLeft,
     Trophy,
     Users,
     Swords,
@@ -11,7 +10,7 @@ import {
 
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+
 
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { useGetRoundsQuery, useFinishTournamentMutation, useStartTournamentMutation, useDeleteTournamentMutation, useGetTournamentDetailsQuery } from "../../hooks";
@@ -36,6 +35,7 @@ export default function TournamentDashboard() {
     const { mutateAsync: finishEvent, isPending: isFinishing } = useFinishTournamentMutation();
     const { mutateAsync: startEvent } = useStartTournamentMutation();
     const { mutateAsync: deleteTournament } = useDeleteTournamentMutation();
+    const [isFocusMode, setIsFocusMode] = useState(false);
 
     if (!id) {
         return <div className="p-6 text-white">Invalid Tournament ID</div>;
@@ -81,60 +81,56 @@ export default function TournamentDashboard() {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            {/* Back Button */}
-            <Button
-                variant="ghost"
-                className="text-gray-400 hover:text-white pl-0 gap-2"
-                onClick={() => navigate(ORGANIZER_ROUTES.TOURNAMENTS)}
-            >
-                <ArrowLeft className="w-4 h-4" />
-                Back to Tournaments
-            </Button>
-
             {/* Header Section */}
-            <TournamentDashboardHeader
-                title={eventDetails?.title || ""}
-                registrationStatus={eventDetails?.registrationStatus || ""}
-                eventProgress={eventDetails?.eventProgress || ""}
-                onStartEvent={async () => {
-                    if (!id) return;
-                    try {
-                        await startEvent(id);
-                        refetchEventDetails();
-                    } catch (error) {
-                        console.error(error);
-                    }
-                }}
-                onFinishEvent={() => setIsFinishDialogOpen(true)}
-                canFinish={canFinish ?? false}
-                isFinishing={isFinishing}
-            />
+            {!isFocusMode && (
+                <TournamentDashboardHeader
+                    title={eventDetails?.title || ""}
+                    registrationStatus={eventDetails?.registrationStatus || ""}
+                    eventProgress={eventDetails?.eventProgress || ""}
+                    onBack={() => navigate(ORGANIZER_ROUTES.TOURNAMENTS)}
+                    onStartEvent={async () => {
+                        if (!id) return;
+                        try {
+                            await startEvent(id);
+                            refetchEventDetails();
+                        } catch (error) {
+                            console.error(error);
+                        }
+                    }}
+                    onFinishEvent={() => setIsFinishDialogOpen(true)}
+                    canFinish={canFinish ?? false}
+                    isFinishing={isFinishing}
+                />
+            )}
+
 
             {/* Main Content Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="bg-gray-900/60 p-1 border border-white/5 h-auto grid grid-cols-4 lg:inline-flex lg:w-auto gap-2">
-                    <TabsTrigger value="overview" className="data-[state=active]:bg-purple-600/20 data-[state=active]:text-purple-300">
-                        <Trophy className="w-4 h-4 mr-2" />
-                        Overview
-                    </TabsTrigger>
-
-                    {/* Hide Rounds Tab if not started */}
-                    {!(eventDetails?.registrationStatus === "registration-open" && eventDetails?.eventProgress === "pending") && (
-                        <TabsTrigger value="rounds" className="data-[state=active]:bg-blue-600/20 data-[state=active]:text-blue-300">
-                            <Swords className="w-4 h-4 mr-2" />
-                            Rounds & Groups
+                {!isFocusMode && (
+                    <TabsList className="bg-gray-900/60 p-1 border border-white/5 h-auto grid grid-cols-4 lg:inline-flex lg:w-auto gap-2">
+                        <TabsTrigger value="overview" className="data-[state=active]:bg-purple-600/20 data-[state=active]:text-purple-300">
+                            <Trophy className="w-4 h-4 mr-2" />
+                            Overview
                         </TabsTrigger>
-                    )}
 
-                    <TabsTrigger value="teams" className="data-[state=active]:bg-green-600/20 data-[state=active]:text-green-300">
-                        <Users className="w-4 h-4 mr-2" />
-                        Teams
-                    </TabsTrigger>
-                    <TabsTrigger value="settings" className="data-[state=active]:bg-orange-600/20 data-[state=active]:text-orange-300">
-                        <Settings className="w-4 h-4 mr-2" />
-                        Settings
-                    </TabsTrigger>
-                </TabsList>
+                        {/* Hide Rounds Tab if not started */}
+                        {!(eventDetails?.registrationStatus === "registration-open" && eventDetails?.eventProgress === "pending") && (
+                            <TabsTrigger value="rounds" className="data-[state=active]:bg-blue-600/20 data-[state=active]:text-blue-300">
+                                <Swords className="w-4 h-4 mr-2" />
+                                Rounds & Groups
+                            </TabsTrigger>
+                        )}
+
+                        <TabsTrigger value="teams" className="data-[state=active]:bg-green-600/20 data-[state=active]:text-green-300">
+                            <Users className="w-4 h-4 mr-2" />
+                            Teams
+                        </TabsTrigger>
+                        <TabsTrigger value="settings" className="data-[state=active]:bg-orange-600/20 data-[state=active]:text-orange-300">
+                            <Settings className="w-4 h-4 mr-2" />
+                            Settings
+                        </TabsTrigger>
+                    </TabsList>
+                )}
 
                 <Card className="min-h-[500px] border-white/5 bg-gray-900/20 backdrop-blur-md">
                     <TabsContent value="overview" className="m-0">
@@ -143,7 +139,11 @@ export default function TournamentDashboard() {
 
                     {!(eventDetails?.registrationStatus === "registration-open" && eventDetails?.eventProgress === "pending") && (
                         <TabsContent value="rounds" className="m-0">
-                            <RoundsManager eventId={id} />
+                            <RoundsManager 
+                                eventId={id} 
+                                isFocusMode={isFocusMode} 
+                                onToggleFocus={() => setIsFocusMode(!isFocusMode)} 
+                            />
                         </TabsContent>
                     )}
                     <TabsContent value="teams" className="m-0">
