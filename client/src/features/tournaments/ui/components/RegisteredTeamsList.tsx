@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Users, Search, ExternalLink, Loader2 } from "lucide-react";
 import debounce from "lodash.debounce";
 import { useInView } from "react-intersection-observer";
@@ -8,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 
 import { useGetInfiniteRegisteredTeamsQuery, useGetInfiniteInvitedTeamsQuery, useGetInfiniteT1SpecialTeamsQuery } from "../../hooks/useTournamentQueries";
 
@@ -16,6 +18,7 @@ interface RegisteredTeamsListProps {
 }
 
 export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<"registered" | "invited" | "t1-special">("registered");
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -47,7 +50,8 @@ export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
     }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
     const allTeams = useMemo(() => {
-        return activeQuery.data?.pages.flatMap((page) => page.teams) || [];
+        if (!activeQuery.data?.pages) return [];
+        return activeQuery.data.pages.flatMap((page) => page?.teams || []) || [];
     }, [activeQuery.data]);
 
     return (
@@ -95,23 +99,31 @@ export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
                 ) : (
                     <div className="absolute inset-0 overflow-y-auto p-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {allTeams.map((team: any, idx: number) => (
-                                <div key={team._id || idx} className="bg-white/5 border border-white/10 p-4 rounded-xl flex items-center gap-4">
-                                    <Avatar className="h-12 w-12 border border-white/10 shadow-lg">
-                                        <AvatarImage src={team.imageUrl} />
-                                        <AvatarFallback className="bg-purple-600/20 text-purple-300 font-bold">
-                                            {team.teamName?.[0]?.toUpperCase()}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="font-bold text-white truncate">{team.teamName}</h4>
-                                        <p className="text-[10px] text-gray-500 uppercase tracking-widest">{team.tag || 'NO TAG'} • {team.teamMembers?.length || 0} Members</p>
+                            {allTeams.map((team: any, idx: number) => {
+                                if (!team) return null;
+                                return (
+                                    <div key={team._id || idx} className="bg-white/5 border border-white/10 p-4 rounded-xl flex items-center gap-4">
+                                        <Avatar className="h-12 w-12 border border-white/10 shadow-lg">
+                                            <AvatarImage src={team.imageUrl} />
+                                            <AvatarFallback className="bg-purple-600/20 text-purple-300 font-bold">
+                                                {team.teamName?.[0]?.toUpperCase() || "?"}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-bold text-white truncate">{team.teamName || 'Unknown Team'}</h4>
+                                            <p className="text-[10px] text-gray-500 uppercase tracking-widest">{team.tag || 'NO TAG'} • {team.teamMembers?.length || 0} Members</p>
+                                        </div>
+                                        <Button 
+                                            size="icon" 
+                                            variant="ghost" 
+                                            className="h-8 w-8 text-gray-400 hover:text-white"
+                                            onClick={() => navigate(TEAM_ROUTES.PROFILE.replace(':id', team._id))}
+                                        >
+                                            <ExternalLink className="w-4 h-4" />
+                                        </Button>
                                     </div>
-                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-white">
-                                        <ExternalLink className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                         {activeQuery.isFetchingNextPage && (
                             <div className="py-8 flex justify-center">
