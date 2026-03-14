@@ -81,7 +81,7 @@ export const RoundInfoDialog = ({ round, open, onOpenChange }: RoundInfoDialogPr
                             <Trophy className="w-3 h-3" /> Qualification
                         </span>
                         <div className="font-bold text-lg text-white">
-                            Top {round.qualifyingTeams || "N/A"} Teams
+                            Top {round.qualifyingTeams ?? "N/A"} Teams
                         </div>
                         <p className="text-xs text-purple-300/70">
                             Advance to the next round based on total points.

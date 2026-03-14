@@ -1,12 +1,12 @@
-import { Trophy, Loader2, PanelTopClose, PanelTopOpen } from "lucide-react";
+import { Trophy, Loader2, PanelTopClose, PanelTopOpen, RefreshCw, AlertTriangle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
-import { CreateRoundDialog } from "./dialogs/CreateRoundDialog";
+import { CreateRoundDialog } from "./rounds/CreateRoundDialog";
 import { useRoundsSidebar, useRoundActions } from "../../hooks";
-import { ResetRoundDialog } from "./dialogs/ResetRoundDialog";
-import { EditRoundDialog } from "./dialogs/EditRoundDialog";
+import { ResetRoundDialog } from "./rounds/ResetRoundDialog";
+import { EditRoundDialog } from "./rounds/EditRoundDialog";
 import { RoundHeader } from "./rounds/RoundHeader";
 import { RoundItem } from "./rounds/RoundItem";
 import { RoundsSidebarHeader } from "./rounds/RoundsSidebarHeader";
@@ -54,13 +54,17 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
         setIsConfirmGroupsOpen,
         isConfirmManualGroupOpen,
         setIsConfirmManualGroupOpen,
+        isConfirmMergeOpen,
+        setIsConfirmMergeOpen,
         cooldown,
         handleRefresh,
         handleCreateGroups,
         handleManualCreateGroup,
         handleCompleteRound,
+        handleMergeTeams,
         isCreatingGroups,
-        isCreatingSingleGroup
+        isCreatingSingleGroup,
+        isMergingTeams
     } = useRoundActions(eventId, rounds, activeRoundTab);
 
     return (
@@ -90,7 +94,7 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
                     className={`${isSidebarCollapsed ? "w-20" : "w-80 md:w-96"
                         } border-r border-white/5 bg-black/10 flex-shrink-0 transition-all duration-300 ease-in-out flex flex-col`}
                 >
-                    <RoundsSidebarHeader 
+                    <RoundsSidebarHeader
                         activeRoundTab={activeRoundTab}
                         isSidebarCollapsed={isSidebarCollapsed}
                         onToggleCollapse={setIsSidebarCollapsed}
@@ -139,6 +143,7 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
                                 isSavingStatus={isSavingStatus}
                                 isCreatingSingleGroup={isCreatingSingleGroup}
                                 isCreatingGroups={isCreatingGroups}
+                                isMergingTeams={isMergingTeams}
                                 cooldown={cooldown}
                                 isCreateDisabled={isCreateDisabled}
                                 onComplete={() => handleCompleteRound(selectedRound)}
@@ -146,6 +151,7 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
                                     setActionRound(selectedRound);
                                     setIsCreateRoundOpen(true);
                                 }}
+                                onMergeTeams={() => setIsConfirmMergeOpen(true)}
                                 onCreateGroup={() => setIsConfirmManualGroupOpen(true)}
                                 onRefresh={() => handleRefresh([refetchRounds, refetchEvent], selectedRoundId || undefined)}
                                 onCreateGroups={() => setIsConfirmGroupsOpen(true)}
@@ -188,6 +194,8 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
                         roundId={actionRound._id}
                         eventId={eventId}
                         initialName={actionRound.roundName}
+                        initialQualifyingTeams={actionRound.qualifyingTeams}
+                        initialMatchesPerGroup={actionRound.matchesPerGroup}
                     />
                     <ResetRoundDialog
                         open={isResetRoundOpen}
@@ -210,16 +218,90 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
                 description={
                     <div className="space-y-4">
                         <p>This will automatically generate groups for <strong className="text-white">{selectedRound?.roundName}</strong> based on the available team data.</p>
-                        {teamPreview && (
-                            <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 flex items-center justify-between">
-                                <span className="text-gray-400 text-sm font-medium">{teamPreview.label}</span>
-                                <span className="text-purple-400 font-black text-xl">{teamPreview.count} Teams</span>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                            {teamPreview && (
+                                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">
+                                        {(teamPreview as any).mainLabel}
+                                    </p>
+                                    <p className="text-xl font-black text-purple-400">
+                                        {(teamPreview as any).mainCount ?? (teamPreview as any).count}
+                                    </p>
+                                </div>
+                            )}
+
+                            {(teamPreview as any)?.invitedCount > 0 && (teamPreview as any).sources.map((source: any, idx: number) => (
+                                <div key={idx} className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex flex-col justify-center">
+                                    <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-1">
+                                        Qualified from {source.sourceRoundName || source.name}
+                                    </p>
+                                    <div className="flex items-baseline gap-2">
+                                        <p className="text-xl font-black text-blue-400">{source.mergedCount || 0}</p>
+                                        {source.pendingCount > 0 && (
+                                            <p className="text-[10px] text-amber-500 font-bold">
+                                                +{source.pendingCount} Pending
+                                            </p>
+                                        )}
+                                    </div>
+                                    <p className="text-[9px] text-blue-500/60 font-medium truncate italic">
+                                        {source.name}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                        
+                        {teamPreview && ((teamPreview as any).totalCount || (teamPreview as any).mainCount) && (
+                            <div className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-white/10 rounded-lg p-3 flex items-center justify-between">
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Total Participating Teams</span>
+                                <span className="text-xl font-black text-white">{(teamPreview as any)?.totalCount || (teamPreview as any)?.mainCount} Teams</span>
                             </div>
                         )}
-                        <p className="text-sm text-gray-500 italic">Are you sure you want to proceed?</p>
+
+                        {teamPreview && (teamPreview as any).hasPending && (
+                            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-4 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex flex-col">
+                                        <span className="text-indigo-400 text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                                            <RefreshCw className="w-3 h-3" />
+                                            Merge Roadmap Teams
+                                        </span>
+                                        <span className="text-[10px] text-indigo-400/60 font-medium ml-5">
+                                            Merges into {(teamPreview as any).currentRoundName}
+                                        </span>
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        disabled={!(teamPreview as any).isReady || isMergingTeams}
+                                        onClick={(e) => { e.stopPropagation(); setIsConfirmMergeOpen(true); }}
+                                        className="h-7 px-3 bg-indigo-500 hover:bg-indigo-600 text-white text-[10px] font-bold"
+                                    >
+                                        {(teamPreview as any).isReady ? "Merge Now" : "Locked"}
+                                    </Button>
+                                </div>
+                                
+                                {!(teamPreview as any).isReady ? (
+                                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded flex items-center gap-3">
+                                        <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+                                        <p className="text-[11px] text-red-400 font-bold leading-relaxed">
+                                            Please complete all mapped rounds in the following roadmaps first: {(teamPreview as any).unreadySources?.join(", ") || "Active Roadmaps"}.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p className="text-[10px] text-gray-500 leading-relaxed italic">
+                                        The "Generate" button is disabled until you merge invited teams to ensure data integrity.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                        <p className="text-sm text-gray-500 italic">
+                            {(teamPreview as any)?.hasPending ? "Merge teams to enable generation." : "Are you sure you want to proceed?"}
+                        </p>
                     </div>
                 }
                 actionLabel="Generate"
+                confirmDisabled={!!(teamPreview as any)?.hasPending}
                 onConfirm={async () => {
                     if (selectedRound) await handleCreateGroups(selectedRound._id);
                     setIsConfirmGroupsOpen(false);
@@ -249,6 +331,39 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
                     setIsConfirmManualGroupOpen(false);
                 }}
                 isLoading={isCreatingSingleGroup}
+                variant="default"
+            />
+
+            <ConfirmActionDialog
+                open={isConfirmMergeOpen}
+                onOpenChange={setIsConfirmMergeOpen}
+                title="Merge Roadmap Teams?"
+                description={
+                    <div className="space-y-4">
+                        <p>Are you sure you want to merge qualified teams from other roadmaps into <strong className="text-white">{selectedRound?.roundName}</strong>?</p>
+                        {selectedRound?.mergeInfo?.sources && (
+                            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3">
+                                <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mb-2">Sources:</p>
+                                <ul className="space-y-1">
+                                    {selectedRound.mergeInfo.sources.map((s: any, idx: number) => (
+                                        <li key={idx} className="text-xs text-gray-300 flex items-center gap-2">
+                                            <div className="w-1 h-1 rounded-full bg-indigo-500" />
+                                            <span className="font-bold">{s.name}</span>
+                                            <span className="text-gray-500 italic">({s.type})</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                        <p className="text-sm text-gray-500 italic">This will pull all currently qualified teams. You can run this again if more teams qualify later.</p>
+                    </div>
+                }
+                actionLabel="Merge Teams"
+                onConfirm={async () => {
+                    if (selectedRound) await handleMergeTeams(selectedRound._id);
+                    setIsConfirmMergeOpen(false);
+                }}
+                isLoading={isMergingTeams}
                 variant="default"
             />
         </div>

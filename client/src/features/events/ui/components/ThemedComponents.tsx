@@ -93,14 +93,24 @@ export const NeonBadge: React.FC<NeonBadgeProps> = ({
     );
 };
 
-export const SectionHeader: React.FC<{ title: string; icon?: React.ElementType; action?: React.ReactNode }> = ({
+export const SectionHeader: React.FC<{
+    title: string;
+    icon?: React.ElementType;
+    action?: React.ReactNode;
+    className?: string;
+    titleClassName?: string;
+    iconClassName?: string;
+}> = ({
     title,
     icon: Icon,
-    action
+    action,
+    className,
+    titleClassName,
+    iconClassName
 }) => (
-    <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3">
-            {Icon && <Icon className="text-purple-500 w-6 h-6" />}
+    <div className={cn("flex items-center justify-between mb-6", className)}>
+        <h2 className={cn("text-xl font-black text-white uppercase tracking-tight flex items-center gap-3", titleClassName)}>
+            {Icon && <Icon className={cn("text-purple-500 w-6 h-6", iconClassName)} />}
             {title}
         </h2>
         {action}

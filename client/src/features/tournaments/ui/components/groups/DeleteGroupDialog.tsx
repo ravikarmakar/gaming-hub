@@ -32,7 +32,7 @@ export const DeleteGroupDialog = ({ open, onOpenChange, eventId, group }: Delete
             description={
                 <div className="space-y-2">
                     <p>
-                        Are you sure you want to delete <span className="text-gray-900 dark:text-white font-bold">{group?.groupName}</span>?
+                        Are you sure you want to delete <span className="text-gray-900 dark:text-white font-bold">{group?.groupName || "this group"}</span>?
                     </p>
                     <p className="text-sm text-red-500 font-medium">
                         This action cannot be undone. All teams in this group will be removed and its leaderboard will be deleted.

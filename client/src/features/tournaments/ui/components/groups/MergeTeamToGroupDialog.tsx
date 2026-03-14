@@ -30,7 +30,7 @@ export const MergeTeamToGroupDialog = ({ open, onOpenChange, eventId, team, sour
         return rounds.filter(r => r._id !== sourceRoundId && (r.type as string) !== 't1-special' && !r.isPlaceholder);
     }, [rounds, sourceRoundId]);
 
-    const { data: groupsData, isLoading: isLoadingGroups } = useGetGroupsQuery(selectedRoundId || "", 1, 100);
+    const { data: groupsData, isLoading: isLoadingGroups } = useGetGroupsQuery(selectedRoundId ?? "", 1, 100);
     const groups = groupsData?.groups || [];
 
     const { mutateAsync: injectTeam, isPending: isInjecting } = useInjectTeamMutation();
@@ -40,7 +40,7 @@ export const MergeTeamToGroupDialog = ({ open, onOpenChange, eventId, team, sour
         try {
             await injectTeam({
                 groupId: selectedGroupId,
-                teamId: team._id || team.teamId._id,
+                teamId: team?.teamId?._id || team?._id,
                 eventId
             });
             onOpenChange(false);

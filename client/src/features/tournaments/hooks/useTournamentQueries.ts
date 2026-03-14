@@ -51,9 +51,23 @@ export interface Group {
     roundId: string;
     matchesPlayed?: number;
     totalSelectedTeam?: number;
+    groupSize?: number;
+    isLeague?: boolean;
+    leaguePairingType?: "standard" | "axb-bxc-axc";
     status?: 'pending' | 'ongoing' | 'completed' | 'cancelled';
     roomId?: number;
     roomPassword?: number;
+    eligibleTeams?: string[];
+    pairingMatches?: {
+        AxB: number;
+        BxC: number;
+        AxC: number;
+    };
+    subGroups?: Array<{
+        _id: string;
+        name: string; // "Sub-Group A", "Sub-Group B", "Sub-Group C"
+        teams: (string | Team)[];
+    }>;
 }
 
 export interface Round {
@@ -70,8 +84,23 @@ export interface Round {
     gapMinutes?: number;
     matchesPerGroup?: number;
     qualifyingTeams?: number;
+    groupSize?: number;
+    isLeague?: boolean;
+    leaguePairingType?: "standard" | "axb-bxc-axc";
     isPlaceholder?: boolean;
     roadmapIndex?: number;
+    eligibleTeams?: string[];
+    mergeInfo?: {
+        sources: Array<{
+            name: string;
+            sourceRoundName?: string;
+            type: string;
+            pendingCount: number;
+            mergedCount: number;
+            isReady: boolean;
+            hasTeamsToMerge: boolean;
+        }>;
+    } | null;
 }
 
 // Queries

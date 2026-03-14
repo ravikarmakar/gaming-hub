@@ -109,8 +109,13 @@ export const useCreateRoundMutation = () => {
 export const useUpdateRoundMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (data: { roundId: string; eventId: string; roundName: string }) => {
-            await axiosInstance.put(`/rounds/${data.roundId}`, { eventId: data.eventId, roundName: data.roundName });
+        mutationFn: async (data: { roundId: string; eventId: string; roundName?: string; qualifyingTeams?: number; matchesPerGroup?: number }) => {
+            await axiosInstance.put(`/rounds/${data.roundId}`, { 
+                eventId: data.eventId, 
+                roundName: data.roundName,
+                qualifyingTeams: data.qualifyingTeams,
+                matchesPerGroup: data.matchesPerGroup
+            });
         },
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
@@ -256,8 +261,12 @@ export const useUpdateTeamScoreMutation = () => {
 export const useUpdateGroupResultsMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (data: { groupId: string; eventId: string; results: any[] }) => {
-            const res = await axiosInstance.put(`/leaderboards/${data.groupId}/results`, { results: data.results, eventId: data.eventId });
+        mutationFn: async (data: { groupId: string; eventId: string; results: any[]; pairingType?: 'AxB' | 'BxC' | 'AxC' }) => {
+            const res = await axiosInstance.put(`/leaderboards/${data.groupId}/results`, {
+                results: data.results,
+                eventId: data.eventId,
+                pairingType: data.pairingType,
+            });
             return res.data;
         },
         onSuccess: (_, variables) => {
@@ -301,6 +310,42 @@ export const useInjectTeamMutation = () => {
         },
         onError: (err) => {
             toast.error(handleApiError(err, "Failed to inject team"));
+        }
+    });
+};
+export const useMergeTeamsToRoundMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (data: { roundId: string; eventId: string }) => {
+            const res = await axiosInstance.post(`/rounds/${data.roundId}/merge-qualified`, { eventId: data.eventId });
+            return res.data;
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
+            toast.success("Teams merged successfully from other roadmaps");
+        },
+        onError: (err) => {
+            toast.error(handleApiError(err, "Failed to merge teams"));
+        }
+    });
+};
+
+export const useMergeTeamsToGroupMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (data: { groupId: string; eventId: string }) => {
+            const res = await axiosInstance.post(`/groups/${data.groupId}/merge-qualified`, { eventId: data.eventId });
+            return res.data;
+        },
+        onSuccess: (data, variables) => {
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.groupDetails(variables.groupId) });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.leaderboard(variables.groupId) });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
+            toast.success(data.message || "Teams merged successfully");
+        },
+        onError: (err) => {
+            toast.error(handleApiError(err, "Failed to merge teams into group"));
         }
     });
 };

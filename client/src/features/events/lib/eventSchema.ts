@@ -37,7 +37,7 @@ export const eventSchema = z.object({
     registrationMode: z.enum(["open", "invite-only"]),
     prizePool: z.union([z.string(), z.number()]).optional(),
     entryFee: z.union([z.string(), z.number()]).optional(),
-    matchCount: z.union([z.string(), z.number()]).optional(),
+    matchCount: z.coerce.number().optional(),
     map: z.array(z.string()).optional(),
     description: z.string().min(10, "Description must be at least 10 characters"),
     status: z.enum(["registration-open", "registration-closed", "live", "completed"]),
@@ -52,8 +52,11 @@ export const eventSchema = z.object({
     maxInvitedSlots: z.union([z.string(), z.number()]).optional(),
     invitedTeamsRoadmap: z.array(roadmapItemSchema).optional(),
     invitedRoundMappings: z.array(invitedRoundMappingSchema).optional(),
+    hasT1SpecialRoadmap: z.boolean().optional(),
+    t1SpecialRoadmap: z.array(roadmapItemSchema).optional(),
+    t1SpecialRoundMappings: z.array(invitedRoundMappingSchema).optional(),
     roadmaps: z.array(z.object({
-        type: z.enum(["tournament", "invitedTeams"]),
+        type: z.enum(["tournament", "invitedTeams", "t1-special"]),
         data: z.array(roadmapItemSchema)
     })).optional(),
     image: z.any()
@@ -99,22 +102,6 @@ export const eventSchema = z.object({
 }, {
     message: "Tournament must start after the registration deadline",
     path: ["startDate"],
-}).refine((data) => {
-    if (data.eventType !== "scrims" && data.hasRoadmap) {
-        return data.roadmap?.every(r => !!r.title?.trim());
-    }
-    return true;
-}, {
-    message: "All roadmap rounds must have a title",
-    path: ["roadmap"],
-}).refine((data) => {
-    if (data.eventType === "invited-tournament" && data.hasInvitedTeams) {
-        return data.invitedTeamsRoadmap?.every(r => !!r.title?.trim());
-    }
-    return true;
-}, {
-    message: "All invited teams roadmap rounds must have a title",
-    path: ["invitedTeamsRoadmap"],
 }).refine((data) => {
     if (data.eventType !== "scrims") {
         return data.prizeDistribution && data.prizeDistribution.length > 0;

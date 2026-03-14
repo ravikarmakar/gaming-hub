@@ -25,6 +25,7 @@ interface ConfirmActionDialogProps {
     cancelLabel?: string;
     onConfirm: () => void | Promise<void>;
     isLoading?: boolean;
+    confirmDisabled?: boolean;
     variant?: DialogVariant;
     icon?: React.ReactNode;
 }
@@ -66,6 +67,7 @@ export const ConfirmActionDialog = ({
     cancelLabel = "Cancel",
     onConfirm,
     isLoading = false,
+    confirmDisabled = false,
     variant = "default",
     icon,
 }: ConfirmActionDialogProps) => {
@@ -95,8 +97,8 @@ export const ConfirmActionDialog = ({
                             e.preventDefault();
                             onConfirm();
                         }}
-                        disabled={isLoading}
-                        className={cn("transition-all font-bold", styles.action)}
+                        disabled={isLoading || confirmDisabled}
+                        className={cn("transition-all font-bold", styles.action, (isLoading || confirmDisabled) && "opacity-50 cursor-not-allowed")}
                     >
                         {isLoading ? (
                             <Loader2 className="w-4 h-4 animate-spin" />

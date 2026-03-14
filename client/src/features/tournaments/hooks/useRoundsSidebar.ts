@@ -67,28 +67,35 @@ export const useRoundsSidebar = (eventId: string) => {
                 }
             } else if (activeRoundTab === 'tournament') {
                 // Check if this main round receives teams from invited or t1-special rounds
-                const invMappings = (event.invitedRoundMappings || []).filter((m: any) => m.targetMainRound === index + 1);
-                const t1Mappings = (event.t1SpecialRoundMappings || []).filter((m: any) => m.targetMainRound === index + 1);
-                
-                if (invMappings.length > 0 || t1Mappings.length > 0) {
-                    const invitedRoadmap = event.roadmaps?.find((r: any) => r.type === 'invitedTeams');
-                    const t1Roadmap = event.roadmaps?.find((r: any) => r.type === 't1-special');
-                    
-                    const sources = [
-                        ...invMappings.map((m: any) => ({
-                            type: 'invited',
-                            name: invitedRoadmap?.data?.[m.endRound - 1]?.title || `Invited Round ${m.endRound}`
-                        })),
-                        ...t1Mappings.map((m: any) => ({
-                            type: 't1-special',
-                            name: t1Roadmap?.data?.[m.endRound - 1]?.title || `T1 Round ${m.endRound}`
-                        }))
-                    ];
-
+                if (linkedRound && linkedRound.mergeInfo) {
                     mergeInfo = {
-                        type: 'receives-from',
-                        sources
+                        ...linkedRound.mergeInfo,
+                        type: 'receives-from'
                     };
+                } else {
+                    const invMappings = (event.invitedRoundMappings || []).filter((m: any) => m.targetMainRound === index + 1);
+                    const t1Mappings = (event.t1SpecialRoundMappings || []).filter((m: any) => m.targetMainRound === index + 1);
+                    
+                    if (invMappings.length > 0 || t1Mappings.length > 0) {
+                        const invitedRoadmap = event.roadmaps?.find((r: any) => r.type === 'invitedTeams');
+                        const t1Roadmap = event.roadmaps?.find((r: any) => r.type === 't1-special');
+                        
+                        const sources = [
+                            ...invMappings.map((m: any) => ({
+                                type: 'invited',
+                                name: invitedRoadmap?.data?.[m.endRound - 1]?.title || `Invited Round ${m.endRound}`
+                            })),
+                            ...t1Mappings.map((m: any) => ({
+                                type: 't1-special',
+                                name: t1Roadmap?.data?.[m.endRound - 1]?.title || `T1 Round ${m.endRound}`
+                            }))
+                        ];
+
+                        mergeInfo = {
+                            type: 'receives-from',
+                            sources
+                        };
+                    }
                 }
             }
 
@@ -141,28 +148,44 @@ export const useRoundsSidebar = (eventId: string) => {
         if (!selectedRound || !event) return null;
 
         const currentIndex = filteredSidebarItems.findIndex(item => item._id === selectedRound._id);
+        const prevRound = currentIndex > 0 ? filteredSidebarItems[currentIndex - 1] : null;
 
+        // Calculate teams that qualify strictly from the PREVIOUS MAIN ROUND
+        let mainCount = 0;
         if (currentIndex === 0) {
-            const count = activeRoundTab === 'invited-tournament'
-                ? (event.invitedTeams?.length || 0)
-                : activeRoundTab === 't1-special'
-                    ? (event.t1SpecialTeams?.length || 0)
-                    : (event.joinedSlots || 0);
-            return {
-                label: activeRoundTab === 'invited-tournament' ? "Invited Teams" : activeRoundTab === 't1-special' ? "T1 Special Teams" : "Registered Teams",
-                count
-            };
-        } else if (currentIndex > 0) {
-            const prevRound = filteredSidebarItems[currentIndex - 1];
-            if (prevRound.isPlaceholder) return null;
-
-            const qualifiedCount = (prevRound.groups || []).reduce((acc: number, g: any) => acc + (g.totalSelectedTeam || 0), 0);
-            return {
-                label: `Qualified from ${prevRound.roundName}`,
-                count: qualifiedCount
-            };
+            mainCount = (selectedRound as any).eligibleTeams?.length || 0;
+        } else if (prevRound) {
+            mainCount = (prevRound.groups || []).reduce((acc: number, g: any) => acc + (g.totalSelectedTeam || 0), 0);
         }
-        return null;
+        
+        const mainLabel = currentIndex === 0 
+            ? (activeRoundTab === 'invited-tournament' ? "Invited Teams" : activeRoundTab === 't1-special' ? "T1 Special Teams" : "Registered Teams")
+            : `Qualified from ${prevRound?.roundName || `Round ${currentIndex}`}`;
+
+        const sources = (selectedRound.mergeInfo as any)?.sources || [];
+        const invitedCount = sources.reduce((acc: number, s: any) => acc + (s.mergedCount || 0) + (s.pendingCount || 0), 0);
+        
+        const totalCount = mainCount + invitedCount;
+        
+        // A round is "ready" to merge if ALL sources that have teams to contribute are completed.
+        const pendingSources = sources.filter((s: any) => s.hasTeamsToMerge);
+        const unreadySources = pendingSources.filter((s: any) => !s.isReady).map((s: any) => s.name);
+        const isReady = unreadySources.length === 0;
+        
+        const hasPending = sources.some((s: any) => s.hasTeamsToMerge);
+
+        return {
+            label: mainLabel,
+            count: mainCount,
+            mainCount,
+            invitedCount,
+            totalCount,
+            isReady,
+            unreadySources,
+            hasPending,
+            currentRoundName: selectedRound.roundName,
+            sources
+        };
     }, [selectedRound, event, filteredSidebarItems, activeRoundTab]);
 
     const isCreateDisabled = !!(selectedRound as any)?.isDisabled;

@@ -8,10 +8,12 @@ interface RoundHeaderProps {
     isSavingStatus: boolean;
     isCreatingSingleGroup: boolean;
     isCreatingGroups: boolean;
+    isMergingTeams?: boolean;
     cooldown: number;
     isCreateDisabled: boolean;
     onComplete: () => Promise<void>;
     onStart: () => void;
+    onMergeTeams?: () => void;
     onCreateGroup: () => void;
     onRefresh: () => void;
     onCreateGroups: () => void;
@@ -23,14 +25,20 @@ export const RoundHeader = ({
     isSavingStatus,
     isCreatingSingleGroup,
     isCreatingGroups,
+    isMergingTeams,
     cooldown,
     isCreateDisabled,
     onComplete,
     onStart,
+    onMergeTeams,
     onCreateGroup,
     onRefresh,
     onCreateGroups
 }: RoundHeaderProps) => {
+    // Check if there are any mappings for this round
+    const hasMappings = round.mergeInfo?.hasInvitedMapping || round.mergeInfo?.hasT1Mapping;
+    const isMainRoadmap = activeRoundTab === 'tournament';
+
     return (
         <div className="h-14 px-6 flex items-center border-b border-white/5 bg-black/10">
             <div className="flex items-center justify-between gap-4 w-full">
@@ -118,6 +126,19 @@ export const RoundHeader = ({
                                 </div>
                             ) : (
                                 <>
+                                    {isMainRoadmap && hasMappings && round.status === 'pending' && (!round.groups || round.groups.length === 0) && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => onMergeTeams?.()}
+                                            disabled={isMergingTeams}
+                                            className="h-8 text-xs font-bold border-indigo-500/20 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 px-4"
+                                        >
+                                            {isMergingTeams ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                                            Merge Roadmap Teams
+                                        </Button>
+                                    )}
+
                                     <Button
                                         size="sm"
                                         onClick={onCreateGroup}

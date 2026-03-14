@@ -5,6 +5,7 @@ import Event from "../event.model.js";
 import Leaderboard from "../models/leaderBoard.model.js";
 import EventRegistration from "../models/event-registration.model.js";
 import { logger } from "../../../shared/utils/logger.js";
+import { TryCatchHandler } from "../../../shared/middleware/error.middleware.js";
 import { withOptionalTransaction } from "../../../shared/utils/withOptionalTransaction.js";
 
 // ✅ Get All Groups (With Pagination)
@@ -99,54 +100,102 @@ export const createGroups = async (req, res) => {
       return res.status(404).json({ message: "Round not found!" });
     }
 
-    // 2️⃣ Fetch Teams (Either from Registrations or Previous Round)
+    // 2️⃣ Identify Sequence Position and Fetch Teams
     let allTeams = [];
-
-    if (round.roundNumber === 1) {
-      if (round.type === "t1-special") {
-        allTeams = round.eventId.t1SpecialTeams || [];
-      } else if (round.type === "invited-tournament") {
-        allTeams = round.eventId.invitedTeams || [];
-      } else {
-        // Fetch Approved Teams from Registrations for Round 1
-        const registrations = await EventRegistration.find({
-          eventId: eventId,
-          status: "approved"
-        });
-        allTeams = registrations.map((reg) => reg.teamId);
-      }
+    
+    if (round.eligibleTeams && round.eligibleTeams.length > 0) {
+      allTeams = round.eligibleTeams;
+      logger.info(`Using ${allTeams.length} pre-merged/eligible teams for Round ${round.roundNumber}`);
     } else {
-      // Fetch Qualified Teams from the Previous Round
-      const prevRoundNumber = round.roundNumber - 1;
-      const prevRound = await Round.findOne({
-        eventId: round.eventId._id,
-        roundNumber: prevRoundNumber
-      });
-
-      if (!prevRound) {
-        return res.status(404).json({ message: `Previous round (Round ${prevRoundNumber}) not found!` });
+      const roadmapTypeMap = {
+        "tournament": "tournament",
+        "invited-tournament": "invitedTeams",
+        "t1-special": "t1-special"
+      };
+      const roadmapType = roadmapTypeMap[round.type] || "tournament";
+      const roadmapItem = round.eventId.roadmaps.find(r => r.type === roadmapType);
+      
+      let currentRoundIndex = -1;
+      if (roadmapItem && Array.isArray(roadmapItem.data)) {
+        currentRoundIndex = roadmapItem.data.findIndex(entry => 
+          entry.roundId && entry.roundId.toString() === roundId.toString()
+        );
       }
 
-      // Find all groups in the previous round
-      const prevGroups = await Group.find({ roundId: prevRound._id });
-      const prevGroupIds = prevGroups.map(g => g._id);
-
-      // Find all qualified teams from leaderboards of these groups
-      const leaderboards = await Leaderboard.find({
-        groupId: { $in: prevGroupIds }
-      });
-
-      leaderboards.forEach(lb => {
-        lb.teamScore.forEach(entry => {
-          if (entry.isQualified) {
-            allTeams.push(entry.teamId);
-          }
+      // Determine if this is the absolute "start" of its sequence
+      let isFirstInSequence = false;
+      if (currentRoundIndex === 0) {
+        isFirstInSequence = true;
+      } else if (currentRoundIndex === -1) {
+        // Fallback for manual/unlinked rounds: Check if any previous rounds of the SAME type exist
+        const earlierRound = await Round.findOne({
+          eventId: round.eventId._id,
+          type: round.type,
+          roundNumber: { $lt: round.roundNumber }
         });
-      });
+        if (!earlierRound) {
+          isFirstInSequence = true;
+        }
+      }
+
+      if (isFirstInSequence) {
+        // Logic for START of a sequence (Fetch from Event object or Registrations)
+        if (round.type === "t1-special") {
+          allTeams = round.eventId.t1SpecialTeams || [];
+        } else if (round.type === "invited-tournament") {
+          allTeams = round.eventId.invitedTeams || [];
+        } else {
+          // Fetch Approved Teams from Registrations for Main Tournament
+          const registrations = await EventRegistration.find({
+            eventId: eventId,
+            status: "approved"
+          });
+          allTeams = registrations.map((reg) => reg.teamId);
+        }
+      } else {
+        // Logic for PROGRESSIVE ROUNDS (Pull from previous round in identified sequence)
+        let prevRoundId = null;
+        if (currentRoundIndex > 0) {
+          prevRoundId = roadmapItem.data[currentRoundIndex - 1].roundId;
+        }
+
+        let prevRound;
+        if (prevRoundId) {
+          prevRound = await Round.findById(prevRoundId);
+        } else {
+          // Fallback: strictly find previous round of SAME type
+          prevRound = await Round.findOne({
+            eventId: round.eventId._id,
+            type: round.type,
+            roundNumber: { $lt: round.roundNumber }
+          }).sort({ roundNumber: -1 });
+        }
+
+        if (!prevRound) {
+          return res.status(404).json({ message: `Previous round for ${round.type} not found!` });
+        }
+
+        // Find all groups in the previous round
+        const prevGroups = await Group.find({ roundId: prevRound._id });
+        const prevGroupIds = prevGroups.map(g => g._id);
+
+        // Find all qualified teams from leaderboards of these groups
+        const leaderboards = await Leaderboard.find({
+          groupId: { $in: prevGroupIds }
+        });
+
+        leaderboards.forEach(lb => {
+          lb.teamScore.forEach(entry => {
+            if (entry.isQualified) {
+              allTeams.push(entry.teamId);
+            }
+          });
+        });
+      }
     }
 
     if (!allTeams || allTeams.length === 0) {
-      const source = round.roundNumber === 1 ? "registrations" : `qualified teams from Round ${round.roundNumber - 1}`;
+      const source = round.roundNumber === 1 ? "registrations" : "qualified teams from the previous round";
       return res.status(400).json({ message: `No ${source} found for this event!` });
     }
 
@@ -165,10 +214,10 @@ export const createGroups = async (req, res) => {
       [allTeams[i], allTeams[j]] = [allTeams[j], allTeams[i]];
     }
 
-    const teamsPerGroup = 12; // Standard Battle Royale Group Size
-    const totalGroups = Math.ceil(allTeams.length / teamsPerGroup);
+    const teamsPerGroup = round.groupSize || 12; // Dynamic Group Size (Default 12)
+    const totalGroups = round.isLeague ? 1 : Math.ceil(allTeams.length / teamsPerGroup);
 
-    logger.info(`Creating ${totalGroups} groups for ${allTeams.length} teams...`);
+    logger.info(`Creating ${totalGroups} groups for ${allTeams.length} teams (Group Size: ${teamsPerGroup})...`);
 
     // 5️⃣ Prepare Groups Data (In-Memory)
     const groupsData = [];
@@ -192,12 +241,36 @@ export const createGroups = async (req, res) => {
       const groupName = generateGroupName(i);
       groupToTeamsMap[groupName] = groupTeams;
 
+      const isLeague = round.isLeague || false;
+      // For league groups, totalMatch is matches PER PAIRING x 3
+      // e.g. if matchesPerGroup is 6, total matches = 18 (6 AxB + 6 BxC + 6 AxC)
+      const computedTotalMatch = isLeague
+        ? (round.matchesPerGroup ? round.matchesPerGroup * 3 : 18)
+        : totalMatch;
+
+      // 🏆 For league groups: divide teams into 3 equal sub-groups (A, B, C)
+      // These define AxB/BxC/AxC pairing. Each sub-group plays against the other two.
+      let subGroups = [];
+      if (isLeague) {
+        const n = groupTeams.length;
+        const chunk = Math.ceil(n / 3);
+        subGroups = [
+          { name: "Sub-Group A", teams: groupTeams.slice(0, chunk) },
+          { name: "Sub-Group B", teams: groupTeams.slice(chunk, chunk * 2) },
+          { name: "Sub-Group C", teams: groupTeams.slice(chunk * 2) },
+        ];
+      }
+
       groupsData.push({
         roundId,
         groupName,
-        totalMatch,
+        totalMatch: computedTotalMatch,
         matchTime: matchTime || new Date(Date.now() + 24 * 60 * 60 * 1000),
-        teams: groupTeams, // Adding teams directly to Group model
+        teams: groupTeams,
+        isLeague,
+        leaguePairingType: round.leaguePairingType || "standard",
+        groupSize: teamsPerGroup,
+        subGroups,
       });
     }
 
@@ -297,7 +370,7 @@ export const createGroups = async (req, res) => {
         for (const group of createdGroups) {
           for (const teamId of group.teams) {
             const team = teamMap.get(teamId.toString());
-            if (!team) continue;
+            if (!team || !team.teamMembers) continue;
 
             const recipientIds = team.teamMembers
               .filter(m => m.isActive)
@@ -429,7 +502,7 @@ export const createSingleGroup = async (req, res) => {
 export const updateGroup = async (req, res) => {
   try {
     const { groupId } = req.params;
-    const { groupName, totalMatch, roomId, roomPassword, totalSelectedTeam, matchTime } = req.body;
+    const { groupName, totalMatch, roomId, roomPassword, totalSelectedTeam, matchTime, subGroups } = req.body;
 
     // Validate groupId
     if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
@@ -446,6 +519,7 @@ export const updateGroup = async (req, res) => {
     if (roomPassword !== undefined) group.roomPassword = roomPassword;
     if (totalSelectedTeam !== undefined) group.totalSelectedTeam = totalSelectedTeam;
     if (matchTime) group.matchTime = matchTime;
+    if (subGroups) group.subGroups = subGroups;
 
     // 🔄 Recalibrate Status (Fixed logic for matchesPlayed === 0)
     if (group.matchesPlayed >= group.totalMatch && group.totalMatch > 0) {
@@ -584,3 +658,104 @@ export const injectTeam = async (req, res) => {
     res.status(status).json({ message: error.message || "Internal Server Error" });
   }
 };
+
+export const mergeQualifiedTeamsIntoGroup = TryCatchHandler(async (req, res) => {
+  const { groupId } = req.params;
+  const { eventId } = req.body;
+
+  if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
+    return res.status(400).json({ message: "Valid Group ID required" });
+  }
+
+  const result = await withOptionalTransaction(async (session) => {
+    const group = await Group.findById(groupId).populate("roundId").session(session);
+    if (!group) throw new Error("Group not found");
+
+    const round = group.roundId;
+    const event = await Event.findById(eventId).session(session);
+    if (!event) throw new Error("Event not found");
+
+    // 1. Determine this round's index in the main roadmap
+    const mainRoadmap = event.roadmaps?.find(r => r.type === "tournament");
+    if (!mainRoadmap) throw new Error("Main roadmap not found");
+
+    const roundIndex = mainRoadmap.data?.findIndex(item => 
+      item.roundId && item.roundId.toString() === round._id.toString()
+    );
+
+    if (roundIndex === -1) throw new Error("Round not found in main roadmap");
+    const displayRoundNumber = roundIndex + 1;
+
+    // 2. Identify mappings
+    const invitedMappings = event.invitedRoundMappings?.filter(m => m.targetMainRound === displayRoundNumber) || [];
+    const t1Mappings = event.t1SpecialRoundMappings?.filter(m => m.targetMainRound === displayRoundNumber) || [];
+
+    const groupTeamsSet = new Set(group.teams.map(id => id.toString()));
+    const newTeams = [];
+
+    const processMappings = async (mappings, roadmapType) => {
+      const roadmap = event.roadmaps.find(r => r.type === roadmapType);
+      if (!roadmap || !roadmap.data) return;
+
+      for (const mapping of mappings) {
+        for (let i = mapping.startRound - 1; i <= mapping.endRound - 1; i++) {
+          const roadmapItem = roadmap.data[i];
+          if (!roadmapItem || !roadmapItem.roundId) continue;
+
+          const prevRound = await Round.findById(roadmapItem.roundId).session(session);
+          if (!prevRound || prevRound.status !== "completed") continue;
+
+          const Leaderboard = mongoose.model("Leaderboard");
+          const prevGroups = await Group.find({ roundId: prevRound._id }).session(session);
+          const prevGroupIds = prevGroups.map(g => g._id);
+          
+          const leaderboards = await Leaderboard.find({ groupId: { $in: prevGroupIds } }).session(session);
+          
+          leaderboards.forEach(lb => {
+            lb.teamScore.forEach(entry => {
+              if (entry.isQualified && !groupTeamsSet.has(entry.teamId.toString())) {
+                groupTeamsSet.add(entry.teamId.toString());
+                newTeams.push(entry.teamId);
+              }
+            });
+          });
+        }
+      }
+    };
+
+    await processMappings(invitedMappings, "invitedTeams");
+    await processMappings(t1Mappings, "t1-special");
+
+    if (newTeams.length > 0) {
+      // Add teams to group
+      group.teams.push(...newTeams);
+      await group.save({ session });
+
+      // Add to leaderboard
+      const Leaderboard = mongoose.model("Leaderboard");
+      const leaderboard = await Leaderboard.findOne({ groupId }).session(session);
+      if (leaderboard) {
+        newTeams.forEach(teamId => {
+          leaderboard.teamScore.push({
+            teamId,
+            score: 0,
+            kills: 0,
+            wins: 0,
+            totalPoints: 0,
+            matchesPlayed: 0,
+            isQualified: false
+          });
+        });
+        await leaderboard.save({ session });
+      }
+    }
+
+    return { group, mergedCount: newTeams.length };
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: `Merged ${result.mergedCount} teams successfully!`,
+    group: result.group
+  });
+});

@@ -151,6 +151,8 @@ export default function TournamentDashboard() {
                     </TabsContent>
                     <TabsContent value="settings" className="m-0 p-6">
                         <TournamentSettings
+                            eventId={id}
+                            eventType={eventDetails?.eventType}
                             registrationStatus={eventDetails?.registrationStatus}
                             onEdit={handleEdit}
                             onDelete={() => setIsDeleteDialogOpen(true)}

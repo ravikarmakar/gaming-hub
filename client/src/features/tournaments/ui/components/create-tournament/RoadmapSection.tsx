@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { useFormContext, useFieldArray, Controller } from "react-hook-form";
-import { ListTodo, Plus, Trash2, Trophy, Users, CheckCircle2, Edit3 } from "lucide-react";
+import { useFormContext, useFieldArray } from "react-hook-form";
+import { ListTodo, Trash2, Trophy } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 import {
     Select,
     SelectContent,
@@ -12,20 +13,17 @@ import {
     SelectTrigger,
     SelectValue
 } from "@/components/ui/select";
-import { GlassCard, SectionHeader } from "@/features/events/ui/components/ThemedComponents";
+import { GlassCard } from "@/features/events/ui/components/ThemedComponents";
+import { RoadmapHeader } from "./roadmaps/RoadmapHeader";
 import { EventFormValues } from "@/features/events/lib";
 
-export const RoadmapSection = () => {
+export const RoadmapSection = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
     const { register, control, watch, setValue } = useFormContext<EventFormValues>();
     const [isRoundsConfirmed, setIsRoundsConfirmed] = useState(false);
-    const [isLeagueSaved, setIsLeagueSaved] = useState(false);
-    const [isFinaleSaved, setIsFinaleSaved] = useState(false);
     const [leagueRoundIdx, setLeagueRoundIdx] = useState<number | null>(null);
     const [finaleRoundIdx, setFinaleRoundIdx] = useState<number | null>(null);
     const [isLeagueEnabled, setIsLeagueEnabled] = useState(false);
     const [isFinaleEnabled, setIsFinaleEnabled] = useState(false);
-    const [showValidationError, setShowValidationError] = useState(false);
-
     const { fields, append, remove } = useFieldArray({
         control,
         name: "roadmap",
@@ -37,7 +35,7 @@ export const RoadmapSection = () => {
     // Initialize with at least one round if not scrims
     useEffect(() => {
         if (fields.length === 0 && eventType !== "scrims") {
-            append({ name: "Round 1", title: "", isFinale: false, isLeague: false, leagueType: "12-teams", grandFinaleType: "Standard" });
+            append({ name: "Round 1", title: "", isFinale: false, isLeague: false, leagueType: "12-teams", grandFinaleType: "12-teams" });
         }
     }, [fields.length, append, eventType]);
 
@@ -56,13 +54,10 @@ export const RoadmapSection = () => {
             if (hasLeague >= 0) {
                 setIsLeagueEnabled(true);
                 setLeagueRoundIdx(hasLeague);
-                setIsLeagueSaved(true);
             }
-
             if (hasFinale >= 0) {
                 setIsFinaleEnabled(true);
                 setFinaleRoundIdx(hasFinale);
-                setIsFinaleSaved(true);
             }
         }
     }, [fields.length]); // Only run on mount or fields initialization
@@ -72,26 +67,29 @@ export const RoadmapSection = () => {
             // Validation: Check if all rounds have titles
             const hasEmptyTitles = roadmapData.some(round => !round.title?.trim());
             if (hasEmptyTitles) {
-                setShowValidationError(true);
                 return;
             }
+            // Save backup before confirming (though confirmation is the "safe" state, 
+            // the transition to edit mode is where we want to backup)
         }
 
-        setShowValidationError(false);
-        setIsRoundsConfirmed(!isRoundsConfirmed);
+        const nextState = !isRoundsConfirmed;
+        
+        // If entering edit mode, save current rounds as backup
+
+        setIsRoundsConfirmed(nextState);
+
         // If unconfirming, we might want to reset finale/league status on all rounds
-        if (isRoundsConfirmed) {
-            roadmapData.forEach((_, idx) => {
-                setValue(`roadmap.${idx}.isFinale`, false);
-                setValue(`roadmap.${idx}.isLeague`, false);
-            });
-            setIsFinaleSaved(false);
-            setLeagueRoundIdx(null);
-            setFinaleRoundIdx(null);
-            setIsLeagueEnabled(false);
-            setIsFinaleEnabled(false);
+        if (isRoundsConfirmed) { // This means we were confirmed and now we are NOT (nextState is false)
+            // Actually, nextState is !isRoundsConfirmed. 
+            // If isRoundsConfirmed was true, nextState is false (Edit Mode).
         }
+        
+        // If we were confirmed and are now becoming unconfirmed (entering edit mode)
+        // the original code had some reset logic here but it's dangerous if user wants to just edit names.
+        // The user wants a "Cancel" button, so we should keep the state and only reset if they cancel.
     };
+
 
     const hasRoadmapValue = watch("hasRoadmap");
     // Default to true for standard tournaments if not explicitly set
@@ -101,7 +99,7 @@ export const RoadmapSection = () => {
 
     return (
         <div className="space-y-6">
-            {eventType === "invited-tournament" && (
+            {!isEmbedded && eventType === "invited-tournament" && (
                 <GlassCard className="p-6 border-amber-500/20 bg-amber-500/5">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -129,28 +127,31 @@ export const RoadmapSection = () => {
             )}
 
             {hasRoadmap && (
-                <GlassCard className="p-8 space-y-6">
-                    <SectionHeader title="Tournament Roadmap" icon={ListTodo} />
+                <GlassCard className={cn("p-8 space-y-6", isEmbedded && "border-none bg-transparent p-0 shadow-none")}>
+                    <RoadmapHeader
+                        title="Tournament Roadmap"
+                        description="Define the progression of your tournament"
+                        icon={ListTodo}
+                        isRoundsConfirmed={isRoundsConfirmed}
+                        onToggleSave={handleConfirmedToggle}
+                        onAddRound={() => append({ name: `Round ${fields.length + 1}`, title: "", isFinale: false, isLeague: false, leagueType: "12-teams", grandFinaleType: "12-teams" })}
+                        isSavingDisabled={roadmapData.some(r => !r.title?.trim())}
+                        accentColor="purple"
+                    />
 
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">Rounds & Stages</p>
-                                <p className="text-[10px] text-gray-500 font-medium pl-1 mt-1">Define the progression of your tournament</p>
-                            </div>
-                            {!isRoundsConfirmed && (
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    onClick={() => append({ name: `Round ${fields.length + 1}`, title: "", isFinale: false, isLeague: false, leagueType: "12-teams", grandFinaleType: "Standard" })}
-                                    className="h-auto p-0 text-[10px] font-black text-purple-400 hover:text-white hover:bg-transparent transition-colors shadow-none"
-                                >
-                                    <Plus size={14} className="mr-1" /> ADD ROUND
-                                </Button>
-                            )}
-                        </div>
-
                         <div className="space-y-1">
+                            <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Rounds Breakdown</h3>
+                            <p className="text-[9px] text-gray-600 font-bold uppercase tracking-wider">Configure each stage of your competition</p>
+                        </div>
+                        <div className="space-y-2">
+                            {!isRoundsConfirmed && fields.length > 0 && (
+                                <div className="grid grid-cols-[100px_1fr_40px] gap-4 px-4 py-1">
+                                    <Label className="text-[8px] font-black text-gray-500 uppercase tracking-widest pl-1">Round Number</Label>
+                                    <Label className="text-[8px] font-black text-gray-500 uppercase tracking-widest pl-1">Round Name (e.g. Qualifiers)</Label>
+                                    <span></span>
+                                </div>
+                            )}
                             {fields.map((field, index) => (
                                 <div key={field.id} className="group/roadmap relative">
                                     {isRoundsConfirmed ? (
@@ -175,39 +176,27 @@ export const RoadmapSection = () => {
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="pb-4 border-b border-white/5 last:border-0 last:pb-0">
-                                            <div className="space-y-4">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/5 p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all">
-                                                    <div className="space-y-2">
-                                                        <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Round Number</Label>
-                                                        <Input
-                                                            {...register(`roadmap.${index}.name` as const)}
-                                                            value={`Round ${index + 1}`}
-                                                            readOnly
-                                                            className="bg-white/10 border-white/10 h-10 rounded-lg text-sm font-bold cursor-not-allowed text-gray-400"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Round Name (e.g. Qualifiers)</Label>
-                                                        <div className="flex gap-2">
-                                                            <Input
-                                                                {...register(`roadmap.${index}.title` as const)}
-                                                                placeholder="Enter round name..."
-                                                                className="bg-white/5 border-white/10 h-10 rounded-lg text-sm font-bold flex-1 focus:border-purple-500/50 transition-colors"
-                                                            />
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => remove(index)}
-                                                                className="h-10 w-10 text-gray-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        <div className="grid grid-cols-[100px_1fr_40px] gap-4 items-center bg-white/[0.03] hover:bg-white/[0.05] p-1.5 px-4 rounded-xl border border-white/5 transition-all">
+                                            <Input
+                                                {...register(`roadmap.${index}.name` as const)}
+                                                value={`Round ${index + 1}`}
+                                                readOnly
+                                                className="bg-white/5 border-transparent h-8 rounded-lg text-[10px] font-bold cursor-not-allowed text-gray-500 text-center"
+                                            />
+                                            <Input
+                                                {...register(`roadmap.${index}.title` as const)}
+                                                placeholder="Enter round name..."
+                                                className="bg-transparent border-white/5 h-8 rounded-lg text-[10px] font-semibold flex-1 focus:border-purple-500/50 transition-colors"
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => remove(index)}
+                                                className="h-8 w-8 text-gray-500 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                                            >
+                                                <Trash2 size={14} />
+                                            </Button>
                                         </div>
                                     )}
                                 </div>
@@ -226,40 +215,11 @@ export const RoadmapSection = () => {
                                     </Button>
                                 </div>
                             )}
-
-                            {fields.length > 0 && (
-                                <div className="flex flex-col items-center gap-4 pt-2">
-                                    {showValidationError && (
-                                        <div className="flex items-center gap-2 text-rose-500 bg-rose-500/5 px-4 py-2 rounded-lg border border-rose-500/20 animate-in shake-in duration-300">
-                                            <Trophy size={14} className="rotate-180" />
-                                            <p className="text-[10px] font-black uppercase tracking-wider text-rose-400">Please fill all round names before confirming</p>
-                                        </div>
-                                    )}
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        onClick={handleConfirmedToggle}
-                                        className={`h-9 px-6 text-[10px] font-black tracking-widest uppercase transition-all ${isRoundsConfirmed
-                                            ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500 hover:text-white shadow-[0_0_20px_-5px_rgba(16,185,129,0.2)]"
-                                            : roadmapData.some(r => !r.title?.trim()) && !isRoundsConfirmed
-                                                ? "bg-white/5 border border-white/10 text-gray-500 cursor-not-allowed opacity-50"
-                                                : "bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-900/40"
-                                            }`}
-                                    >
-                                        {isRoundsConfirmed ? (
-                                            <span className="flex items-center gap-2"><CheckCircle2 size={14} /> Rounds Confirmed - Edit?</span>
-                                        ) : (
-                                            "Confirm Roadmap Rounds"
-                                        )}
-                                    </Button>
-                                </div>
-                            )}
                         </div>
                     </div>
 
                     {isRoundsConfirmed && (
                         <div className="mt-8 pt-8 border-t border-white/10 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            {/* Section Header */}
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-amber-500/10 rounded-lg">
                                     <Trophy size={18} className="text-amber-500" />
@@ -271,8 +231,8 @@ export const RoadmapSection = () => {
                             </div>
 
                             {/* 1. League Match Type Configuration */}
-                            <div className="space-y-4 bg-white/[0.02] p-6 rounded-2xl border border-white/5 relative overflow-hidden transition-all duration-300">
-                                <div className="flex items-center justify-between">
+                            <div className="space-y-4 bg-white/[0.02] p-4 rounded-xl border border-white/5 relative overflow-hidden transition-all duration-300">
+                                <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
                                     <div className="flex items-center gap-3">
                                         <Checkbox
                                             id="is-league"
@@ -282,8 +242,11 @@ export const RoadmapSection = () => {
                                                 setIsLeagueEnabled(isChecked);
                                                 if (!isChecked) {
                                                     fields.forEach((_, i) => setValue(`roadmap.${i}.isLeague`, false));
-                                                    setIsLeagueSaved(false);
                                                     setLeagueRoundIdx(null);
+                                                } else if (leagueRoundIdx === null && fields.length > 0) {
+                                                    const lastIdx = fields.length - 1;
+                                                    setValue(`roadmap.${lastIdx}.isLeague`, true);
+                                                    setLeagueRoundIdx(lastIdx);
                                                 }
                                             }}
                                             className="border-white/20 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500 rounded-md"
@@ -291,15 +254,17 @@ export const RoadmapSection = () => {
                                         <Label htmlFor="is-league" className="text-[10px] font-black text-gray-400 uppercase tracking-widest cursor-pointer">
                                             League Match Type
                                         </Label>
-                                        {isLeagueEnabled && !isLeagueSaved && (
-                                            <div className="w-[180px] animate-in slide-in-from-left-2 duration-300">
+                                    </div>
+
+                                    {isLeagueEnabled && (
+                                        <div className="flex items-center gap-4 animate-in slide-in-from-left-2 duration-300">
+                                            <div className="w-[160px]">
                                                 <Select
                                                     value={leagueRoundIdx?.toString() ?? ""}
                                                     onValueChange={(value) => {
                                                         const idx = parseInt(value);
                                                         fields.forEach((_, i) => setValue(`roadmap.${i}.isLeague`, i === idx));
                                                         setLeagueRoundIdx(idx);
-                                                        setIsLeagueSaved(false);
                                                     }}
                                                 >
                                                     <SelectTrigger className="bg-white/5 border-white/10 h-8 rounded-lg text-[9px] font-black uppercase text-gray-400">
@@ -318,91 +283,30 @@ export const RoadmapSection = () => {
                                                     </SelectContent>
                                                 </Select>
                                             </div>
-                                        )}
-                                    </div>
 
-                                    {isLeagueSaved && (
-                                        <div className="flex items-center gap-2 animate-in zoom-in duration-300">
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => setIsLeagueSaved(false)}
-                                                className="h-8 w-8 text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors"
-                                            >
-                                                <Edit3 size={14} />
-                                            </Button>
-                                            <div className="text-emerald-500">
-                                                <CheckCircle2 size={20} />
+                                            <div className="flex items-center gap-2 bg-purple-500/5 px-3 py-1 rounded-lg border border-purple-500/10">
+                                                <Checkbox
+                                                    id="league-18-teams"
+                                                    checked={leagueRoundIdx !== null && watch(`roadmap.${leagueRoundIdx}.leagueType`) === "18-teams"}
+                                                    onCheckedChange={(checked) => {
+                                                        if (leagueRoundIdx !== null) {
+                                                            setValue(`roadmap.${leagueRoundIdx}.leagueType`, checked ? "18-teams" : "12-teams");
+                                                        }
+                                                    }}
+                                                    className="border-purple-500/30 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500 rounded-sm h-3.5 w-3.5"
+                                                />
+                                                <Label htmlFor="league-18-teams" className="text-[9px] font-black text-purple-400/80 uppercase tracking-wider cursor-pointer">
+                                                    18 Teams Mode
+                                                </Label>
                                             </div>
                                         </div>
                                     )}
                                 </div>
-
-                                {isLeagueEnabled && (
-                                    <div className="pt-2">
-                                        {(() => {
-                                            const leagueRound = leagueRoundIdx !== null ? roadmapData[leagueRoundIdx as number] : null;
-                                            return isLeagueSaved ? (
-                                                <div className="flex items-center gap-3 py-2 px-4 bg-purple-500/5 rounded-lg group">
-                                                    <div className="flex items-center gap-2">
-                                                        <Users size={12} className="text-purple-400" />
-                                                        <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest">League Config</span>
-                                                        <span className="text-gray-700 font-bold">→</span>
-                                                    </div>
-                                                    <span className="text-[11px] font-bold text-gray-300">
-                                                        {leagueRoundIdx !== null ? `R${leagueRoundIdx + 1}: ${leagueRound?.title}` : "None"} • {leagueRound?.leagueType?.replace("-", " ")}
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                leagueRoundIdx !== null && (
-                                                    <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-500">
-                                                        <div className="space-y-3">
-                                                            <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block pl-1">Select League Team Size</Label>
-                                                            <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 w-fit">
-                                                                {(["12-teams", "18-teams"] as const).map((type) => (
-                                                                    <Controller
-                                                                        key={type}
-                                                                        name={`roadmap.${leagueRoundIdx as number}.leagueType` as const}
-                                                                        control={control}
-                                                                        render={({ field: { value, onChange } }) => (
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => {
-                                                                                    onChange(type);
-                                                                                    setIsLeagueSaved(false);
-                                                                                }}
-                                                                                className={`px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${value === type
-                                                                                    ? "bg-purple-600 text-white shadow-lg shadow-purple-900/40"
-                                                                                    : "text-gray-500 hover:text-gray-300"
-                                                                                    }`}
-                                                                            >
-                                                                                {type.replace("-", " ")}
-                                                                            </button>
-                                                                        )}
-                                                                    />
-                                                                ))}
-                                                            </div>
-                                                        </div>
-
-                                                        <Button
-                                                            type="button"
-                                                            onClick={() => setIsLeagueSaved(true)}
-                                                            className="w-full bg-white/5 hover:bg-white/10 text-[10px] font-black uppercase tracking-widest h-10 border border-white/10"
-                                                        >
-                                                            Save League Changes
-                                                        </Button>
-                                                    </div>
-                                                )
-                                            );
-                                        })()}
-                                    </div>
-                                )}
                             </div>
 
                             {/* 2. Grand Finale Type Configuration */}
-                            <div className="space-y-4 bg-white/[0.02] p-6 rounded-2xl border border-white/5 relative overflow-hidden transition-all duration-300">
-                                <div className="flex items-center justify-between">
+                            <div className="space-y-4 bg-white/[0.02] p-4 rounded-xl border border-white/5 relative overflow-hidden transition-all duration-300">
+                                <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
                                     <div className="flex items-center gap-3">
                                         <Checkbox
                                             id="is-finale"
@@ -412,8 +316,11 @@ export const RoadmapSection = () => {
                                                 setIsFinaleEnabled(isChecked);
                                                 if (!isChecked) {
                                                     fields.forEach((_, i) => setValue(`roadmap.${i}.isFinale`, false));
-                                                    setIsFinaleSaved(false);
                                                     setFinaleRoundIdx(null);
+                                                } else if (finaleRoundIdx === null && fields.length > 0) {
+                                                    const lastIdx = fields.length - 1;
+                                                    setValue(`roadmap.${lastIdx}.isFinale`, true);
+                                                    setFinaleRoundIdx(lastIdx);
                                                 }
                                             }}
                                             className="border-white/20 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500 rounded-md"
@@ -421,15 +328,17 @@ export const RoadmapSection = () => {
                                         <Label htmlFor="is-finale" className="text-[10px] font-black text-gray-400 uppercase tracking-widest cursor-pointer">
                                             Grand Finale Type
                                         </Label>
-                                        {isFinaleEnabled && !isFinaleSaved && (
-                                            <div className="w-[180px] animate-in slide-in-from-left-2 duration-300">
+                                    </div>
+
+                                    {isFinaleEnabled && (
+                                        <div className="flex items-center gap-4 animate-in slide-in-from-left-2 duration-300">
+                                            <div className="w-[160px]">
                                                 <Select
                                                     value={finaleRoundIdx?.toString() ?? ""}
                                                     onValueChange={(value) => {
                                                         const idx = parseInt(value);
                                                         fields.forEach((_, i) => setValue(`roadmap.${i}.isFinale`, i === idx));
                                                         setFinaleRoundIdx(idx);
-                                                        setIsFinaleSaved(false);
                                                     }}
                                                 >
                                                     <SelectTrigger className="bg-white/5 border-white/10 h-8 rounded-lg text-[9px] font-black uppercase text-gray-400">
@@ -448,86 +357,25 @@ export const RoadmapSection = () => {
                                                     </SelectContent>
                                                 </Select>
                                             </div>
-                                        )}
-                                    </div>
 
-                                    {isFinaleSaved && (
-                                        <div className="flex items-center gap-2 animate-in zoom-in duration-300">
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => setIsFinaleSaved(false)}
-                                                className="h-8 w-8 text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors"
-                                            >
-                                                <Edit3 size={14} />
-                                            </Button>
-                                            <div className="text-emerald-500">
-                                                <CheckCircle2 size={20} />
+                                            <div className="flex items-center gap-2 bg-amber-500/5 px-3 py-1 rounded-lg border border-amber-500/10">
+                                                <Checkbox
+                                                    id="finale-18-teams"
+                                                    checked={finaleRoundIdx !== null && watch(`roadmap.${finaleRoundIdx}.grandFinaleType`) === "18-teams"}
+                                                    onCheckedChange={(checked) => {
+                                                        if (finaleRoundIdx !== null) {
+                                                            setValue(`roadmap.${finaleRoundIdx}.grandFinaleType`, checked ? "18-teams" : "12-teams");
+                                                        }
+                                                    }}
+                                                    className="border-amber-500/30 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500 rounded-sm h-3.5 w-3.5"
+                                                />
+                                                <Label htmlFor="finale-18-teams" className="text-[9px] font-black text-amber-400/80 uppercase tracking-wider cursor-pointer">
+                                                    18 Teams Mode
+                                                </Label>
                                             </div>
                                         </div>
                                     )}
                                 </div>
-
-                                {isFinaleEnabled && (
-                                    <div className="pt-2">
-                                        {(() => {
-                                            const finaleRound = finaleRoundIdx !== null ? roadmapData[finaleRoundIdx as number] : null;
-                                            return isFinaleSaved ? (
-                                                <div className="flex items-center gap-3 py-2 px-4 bg-amber-500/5 rounded-lg group">
-                                                    <div className="flex items-center gap-2">
-                                                        <Trophy size={12} className="text-amber-400" />
-                                                        <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Finale Config</span>
-                                                        <span className="text-gray-700 font-bold">→</span>
-                                                    </div>
-                                                    <span className="text-[11px] font-bold text-gray-300">
-                                                        {finaleRoundIdx !== null ? `R${finaleRoundIdx + 1}: ${finaleRound?.title}` : "None"} • {finaleRound?.grandFinaleType?.replace("-", " ")}
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                finaleRoundIdx !== null && (
-                                                    <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-500">
-                                                        <div className="space-y-3">
-                                                            <Label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block pl-1">Select Finale Size</Label>
-                                                            <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 w-fit">
-                                                                {(["12-teams", "18-teams"] as const).map((type) => (
-                                                                    <Controller
-                                                                        key={type}
-                                                                        name={`roadmap.${finaleRoundIdx as number}.grandFinaleType` as const}
-                                                                        control={control}
-                                                                        render={({ field: { value, onChange } }) => (
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => {
-                                                                                    onChange(type);
-                                                                                    setIsFinaleSaved(false);
-                                                                                }}
-                                                                                className={`px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${value === type
-                                                                                    ? "bg-amber-600 text-white shadow-lg shadow-amber-900/40"
-                                                                                    : "text-gray-500 hover:text-gray-300"
-                                                                                    }`}
-                                                                            >
-                                                                                {type.replace("-", " ")}
-                                                                            </button>
-                                                                        )}
-                                                                    />
-                                                                ))}
-                                                            </div>
-                                                        </div>
-
-                                                        <Button
-                                                            type="button"
-                                                            onClick={() => setIsFinaleSaved(true)}
-                                                            className="w-full bg-white/5 hover:bg-white/10 text-[10px] font-black uppercase tracking-widest h-10 border border-white/10"
-                                                        >
-                                                            Save Finale Changes
-                                                        </Button>
-                                                    </div>
-                                                )
-                                            );
-                                        })()}
-                                    </div>
-                                )}
                             </div>
                         </div>
                     )}

@@ -7,6 +7,7 @@ import {
   updateGroup,
   deleteGroup,
   injectTeam,
+  mergeQualifiedTeamsIntoGroup,
 } from "../controllers/group.controller.js";
 import { authorize } from "../../../shared/middleware/rbac.middleware.js";
 import { isAuthenticated } from "../../../shared/middleware/auth.middleware.js";
@@ -47,6 +48,13 @@ router.delete(
   isAuthenticated,
   authorize(Scopes.EVENT, [Roles.ORG.OWNER, Roles.ORG.MANAGER], { parentScope: Scopes.ORG }),
   deleteGroup
+);
+
+router.post(
+  "/:groupId/merge-qualified",
+  isAuthenticated,
+  authorize(Scopes.EVENT, [Roles.ORG.OWNER, Roles.ORG.MANAGER], { parentScope: Scopes.ORG }),
+  mergeQualifiedTeamsIntoGroup
 );
 
 router.get("/:groupId", isAuthenticated, authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), groupDetails);

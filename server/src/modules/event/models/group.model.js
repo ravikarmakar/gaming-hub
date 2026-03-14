@@ -49,6 +49,30 @@ const groupSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    isLeague: {
+      type: Boolean,
+      default: false,
+    },
+    leaguePairingType: {
+      type: String,
+      enum: ["standard", "axb-bxc-axc"],
+      default: "standard",
+    },
+    // 🏆 Per-pairing match counters for league format
+    pairingMatches: {
+      AxB: { type: Number, default: 0 },
+      BxC: { type: Number, default: 0 },
+      AxC: { type: Number, default: 0 },
+    },
+    // 🏆 Sub-groups for league format (AxB, BxC, AxC style)
+    // Auto-generated when a league group is created.
+    // e.g. 18 teams → Sub-Group A (6), Sub-Group B (6), Sub-Group C (6)
+    subGroups: [
+      {
+        name: { type: String }, // "Sub-Group A", "Sub-Group B", "Sub-Group C"
+        teams: [{ type: mongoose.Schema.Types.ObjectId, ref: "Team" }],
+      },
+    ],
     isDeleted: { type: Boolean, default: false }, // ⚡ Soft delete
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }

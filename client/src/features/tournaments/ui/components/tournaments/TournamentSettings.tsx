@@ -1,17 +1,20 @@
-import { Edit2, AlertTriangle, Trash2, Info, ArrowRight, ShieldAlert } from "lucide-react";
+import { Edit2, AlertTriangle, Trash2, Info, ArrowRight, ShieldAlert, Map } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 
 interface TournamentSettingsProps {
+    eventId?: string;
+    eventType?: string;
     registrationStatus?: string;
     onEdit: () => void;
     onDelete: () => void;
 }
 
-export function TournamentSettings({ registrationStatus, onEdit, onDelete }: TournamentSettingsProps) {
+export function TournamentSettings({ eventId, eventType, registrationStatus, onEdit, onDelete }: TournamentSettingsProps) {
     const navigate = useNavigate();
     const canEdit = registrationStatus === "registration-open";
 
@@ -92,6 +95,34 @@ export function TournamentSettings({ registrationStatus, onEdit, onDelete }: Tou
                             </p>
                         </CardContent>
                     </Card>
+
+                    {/* Roadmap Card */}
+                    {eventType && eventType !== "scrims" && (
+                        <Card
+                            onClick={canEdit ? () => navigate(`${ORGANIZER_ROUTES.EDIT_TOURNAMENT.replace(":eventId", eventId || "")}?tab=roadmap`) : undefined}
+                            className={`group relative overflow-hidden border-white/5 bg-gray-900/40 backdrop-blur-sm transition-all duration-300 ${canEdit ? 'hover:border-amber-500/40 hover:bg-amber-500/5 cursor-pointer' : 'opacity-60 grayscale'}`}
+                        >
+                            <CardContent className="p-6">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className={`p-3 rounded-xl transition-colors ${canEdit ? 'bg-amber-500/10 text-amber-400 group-hover:bg-amber-500 group-hover:text-white' : 'bg-gray-800 text-gray-500'}`}>
+                                        <Map className="w-6 h-6" />
+                                    </div>
+                                    {!canEdit && (
+                                        <Badge variant="outline" className="border-rose-500/30 text-rose-500 bg-rose-500/5 text-[9px] font-black uppercase">
+                                            Locked
+                                        </Badge>
+                                    )}
+                                </div>
+                                <h4 className="text-lg font-black text-white mb-2 flex items-center gap-2">
+                                    Configure Roadmap
+                                    {canEdit && <ArrowRight className="w-4 h-4 opacity-0 -ml-4 group-hover:opacity-100 group-hover:ml-0 transition-all" />}
+                                </h4>
+                                <p className="text-sm text-gray-500 leading-relaxed">
+                                    Set up tournament rounds, leagues, and the grand finale stage.
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             </section>
 

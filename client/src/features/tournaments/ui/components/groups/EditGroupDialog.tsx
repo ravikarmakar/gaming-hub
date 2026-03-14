@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { toast } from "react-hot-toast";
 import {
     Dialog,
     DialogContent,
@@ -10,7 +11,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import toast from "react-hot-toast";
 import { Group, useUpdateGroupMutation } from "../../../hooks";
 
 interface EditGroupDialogProps {
@@ -27,6 +27,7 @@ export const EditGroupDialog = ({ open, onOpenChange, eventId, group }: EditGrou
     const [editPassword, setEditPassword] = useState("");
     const [editDate, setEditDate] = useState("");
     const [editTime, setEditTime] = useState("");
+    const [subGroups, setSubGroups] = useState<{ name: string; teams: string[] }[]>([]);
 
     const { mutateAsync: updateGroup, isPending } = useUpdateGroupMutation();
 
@@ -36,6 +37,11 @@ export const EditGroupDialog = ({ open, onOpenChange, eventId, group }: EditGrou
             setEditMatches(group.totalMatch);
             setEditRoomId(group.roomId?.toString() || "");
             setEditPassword(group.roomPassword?.toString() || "");
+            const mappedSubGroups = (group.subGroups || []).map(sg => ({
+                name: sg.name,
+                teams: sg.teams.map((t: any) => typeof t === 'string' ? t : t._id)
+            }));
+            setSubGroups(mappedSubGroups);
 
             if (group.matchTime) {
                 const date = new Date(group.matchTime);
@@ -67,23 +73,42 @@ export const EditGroupDialog = ({ open, onOpenChange, eventId, group }: EditGrou
                     totalMatch: editMatches,
                     roomId: editRoomId ? parseInt(editRoomId) : undefined,
                     roomPassword: editPassword ? parseInt(editPassword) : undefined,
-                    matchTime: combinedMatchTime
+                    matchTime: combinedMatchTime,
+                    subGroups: group.isLeague ? subGroups : undefined
                 }
             });
             toast.success("Group updated!");
             onOpenChange(false);
         } catch (error) {
             console.error(error);
+            toast.error("Failed to update group. Please try again.");
         }
+    };
+
+    const handleSubGroupChange = (teamId: string, subGroupName: string) => {
+        setSubGroups(prev => {
+            const newSubGroups = prev.map(sg => ({
+                ...sg,
+                teams: sg.teams.filter(id => id !== teamId)
+            }));
+            
+            const targetSg = newSubGroups.find(sg => sg.name === subGroupName);
+            if (targetSg) {
+                targetSg.teams.push(teamId);
+            } else {
+                newSubGroups.push({ name: subGroupName, teams: [teamId] });
+            }
+            return newSubGroups;
+        });
     };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-gray-900 border-white/10 text-white">
+            <DialogContent className="sm:max-w-[550px] bg-gray-900 border-white/10 text-white overflow-hidden flex flex-col max-h-[90vh]">
                 <DialogHeader>
                     <DialogTitle>Edit Group Details</DialogTitle>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
+                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label className="text-right text-gray-300">Name</Label>
                         <Input
@@ -139,6 +164,44 @@ export const EditGroupDialog = ({ open, onOpenChange, eventId, group }: EditGrou
                             className="col-span-3 bg-white/5 border-white/10 text-white"
                         />
                     </div>
+
+                    {group?.isLeague && (
+                        <div className="space-y-3 pt-4 border-t border-white/5">
+                            <Label className="text-xs font-black uppercase text-purple-400 tracking-widest pl-1">
+                                Sub-Group Team Assignment
+                            </Label>
+                            <div className="space-y-2">
+                                {group.teams?.map((team: any) => {
+                                    const teamId = team.teamId?._id || team._id;
+                                    const teamName = team.teamId?.teamName || team.teamName || "Unknown Team";
+                                    const currentSg = subGroups.find(sg => sg.teams.includes(teamId))?.name || "Unassigned";
+
+                                    return (
+                                        <div key={teamId} className="flex items-center justify-between p-2.5 rounded-lg bg-white/5 border border-white/5">
+                                            <span className="text-xs font-bold truncate max-w-[150px]">{teamName}</span>
+                                            <div className="flex gap-1">
+                                                {["Sub-Group A", "Sub-Group B", "Sub-Group C"].map(sgName => (
+                                                    <Button
+                                                        key={sgName}
+                                                        size="sm"
+                                                        variant={currentSg === sgName ? "default" : "outline"}
+                                                        onClick={() => handleSubGroupChange(teamId, sgName)}
+                                                        className={`h-7 px-2 text-[10px] font-bold ${
+                                                            currentSg === sgName 
+                                                                ? 'bg-purple-600 border-none' 
+                                                                : 'border-white/10 text-gray-400 hover:bg-white/10'
+                                                        }`}
+                                                    >
+                                                        {sgName.split(' ')[1]}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
                 <DialogFooter>
                     <Button onClick={handleSaveGroup} disabled={isPending} className="bg-purple-600 hover:bg-purple-700">

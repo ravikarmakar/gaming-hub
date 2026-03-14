@@ -1,13 +1,8 @@
 import { memo } from 'react';
+import { MoreVertical, Edit2, Trash2, MessageSquare, UserPlus, RefreshCw } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-    MoreVertical, 
-    Edit2, 
-    Trash2, 
-    MessageSquare, 
-    UserPlus 
-} from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -15,7 +10,8 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Group } from "../../hooks";
+
+import { Group } from "../../../hooks";
 
 interface GroupCardProps {
     group: Group;
@@ -25,9 +21,17 @@ interface GroupCardProps {
     onDelete: (group: Group) => void;
     onChat: (group: Group) => void;
     onInvite: (group: Group) => void;
+    onMerge?: () => void;
+    activeRoundTab?: string;
+    round?: any;
 }
 
-export const GroupCard = memo(({ group, roundMatches, onSelect, onEdit, onDelete, onChat, onInvite }: GroupCardProps) => {
+export const GroupCard = memo(({ group, roundMatches, onSelect, onEdit, onDelete, onChat, onInvite, onMerge, activeRoundTab, round }: GroupCardProps) => {
+    // Determine if merge option should be available
+    // Determine if merge option should be available
+    const hasMappings = round?.mergeInfo?.sources?.some((s: any) => s.hasTeamsToMerge);
+    const isMainRoadmap = activeRoundTab === 'tournament';
+    const showMerge = isMainRoadmap && hasMappings && group.status !== 'completed';
     return (
         <div
             onClick={() => onSelect(group._id)}
@@ -38,12 +42,13 @@ export const GroupCard = memo(({ group, roundMatches, onSelect, onEdit, onDelete
                 <h4 className="font-black text-gray-100 uppercase tracking-tight text-sm truncate pr-2">
                     {group.groupName}
                 </h4>
-                
+
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button
                             size="icon"
                             variant="ghost"
+                            aria-label="Group actions"
                             className="h-7 w-7 text-gray-400 hover:text-white hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity -mt-1 -mr-1"
                             onClick={(e) => e.stopPropagation()}
                         >
@@ -51,7 +56,7 @@ export const GroupCard = memo(({ group, roundMatches, onSelect, onEdit, onDelete
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-gray-900 border-white/10 text-white min-w-[140px]">
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                             className="focus:bg-white/5 focus:text-white cursor-pointer py-2"
                             disabled={group.status === 'completed'}
                             onClick={(e) => {
@@ -63,7 +68,7 @@ export const GroupCard = memo(({ group, roundMatches, onSelect, onEdit, onDelete
                             <span className="text-xs">Edit Group</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-white/5" />
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                             className="focus:bg-red-500/10 focus:text-red-500 cursor-pointer text-red-400 py-2"
                             disabled={group.status === 'completed'}
                             onClick={(e) => {
@@ -74,6 +79,21 @@ export const GroupCard = memo(({ group, roundMatches, onSelect, onEdit, onDelete
                             <Trash2 className="w-3.5 h-3.5 mr-2" />
                             <span className="text-xs">Delete Group</span>
                         </DropdownMenuItem>
+                        {showMerge && (
+                            <>
+                                <DropdownMenuSeparator className="bg-white/5" />
+                                <DropdownMenuItem
+                                    className="focus:bg-indigo-500/10 focus:text-indigo-400 cursor-pointer py-2"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onMerge?.();
+                                    }}
+                                >
+                                    <RefreshCw className="w-3.5 h-3.5 mr-2" />
+                                    <span className="text-xs">Merge Qualified Teams</span>
+                                </DropdownMenuItem>
+                            </>
+                        )}
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
@@ -154,7 +174,7 @@ export const GroupCard = memo(({ group, roundMatches, onSelect, onEdit, onDelete
                     Group Chat
                 </Button>
 
-                {(!group.status || group.status !== 'completed') && (group.teams || []).length < 12 && (
+                {(!group.status || group.status !== 'completed') && (group.teams || []).length < (group.groupSize || 12) && (
                     <Button
                         size="sm"
                         variant="outline"

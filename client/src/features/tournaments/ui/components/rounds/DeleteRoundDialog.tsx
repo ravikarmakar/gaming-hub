@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react";
+import { toast } from "react-hot-toast";
 import {
     Dialog,
     DialogContent,
@@ -29,6 +30,7 @@ export const DeleteRoundDialog = ({ roundId, roundName, eventId, open, onOpenCha
             onDeleted?.();
         } catch (error) {
             console.error("Failed to delete round", error);
+            toast.error("Failed to delete round. Please try again.");
         }
     };
 
