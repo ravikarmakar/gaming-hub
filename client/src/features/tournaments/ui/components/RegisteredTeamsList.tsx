@@ -11,7 +11,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 
-import { useGetInfiniteRegisteredTeamsQuery, useGetInfiniteInvitedTeamsQuery, useGetInfiniteT1SpecialTeamsQuery } from "../../hooks/useTournamentQueries";
+import { useGetInfiniteRegisteredTeamsQuery, useGetInfiniteInvitedTeamsQuery, useGetInfiniteT1SpecialTeamsQuery, useGetTournamentDetailsQuery } from "../../hooks/useTournamentQueries";
 
 interface RegisteredTeamsListProps {
     eventId: string;
@@ -19,6 +19,7 @@ interface RegisteredTeamsListProps {
 
 export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
     const navigate = useNavigate();
+    const { data: event } = useGetTournamentDetailsQuery(eventId);
     const [activeTab, setActiveTab] = useState<"registered" | "invited" | "t1-special">("registered");
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -34,6 +35,17 @@ export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
         handleSearch(searchQuery);
         return () => handleSearch.cancel(); // Cancel debounce on unmount/re-render
     }, [searchQuery, handleSearch]);
+
+    // Reset active tab if it becomes hidden
+    useEffect(() => {
+        if (!event) return; // Guard against undefined event during loading
+        
+        const isInvitedHidden = !event?.hasInvitedTeams && activeTab === 'invited';
+        const isT1Hidden = !event?.hasT1SpecialTeams && activeTab === 't1-special';
+        if (isInvitedHidden || isT1Hidden) {
+            setActiveTab('registered');
+        }
+    }, [event, activeTab]);
 
     const registeredQuery = useGetInfiniteRegisteredTeamsQuery(eventId, debouncedSearch);
     const invitedQuery = useGetInfiniteInvitedTeamsQuery(eventId, debouncedSearch);
@@ -63,12 +75,16 @@ export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
                             <TabsTrigger value="registered" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white uppercase text-[10px] font-black tracking-widest px-6">
                                 Registered
                             </TabsTrigger>
-                            <TabsTrigger value="invited" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white uppercase text-[10px] font-black tracking-widest px-6">
-                                Invited
-                            </TabsTrigger>
-                            <TabsTrigger value="t1-special" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white uppercase text-[10px] font-black tracking-widest px-6">
-                                T1 Special
-                            </TabsTrigger>
+                            {event?.hasInvitedTeams && (
+                                <TabsTrigger value="invited" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white uppercase text-[10px] font-black tracking-widest px-6">
+                                    Invited
+                                </TabsTrigger>
+                            )}
+                            {event?.hasT1SpecialTeams && (
+                                <TabsTrigger value="t1-special" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white uppercase text-[10px] font-black tracking-widest px-6">
+                                    T1 Special
+                                </TabsTrigger>
+                            )}
                         </TabsList>
                     </Tabs>
 

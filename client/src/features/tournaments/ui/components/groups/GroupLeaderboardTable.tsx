@@ -15,6 +15,7 @@ interface GroupLeaderboardTableProps {
     selectedPairing?: 'AxB' | 'BxC' | 'AxC' | null;
     isLeague?: boolean;
     subGroupTeamSets?: Record<string, Set<string>>; // {"Sub-Group A": Set<id>, ...}
+    isGrandFinale?: boolean;
 }
 
 // Determine which sub-group a team belongs to based on pairingType
@@ -90,25 +91,27 @@ export const GroupLeaderboardTable = ({
     selectedPairing,
     isLeague = false,
     subGroupTeamSets,
+    isGrandFinale,
 }: GroupLeaderboardTableProps) => {
+    if (!leaderboard || !leaderboard.teamScore) return null;
 
     return (
-        <div className="bg-gray-900/40 border border-white/5 rounded-xl overflow-hidden">
+        <div className="bg-gray-900/40 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm">
             <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-gray-400">
-                    <thead className="text-xs text-gray-200 uppercase bg-black/40 border-b border-white/10">
+                <table className="w-full text-sm text-left text-gray-400 border-collapse">
+                    <thead className="text-[10px] text-gray-400 uppercase bg-gradient-to-b from-black/60 to-black/40 border-b border-white/10">
                         <tr>
-                            <th className="px-6 py-3 text-center">Rank</th>
-                            <th className="px-6 py-3">Team</th>
-                            {isLeague && <th className="px-4 py-3 text-center text-[10px]">Group</th>}
-                            <th className="px-6 py-3 text-center">Matches</th>
-                            <th className="px-6 py-3 text-center">Match Rank</th>
-                            <th className="px-6 py-3 text-center">Kills</th>
-                            <th className="px-6 py-3 text-center">Total Pts</th>
-                            {activeRoundTab === 't1-special' && <th className="px-6 py-3 text-center">Actions</th>}
+                            <th className="px-6 py-4 text-center font-black tracking-widest whitespace-nowrap">Rank</th>
+                            <th className="px-6 py-4 font-black tracking-widest">Team Profile</th>
+                            {isLeague && <th className="px-4 py-4 text-center font-black tracking-widest">Grp</th>}
+                            <th className="px-6 py-4 text-center font-black tracking-widest">Played</th>
+                            <th className="px-6 py-4 text-center font-black tracking-widest">Match Pos</th>
+                            <th className="px-6 py-4 text-center font-black tracking-widest">Kills</th>
+                            <th className="px-6 py-4 text-center font-black tracking-widest">Total Pts</th>
+                            {activeRoundTab === 't1-special' && <th className="px-6 py-4 text-center font-black tracking-widest">Operations</th>}
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-white/5">
                         {[...leaderboard.teamScore].sort((a, b) => {
                             if (a.isQualified !== b.isQualified) return a.isQualified ? -1 : 1;
                             return b.totalPoints - a.totalPoints;
@@ -130,76 +133,117 @@ export const GroupLeaderboardTable = ({
                             ) : null;
 
                             // Row styling — dim teams outside the active pairing
-                            let rowStyle = "hover:bg-white/5";
-                            if (isResultsMode && selectedPairing && !inActivePairing) {
-                                rowStyle = "opacity-25 grayscale pointer-events-none";
-                            } else if (isResultsMode && selectedPairing && inActivePairing) {
-                                rowStyle = "bg-amber-500/5 border-l-2 border-l-amber-500/40";
+                            let rowBg = "bg-transparent hover:bg-white/5";
+                            let rowBorder = "";
+                            
+                            // 1. Result mode dimming/highlighting takes first precedence
+                            if (isResultsMode && selectedPairing) {
+                                if (!inActivePairing) {
+                                    rowBg = "opacity-20 grayscale pointer-events-none";
+                                } else {
+                                    rowBg = "bg-amber-500/[0.03] border-l-2 border-l-amber-500/40";
+                                }
+                            } else {
+                                // 2. Special styling for Top 3 and Qualified (only if not in results mode pairing selection)
+                                if (entry.isQualified) {
+                                    if (index === 0) {
+                                        rowBg = "bg-yellow-500/10 hover:bg-yellow-500/15";
+                                        rowBorder = "border-l-4 border-l-yellow-400 shadow-[inset_4px_0_10px_-4px_rgba(250,204,21,0.2)]";
+                                    } else if (index === 1) {
+                                        rowBg = "bg-slate-300/10 hover:bg-slate-300/15";
+                                        rowBorder = "border-l-4 border-l-slate-300 shadow-[inset_4px_0_10px_-4px_rgba(203,213,225,0.2)]";
+                                    } else if (index === 2) {
+                                        rowBg = "bg-orange-600/10 hover:bg-orange-600/15";
+                                        rowBorder = "border-l-4 border-l-orange-500 shadow-[inset_4px_0_10px_-4px_rgba(249,115,22,0.2)]";
+                                    } else {
+                                        rowBg = "bg-green-500/[0.03] hover:bg-green-500/[0.08]";
+                                        rowBorder = "border-l-4 border-l-green-500/50";
+                                    }
+                                }
                             }
 
-                            // Qualified highlighting overrides dim
-                            let rankBadge = null;
+                            let rankDisplay = null;
                             if (entry.isQualified) {
                                 if (index === 0) {
-                                    rowStyle = `${rowStyle.includes('opacity') ? '' : rowStyle} bg-yellow-500/20 hover:bg-yellow-500/30 border-l-4 border-l-yellow-400`;
-                                    rankBadge = <span className="text-yellow-500">🏆 1st</span>;
+                                    rankDisplay = (
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-yellow-400 text-xs font-black uppercase tracking-tighter">1st</span>
+                                            <div className="w-4 h-0.5 bg-yellow-400 mt-0.5 rounded-full" />
+                                        </div>
+                                    );
                                 } else if (index === 1) {
-                                    rowStyle = `${rowStyle.includes('opacity') ? '' : rowStyle} bg-slate-400/20 hover:bg-slate-400/30 border-l-4 border-l-slate-300`;
-                                    rankBadge = <span className="text-slate-300">🥈 2nd</span>;
+                                    rankDisplay = (
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-slate-300 text-xs font-black uppercase tracking-tighter">2nd</span>
+                                            <div className="w-4 h-0.5 bg-slate-300 mt-0.5 rounded-full" />
+                                        </div>
+                                    );
                                 } else if (index === 2) {
-                                    rowStyle = `${rowStyle.includes('opacity') ? '' : rowStyle} bg-amber-700/20 hover:bg-amber-700/30 border-l-4 border-l-amber-600`;
-                                    rankBadge = <span className="text-amber-600">🥉 3rd</span>;
+                                    rankDisplay = (
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-orange-500 text-xs font-black uppercase tracking-tighter">3rd</span>
+                                            <div className="w-4 h-0.5 bg-orange-500 mt-0.5 rounded-full" />
+                                        </div>
+                                    );
                                 } else {
-                                    rowStyle = `${rowStyle.includes('opacity') ? '' : rowStyle} bg-green-500/10 hover:bg-green-500/20 border-l-4 border-l-green-500`;
-                                    rankBadge = <span className="text-green-500">#{index + 1}</span>;
+                                    rankDisplay = <span className="text-green-500/80 font-black text-xs">#{index + 1}</span>;
                                 }
                             }
 
                             let nameColor = entry.isQualified ? "text-green-400" : "text-gray-200";
                             if (entry.isQualified) {
-                                if (index === 0) nameColor = "text-yellow-400";
-                                else if (index === 1) nameColor = "text-slate-200";
-                                else if (index === 2) nameColor = "text-orange-400";
+                                if (index === 0) nameColor = "text-yellow-300";
+                                else if (index === 1) nameColor = "text-white";
+                                else if (index === 2) nameColor = "text-orange-300";
                             }
 
                             return (
                                 <tr
                                     key={teamId}
-                                    className={`border-b border-white/5 transition-all duration-300 ${rowStyle}`}
+                                    className={`transition-all duration-300 group/row ${rowBg} ${rowBorder}`}
                                 >
-                                    <td className="px-6 py-4 font-bold text-white text-center">
-                                        {rankBadge || `#${index + 1}`}
-                                    </td>
-                                    <td className="px-6 py-4 flex items-center gap-3">
-                                        {entry.teamId.teamLogo ? (
-                                            <img src={entry.teamId.teamLogo} alt={entry.teamId.teamName} className="w-8 h-8 rounded-full bg-gray-800 object-cover" />
-                                        ) : (
-                                            <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-500 border border-white/10">
-                                                {entry.teamId.teamName?.substring(0, 2).toUpperCase()}
-                                            </div>
-                                        )}
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <span className={`font-bold ${nameColor}`}>
-                                                    {entry.teamId.teamName}
-                                                </span>
-                                            </div>
-                                            {entry.isQualified && <span className={`block text-[10px] uppercase tracking-wider font-black ${nameColor}`}>Qualified</span>}
+                                    <td className="px-6 py-4 text-center align-middle">
+                                        <div className="flex justify-center items-center h-full">
+                                            {rankDisplay || <span className="text-gray-600 font-bold text-xs">#{index + 1}</span>}
                                         </div>
                                     </td>
-                                    {/* Sub-Group Badge column */}
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="relative shrink-0">
+                                                {entry.teamId.teamLogo ? (
+                                                    <img src={entry.teamId.teamLogo} alt={entry.teamId.teamName} className="w-8 h-8 rounded-lg bg-black object-cover border border-white/10 group-hover/row:border-white/20 transition-colors" />
+                                                ) : (
+                                                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[10px] font-black text-gray-500 border border-white/10 group-hover/row:border-white/20 transition-colors">
+                                                        {entry.teamId.teamName?.substring(0, 2).toUpperCase()}
+                                                    </div>
+                                                )}
+                                                {entry.isQualified && (
+                                                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-black" />
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className={`font-black text-[13px] tracking-tight uppercase ${nameColor}`}>
+                                                    {entry.teamId.teamName}
+                                                </span>
+                                                {entry.isQualified && (
+                                                    <span className={`text-[9px] uppercase tracking-widest font-black ${nameColor} opacity-60 mt-0.5`}>
+                                                        {isGrandFinale ? 'Winner' : 'Finalist'}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </td>
                                     {isLeague && (
                                         <td className="px-4 py-4 text-center">
                                             {subGroupLabel && (
-                                                <Badge className={`h-5 px-1.5 text-[10px] font-black border uppercase tracking-widest ${SUB_GROUP_COLORS[subGroupLabel as keyof typeof SUB_GROUP_COLORS]}`}>
-                                                    Sub-{subGroupLabel}
+                                                <Badge className={`h-4 px-1 text-[8px] font-black border uppercase tracking-widest ${SUB_GROUP_COLORS[subGroupLabel as keyof typeof SUB_GROUP_COLORS]}`}>
+                                                    S-{subGroupLabel}
                                                 </Badge>
                                             )}
                                         </td>
                                     )}
-                                    {/* Per-team matches played */}
                                     <td className="px-6 py-4 text-center">
-                                        <span className="text-gray-400 text-xs font-bold">{entry.matchesPlayed || 0}</span>
+                                        <span className="text-gray-400 text-xs font-black tabular-nums">{entry.matchesPlayed || 0}</span>
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         {isResultsMode && inActivePairing ? (
@@ -208,12 +252,12 @@ export const GroupLeaderboardTable = ({
                                                 min="1"
                                                 autoFocus={index === 0}
                                                 value={stats.rank ?? ''}
-                                                placeholder="Rank"
+                                                placeholder="0"
                                                 onChange={(e) => handleResultChange(teamId, 'rank', parseInt(e.target.value) || 0)}
-                                                className="w-20 h-8 text-center bg-black/60 border-amber-500/30 focus:border-amber-500 text-white mx-auto font-bold"
+                                                className="w-14 h-8 text-center bg-black/60 border-amber-500/20 focus:border-amber-500 focus:bg-amber-500/10 text-white mx-auto font-black text-xs rounded-lg transition-all"
                                             />
                                         ) : (
-                                            <span className="text-gray-300 font-medium">#{entry.position || '-'}</span>
+                                            <span className="text-gray-400 font-black text-xs tabular-nums">#{entry.position || '-'}</span>
                                         )}
                                     </td>
                                     <td className="px-6 py-4 text-center">
@@ -222,20 +266,22 @@ export const GroupLeaderboardTable = ({
                                                 type="number"
                                                 min="0"
                                                 value={stats.kills ?? ''}
-                                                placeholder="Kills"
+                                                placeholder="0"
                                                 onChange={(e) => handleResultChange(teamId, 'kills', parseInt(e.target.value) || 0)}
-                                                className="w-20 h-8 text-center bg-black/60 border-amber-500/30 focus:border-amber-500 text-white mx-auto font-bold"
+                                                className="w-14 h-8 text-center bg-black/60 border-amber-500/20 focus:border-amber-500 focus:bg-amber-500/10 text-white mx-auto font-black text-xs rounded-lg transition-all"
                                             />
                                         ) : (
                                             <span className="flex items-center justify-center">
-                                                <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/20 font-black">
-                                                    {entry.kills} Kills
-                                                </Badge>
+                                                <div className="px-2 py-0.5 bg-red-500/5 text-red-400/80 border border-red-500/10 rounded font-black text-[10px] uppercase tracking-tighter">
+                                                    {entry.kills || 0} Kill{(entry.kills || 0) !== 1 ? 's' : ''}
+                                                </div>
                                             </span>
                                         )}
                                     </td>
-                                    <td className="px-6 py-4 text-center font-black text-white text-lg">
-                                        {entry.totalPoints}
+                                    <td className="px-6 py-4 text-center">
+                                        <span className="font-black text-white text-base tracking-tighter tabular-nums">
+                                            {entry.totalPoints}
+                                        </span>
                                     </td>
                                     {activeRoundTab === 't1-special' && (
                                         <td className="px-6 py-4 text-center">
@@ -243,26 +289,25 @@ export const GroupLeaderboardTable = ({
                                                 size="sm"
                                                 variant="ghost"
                                                 onClick={() => openMergeModal(entry.teamId)}
-                                                className="h-8 px-3 text-[10px] font-black uppercase tracking-widest bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 hover:text-blue-300 transition-all shadow-sm"
+                                                className="h-8 px-2.5 text-[8px] font-black uppercase tracking-widest bg-blue-500/5 text-blue-400/80 border border-blue-500/10 hover:bg-blue-500/20 hover:text-blue-300 transition-all rounded-lg"
                                             >
-                                                <GitMerge className="w-3.5 h-3.5 mr-1.5" />
+                                                <GitMerge className="w-3 h-3 mr-1" />
                                                 Merge
                                             </Button>
                                         </td>
                                     )}
                                 </tr>
                             );
-                        })}
-                        {leaderboard.teamScore.length === 0 && (
-                            <tr>
+                        }).concat(leaderboard.teamScore.length === 0 ? [
+                            <tr key="empty">
                                 <td 
                                     colSpan={6 + (isLeague ? 1 : 0) + (activeRoundTab === 't1-special' ? 1 : 0)} 
-                                    className="px-6 py-8 text-center text-gray-500"
+                                    className="px-6 py-12 text-center text-gray-600 font-black uppercase tracking-[0.2em] text-[10px]"
                                 >
-                                    No teams in this group yet.
+                                    No combatants deployed to this sector
                                 </td>
                             </tr>
-                        )}
+                        ] : [])}
                     </tbody>
                 </table>
             </div>

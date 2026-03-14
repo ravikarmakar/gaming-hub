@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { 
-    useGetLeaderboardQuery, 
-    useUpdateGroupResultsMutation, 
+import {
+    useGetLeaderboardQuery,
+    useUpdateGroupResultsMutation,
     useMergeTeamsToGroupMutation,
-    Group 
+    Group
 } from './';
 
 interface UseGroupsInteractionsProps {
@@ -11,11 +11,12 @@ interface UseGroupsInteractionsProps {
     groups: Group[];
     roundId: string;
     eventId: string;
+    isLoading: boolean;
 }
 
-export const useGroupsInteractions = ({ rounds, groups, roundId, eventId }: UseGroupsInteractionsProps) => {
+export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoading }: UseGroupsInteractionsProps) => {
     const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-    const { data: leaderboard } = useGetLeaderboardQuery(selectedGroupId ?? "");
+    const { data: leaderboard, isLoading: isLeaderboardLoading } = useGetLeaderboardQuery(selectedGroupId ?? "");
     const { mutateAsync: updateGroupResults } = useUpdateGroupResultsMutation();
     const { mutateAsync: mergeTeamsToGroup, isPending: isMergingToGroup } = useMergeTeamsToGroupMutation();
 
@@ -47,9 +48,9 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId }: UseG
         const group = groups.find(g => g._id === selectedGroupId);
         const rm = round?.matchesPerGroup;
         const qt = round?.qualifyingTeams || 0;
-        
+
         const isLeague = round?.isLeague || group?.isLeague;
-        const totalMatch = isLeague 
+        const totalMatch = isLeague
             ? (rm ? rm * 3 : group?.totalMatch || 18)
             : (rm || group?.totalMatch || 1);
 
@@ -63,28 +64,38 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId }: UseG
     }, [rounds, groups, roundId, selectedGroupId]);
 
     const openEditModal = useCallback((group: Group) => {
-        setEditingGroup(group);
-        setIsEditOpen(true);
+        setTimeout(() => {
+            setEditingGroup(group);
+            setIsEditOpen(true);
+        }, 0);
     }, []);
 
     const openChatModal = useCallback((group: Group) => {
-        setChatGroup(group);
-        setIsChatOpen(true);
+        setTimeout(() => {
+            setChatGroup(group);
+            setIsChatOpen(true);
+        }, 0);
     }, []);
 
     const openInviteModal = useCallback((group: Group) => {
-        setInviteGroup(group);
-        setIsInviteOpen(true);
+        setTimeout(() => {
+            setInviteGroup(group);
+            setIsInviteOpen(true);
+        }, 0);
     }, []);
 
     const openDeleteModal = useCallback((group: Group) => {
-        setDeletingGroup(group);
-        setIsDeleteOpen(true);
+        setTimeout(() => {
+            setDeletingGroup(group);
+            setIsDeleteOpen(true);
+        }, 0);
     }, []);
 
     const openMergeModal = useCallback((team: any) => {
-        setMergeTeam(team);
-        setIsMergeOpen(true);
+        setTimeout(() => {
+            setMergeTeam(team);
+            setIsMergeOpen(true);
+        }, 0);
     }, []);
 
     useEffect(() => {
@@ -92,7 +103,7 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId }: UseG
         // (we just entered results mode OR we don't have results yet)
         if (leaderboard?.teamScore && (isResultsMode || Object.keys(tempResults).length === 0)) {
             const hasExistingData = Object.keys(tempResults).length > 0;
-            
+
             // If we are already in results mode and have data, don't overwrite it
             // This prevents data loss when the leaderboard query re-fetches in the background
             if (isResultsMode && hasExistingData) return;
@@ -157,6 +168,65 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId }: UseG
         }
     }, [selectedGroupId]);
 
+    // Reset selection when round changes
+    useEffect(() => {
+        setSelectedGroupId(null);
+        setIsResultsMode(false);
+    }, [roundId]);
+
+    // Track the index of the selected group to handle deletions gracefully
+    const [lastSelectedIndex, setLastSelectedIndex] = useState<number>(-1);
+
+    useEffect(() => {
+        if (selectedGroupId && groups.length > 0) {
+            const index = groups.findIndex(g => g._id === selectedGroupId);
+            if (index !== -1) {
+                setLastSelectedIndex(index);
+            }
+        }
+    }, [selectedGroupId, groups]);
+
+    // Auto-navigate or close if the selected group is deleted
+    useEffect(() => {
+        if (!selectedGroupId || isLoading) return;
+
+        const groupExists = groups.some(g => g._id === selectedGroupId);
+        if (!groupExists) {
+            if (groups.length === 0) {
+                setSelectedGroupId(null);
+            } else {
+                // Try to select the group at the same index, or the last one if we were at the end
+                const nextIndex = Math.min(lastSelectedIndex, groups.length - 1);
+                if (nextIndex >= 0) {
+                    setSelectedGroupId(groups[nextIndex]._id);
+                } else {
+                    setSelectedGroupId(null);
+                }
+            }
+        }
+    }, [groups, selectedGroupId, isLoading, lastSelectedIndex]);
+
+    // Cleanup effects: Reset state when modals close to prevent stale data or UI freezes
+    useEffect(() => {
+        if (!isEditOpen) setEditingGroup(null);
+    }, [isEditOpen]);
+
+    useEffect(() => {
+        if (!isChatOpen) setChatGroup(null);
+    }, [isChatOpen]);
+
+    useEffect(() => {
+        if (!isInviteOpen) setInviteGroup(null);
+    }, [isInviteOpen]);
+
+    useEffect(() => {
+        if (!isDeleteOpen) setDeletingGroup(null);
+    }, [isDeleteOpen]);
+
+    useEffect(() => {
+        if (!isMergeOpen) setMergeTeam(null);
+    }, [isMergeOpen]);
+
     const handleMergeToGroup = useCallback(async (groupId: string) => {
         try {
             await mergeTeamsToGroup({ groupId, eventId });
@@ -165,10 +235,47 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId }: UseG
         }
     }, [eventId, mergeTeamsToGroup]);
 
+    const handleNextGroup = useCallback(() => {
+        if (!selectedGroupId || groups.length === 0) return;
+        const currentIndex = groups.findIndex(g => g._id === selectedGroupId);
+        if (currentIndex !== -1 && currentIndex < groups.length - 1) {
+            setSelectedGroupId(groups[currentIndex + 1]._id);
+        }
+    }, [selectedGroupId, groups]);
+
+    const handlePreviousGroup = useCallback(() => {
+        if (!selectedGroupId || groups.length === 0) return;
+        const currentIndex = groups.findIndex(g => g._id === selectedGroupId);
+        if (currentIndex > 0) {
+            setSelectedGroupId(groups[currentIndex - 1]._id);
+        }
+    }, [selectedGroupId, groups]);
+
+    const hasNextGroup = useMemo(() => {
+        if (!selectedGroupId || groups.length === 0) return false;
+        const currentIndex = groups.findIndex(g => g._id === selectedGroupId);
+        return currentIndex !== -1 && currentIndex < groups.length - 1;
+    }, [selectedGroupId, groups]);
+
+    const hasPreviousGroup = useMemo(() => {
+        if (!selectedGroupId || groups.length === 0) return false;
+        const currentIndex = groups.findIndex(g => g._id === selectedGroupId);
+        return currentIndex > 0;
+    }, [selectedGroupId, groups]);
+
+    const { currentGroupIndex, totalGroupsCount } = useMemo(() => {
+        if (!selectedGroupId || groups.length === 0) return { currentGroupIndex: 0, totalGroupsCount: 0 };
+        return {
+            currentGroupIndex: groups.findIndex(g => g._id === selectedGroupId) + 1,
+            totalGroupsCount: groups.length
+        };
+    }, [selectedGroupId, groups]);
+
     return {
         selectedGroupId,
         setSelectedGroupId,
         leaderboard,
+        isLeaderboardLoading,
         editingGroup,
         isEditOpen,
         setIsEditOpen,
@@ -207,5 +314,11 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId }: UseG
         isMergingToGroup,
         selectedPairing,
         setSelectedPairing,
+        handleNextGroup,
+        handlePreviousGroup,
+        hasNextGroup,
+        hasPreviousGroup,
+        currentGroupIndex,
+        totalGroupsCount
     };
 };

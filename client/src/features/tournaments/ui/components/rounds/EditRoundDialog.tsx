@@ -24,6 +24,13 @@ interface EditRoundDialogProps {
     initialName: string;
     initialQualifyingTeams?: number;
     initialMatchesPerGroup?: number;
+    initialStartTime?: string;
+    initialDailyStartTime?: string;
+    initialDailyEndTime?: string;
+    initialGapMinutes?: number;
+    initialGroupSize?: number;
+    initialIsLeague?: boolean;
+    initialLeaguePairingType?: string;
     eventId: string;
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -31,10 +38,32 @@ interface EditRoundDialogProps {
 
 const WINNER_OPTIONS = ["1", "2", "3", "4", "5", "6"];
 
-export const EditRoundDialog = ({ roundId, initialName, initialQualifyingTeams = 2, initialMatchesPerGroup = 1, eventId, open, onOpenChange }: EditRoundDialogProps) => {
+export const EditRoundDialog = ({ 
+    roundId, 
+    initialName, 
+    initialQualifyingTeams = 2, 
+    initialMatchesPerGroup = 1, 
+    initialStartTime = "", 
+    initialDailyStartTime = "13:00", 
+    initialDailyEndTime = "21:00", 
+    initialGapMinutes = 30, 
+    initialGroupSize = 12, 
+    initialIsLeague = false, 
+    initialLeaguePairingType = "standard", 
+    eventId, 
+    open, 
+    onOpenChange 
+}: EditRoundDialogProps) => {
     const [editRoundName, setEditRoundName] = useState(initialName);
     const [qualifyingTeams, setQualifyingTeams] = useState<number>(initialQualifyingTeams);
     const [matchesPerGroup, setMatchesPerGroup] = useState<number>(initialMatchesPerGroup);
+    const [startTime, setStartTime] = useState(initialStartTime ? initialStartTime.split('T')[0] : "");
+    const [dailyStartTime, setDailyStartTime] = useState(initialDailyStartTime);
+    const [dailyEndTime, setDailyEndTime] = useState(initialDailyEndTime);
+    const [gapMinutes, setGapMinutes] = useState(initialGapMinutes);
+    const [groupSize, setGroupSize] = useState(initialGroupSize);
+    const [isLeague, setIsLeague] = useState(initialIsLeague);
+    const [leaguePairingType, setLeaguePairingType] = useState(initialLeaguePairingType);
     
     const { mutateAsync: updateRound, isPending } = useUpdateRoundMutation();
 
@@ -43,8 +72,15 @@ export const EditRoundDialog = ({ roundId, initialName, initialQualifyingTeams =
             setEditRoundName(initialName);
             setQualifyingTeams(initialQualifyingTeams);
             setMatchesPerGroup(initialMatchesPerGroup);
+            setStartTime(initialStartTime ? initialStartTime.split('T')[0] : "");
+            setDailyStartTime(initialDailyStartTime);
+            setDailyEndTime(initialDailyEndTime);
+            setGapMinutes(initialGapMinutes);
+            setGroupSize(initialGroupSize);
+            setIsLeague(initialIsLeague);
+            setLeaguePairingType(initialLeaguePairingType);
         }
-    }, [initialName, initialQualifyingTeams, initialMatchesPerGroup, open]);
+    }, [initialName, initialQualifyingTeams, initialMatchesPerGroup, initialStartTime, initialDailyStartTime, initialDailyEndTime, initialGapMinutes, initialGroupSize, initialIsLeague, initialLeaguePairingType, open]);
 
     const handleSave = async () => {
         if (!editRoundName.trim()) {
@@ -57,7 +93,14 @@ export const EditRoundDialog = ({ roundId, initialName, initialQualifyingTeams =
                 eventId, 
                 roundName: editRoundName,
                 qualifyingTeams,
-                matchesPerGroup 
+                matchesPerGroup,
+                startTime,
+                dailyStartTime,
+                dailyEndTime,
+                gapMinutes,
+                groupSize,
+                isLeague,
+                leaguePairingType
             });
             onOpenChange(false);
         } catch (error: any) {
@@ -118,6 +161,59 @@ export const EditRoundDialog = ({ roundId, initialName, initialQualifyingTeams =
                                 className="bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg h-11 text-sm"
                                 min={1}
                             />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-purple-200/40 tracking-widest pl-1">Match Date</label>
+                            <Input
+                                type="date"
+                                value={startTime}
+                                onChange={(e) => setStartTime(e.target.value)}
+                                className="bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg h-11 text-sm"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-purple-200/40 tracking-widest pl-1">Match Gap (Min)</label>
+                            <Input
+                                type="number"
+                                value={gapMinutes}
+                                onChange={(e) => setGapMinutes(parseInt(e.target.value) || 0)}
+                                className="bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg h-11 text-sm"
+                                min={0}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-purple-200/40 tracking-widest pl-1">Daily Start</label>
+                            <Input
+                                type="time"
+                                value={dailyStartTime}
+                                onChange={(e) => setDailyStartTime(e.target.value)}
+                                className="bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg h-11 text-sm"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-purple-200/40 tracking-widest pl-1">Daily End</label>
+                            <Input
+                                type="time"
+                                value={dailyEndTime}
+                                onChange={(e) => setDailyEndTime(e.target.value)}
+                                className="bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg h-11 text-sm"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 flex items-start gap-3">
+                        <Trophy className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                            <p className="text-[11px] font-bold text-amber-500 uppercase tracking-tight">Sync Notice</p>
+                            <p className="text-[10px] text-amber-200/60 leading-relaxed italic">
+                                Changing "Winners" will immediately update the qualification status for all groups in this round. Scheduling and size changes will apply to new groups or require group-level updates.
+                            </p>
                         </div>
                     </div>
                 </div>

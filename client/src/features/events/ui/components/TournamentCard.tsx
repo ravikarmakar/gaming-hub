@@ -22,12 +22,13 @@ import {
 } from "@/components/ui/tooltip";
 
 import { GlassCard, NeonBadge } from "./ThemedComponents";
-import { Event, EVENT_ROUTES } from "@/features/events/lib";
+import { EVENT_ROUTES } from "@/features/events/lib";
+import { Tournament } from "@/features/tournaments/types";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { cn, formatDate, formatCurrency } from "@/lib/utils";
 
 interface TournamentCardProps {
-    event: Event;
+    event: Tournament;
     onButtonClick?: (eventId: string) => void;
     onDeleteClick?: (eventId: string) => void;
     showEditButton?: boolean;

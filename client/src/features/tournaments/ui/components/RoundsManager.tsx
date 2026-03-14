@@ -1,4 +1,5 @@
 import { Trophy, Loader2, PanelTopClose, PanelTopOpen, RefreshCw, AlertTriangle } from "lucide-react";
+import { useState, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 
@@ -39,6 +40,18 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
         isCreateDisabled
     } = useRoundsSidebar(eventId);
 
+    // Filter state lifted here so RoundHeader and GroupsGrid can share it
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
+    const [sortBy, setSortBy] = useState("matchTime-asc");
+
+    // Reset filters whenever user switches rounds
+    useEffect(() => {
+        setSearch("");
+        setStatusFilter("");
+        setSortBy("matchTime-asc");
+    }, [selectedRoundId]);
+
     // 2. Manage Actions & Dialogs
     const {
         isCreateRoundOpen,
@@ -73,6 +86,8 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
                 <RoadmapTabs
                     activeTab={activeRoundTab}
                     onTabChange={setActiveRoundTab}
+                    showInvited={event?.hasInvitedTeams}
+                    showT1Special={event?.hasT1SpecialTeams}
                 />
 
                 {onToggleFocus && (
@@ -152,15 +167,41 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
                                     setIsCreateRoundOpen(true);
                                 }}
                                 onMergeTeams={() => setIsConfirmMergeOpen(true)}
-                                onCreateGroup={() => setIsConfirmManualGroupOpen(true)}
+                                onCreateGroup={() => {
+                                    setSearch("");
+                                    setStatusFilter("");
+                                    setIsConfirmManualGroupOpen(true);
+                                }}
                                 onRefresh={() => handleRefresh([refetchRounds, refetchEvent], selectedRoundId || undefined)}
                                 onCreateGroups={() => setIsConfirmGroupsOpen(true)}
+                                search={search}
+                                setSearch={setSearch}
+                                statusFilter={statusFilter}
+                                setStatusFilter={setStatusFilter}
+                                sortBy={sortBy}
+                                setSortBy={setSortBy}
+                                onResetFilters={() => {
+                                    setSearch("");
+                                    setStatusFilter("");
+                                    setSortBy("matchTime-asc");
+                                }}
                             />
 
                             {/* Scrollable Groups Grid Area */}
                             <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
                                 {!selectedRound.isPlaceholder ? (
-                                    <GroupsGrid roundId={selectedRound._id} eventId={eventId} />
+                                    <GroupsGrid
+                                        roundId={selectedRound._id}
+                                        eventId={eventId}
+                                        search={search}
+                                        statusFilter={statusFilter}
+                                        sortBy={sortBy}
+                                        onResetFilters={() => {
+                                            setSearch("");
+                                            setStatusFilter("");
+                                            setSortBy("matchTime-asc");
+                                        }}
+                                    />
                                 ) : (
                                     <div className="flex flex-col items-center justify-center h-64 bg-white/5 border border-dashed border-white/10 rounded-2xl">
                                         <Trophy className="w-12 h-12 text-gray-700 mb-4" />
@@ -196,6 +237,13 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
                         initialName={actionRound.roundName}
                         initialQualifyingTeams={actionRound.qualifyingTeams}
                         initialMatchesPerGroup={actionRound.matchesPerGroup}
+                        initialStartTime={actionRound.startTime}
+                        initialDailyStartTime={actionRound.dailyStartTime}
+                        initialDailyEndTime={actionRound.dailyEndTime}
+                        initialGapMinutes={actionRound.gapMinutes}
+                        initialGroupSize={actionRound.groupSize}
+                        initialIsLeague={actionRound.isLeague}
+                        initialLeaguePairingType={actionRound.leaguePairingType}
                     />
                     <ResetRoundDialog
                         open={isResetRoundOpen}
@@ -218,7 +266,7 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
                 description={
                     <div className="space-y-4">
                         <p>This will automatically generate groups for <strong className="text-white">{selectedRound?.roundName}</strong> based on the available team data.</p>
-                        
+
                         <div className="grid grid-cols-2 gap-3">
                             {teamPreview && (
                                 <div className="bg-white/5 border border-white/10 rounded-lg p-3">
@@ -250,7 +298,7 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
                                 </div>
                             ))}
                         </div>
-                        
+
                         {teamPreview && ((teamPreview as any).totalCount || (teamPreview as any).mainCount) && (
                             <div className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-white/10 rounded-lg p-3 flex items-center justify-between">
                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Total Participating Teams</span>
@@ -279,7 +327,7 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
                                         {(teamPreview as any).isReady ? "Merge Now" : "Locked"}
                                     </Button>
                                 </div>
-                                
+
                                 {!(teamPreview as any).isReady ? (
                                     <div className="p-3 bg-red-500/10 border border-red-500/20 rounded flex items-center gap-3">
                                         <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
@@ -317,12 +365,7 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
                 description={
                     <div className="space-y-4">
                         <p>Are you sure you want to create <strong className="text-white">one new group</strong> manually in <strong className="text-white">{selectedRound?.roundName}</strong>?</p>
-                        {teamPreview && (
-                            <div className="bg-purple-500/5 border border-white/5 rounded-lg p-3 flex items-center justify-between opacity-80">
-                                <span className="text-gray-500 text-sm font-medium">{teamPreview.label} (Total Available)</span>
-                                <span className="text-white font-black text-lg">{teamPreview.count} Teams</span>
-                            </div>
-                        )}
+                        <p className="text-xs text-gray-500 italic">This will create an empty group with default settings. You can add teams to it later.</p>
                     </div>
                 }
                 actionLabel="Create Group"

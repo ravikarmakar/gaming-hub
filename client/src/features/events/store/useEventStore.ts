@@ -6,16 +6,16 @@ import { axiosInstance } from "@/lib/axios";
 import { Team } from "@/features/teams/lib/types";
 import { EVENT_ENDPOINTS } from "../lib/endpoints";
 import { handleApiError } from "@/lib/api-helper";
-import { Event } from "../lib/types";
+import { Tournament } from "@/features/tournaments/types";
 
 interface EventStateTypes {
-  events: Event[];
-  orgEvents: Event[];
+  events: Tournament[];
+  orgEvents: Tournament[];
   isLoading: boolean;
   isTeamsLoading: boolean;
   error: string | null;
-  eventDetails: Event | null;
-  selectedEvent: Event | null; // Alias for eventDetails
+  eventDetails: Tournament | null;
+  selectedEvent: Tournament | null; // Alias for eventDetails
   registerdTeams: Team[];
 
   // Pagination & Search

@@ -1,6 +1,6 @@
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import { axiosInstance } from '@/lib/axios';
 import { tournamentApi } from '../api/tournamentApi';
+import { Tournament, Round, Group, Leaderboard } from '../types';
 
 // Tournament keys factor
 export const tournamentKeys = {
@@ -8,7 +8,8 @@ export const tournamentKeys = {
     orgTournaments: (orgId: string) => [...tournamentKeys.all, 'org', orgId] as const,
     details: (eventId: string) => [...tournamentKeys.all, 'details', eventId] as const,
     rounds: (eventId: string) => [...tournamentKeys.all, 'rounds', eventId] as const,
-    groups: (roundId: string, page: number, limit: number) => [...tournamentKeys.all, 'groups', roundId, page, limit] as const,
+    groups: (roundId: string, page: number, limit: number, search = "", status = "", sortBy = "") => 
+        [...tournamentKeys.all, 'groups', roundId, page, limit, search, status, sortBy] as const,
     groupDetails: (groupId: string) => [...tournamentKeys.all, 'groupDetails', groupId] as const,
     leaderboard: (groupId: string) => [...tournamentKeys.all, 'leaderboard', groupId] as const,
     registeredTeams: (eventId: string, search: string, type: 'infinite' | 'standard' = 'standard') => [...tournamentKeys.all, 'registered-teams', type, eventId, search] as const,
@@ -16,149 +17,42 @@ export const tournamentKeys = {
     t1SpecialTeams: (eventId: string, search: string, type: 'infinite' | 'standard' = 'standard') => [...tournamentKeys.all, 't1-special-teams', type, eventId, search] as const,
 };
 
-// Types from the store
-export interface Team {
-    _id: string;
-    teamName: string;
-    teamLogo?: string;
-    isQualified?: boolean;
-}
-
-export interface LeaderboardEntry {
-    _id: string;
-    teamId: Team; // Populated
-    score: number;
-    position: number;
-    kills: number;
-    wins: number;
-    totalPoints: number;
-    matchesPlayed: number;
-    isQualified: boolean;
-}
-
-export interface Leaderboard {
-    _id: string;
-    groupId: string;
-    teamScore: LeaderboardEntry[];
-}
-
-export interface Group {
-    _id: string;
-    groupName: string;
-    totalMatch: number;
-    matchTime: string;
-    teams: Team[];
-    roundId: string;
-    matchesPlayed?: number;
-    totalSelectedTeam?: number;
-    groupSize?: number;
-    isLeague?: boolean;
-    leaguePairingType?: "standard" | "axb-bxc-axc";
-    status?: 'pending' | 'ongoing' | 'completed' | 'cancelled';
-    roomId?: number;
-    roomPassword?: number;
-    eligibleTeams?: string[];
-    pairingMatches?: {
-        AxB: number;
-        BxC: number;
-        AxC: number;
-    };
-    subGroups?: Array<{
-        _id: string;
-        name: string; // "Sub-Group A", "Sub-Group B", "Sub-Group C"
-        teams: (string | Team)[];
-    }>;
-}
-
-export interface Round {
-    _id: string;
-    roundName: string;
-    roundNumber: number;
-    status: "pending" | "ongoing" | "completed";
-    type?: "tournament" | "invited-tournament" | "t1-special";
-    eventId: string;
-    groups?: Group[];
-    startTime?: string;
-    dailyStartTime?: string;
-    dailyEndTime?: string;
-    gapMinutes?: number;
-    matchesPerGroup?: number;
-    qualifyingTeams?: number;
-    groupSize?: number;
-    isLeague?: boolean;
-    leaguePairingType?: "standard" | "axb-bxc-axc";
-    isPlaceholder?: boolean;
-    roadmapIndex?: number;
-    eligibleTeams?: string[];
-    mergeInfo?: {
-        sources: Array<{
-            name: string;
-            sourceRoundName?: string;
-            type: string;
-            pendingCount: number;
-            mergedCount: number;
-            isReady: boolean;
-            hasTeamsToMerge: boolean;
-        }>;
-    } | null;
-}
-
 // Queries
 export const useGetRoundsQuery = (eventId: string) => {
-    return useQuery({
+    return useQuery<Round[]>({
         queryKey: tournamentKeys.rounds(eventId),
-        queryFn: async () => {
-            const res = await axiosInstance.get(`/rounds?eventId=${eventId}`);
-            return res.data.data as Round[];
-        },
+        queryFn: () => tournamentApi.getRounds(eventId),
         enabled: !!eventId,
     });
 };
 
-export const useGetGroupsQuery = (roundId: string, page = 1, limit = 20) => {
-    return useQuery({
-        queryKey: tournamentKeys.groups(roundId, page, limit),
-        queryFn: async () => {
-            const res = await axiosInstance.get("/groups", {
-                params: { roundId, page, limit }
-            });
-            return {
-                groups: res.data.data as Group[],
-                pagination: res.data.pagination as {
-                    totalGroups: number;
-                    totalPages: number;
-                    currentPage: number;
-                }
-            };
-        },
+export const useGetGroupsQuery = (roundId: string, page = 1, limit = 20, search = "", status = "", sortBy = "") => {
+    return useQuery<{ groups: Group[]; pagination: any }>({
+        queryKey: tournamentKeys.groups(roundId, page, limit, search, status, sortBy),
+        queryFn: () => tournamentApi.getGroups({ roundId, page, limit, search, status, sortBy }),
         enabled: !!roundId,
     });
 };
 
+
 export const useGetGroupDetailsQuery = (groupId: string) => {
-    return useQuery({
+    return useQuery<Group>({
         queryKey: tournamentKeys.groupDetails(groupId),
-        queryFn: async () => {
-            const res = await axiosInstance.get(`/groups/${groupId}`);
-            return res.data.group as Group;
-        },
+        queryFn: () => tournamentApi.getGroupDetails(groupId),
         enabled: !!groupId,
     });
 };
 
 export const useGetLeaderboardQuery = (groupId: string) => {
-    return useQuery({
+    return useQuery<Leaderboard>({
         queryKey: tournamentKeys.leaderboard(groupId),
-        queryFn: async () => {
-            const res = await axiosInstance.get(`/leaderboards/${groupId}`);
-            return res.data as Leaderboard;
-        },
+        queryFn: () => tournamentApi.getLeaderboard(groupId),
         enabled: !!groupId,
     });
 };
 
 export const useGetTournamentDetailsQuery = (eventId: string) => {
-    return useQuery({
+    return useQuery<Tournament>({
         queryKey: tournamentKeys.details(eventId),
         queryFn: () => tournamentApi.getTournamentDetails(eventId),
         enabled: !!eventId,
@@ -166,7 +60,7 @@ export const useGetTournamentDetailsQuery = (eventId: string) => {
 };
 
 export const useGetOrgTournamentsQuery = (orgId: string) => {
-    return useQuery({
+    return useQuery<Tournament[]>({
         queryKey: tournamentKeys.orgTournaments(orgId),
         queryFn: () => tournamentApi.getOrgTournaments(orgId),
         enabled: !!orgId,
@@ -176,12 +70,7 @@ export const useGetOrgTournamentsQuery = (orgId: string) => {
 export const useGetInfiniteRegisteredTeamsQuery = (eventId: string, search = "") => {
     return useInfiniteQuery({
         queryKey: tournamentKeys.registeredTeams(eventId, search, 'infinite'),
-        queryFn: async ({ pageParam = null }) => {
-            const res = await axiosInstance.get(`/events/registered-teams/${eventId}`, {
-                params: { cursor: pageParam, limit: 20, search, skipCache: true }
-            });
-            return res.data;
-        },
+        queryFn: ({ pageParam = null }) => tournamentApi.getRegisteredTeams(eventId, { cursor: pageParam, limit: 20, search, skipCache: true }),
         initialPageParam: null,
         getNextPageParam: (lastPage: any) => lastPage?.nextCursor,
         enabled: !!eventId,
@@ -191,12 +80,7 @@ export const useGetInfiniteRegisteredTeamsQuery = (eventId: string, search = "")
 export const useGetInfiniteInvitedTeamsQuery = (eventId: string, search = "") => {
     return useInfiniteQuery({
         queryKey: tournamentKeys.invitedTeams(eventId, search, 'infinite'),
-        queryFn: async ({ pageParam = null }) => {
-            const res = await axiosInstance.get(`/events/invited-teams/${eventId}`, {
-                params: { cursor: pageParam, limit: 20, search, skipCache: true }
-            });
-            return res.data;
-        },
+        queryFn: ({ pageParam = null }) => tournamentApi.getInvitedTeams(eventId, { cursor: pageParam, limit: 20, search, skipCache: true }),
         initialPageParam: null,
         getNextPageParam: (lastPage: any) => lastPage?.nextCursor,
         enabled: !!eventId,
@@ -204,14 +88,9 @@ export const useGetInfiniteInvitedTeamsQuery = (eventId: string, search = "") =>
 };
 
 export const useSearchTeamsQuery = (search: string) => {
-    return useQuery({
+    return useQuery<any[]>({
         queryKey: ['teams', 'search', search],
-        queryFn: async () => {
-            const res = await axiosInstance.get('/teams', {
-                params: { search, limit: 10 }
-            });
-            return res.data.data;
-        },
+        queryFn: () => tournamentApi.searchTeams({ search, limit: 10 }),
         enabled: search.length >= 2,
     });
 };
@@ -219,26 +98,19 @@ export const useSearchTeamsQuery = (search: string) => {
 export const useGetInfiniteT1SpecialTeamsQuery = (eventId: string, search = "") => {
     return useInfiniteQuery({
         queryKey: tournamentKeys.t1SpecialTeams(eventId, search, 'infinite'),
-        queryFn: async ({ pageParam = null }) => {
-            const res = await axiosInstance.get(`/events/t1-special-teams/${eventId}`, {
-                params: { cursor: pageParam, limit: 20, search, skipCache: true }
-            });
-            return res.data;
-        },
+        queryFn: ({ pageParam = null }) => tournamentApi.getT1SpecialTeams(eventId, { cursor: pageParam, limit: 20, search, skipCache: true }),
         initialPageParam: null,
-        getNextPageParam: (lastPage) => lastPage?.nextCursor,
+        getNextPageParam: (lastPage: any) => lastPage?.nextCursor,
         enabled: !!eventId,
     });
 };
 
 export const useGetT1SpecialTeamsQuery = (eventId: string, search = "") => {
-    return useQuery({
+    return useQuery<any[]>({
         queryKey: tournamentKeys.t1SpecialTeams(eventId, search),
         queryFn: async () => {
-            const res = await axiosInstance.get(`/events/t1-special-teams/${eventId}`, {
-                params: { search, limit: 100 }
-            });
-            return res.data?.teams || [];
+            const data = await tournamentApi.getT1SpecialTeams(eventId, { search, limit: 100 });
+            return data?.teams || [];
         },
         enabled: !!eventId,
     });

@@ -1,15 +1,9 @@
 import { memo } from 'react';
-import { MoreVertical, Edit2, Trash2, MessageSquare, UserPlus, RefreshCw } from "lucide-react";
+import { MessageSquare, UserPlus, CheckCircle2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-    DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { GroupActionsMenu } from "./GroupActionsMenu";
 
 import { Group } from "../../../hooks";
 
@@ -43,72 +37,30 @@ export const GroupCard = memo(({ group, roundMatches, onSelect, onEdit, onDelete
                     {group.groupName}
                 </h4>
 
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button
-                            size="icon"
-                            variant="ghost"
-                            aria-label="Group actions"
-                            className="h-7 w-7 text-gray-400 hover:text-white hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity -mt-1 -mr-1"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <MoreVertical className="w-4 h-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-gray-900 border-white/10 text-white min-w-[140px]">
-                        <DropdownMenuItem
-                            className="focus:bg-white/5 focus:text-white cursor-pointer py-2"
-                            disabled={group.status === 'completed'}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onEdit(group);
-                            }}
-                        >
-                            <Edit2 className="w-3.5 h-3.5 mr-2" />
-                            <span className="text-xs">Edit Group</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-white/5" />
-                        <DropdownMenuItem
-                            className="focus:bg-red-500/10 focus:text-red-500 cursor-pointer text-red-400 py-2"
-                            disabled={group.status === 'completed'}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onDelete(group);
-                            }}
-                        >
-                            <Trash2 className="w-3.5 h-3.5 mr-2" />
-                            <span className="text-xs">Delete Group</span>
-                        </DropdownMenuItem>
-                        {showMerge && (
-                            <>
-                                <DropdownMenuSeparator className="bg-white/5" />
-                                <DropdownMenuItem
-                                    className="focus:bg-indigo-500/10 focus:text-indigo-400 cursor-pointer py-2"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onMerge?.();
-                                    }}
-                                >
-                                    <RefreshCw className="w-3.5 h-3.5 mr-2" />
-                                    <span className="text-xs">Merge Qualified Teams</span>
-                                </DropdownMenuItem>
-                            </>
-                        )}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex items-center gap-1 -mt-1 -mr-1">
+                    <GroupActionsMenu
+                        group={group}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                        onMerge={onMerge}
+                        showMerge={showMerge}
+                        className="opacity-0 group-hover:opacity-100 h-7 w-7"
+                    />
+                    {group.status === 'completed' && (
+                        <div className="bg-green-500/10 p-1 rounded-full border border-green-500/20 mr-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Header: Row 2 - Status & Info */}
             <div className="flex flex-wrap items-center gap-1.5 mb-4 border-b border-white/5 pb-3">
-                {group.status === 'completed' ? (
-                    <Badge className="text-[9px] h-4 px-1.5 bg-green-500/20 text-green-400 border-green-500/30 font-bold uppercase tracking-tighter">
-                        Done
-                    </Badge>
-                ) : group.status === 'ongoing' ? (
+                {group.status === 'ongoing' ? (
                     <Badge className="text-[9px] h-4 px-1.5 bg-yellow-500/20 text-yellow-400 border-yellow-500/30 font-bold uppercase tracking-tighter animate-pulse">
                         Live
                     </Badge>
-                ) : (
+                ) : group.status !== 'completed' && (
                     <Badge variant="outline" className="text-[9px] h-4 px-1.5 text-gray-500 border-gray-700 font-bold uppercase tracking-tighter">
                         Pending
                     </Badge>

@@ -87,14 +87,19 @@ export const EditGroupDialog = ({ open, onOpenChange, eventId, group }: EditGrou
 
     const handleSubGroupChange = (teamId: string, subGroupName: string) => {
         setSubGroups(prev => {
+            // 1. Create a fresh copy and remove team from all groups
             const newSubGroups = prev.map(sg => ({
                 ...sg,
                 teams: sg.teams.filter(id => id !== teamId)
             }));
             
-            const targetSg = newSubGroups.find(sg => sg.name === subGroupName);
-            if (targetSg) {
-                targetSg.teams.push(teamId);
+            // 2. Add team to the target group
+            const targetIdx = newSubGroups.findIndex(sg => sg.name === subGroupName);
+            if (targetIdx !== -1) {
+                newSubGroups[targetIdx] = {
+                    ...newSubGroups[targetIdx],
+                    teams: [...newSubGroups[targetIdx].teams, teamId]
+                };
             } else {
                 newSubGroups.push({ name: subGroupName, teams: [teamId] });
             }

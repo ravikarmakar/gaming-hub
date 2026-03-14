@@ -442,6 +442,7 @@ export const updateGroupResults = async (req, res) => {
 
       if (matchesPlayedCount >= effectiveTotalMatch) {
         group.status = "completed";
+        group.totalSelectedTeam = qualifyingLimit;
 
         leaderboard.teamScore.forEach(entry => {
           entry.totalPoints = (entry.score || 0) + (entry.kills || 0);
@@ -452,6 +453,7 @@ export const updateGroupResults = async (req, res) => {
         leaderboard.teamScore.forEach((entry, index) => {
           entry.isQualified = qualifyingLimit > 0 && index < qualifyingLimit;
         });
+        leaderboard.markModified('teamScore');
       } else {
         group.status = "ongoing";
       }

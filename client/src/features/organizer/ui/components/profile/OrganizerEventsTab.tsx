@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
-import { Event } from "@/features/events/lib/types";
+import { Tournament } from "@/features/tournaments/types";
 import { X, Menu, Play, Gamepad2, Calendar, Clock, MapPin, Users, Eye, Heart, ChevronRight } from "lucide-react";
 // import { useNavigate } from "react-router-dom";
 // import { ROUTES } from "@/lib/routes";
 
 interface OrganizerEventsTabProps {
-    events: Event[];
+    events: Tournament[];
 }
 
 export const OrganizerEventsTab = ({ events }: OrganizerEventsTabProps) => {

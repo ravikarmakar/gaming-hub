@@ -134,7 +134,8 @@ export const getRounds = TryCatchHandler(async (req, res) => {
 });
 
 export const createRound = TryCatchHandler(async (req, res) => {
-  const { eventId, roundName, startTime, dailyStartTime, dailyEndTime, gapMinutes, matchesPerGroup, qualifyingTeams, type, roadmapIndex, groupSize, isLeague, leaguePairingType } = req.body;
+  const { eventId, roundName, startTime, dailyStartTime, dailyEndTime, gapMinutes, matchesPerGroup, qualifyingTeams: rawQualifyingTeams, type, roadmapIndex, groupSize, isLeague, leaguePairingType } = req.body;
+  const qualifyingTeams = Math.max(0, parseInt(rawQualifyingTeams) || 0);
 
   // Event ID check
   if (!eventId || !mongoose.Types.ObjectId.isValid(eventId)) {
@@ -320,7 +321,10 @@ export const updateRound = TryCatchHandler(async (req, res) => {
   if (dailyEndTime) updateData.dailyEndTime = dailyEndTime;
   if (gapMinutes !== undefined) updateData.gapMinutes = gapMinutes;
   if (matchesPerGroup !== undefined) updateData.matchesPerGroup = matchesPerGroup;
-  if (qualifyingTeams !== undefined) updateData.qualifyingTeams = qualifyingTeams;
+  if (qualifyingTeams !== undefined) {
+    const qTeams = parseInt(qualifyingTeams);
+    updateData.qualifyingTeams = isNaN(qTeams) ? 0 : Math.max(0, qTeams);
+  }
   if (groupSize !== undefined) updateData.groupSize = groupSize;
   if (isLeague !== undefined) updateData.isLeague = isLeague;
   if (leaguePairingType !== undefined) updateData.leaguePairingType = leaguePairingType;
@@ -333,6 +337,43 @@ export const updateRound = TryCatchHandler(async (req, res) => {
   );
 
   if (!round) return res.status(404).json({ message: "Round not found" });
+
+  // Sync leaderboards and groups if qualifyingTeams changed
+  if (qualifyingTeams !== undefined) {
+    try {
+      const Group = mongoose.model("Group");
+      const Leaderboard = mongoose.model("Leaderboard");
+      const qLimit = Number(qualifyingTeams);
+      
+      const groups = await Group.find({ roundId });
+      for (const group of groups) {
+        // Update group-level count
+        group.totalSelectedTeam = qLimit;
+        await group.save();
+
+        const leaderboard = await Leaderboard.findOne({ groupId: group._id });
+        if (leaderboard && leaderboard.teamScore && leaderboard.teamScore.length > 0) {
+          // Re-calculate isQualified for all teams based on new limit
+          leaderboard.teamScore.forEach((entry) => {
+            entry.totalPoints = (entry.score || 0) + (entry.kills || 0);
+          });
+
+          // Sort by points to identify new qualifiers
+          leaderboard.teamScore.sort((a, b) => b.totalPoints - a.totalPoints);
+          
+          leaderboard.teamScore.forEach((entry, index) => {
+            entry.isQualified = qLimit > 0 && index < qLimit;
+          });
+          
+          leaderboard.markModified('teamScore');
+          await leaderboard.save();
+        }
+      }
+      logger.info(`Synchronized isQualified flags and totalSelectedTeam for ${groups.length} groups in round ${roundId} due to qualifier count change to ${qLimit}`);
+    } catch (syncError) {
+      logger.error("Error synchronizing leaderboards after qualifyingTeams update:", syncError);
+    }
+  }
 
   // Update roadmap status if eventId is provided
   if (eventId && status && mongoose.Types.ObjectId.isValid(eventId)) {

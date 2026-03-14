@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import { GlassCard, SectionHeader } from "@/features/events/ui/components/ThemedComponents";
 import { categoryOptions, eventTypeOptions, registrationModeOptions, EventFormValues, GAMES_MAPS } from "@/features/events/lib";
-import { Category, RegistrationMode } from "@/features/events/lib/types";
+import { Category, RegistrationMode } from "../../../types";
 
 export const BasicInfoSection = () => {
     const { register, watch, setValue, control, formState: { errors } } = useFormContext<EventFormValues>();

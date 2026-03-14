@@ -52,7 +52,6 @@ export const AddTeamDialog = ({ open, onOpenChange, groupId, groupName, eventId,
                 targetModel: "Group"
             });
             setInvitedTeams(prev => [...prev, team._id]);
-            toast.success(`Successfully invited team ${team.teamName || 'Unknown'}`);
         } catch (error) {
             console.error(error);
             toast.error("Failed to send invitation. Please try again.");

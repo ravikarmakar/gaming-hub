@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
-import { useGetRoundsQuery, useFinishTournamentMutation, useStartTournamentMutation, useDeleteTournamentMutation, useGetTournamentDetailsQuery } from "../../hooks";
+import { useStartTournamentMutation, useDeleteTournamentMutation, useGetTournamentDetailsQuery } from "../../hooks";
 import { RoundsManager } from "../components/RoundsManager";
 import { TournamentOverview } from "../components/TournamentOverview";
 import { RegisteredTeamsList } from "../components/RegisteredTeamsList";
@@ -29,10 +29,9 @@ export default function TournamentDashboard() {
     const [activeTab, setActiveTab] = useState("overview");
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [isFinishDialogOpen, setIsFinishDialogOpen] = useState(false);
-    const { data: eventDetails, refetch: refetchEventDetails } = useGetTournamentDetailsQuery(id || "");
-    const { data: rounds = [] } = useGetRoundsQuery(id || "");
-    const { mutateAsync: finishEvent, isPending: isFinishing } = useFinishTournamentMutation();
+    const [isStartDialogOpen, setIsStartDialogOpen] = useState(false);
+    const [isStarting, setIsStarting] = useState(false);
+    const { data: eventDetails } = useGetTournamentDetailsQuery(id || "");
     const { mutateAsync: startEvent } = useStartTournamentMutation();
     const { mutateAsync: deleteTournament } = useDeleteTournamentMutation();
     const [isFocusMode, setIsFocusMode] = useState(false);
@@ -62,22 +61,23 @@ export default function TournamentDashboard() {
         navigate(ORGANIZER_ROUTES.EDIT_TOURNAMENT.replace(":eventId", id));
     };
 
-    const handleFinishTournament = async () => {
+    const handleStartTournament = async () => {
         if (!id) return;
+        setIsStarting(true);
         try {
-            await finishEvent(id);
-            refetchEventDetails(); // Refresh status
+            await startEvent(id);
+            toast.success("Tournament started successfully");
+            // Cache update is handled by mutation onSuccess
         } catch (error) {
-            console.error(error);
+            console.error("Failed to start tournament:", error);
+            toast.error("Failed to start tournament. Please try again.");
         } finally {
-            setIsFinishDialogOpen(false);
+            setIsStarting(false);
+            setIsStartDialogOpen(false);
         }
     };
 
-    const lastRound = rounds.length > 0 ? rounds[rounds.length - 1] : null;
-    const isGrandFinale = lastRound?.groups && lastRound.groups.length === 1;
-    const allRoundsCompleted = rounds.length > 0 && rounds.every(r => r.status === 'completed');
-    const canFinish = allRoundsCompleted || (isGrandFinale && lastRound?.status === 'completed');
+    console.log("eventDetails", eventDetails);
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -88,18 +88,7 @@ export default function TournamentDashboard() {
                     registrationStatus={eventDetails?.registrationStatus || ""}
                     eventProgress={eventDetails?.eventProgress || ""}
                     onBack={() => navigate(ORGANIZER_ROUTES.TOURNAMENTS)}
-                    onStartEvent={async () => {
-                        if (!id) return;
-                        try {
-                            await startEvent(id);
-                            refetchEventDetails();
-                        } catch (error) {
-                            console.error(error);
-                        }
-                    }}
-                    onFinishEvent={() => setIsFinishDialogOpen(true)}
-                    canFinish={canFinish ?? false}
-                    isFinishing={isFinishing}
+                    onStartEvent={() => setIsStartDialogOpen(true)}
                 />
             )}
 
@@ -139,10 +128,10 @@ export default function TournamentDashboard() {
 
                     {!(eventDetails?.registrationStatus === "registration-open" && eventDetails?.eventProgress === "pending") && (
                         <TabsContent value="rounds" className="m-0">
-                            <RoundsManager 
-                                eventId={id} 
-                                isFocusMode={isFocusMode} 
-                                onToggleFocus={() => setIsFocusMode(!isFocusMode)} 
+                            <RoundsManager
+                                eventId={id}
+                                isFocusMode={isFocusMode}
+                                onToggleFocus={() => setIsFocusMode(!isFocusMode)}
                             />
                         </TabsContent>
                     )}
@@ -172,15 +161,16 @@ export default function TournamentDashboard() {
                 onConfirm={handleDelete}
             />
 
+
             <ConfirmActionDialog
-                open={isFinishDialogOpen}
-                onOpenChange={setIsFinishDialogOpen}
-                title="Finish Tournament"
-                description="Are you sure you want to finish this tournament? This will publish the final leaderboard and mark the event as completed."
-                actionLabel="Finish"
-                variant="warning"
-                isLoading={isFinishing}
-                onConfirm={handleFinishTournament}
+                open={isStartDialogOpen}
+                onOpenChange={setIsStartDialogOpen}
+                title="Start Event"
+                description="Are you sure you want to start this event? This will close registrations and move the event to the ongoing state. This action cannot be undone."
+                actionLabel="Start Event"
+                variant="default"
+                isLoading={isStarting}
+                onConfirm={handleStartTournament}
             />
         </div>
     );

@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { axiosInstance } from '@/lib/axios';
 import { handleApiError } from '@/lib/api-helper';
 import { tournamentKeys } from './useTournamentQueries';
 import toast from 'react-hot-toast'; // Assuming toast is used for error/success reporting in UI normally handled by components, but we'll return promises so components can handle it
@@ -54,10 +53,12 @@ export const useDeleteTournamentMutation = () => {
 export const useStartTournamentMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (eventId: string) => {
-            await axiosInstance.post(`/events/${eventId}/start`);
-        },
-        onSuccess: (_, eventId) => {
+        mutationFn: tournamentApi.startTournament,
+        onSuccess: (data, eventId) => {
+            // Update the specific tournament details query cache immediately
+            queryClient.setQueryData(tournamentKeys.details(eventId), data);
+
+            // Still invalidate to be safe, but setQueryData provides immediate UI update
             queryClient.invalidateQueries({ queryKey: tournamentKeys.details(eventId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
             toast.success("Event started");
@@ -68,34 +69,12 @@ export const useStartTournamentMutation = () => {
     });
 };
 
-export const useFinishTournamentMutation = () => {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: async (eventId: string) => {
-            await axiosInstance.post(`/events/${eventId}/finish`);
-        },
-        onSuccess: (_, eventId) => {
-            queryClient.invalidateQueries({ queryKey: tournamentKeys.details(eventId) });
-            queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
-            toast.success("Event finished");
-        },
-        onError: (err) => {
-            toast.error(handleApiError(err, "Failed to finish event"));
-        }
-    });
-};
 
 // ROUND MUTATIONS
 export const useCreateRoundMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (data: { eventId: string; params: any }) => {
-            const res = await axiosInstance.post("/rounds/create", {
-                eventId: data.eventId,
-                ...data.params
-            });
-            return res.data.rounds;
-        },
+        mutationFn: tournamentApi.createRound,
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
             toast.success("Round created successfully");
@@ -109,17 +88,15 @@ export const useCreateRoundMutation = () => {
 export const useUpdateRoundMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (data: { roundId: string; eventId: string; roundName?: string; qualifyingTeams?: number; matchesPerGroup?: number }) => {
-            await axiosInstance.put(`/rounds/${data.roundId}`, { 
-                eventId: data.eventId, 
-                roundName: data.roundName,
-                qualifyingTeams: data.qualifyingTeams,
-                matchesPerGroup: data.matchesPerGroup
-            });
-        },
+        mutationFn: tournamentApi.updateRound,
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
+            queryClient.invalidateQueries({ queryKey: [...tournamentKeys.all, 'leaderboard'] });
+            queryClient.invalidateQueries({ queryKey: [...tournamentKeys.all, 'groups'] });
             toast.success("Round updated successfully");
+        },
+        onError: (err) => {
+            toast.error(handleApiError(err, "Failed to update round"));
         }
     });
 };
@@ -127,13 +104,14 @@ export const useUpdateRoundMutation = () => {
 export const useUpdateRoundStatusMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (data: { roundId: string; eventId: string; status: "pending" | "ongoing" | "completed" }) => {
-            await axiosInstance.put(`/rounds/${data.roundId}`, { eventId: data.eventId, status: data.status });
-        },
+        mutationFn: tournamentApi.updateRoundStatus,
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.details(variables.eventId) });
             toast.success("Round status updated");
+        },
+        onError: (err) => {
+            toast.error(handleApiError(err, "Failed to update round status"));
         }
     });
 };
@@ -141,14 +119,15 @@ export const useUpdateRoundStatusMutation = () => {
 export const useDeleteRoundMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (data: { roundId: string; eventId: string }) => {
-            await axiosInstance.delete(`/rounds/${data.roundId}`, { data: { eventId: data.eventId } });
-        },
+        mutationFn: tournamentApi.deleteRound,
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
             // Invalidate groups as well since deleting a round removes its groups context
             queryClient.invalidateQueries({ queryKey: tournamentKeys.groups(variables.roundId, 1, 20) });
             toast.success("Round deleted successfully");
+        },
+        onError: (err) => {
+            toast.error(handleApiError(err, "Failed to delete round"));
         }
     });
 };
@@ -156,9 +135,7 @@ export const useDeleteRoundMutation = () => {
 export const useResetRoundMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (data: { roundId: string; eventId: string }) => {
-            await axiosInstance.post(`/rounds/${data.roundId}/reset`, { eventId: data.eventId });
-        },
+        mutationFn: tournamentApi.resetRound,
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
@@ -174,14 +151,7 @@ export const useResetRoundMutation = () => {
 export const useCreateGroupsMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (data: { roundId: string; eventId: string; totalMatch?: number; matchTime?: string }) => {
-            await axiosInstance.post("/groups/create", {
-                roundId: data.roundId,
-                eventId: data.eventId,
-                totalMatch: data.totalMatch || 1,
-                matchTime: data.matchTime
-            });
-        },
+        mutationFn: tournamentApi.createGroups,
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
             // Need to invalidate specific pages or all groups for this round
@@ -197,13 +167,14 @@ export const useCreateGroupsMutation = () => {
 export const useUpdateGroupMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (data: { groupId: string; eventId: string; payload: any }) => {
-            await axiosInstance.put(`/groups/${data.groupId}`, { ...data.payload, eventId: data.eventId });
-        },
+        mutationFn: tournamentApi.updateGroup,
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.groupDetails(variables.groupId) });
             // Invalidate all groups to ensure lists are updated
             queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
+        },
+        onError: (err) => {
+            toast.error(handleApiError(err, "Failed to update group"));
         }
     });
 };
@@ -211,9 +182,7 @@ export const useUpdateGroupMutation = () => {
 export const useCreateSingleGroupMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (data: { roundId: string; eventId: string; groupName?: string; matchTime?: string }) => {
-            await axiosInstance.post("/groups/manual-create", data);
-        },
+        mutationFn: tournamentApi.createSingleGroup,
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
@@ -227,9 +196,7 @@ export const useCreateSingleGroupMutation = () => {
 
 export const useInviteToGroupMutation = () => {
     return useMutation({
-        mutationFn: async (data: { targetId: string; playerId: string; targetModel: "Group"; role?: string }) => {
-            await axiosInstance.post("/invitations/invite-member", data);
-        },
+        mutationFn: tournamentApi.inviteToGroup,
         onSuccess: () => {
             toast.success("Invitation sent successfully");
         },
@@ -243,17 +210,13 @@ export const useInviteToGroupMutation = () => {
 export const useUpdateTeamScoreMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (data: { groupId: string; eventId: string; teamId: string; stats: any }) => {
-            const res = await axiosInstance.put(`/leaderboards/${data.groupId}/score`, {
-                teamId: data.teamId,
-                eventId: data.eventId,
-                ...data.stats,
-            });
-            return res.data;
-        },
+        mutationFn: tournamentApi.updateTeamScore,
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.leaderboard(variables.groupId) });
             toast.success("Team score updated");
+        },
+        onError: (err) => {
+            toast.error(handleApiError(err, "Failed to update team score"));
         }
     });
 };
@@ -261,19 +224,15 @@ export const useUpdateTeamScoreMutation = () => {
 export const useUpdateGroupResultsMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (data: { groupId: string; eventId: string; results: any[]; pairingType?: 'AxB' | 'BxC' | 'AxC' }) => {
-            const res = await axiosInstance.put(`/leaderboards/${data.groupId}/results`, {
-                results: data.results,
-                eventId: data.eventId,
-                pairingType: data.pairingType,
-            });
-            return res.data;
-        },
+        mutationFn: tournamentApi.updateGroupResults,
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.leaderboard(variables.groupId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.groupDetails(variables.groupId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
             toast.success("Results submitted successfully");
+        },
+        onError: (err) => {
+            toast.error(handleApiError(err, "Failed to submit results"));
         }
     });
 };
@@ -281,14 +240,11 @@ export const useUpdateGroupResultsMutation = () => {
 export const useDeleteGroupMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async ({ groupId, eventId }: { groupId: string; eventId: string }) => {
-            const { data } = await axiosInstance.delete(`/groups/${groupId}`, { params: { eventId } });
-            return data;
-        },
+        mutationFn: tournamentApi.deleteGroup,
         onSuccess: (data, variables) => {
             toast.success(data.message || "Group deleted!");
-            queryClient.invalidateQueries({ queryKey: ["groups"] });
-            queryClient.invalidateQueries({ queryKey: ["rounds", variables.eventId] });
+            queryClient.invalidateQueries({ queryKey: [...tournamentKeys.all, 'groups'] });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
         },
         onError: (error: any) => {
             toast.error(error.response?.data?.message || "Failed to delete group");
@@ -299,10 +255,7 @@ export const useDeleteGroupMutation = () => {
 export const useInjectTeamMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (data: { groupId: string; teamId: string; eventId: string }) => {
-            const res = await axiosInstance.post("/groups/inject-team", data);
-            return res.data;
-        },
+        mutationFn: tournamentApi.injectTeam,
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.leaderboard(variables.groupId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
@@ -313,13 +266,11 @@ export const useInjectTeamMutation = () => {
         }
     });
 };
+
 export const useMergeTeamsToRoundMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (data: { roundId: string; eventId: string }) => {
-            const res = await axiosInstance.post(`/rounds/${data.roundId}/merge-qualified`, { eventId: data.eventId });
-            return res.data;
-        },
+        mutationFn: tournamentApi.mergeTeamsToRound,
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
@@ -334,10 +285,7 @@ export const useMergeTeamsToRoundMutation = () => {
 export const useMergeTeamsToGroupMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (data: { groupId: string; eventId: string }) => {
-            const res = await axiosInstance.post(`/groups/${data.groupId}/merge-qualified`, { eventId: data.eventId });
-            return res.data;
-        },
+        mutationFn: tournamentApi.mergeTeamsToGroup,
         onSuccess: (data, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.groupDetails(variables.groupId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.leaderboard(variables.groupId) });

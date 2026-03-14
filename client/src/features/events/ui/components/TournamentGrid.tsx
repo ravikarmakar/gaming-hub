@@ -1,9 +1,9 @@
 import React from "react";
 import TournamentCard from "./TournamentCard";
-import { Event } from "@/features/events/lib";
+import { Tournament } from "@/features/tournaments/types";
 
 interface TournamentGridProps {
-    events: Event[];
+    events: Tournament[];
     onButtonClick?: (eventId: string) => void;
     onDeleteClick?: (eventId: string) => void;
     showEditButton?: boolean;

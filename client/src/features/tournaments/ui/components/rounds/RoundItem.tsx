@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Edit, Trash2, CheckCircle2, GitMerge } from "lucide-react";
+import { Edit, Trash2, CheckCircle2, GitMerge, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface RoundItemProps {
@@ -44,6 +44,9 @@ export const RoundItem = memo(({ round, isSelected, isSidebarCollapsed, activeRo
                         {round.status === 'ongoing' && (
                             <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-green-500 animate-pulse border border-black" />
                         )}
+                        {round.status === 'completed' && (
+                            <CheckCircle2 className="absolute -top-1 -right-1.5 w-3 h-3 text-green-500 bg-black rounded-full" />
+                        )}
                     </div>
                 </div>
             ) : (
@@ -51,19 +54,27 @@ export const RoundItem = memo(({ round, isSelected, isSidebarCollapsed, activeRo
                     <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                             <span className={`font-bold ${isSelected ? 'text-purple-300' : 'text-gray-300'}`}>
-                                {round.roundName}
+                                {round.roundNumber ? `R${round.roundNumber} - ` : ""}{round.roundName}
                             </span>
                             {round.status === 'ongoing' && (
                                 <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                             )}
                         </div>
                         <div className="flex flex-col gap-1">
-                            {(round.roadmapData?.isLeague || round.roadmapData?.isFinale) && (round.roadmapData?.leagueType || round.roadmapData?.grandFinaleType) && (
-                                <span className="text-[10px] text-gray-500 uppercase font-black tracking-tight flex items-center gap-1">
-                                    <span className="w-1 h-1 rounded-full bg-white/20" />
-                                    {(round.roadmapData?.leagueType || round.roadmapData?.grandFinaleType).replace("-", " ").toUpperCase()}
+                            <div className="flex items-center gap-2">
+                                <span className={`text-[8px] px-1.5 py-0.5 rounded-sm font-black tracking-widest uppercase border ${round.isLeague
+                                        ? "bg-amber-500/10 border-amber-500/20 text-amber-500"
+                                        : "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                                    }`}>
+                                    {round.isLeague ? "League" : "Standard"}
                                 </span>
-                            )}
+                                {(round.roadmapData?.isLeague || round.roadmapData?.isFinale) && (round.roadmapData?.leagueType || round.roadmapData?.grandFinaleType) && (
+                                    <span className="text-[10px] text-gray-500 uppercase font-black tracking-tight flex items-center gap-1">
+                                        <span className="w-1 h-1 rounded-full bg-white/20" />
+                                        {(round.roadmapData?.leagueType || round.roadmapData?.grandFinaleType).replace("-", " ").toUpperCase()}
+                                    </span>
+                                )}
+                            </div>
                             <div className="flex flex-wrap gap-2 mt-0.5">
                                 {round.mergeInfo && (
                                     <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400 uppercase tracking-wider">
@@ -101,21 +112,32 @@ export const RoundItem = memo(({ round, isSelected, isSidebarCollapsed, activeRo
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 text-gray-400 hover:text-white hover:bg-white/10"
+                                    className="h-7 w-7 text-gray-400/50 hover:text-purple-400 hover:bg-purple-500/10"
                                     onClick={(e) => { e.stopPropagation(); onEditClick(round); }}
-                                    aria-label={`Edit ${round.roundName}`}
+                                    aria-label="Edit timing and scheduling"
                                 >
-                                    <Edit className="w-3.5 h-3.5" />
+                                    <Clock className="w-3.5 h-3.5" />
                                 </Button>
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                                    onClick={(e) => { e.stopPropagation(); onDeleteClick(round); }}
-                                    aria-label={`Delete ${round.roundName}`}
+                                    className="h-7 w-7 text-gray-400 hover:text-white hover:bg-white/10"
+                                    onClick={(e) => { e.stopPropagation(); onEditClick(round); }}
+                                    aria-label={`Edit ${round.roundName} name and settings`}
                                 >
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <Edit className="w-3.5 h-3.5" />
                                 </Button>
+                                {(round.groups?.length || 0) > 0 && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-red-500/50 hover:text-red-400 hover:bg-red-500/10"
+                                        onClick={(e) => { e.stopPropagation(); onDeleteClick(round); }}
+                                        aria-label={`Delete ${round.roundName}`}
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                )}
                             </div>
                         )}
                     </div>

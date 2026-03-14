@@ -1,4 +1,4 @@
-import { Trophy, PlayCircle, Loader2, ArrowLeft } from "lucide-react";
+import { PlayCircle, ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -7,10 +7,7 @@ interface TournamentDashboardHeaderProps {
     registrationStatus: string;
     eventProgress: string;
     onStartEvent: () => void;
-    onFinishEvent: () => void;
     onBack: () => void;
-    canFinish: boolean;
-    isFinishing: boolean;
 }
 
 export const TournamentDashboardHeader = ({
@@ -18,10 +15,7 @@ export const TournamentDashboardHeader = ({
     registrationStatus,
     eventProgress,
     onStartEvent,
-    onFinishEvent,
     onBack,
-    canFinish,
-    isFinishing
 }: TournamentDashboardHeaderProps) => {
     return (
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-900/40 p-3 md:p-4 rounded-xl border border-white/5 backdrop-blur-xl">
@@ -65,22 +59,6 @@ export const TournamentDashboardHeader = ({
                     </Button>
                 )}
 
-                {eventProgress === "ongoing" && (
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 text-xs border-purple-500/20 text-purple-400 hover:bg-purple-500/10 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-                        onClick={onFinishEvent}
-                        disabled={!canFinish || isFinishing}
-                    >
-                        {isFinishing ? (
-                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                        ) : (
-                            <Trophy className="w-3.5 h-3.5 mr-1.5" />
-                        )}
-                        Finish Tournament
-                    </Button>
-                )}
             </div>
         </div>
     );

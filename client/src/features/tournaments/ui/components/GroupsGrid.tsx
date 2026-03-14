@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { Loader2, SearchX, RotateCcw } from "lucide-react";
 import { useGroupsGrid } from "../../hooks";
 import { GroupGridView } from "./groups/GroupGridView";
 import { GroupDetailsView } from "./groups/GroupDetailsView";
@@ -7,9 +7,20 @@ import { GroupsGridDialogs } from "./groups/GroupsGridDialogs";
 interface GroupsGridProps {
     roundId: string;
     eventId: string;
+    search?: string;
+    statusFilter?: string;
+    sortBy?: string;
+    onResetFilters?: () => void;
 }
 
-export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
+export const GroupsGrid = ({
+    roundId,
+    eventId,
+    search: externalSearch,
+    statusFilter: externalStatusFilter,
+    sortBy: externalSortBy,
+    onResetFilters
+}: GroupsGridProps) => {
     const {
         currentPage,
         activeRoundTab,
@@ -51,17 +62,32 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
         openInviteModal,
         openDeleteModal,
         openMergeModal,
-        handleResultChange,
-        handleSubmitResults,
-        handleConfirmSubmit,
         handlePageChange,
         handleMergeToGroup,
         rounds,
         selectedPairing,
         setSelectedPairing,
-    } = useGroupsGrid({ roundId, eventId });
+        search,
+        statusFilter,
+        handleNextGroup,
+        handlePreviousGroup,
+        hasNextGroup,
+        hasPreviousGroup,
+        handleSubmitResults,
+        handleResultChange,
+        handleConfirmSubmit,
+        currentGroupIndex,
+        totalGroupsCount,
+        isLeaderboardLoading,
+    } = useGroupsGrid({ roundId, eventId, externalSearch, externalStatusFilter, externalSortBy });
 
     const currentRound = rounds.find((r: any) => r._id === roundId);
+    
+    // Improved Grand Finale detection
+    const roadmapData = (currentRound as any)?.roadmapData;
+    const isGrandFinale = roadmapData?.isFinale === true || 
+                        roadmapData?.grandFinaleType || 
+                        (roadmapData?.title?.toLowerCase().includes('final') && !roadmapData?.title?.toLowerCase().includes('semi'));
 
     if (isLoading && groups.length === 0 && !selectedGroupId) {
         return (
@@ -72,16 +98,44 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
     }
 
     if (!isLoading && groups.length === 0) {
+        if (search || statusFilter) {
+            return (
+                <div className="flex flex-col h-64 items-center justify-center gap-4 text-center">
+                    <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center">
+                        <SearchX className="w-6 h-6 text-purple-400" />
+                    </div>
+                    <div>
+                        <h3 className="text-white font-bold">No matches found</h3>
+                        <p className="text-sm text-gray-400 max-w-xs mt-1">
+                            We couldn't find any groups matching your current filters.
+                        </p>
+                    </div>
+                    {onResetFilters && (
+                        <button
+                            onClick={onResetFilters}
+                            className="flex items-center gap-2 text-xs font-bold text-purple-400 hover:text-purple-300 transition-colors bg-purple-500/10 px-4 py-2 rounded-lg border border-purple-500/20"
+                        >
+                            <RotateCcw className="w-3 h-3" />
+                            Clear Filters
+                        </button>
+                    )}
+                </div>
+            );
+        }
+
         return (
-            <div className="flex h-64 items-center justify-center text-gray-500">
-                No groups found. Create groups to get started.
+            <div className="flex flex-col h-64 items-center justify-center gap-3 text-gray-500">
+                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 opacity-20" />
+                </div>
+                <p className="text-sm">No groups found. Create groups to get started.</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-4">
-            {selectedGroupId && leaderboard ? (
+        <div className="space-y-6">
+            {selectedGroupId ? (
                 <GroupDetailsView
                     currentGroup={currentGroup}
                     leaderboard={leaderboard}
@@ -100,6 +154,17 @@ export const GroupsGrid = ({ roundId, eventId }: GroupsGridProps) => {
                     openMergeModal={openMergeModal}
                     selectedPairing={selectedPairing}
                     setSelectedPairing={setSelectedPairing}
+                    onNextGroup={handleNextGroup}
+                    onPreviousGroup={handlePreviousGroup}
+                    hasNextGroup={hasNextGroup}
+                    hasPreviousGroup={hasPreviousGroup}
+                    openEditModal={openEditModal}
+                    openDeleteModal={openDeleteModal}
+                    openChatModal={openChatModal}
+                    currentGroupIndex={currentGroupIndex}
+                    totalGroupsCount={totalGroupsCount}
+                    isLoading={isLeaderboardLoading}
+                    isGrandFinale={isGrandFinale}
                 />
             ) : (
                 <GroupGridView

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Users,
     Trophy,
@@ -13,19 +14,20 @@ import {
     ArrowRight,
     CheckCircle2
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { useGetRoundsQuery } from "../../hooks";
-import { Event } from "@/features/events/lib/types";
+import { Tournament, Round } from "../../types";
 
 interface TournamentOverviewProps {
-    eventDetails?: Event;
+    eventDetails?: Tournament;
 }
 
 export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) => {
@@ -39,7 +41,7 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
         const joinedSlots = eventDetails.joinedSlots || 0;
         const fillPercentage = totalSlots > 0 ? (joinedSlots / totalSlots) * 100 : 0;
 
-        const completedRounds = rounds.filter(r => r.status === 'completed').length;
+        const completedRounds = (rounds as Round[]).filter(r => r.status === 'completed').length;
         const totalRounds = rounds.length;
 
         return {
@@ -58,10 +60,10 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
     const activeRoadmap = useMemo(() => {
         if (!eventDetails) return [];
         const roadmapData = eventDetails.roadmaps?.find(r => r.type === 'tournament')?.data || eventDetails.roadmap || [];
-        
+
         return roadmapData.map((item: any) => {
-            const actualRound = rounds.find(r => 
-                (item.roundId && r._id === item.roundId) || 
+            const actualRound = (rounds as Round[]).find((r: Round) =>
+                (item.roundId && r._id === item.roundId) ||
                 (!item.roundId && r.roundName === item.title)
             );
             return { ...item, status: actualRound?.status || 'pending' };
@@ -71,10 +73,10 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
     const activeInvitedRoadmap = useMemo(() => {
         if (!eventDetails) return [];
         const roadmapData = eventDetails.roadmaps?.find(r => r.type === 'invitedTeams')?.data || eventDetails.invitedTeamsRoadmap || [];
-        
+
         return roadmapData.map((item: any) => {
-            const actualRound = rounds.find(r => 
-                (item.roundId && r._id === item.roundId) || 
+            const actualRound = (rounds as Round[]).find((r: Round) =>
+                (item.roundId && r._id === item.roundId) ||
                 (!item.roundId && r.roundName === item.title)
             );
             return { ...item, status: actualRound?.status || 'pending' };
@@ -84,10 +86,10 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
     const activeT1Roadmap = useMemo(() => {
         if (!eventDetails) return [];
         const roadmapData = eventDetails.roadmaps?.find(r => r.type === 't1-special')?.data || [];
-        
+
         return roadmapData.map((item: any) => {
-            const actualRound = rounds.find(r => 
-                (item.roundId && r._id === item.roundId) || 
+            const actualRound = (rounds as Round[]).find((r: Round) =>
+                (item.roundId && r._id === item.roundId) ||
                 (!item.roundId && r.roundName === item.title)
             );
             return { ...item, status: actualRound?.status || 'pending' };
@@ -277,7 +279,7 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
                         Prize Distribution
                     </h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                        {eventDetails.prizeDistribution.map((prize, idx) => (
+                        {eventDetails.prizeDistribution.map((prize: any, idx: number) => (
                             <div key={idx} className="p-3 rounded-xl bg-gradient-to-br from-white/5 to-transparent border border-white/10 text-center">
                                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-tighter mb-1">
                                     {prize.label || `Rank ${prize.rank}`}
@@ -326,7 +328,7 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
                             <TabsContent value="main" className="m-0 focus-visible:ring-0">
                                 <Card className="bg-black/20 border-white/5 p-6 rounded-2xl">
                                     <div className="relative pl-8 space-y-8 before:absolute before:inset-y-0 before:left-[15px] before:w-[2px] before:bg-gradient-to-b before:from-purple-500/50 before:via-purple-500/10 before:to-transparent">
-                                        {activeRoadmap.map((step, idx) => (
+                                        {activeRoadmap.map((step: any, idx: number) => (
                                             <div key={idx} className="relative group">
                                                 <div className={`absolute -left-[38px] w-6 h-6 rounded-lg border-4 border-brand-black flex items-center justify-center z-10 transition-transform group-hover:scale-110 ${step.isFinale ? 'bg-amber-500 text-brand-black shadow-[0_0_15px_rgba(245,158,11,0.3)]' : step.isLeague ? 'bg-indigo-500 text-white' : 'bg-gray-800 text-gray-400'}`}>
                                                     {step.isFinale ? <Trophy size={10} /> : step.isLeague ? <Users size={10} /> : <Activity size={10} />}
@@ -386,7 +388,7 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
                                 <TabsContent value="invited" className="m-0 focus-visible:ring-0">
                                     <Card className="bg-black/20 border-white/5 p-6 rounded-2xl">
                                         <div className="relative pl-8 space-y-8 before:absolute before:inset-y-0 before:left-[15px] before:w-[2px] before:bg-gradient-to-b before:from-rose-500/50 before:via-rose-500/10 before:to-transparent">
-                                            {activeInvitedRoadmap.map((step, idx) => (
+                                            {activeInvitedRoadmap.map((step: any, idx: number) => (
                                                 <div key={idx} className="relative group">
                                                     <div className={`absolute -left-[38px] w-6 h-6 rounded-lg border-4 border-brand-black flex items-center justify-center z-10 transition-transform group-hover:scale-110 ${step.isFinale ? 'bg-amber-500 text-brand-black' : 'bg-rose-500 text-white shadow-[0_0_15px_rgba(244,63,94,0.3)]'}`}>
                                                         {step.isFinale ? <Trophy size={10} /> : <Users size={10} />}
@@ -411,28 +413,28 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
                                                                     </Badge>
                                                                 )}
                                                                 {/* Mapping Logic */}
-                                                                    {(() => {
-                                                                        const mapping = eventDetails.invitedRoundMappings?.find(m => idx >= m.startRound && idx <= m.endRound);
-                                                                        if (mapping) {
-                                                                            const targetRound = activeRoadmap[mapping.targetMainRound];
-                                                                            const sourceRoundTitle = step.title || step.name;
-                                                                            
-                                                                            return (
-                                                                                <Badge className="bg-white/5 text-gray-400 border-white/10 uppercase text-[9px] font-black flex items-center gap-1.5 py-1 px-2.5 rounded-lg border">
-                                                                                    <span className="text-rose-400">Invited Roadmap</span>
-                                                                                    <span className="text-gray-600 font-medium">({sourceRoundTitle})</span>
-                                                                                    <span className="text-emerald-400 flex items-center gap-1">
-                                                                                        Merges to <ArrowRight size={8} />
-                                                                                    </span>
-                                                                                    <span className="text-purple-400">Main Roadmap</span>
-                                                                                    {targetRound?.title && (
-                                                                                        <span className="text-amber-400 font-bold ml-0.5">({targetRound.title})</span>
-                                                                                    )}
-                                                                                </Badge>
-                                                                            );
-                                                                        }
-                                                                        return null;
-                                                                    })()}
+                                                                {(() => {
+                                                                    const mapping = eventDetails.invitedRoundMappings?.find((m: any) => idx >= m.startRound && idx <= m.endRound);
+                                                                    if (mapping) {
+                                                                        const targetRound = activeRoadmap[mapping.targetMainRound];
+                                                                        const sourceRoundTitle = step.title || step.name;
+
+                                                                        return (
+                                                                            <Badge className="bg-white/5 text-gray-400 border-white/10 uppercase text-[9px] font-black flex items-center gap-1.5 py-1 px-2.5 rounded-lg border">
+                                                                                <span className="text-rose-400">Invited Roadmap</span>
+                                                                                <span className="text-gray-600 font-medium">({sourceRoundTitle})</span>
+                                                                                <span className="text-emerald-400 flex items-center gap-1">
+                                                                                    Merges to <ArrowRight size={8} />
+                                                                                </span>
+                                                                                <span className="text-purple-400">Main Roadmap</span>
+                                                                                {targetRound?.title && (
+                                                                                    <span className="text-amber-400 font-bold ml-0.5">({targetRound.title})</span>
+                                                                                )}
+                                                                            </Badge>
+                                                                        );
+                                                                    }
+                                                                    return null;
+                                                                })()}
                                                                 {step.status === 'ongoing' && (
                                                                     <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 uppercase text-[9px] font-black animate-pulse">
                                                                         Live now
@@ -462,7 +464,7 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
                                 <TabsContent value="t1-special" className="m-0 focus-visible:ring-0">
                                     <Card className="bg-black/20 border-white/5 p-6 rounded-2xl">
                                         <div className="relative pl-8 space-y-8 before:absolute before:inset-y-0 before:left-[15px] before:w-[2px] before:bg-gradient-to-b before:from-blue-500/50 before:via-blue-500/10 before:to-transparent">
-                                            {activeT1Roadmap.map((step, idx) => (
+                                            {activeT1Roadmap.map((step: any, idx: number) => (
                                                 <div key={idx} className="relative group">
                                                     <div className={`absolute -left-[38px] w-6 h-6 rounded-lg border-4 border-brand-black flex items-center justify-center z-10 transition-transform group-hover:scale-110 ${step.isFinale ? 'bg-amber-500 text-brand-black' : 'bg-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.3)]'}`}>
                                                         {step.isFinale ? <Trophy size={10} /> : <Zap size={10} />}
@@ -487,28 +489,28 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
                                                                     </Badge>
                                                                 )}
                                                                 {/* Mapping Logic */}
-                                                                    {(() => {
-                                                                        const mapping = eventDetails.t1SpecialRoundMappings?.find(m => idx >= m.startRound && idx <= m.endRound);
-                                                                        if (mapping) {
-                                                                            const targetRound = activeRoadmap[mapping.targetMainRound];
-                                                                            const sourceRoundTitle = step.title || step.name;
-                                                                            
-                                                                            return (
-                                                                                <Badge className="bg-white/5 text-gray-400 border-white/10 uppercase text-[9px] font-black flex items-center gap-1.5 py-1 px-2.5 rounded-lg border">
-                                                                                    <span className="text-blue-400">T1 Special</span>
-                                                                                    <span className="text-gray-600 font-medium">({sourceRoundTitle})</span>
-                                                                                    <span className="text-emerald-400 flex items-center gap-1">
-                                                                                        Merges to <ArrowRight size={8} />
-                                                                                    </span>
-                                                                                    <span className="text-purple-400">Main Roadmap</span>
-                                                                                    {targetRound?.title && (
-                                                                                        <span className="text-amber-400 font-bold ml-0.5">({targetRound.title})</span>
-                                                                                    )}
-                                                                                </Badge>
-                                                                            );
-                                                                        }
-                                                                        return null;
-                                                                    })()}
+                                                                {(() => {
+                                                                    const mapping = eventDetails.t1SpecialRoundMappings?.find((m: any) => idx >= m.startRound && idx <= m.endRound);
+                                                                    if (mapping) {
+                                                                        const targetRound = activeRoadmap[mapping.targetMainRound];
+                                                                        const sourceRoundTitle = step.title || step.name;
+
+                                                                        return (
+                                                                            <Badge className="bg-white/5 text-gray-400 border-white/10 uppercase text-[9px] font-black flex items-center gap-1.5 py-1 px-2.5 rounded-lg border">
+                                                                                <span className="text-blue-400">T1 Special</span>
+                                                                                <span className="text-gray-600 font-medium">({sourceRoundTitle})</span>
+                                                                                <span className="text-emerald-400 flex items-center gap-1">
+                                                                                    Merges to <ArrowRight size={8} />
+                                                                                </span>
+                                                                                <span className="text-purple-400">Main Roadmap</span>
+                                                                                {targetRound?.title && (
+                                                                                    <span className="text-amber-400 font-bold ml-0.5">({targetRound.title})</span>
+                                                                                )}
+                                                                            </Badge>
+                                                                        );
+                                                                    }
+                                                                    return null;
+                                                                })()}
                                                                 {step.status === 'ongoing' && (
                                                                     <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 uppercase text-[9px] font-black animate-pulse">
                                                                         Live now

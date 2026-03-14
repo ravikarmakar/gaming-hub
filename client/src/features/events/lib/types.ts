@@ -60,6 +60,8 @@ export interface Event {
         targetMainRound: number;
     }[];
     roadmaps?: Array<{ type: RoadmapType; data: RoadmapItem[] }>;
+    hasInvitedTeams?: boolean;
+    hasT1SpecialTeams?: boolean;
     registeredTeams?: string[];
     t1SpecialTeams?: string[];
     createdAt?: string;

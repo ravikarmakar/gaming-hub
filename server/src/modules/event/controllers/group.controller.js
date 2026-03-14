@@ -11,7 +11,7 @@ import { withOptionalTransaction } from "../../../shared/utils/withOptionalTrans
 // ✅ Get All Groups (With Pagination)
 export const getGroups = async (req, res) => {
   try {
-    const { roundId } = req.query; // Filter by Round
+    const { roundId, search, status, sortBy } = req.query; // Filter by Round, Search, Status
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
@@ -24,6 +24,27 @@ export const getGroups = async (req, res) => {
       query.roundId = roundId;
     }
 
+    if (search) {
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      query.groupName = { $regex: escapedSearch, $options: "i" };
+    }
+
+    if (status) {
+      query.status = status;
+    }
+
+    // Determine Sort
+    let sortOptions = { createdAt: 1 };
+    if (sortBy === "matchTime-asc") {
+      sortOptions = { matchTime: 1 };
+    } else if (sortBy === "matchTime-desc") {
+      sortOptions = { matchTime: -1 };
+    } else if (sortBy === "name-asc") {
+      sortOptions = { groupName: 1 };
+    } else if (sortBy === "name-desc") {
+      sortOptions = { groupName: -1 };
+    }
+
     // Fetch groups with pagination
     const groups = await Group.find(query)
       .populate({
@@ -32,7 +53,7 @@ export const getGroups = async (req, res) => {
       })
       .skip(skip)
       .limit(limit)
-      .sort({ createdAt: 1 }); // Ensure consistent order
+      .sort(sortOptions); // Flexible sorting
 
     const totalGroups = await Group.countDocuments(query);
 
@@ -442,32 +463,32 @@ export const createSingleGroup = async (req, res) => {
     }
 
     // Handle Auto Group Name if not provided
-    let finalGroupName = groupName;
-    if (!finalGroupName) {
-      const groupCount = await Group.countDocuments({ roundId });
-      
-      const generateGroupName = (index) => {
-        let name = "";
-        while (index >= 0) {
-          name = String.fromCharCode((index % 26) + 65) + name;
-          index = Math.floor(index / 26) - 1;
-        }
-        return `Group ${name}`;
-      };
-      
-      finalGroupName = generateGroupName(groupCount);
+    const generateGroupName = (index) => {
+      let name = "";
+      let i = index;
+      while (i >= 0) {
+        name = String.fromCharCode((i % 26) + 65) + name;
+        i = Math.floor(i / 26) - 1;
+      }
+      return `Group ${name}`;
+    };
 
-      // Verify name uniqueness in this round to prevent race condition
-      let nameCollision = await Group.findOne({ roundId, groupName: finalGroupName }).session(session);
-      let suffix = 1;
-      while (nameCollision) {
+    const result = await withOptionalTransaction(async (session) => {
+      let finalGroupName = groupName;
+      if (!finalGroupName) {
+        const groupCount = await Group.countDocuments({ roundId }).session(session);
+        finalGroupName = generateGroupName(groupCount);
+
+        // Verify name uniqueness in this round to prevent race condition
+        let nameCollision = await Group.findOne({ roundId, groupName: finalGroupName }).session(session);
+        let suffix = 1;
+        while (nameCollision) {
           finalGroupName = `${generateGroupName(groupCount)} (${suffix})`;
           nameCollision = await Group.findOne({ roundId, groupName: finalGroupName }).session(session);
           suffix++;
+        }
       }
-    }
 
-    const result = await withOptionalTransaction(async (session) => {
       const group = await Group.create([{
         roundId,
         groupName: finalGroupName,

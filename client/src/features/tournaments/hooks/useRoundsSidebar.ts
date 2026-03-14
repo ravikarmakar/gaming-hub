@@ -153,7 +153,13 @@ export const useRoundsSidebar = (eventId: string) => {
         // Calculate teams that qualify strictly from the PREVIOUS MAIN ROUND
         let mainCount = 0;
         if (currentIndex === 0) {
-            mainCount = (selectedRound as any).eligibleTeams?.length || 0;
+            if (activeRoundTab === 'invited-tournament') {
+                mainCount = event.invitedTeams?.length || 0;
+            } else if (activeRoundTab === 't1-special') {
+                mainCount = event.t1SpecialTeams?.length || 0;
+            } else {
+                mainCount = event.registeredTeams?.length || 0;
+            }
         } else if (prevRound) {
             mainCount = (prevRound.groups || []).reduce((acc: number, g: any) => acc + (g.totalSelectedTeam || 0), 0);
         }
