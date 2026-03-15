@@ -1,4 +1,4 @@
-import { GlassCard } from "@/features/tournaments/ui/components/ThemedComponents";
+import { GlassCard } from "@/features/tournaments/ui/components/shared/ThemedComponents";
 
 interface Activity {
     type: string;

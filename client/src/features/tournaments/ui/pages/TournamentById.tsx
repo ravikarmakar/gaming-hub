@@ -4,7 +4,13 @@ import { Trophy, Users, MessageSquare, ListOrdered, Gavel, Info, Map } from "luc
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { RegisteredTeamsList } from "../components/RegisteredTeamsList";
+import { 
+    RegisteredTeamsList, 
+    TournamentHeader, 
+    TournamentQuickStats,
+    Roadmaps 
+} from "@/features/tournaments/ui/components";
+import TournamentDetails from "@/features/tournaments/ui/components/details/TournamentDetails";
 import {
     useGetRoundsQuery,
     useGetGroupsQuery,
@@ -13,11 +19,7 @@ import {
     useGetRegistrationStatusQuery,
     useRegisterTournamentMutation
 } from "@/features/tournaments/hooks";
-import { GroupLeaderboardTable } from "../components/groups/GroupLeaderboardTable";
-import { TournamentHeader } from "../components/TournamentHeader";
-import { TournamentQuickStats } from "../components/TournamentQuickStats";
-import TournamentDetails from "../components/TournamentDetails";
-import { Roadmaps } from "../components/Roadmaps";
+import { GroupLeaderboardTable } from "@/features/tournaments/ui/components/management/groups/GroupLeaderboardTable";
 
 
 const TABS_CONFIG = [

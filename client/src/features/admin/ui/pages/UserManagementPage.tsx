@@ -34,7 +34,7 @@ import {
 import { useAdminStore } from "../../store/useAdminStore";
 import { useDebounce } from "@/hooks/useDebounce";
 import { throttle, formatDate } from "@/lib/utils";
-import { GlassCard, NeonBadge } from "@/features/tournaments/ui/components/ThemedComponents";
+import { GlassCard, NeonBadge } from "@/features/tournaments/ui/components/shared/ThemedComponents";
 
 import { cn } from "@/lib/utils";
 
@@ -180,14 +180,14 @@ const UserManagementPage = () => {
                                                 <Avatar className="w-10 h-10 border border-white/10">
                                                     <AvatarImage src={user.avatar} />
                                                     <AvatarFallback className="bg-white/5 text-gray-400 font-bold uppercase text-xs">
-                                                        {user.username.substring(0, 2)}
+                                                        {user.username?.substring(0, 2) || "??"}
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <div className="flex flex-col">
                                                     <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">
                                                         {user.username}
                                                     </span>
-                                                    <span className="text-[10px] text-gray-500 font-mono tracking-tighter uppercase">ID: {user._id.substring(0, 10)}</span>
+                                                    <span className="text-[10px] text-gray-500 font-mono tracking-tighter uppercase">ID: {user._id?.substring(0, 10) || "UNKNOWN"}</span>
                                                 </div>
                                             </div>
                                         </TableCell>

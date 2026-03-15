@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import toast from "react-hot-toast";
 import { formatDate } from "@/lib/utils";
-import { useGetGroupDetailsQuery } from "../../hooks";
+import { useGetGroupDetailsQuery } from "@/features/tournaments/hooks";
 
 export default function GroupTeamList() {
     const { groupId } = useParams<{ groupId: string }>();

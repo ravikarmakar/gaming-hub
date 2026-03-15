@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Gamepad2, PlusCircle, Calendar, DollarSign, Eye } from "lucide-react";
-import { GlassCard, NeonBadge } from "@/features/tournaments/ui/components/ThemedComponents";
+import { GlassCard, NeonBadge } from "@/features/tournaments/ui/components/shared/ThemedComponents";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { TOURNAMENT_ROUTES } from "@/features/tournaments/lib/routes";
 

@@ -27,3 +27,9 @@ export const GAMES_MAPS = {
     "bgmi": ["Erangel", "Miramar", "Sanhok", "Vikendi", "Nusa", "Karakin"],
     "valorant": ["Ascent", "Bind", "Haven", "Icebox", "Breeze", "Fracture", "Pearl", "Lotus", "Sunset"]
 } as const;
+
+export const PAIRING_CONFIG = [
+    { key: 'AxB' as const, label: 'Group A & B', color: 'blue' },
+    { key: 'BxC' as const, label: 'Group B & C', color: 'purple' },
+    { key: 'AxC' as const, label: 'Group A & C', color: 'orange' },
+] as const;

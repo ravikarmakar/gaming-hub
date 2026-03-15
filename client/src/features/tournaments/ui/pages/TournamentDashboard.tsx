@@ -12,16 +12,18 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
-import { useStartTournamentMutation, useDeleteTournamentMutation, useGetTournamentDetailsQuery } from "../../hooks";
-import { RoundsManager } from "../components/RoundsManager";
-import { ScrimsManager } from "../components/ScrimsManager";
-import { TournamentOverview } from "../components/TournamentOverview";
-import { RegisteredTeamsList } from "../components/RegisteredTeamsList";
+import { useStartTournamentMutation, useDeleteTournamentMutation, useGetTournamentDetailsQuery } from "@/features/tournaments/hooks";
+import {
+    RoundsManager,
+    ScrimsManager,
+    TournamentOverview,
+    RegisteredTeamsList
+} from "@/features/tournaments/ui/components";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 
 // Extracted sub-components
-import { TournamentDashboardHeader } from "../components/tournaments/TournamentDashboardHeader";
-import { TournamentSettings } from "../components/tournaments/TournamentSettings";
+import { TournamentDashboardHeader } from "@/features/tournaments/ui/components/tournaments/TournamentDashboardHeader";
+import { TournamentSettings } from "@/features/tournaments/ui/components/tournaments/TournamentSettings";
 
 export default function TournamentDashboard() {
     const { id } = useParams<{ id: string }>();
@@ -98,7 +100,6 @@ export default function TournamentDashboard() {
                     onStartEvent={() => setIsStartDialogOpen(true)}
                 />
             )}
-
 
             {/* Main Content Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

@@ -33,7 +33,7 @@ import {
 import { useAdminStore } from "../../store/useAdminStore";
 import { useDebounce } from "@/hooks/useDebounce";
 import { throttle } from "@/lib/utils";
-import { GlassCard, NeonBadge } from "@/features/tournaments/ui/components/ThemedComponents";
+import { GlassCard, NeonBadge } from "@/features/tournaments/ui/components/shared/ThemedComponents";
 
 import { cn } from "@/lib/utils";
 
@@ -184,7 +184,7 @@ const TeamManagementPage = () => {
                                                     <span className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">
                                                         {team.teamName}
                                                     </span>
-                                                    <span className="text-[10px] text-gray-500 font-mono tracking-tighter uppercase">ID: {team._id.substring(0, 10)}</span>
+                                                    <span className="text-[10px] text-gray-500 font-mono tracking-tighter uppercase">ID: {team._id?.substring(0, 10) || "UNKNOWN"}</span>
                                                 </div>
                                             </div>
                                         </TableCell>

@@ -9,10 +9,10 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
-import { useGetTournamentsQuery } from "../../hooks/useTournamentQueries";
-import { GlassCard, SectionHeader } from "../components/ThemedComponents";
-import { TournamentGrid } from "../components/TournamentGrid";
-import { categoryOptions } from "../../lib/constants";
+import { useGetTournamentsQuery } from "@/features/tournaments/hooks/useTournamentQueries";
+import { GlassCard, SectionHeader } from "@/features/tournaments/ui/components/shared/ThemedComponents";
+import { TournamentGrid } from "@/features/tournaments/ui/components/shared/TournamentGrid";
+import { categoryOptions } from "@/features/tournaments/lib/constants";
 
 
 const AllTournaments = () => {

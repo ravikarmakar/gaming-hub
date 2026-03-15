@@ -14,9 +14,9 @@ import {
   ScheduleSection,
   PrizeSection,
   MediaSection,
-} from "../components/create-tournament";
-import { RoadmapBuilder } from "../components/create-tournament/roadmaps/RoadmapBuilder";
-import { useTournamentForm } from "../../hooks/useTournamentForm";
+} from "@/features/tournaments/ui/components/creation";
+import { RoadmapBuilder } from "@/features/tournaments/ui/components/creation/roadmaps/RoadmapBuilder";
+import { useTournamentForm } from "@/features/tournaments/hooks/useTournamentForm";
 
 export default function CreateTournament() {
   const navigate = useNavigate();

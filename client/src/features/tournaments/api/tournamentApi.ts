@@ -1,6 +1,6 @@
 import { axiosInstance } from "@/lib/axios";
-import { TOURNAMENT_ENDPOINTS } from "../lib";
-import { Tournament } from "../types";
+import { TOURNAMENT_ENDPOINTS } from "@/features/tournaments/lib";
+import { Tournament } from "@/features/tournaments/types";
 
 export const tournamentApi = {
     createTournament: async (data: FormData): Promise<Tournament> => {

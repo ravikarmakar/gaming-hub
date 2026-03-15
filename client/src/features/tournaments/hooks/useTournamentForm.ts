@@ -9,8 +9,8 @@ import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import {
   TournamentFormValues,
   tournamentSchema,
-} from "../lib";
-import { Category, RegistrationStatus } from "../types";
+} from "@/features/tournaments/lib";
+import { Category, RegistrationStatus } from "@/features/tournaments/types";
 import { useCreateTournamentMutation, useUpdateTournamentMutation } from "./useTournamentMutations";
 import { useGetTournamentDetailsQuery } from "./useTournamentQueries";
 

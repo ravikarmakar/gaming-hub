@@ -3,17 +3,17 @@ import { Loader2, Trophy, Plus, LayoutGrid } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { TournamentGrid } from "@/features/tournaments/ui/components/TournamentGrid";
+import { TournamentGrid } from "@/features/tournaments/ui/components/shared/TournamentGrid";
 import { Button } from "@/components/ui/button";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
-import { useGetOrgTournamentsQuery, useDeleteTournamentMutation } from "../../hooks";
+import { useGetOrgTournamentsQuery, useDeleteTournamentMutation } from "@/features/tournaments/hooks";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { skipToken } from "@tanstack/react-query";
 
 // Extracted sub-components
-import { TournamentControlBar } from "../components/tournaments/TournamentControlBar";
+import { TournamentControlBar } from "@/features/tournaments/ui/components/tournaments/TournamentControlBar";
 import { ORG_ACCESS } from "@/features/organizer/lib/access";
 
 const OrganizerTournaments: React.FC = () => {
