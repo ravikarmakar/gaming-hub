@@ -85,7 +85,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
             transition={{ delay: index * 0.05 }}
         >
             <GlassCard
-                className="group h-full flex flex-col cursor-pointer"
+                className="group h-full flex flex-col cursor-pointer transition-all duration-500 hover:shadow-[0_0_40px_8px_rgba(147,51,234,0.15)] hover:border-purple-500/30 overflow-hidden"
                 onClick={(e) => handleCardClick(e)}
             >
                 {/* Event Hero */}
@@ -100,11 +100,13 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
                         onLoad={() => setIsLoaded(true)}
                         loading="lazy"
                         className={cn(
-                            "w-full h-full object-cover transition-all duration-700 group-hover:scale-110",
+                            "w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-1",
                             isLoaded ? "opacity-100 scale-100 blur-0" : "opacity-0 scale-105 blur-sm"
                         )}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B0C1A] via-transparent to-transparent opacity-60" />
+                    {/* Animated Shine Effect */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0B0C1A] via-[#0B0C1A]/20 to-transparent" />
 
                     {/* Status Overlay */}
                     <div className="absolute top-4 right-4 flex gap-2">

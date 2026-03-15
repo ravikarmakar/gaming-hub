@@ -211,13 +211,37 @@ export const useUpdateTeamScoreMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: tournamentApi.updateTeamScore,
-        onSuccess: (_, variables) => {
-            queryClient.invalidateQueries({ queryKey: tournamentKeys.leaderboard(variables.groupId) });
+        onMutate: async (variables) => {
+            const { groupId, teamId, stats } = variables;
+            await queryClient.cancelQueries({ queryKey: tournamentKeys.leaderboard(groupId) });
+            const previousLeaderboard = queryClient.getQueryData(tournamentKeys.leaderboard(groupId));
+
+            queryClient.setQueryData(tournamentKeys.leaderboard(groupId), (old: any) => {
+                if (!old) return old;
+                return {
+                    ...old,
+                    leaderboard: old.leaderboard?.map((entry: any) =>
+                        entry.teamId?._id === teamId || entry.teamId === teamId
+                            ? { ...entry, ...stats }
+                            : entry
+                    )
+                };
+            });
+
+            return { previousLeaderboard };
+        },
+        onError: (err, variables, context) => {
+            if (context?.previousLeaderboard) {
+                queryClient.setQueryData(tournamentKeys.leaderboard(variables.groupId), context.previousLeaderboard);
+            }
+            toast.error(handleApiError(err, "Failed to update team score"));
+        },
+        onSuccess: () => {
             toast.success("Team score updated");
         },
-        onError: (err) => {
-            toast.error(handleApiError(err, "Failed to update team score"));
-        }
+        onSettled: (_data, _error, variables) => {
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.leaderboard(variables.groupId) });
+        },
     });
 };
 
@@ -302,8 +326,37 @@ export const useLikeTournamentMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (eventId: string) => tournamentApi.toggleLike(eventId),
+        onMutate: async (eventId) => {
+            // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+            await queryClient.cancelQueries({ queryKey: tournamentKeys.details(eventId) });
+
+            // Snapshot the previous value
+            const previousTournament = queryClient.getQueryData(tournamentKeys.details(eventId));
+
+            // Optimistically update to the new value
+            queryClient.setQueryData(tournamentKeys.details(eventId), (old: any) => {
+                if (!old) return old;
+                // Since this is a toggle, we simulate the change
+                const isLiked = !old.isLiked;
+                return {
+                    ...old,
+                    isLiked,
+                    likes: isLiked ? (old.likes || 0) + 1 : Math.max(0, (old.likes || 1) - 1)
+                };
+            });
+
+            // Return a context object with the snapshotted value
+            return { previousTournament };
+        },
+        onError: (err, eventId, context) => {
+            // Rollback to the previous value if the mutation fails
+            if (context?.previousTournament) {
+                queryClient.setQueryData(tournamentKeys.details(eventId), context.previousTournament);
+            }
+            toast.error(handleApiError(err, "Failed to toggle like"));
+        },
         onSuccess: (data, eventId) => {
-            // Update the specific tournament details query cache immediately
+            // Update the specific tournament details query cache with official data
             queryClient.setQueryData(tournamentKeys.details(eventId), (oldData: any) => {
                 if (!oldData) return oldData;
                 return {
@@ -312,13 +365,11 @@ export const useLikeTournamentMutation = () => {
                     isLiked: data.isLiked
                 };
             });
-
-            // Still invalidate to be safe and sync with potential other changes
+        },
+        onSettled: (_data, _error, eventId) => {
+            // Always refetch after error or success to ensure we are in sync with the server
             queryClient.invalidateQueries({ queryKey: tournamentKeys.details(eventId) });
         },
-        onError: (err) => {
-            toast.error(handleApiError(err, "Failed to toggle like"));
-        }
     });
 };
 

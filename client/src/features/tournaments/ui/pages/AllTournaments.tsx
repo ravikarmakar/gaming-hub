@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
-import { Trophy, Search } from "lucide-react";
+import { Trophy, Search, Loader2 } from "lucide-react";
+import { useInView } from "react-intersection-observer";
 
 import {
     Select,
@@ -9,7 +10,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
-import { useGetTournamentsQuery } from "@/features/tournaments/hooks/useTournamentQueries";
+import { useGetInfiniteTournamentsQuery } from "@/features/tournaments/hooks/useTournamentQueries";
 import { GlassCard, SectionHeader } from "@/features/tournaments/ui/components/shared/ThemedComponents";
 import { TournamentGrid } from "@/features/tournaments/ui/components/shared/TournamentGrid";
 import { categoryOptions } from "@/features/tournaments/lib/constants";
@@ -28,14 +29,39 @@ const AllTournaments = () => {
         return () => clearTimeout(handler);
     }, [searchTerm]);
 
-    const { data: eventsData, isLoading } = useGetTournamentsQuery({
+    const { ref, inView } = useInView();
+
+    const { 
+        data: infiniteData, 
+        isLoading, 
+        isFetchingNextPage, 
+        hasNextPage, 
+        fetchNextPage 
+    } = useGetInfiniteTournamentsQuery({
         search: debouncedSearch || undefined,
         game: gameFilter !== "all" ? gameFilter : undefined,
         category: categoryFilter !== "all" ? categoryFilter : undefined,
-        limit: 100 // Loading a reasonable amount for the hub
+        limit: 12
     });
 
-    const events = eventsData?.data || [];
+    useEffect(() => {
+        if (inView && hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    const events = useMemo(() => {
+        return infiniteData?.pages.flatMap((page: any) => page.data || []) || [];
+    }, [infiniteData]);
+
+    const stats = useMemo(() => {
+        // Since we are paging, we might only show stats for loaded items unless backend provides totals
+        // For now, we'll calculate from loaded items.
+        return {
+            totalPrize: events.reduce((acc: number, e: any) => acc + (Number(e.prizePool) || 0), 0),
+            count: events.length
+        };
+    }, [events]);
 
     const uniqueGames = useMemo(() => {
         const games = new Set(events.map((e: any) => e.game));
@@ -67,12 +93,12 @@ const AllTournaments = () => {
                         <div className="text-right">
                             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Total Prize Pool</p>
                             <p className="text-3xl font-black text-white">
-                                ₹{events.reduce((acc: number, e: any) => acc + (Number(e.prizePool) || 0), 0).toLocaleString()}
+                                ₹{stats.totalPrize.toLocaleString()}
                             </p>
                         </div>
                         <div className="text-right">
                             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Active Arenas</p>
-                            <p className="text-3xl font-black text-white">{events.length}</p>
+                            <p className="text-3xl font-black text-white">{stats.count}</p>
                         </div>
                     </div>
                 </div>
@@ -138,7 +164,18 @@ const AllTournaments = () => {
                         ))}
                     </div>
                 ) : events.length > 0 ? (
-                    <TournamentGrid events={events} />
+                    <>
+                        <TournamentGrid events={events} />
+                        {/* Load More Trigger */}
+                        <div ref={ref} className="h-20 flex items-center justify-center mt-8">
+                            {isFetchingNextPage && (
+                                <div className="flex flex-col items-center gap-2">
+                                    <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Loading more arenas...</p>
+                                </div>
+                            )}
+                        </div>
+                    </>
                 ) : (
                     <div className="col-span-full py-20 text-center">
                         <div className="inline-block p-6 bg-white/5 rounded-full mb-6 italic text-gray-500">

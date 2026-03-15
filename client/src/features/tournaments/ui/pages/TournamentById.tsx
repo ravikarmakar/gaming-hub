@@ -5,21 +5,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { 
-    RegisteredTeamsList, 
     TournamentHeader, 
     TournamentQuickStats,
-    Roadmaps 
+    Roadmaps,
+    TournamentDetails
 } from "@/features/tournaments/ui/components";
-import TournamentDetails from "@/features/tournaments/ui/components/details/TournamentDetails";
 import {
-    useGetRoundsQuery,
-    useGetGroupsQuery,
-    useGetLeaderboardQuery,
     useGetTournamentDetailsQuery,
     useGetRegistrationStatusQuery,
-    useRegisterTournamentMutation
+    useRegisterTournamentMutation,
+    useGetRoundsQuery,
+    useGetGroupsQuery,
+    useGetLeaderboardQuery
 } from "@/features/tournaments/hooks";
-import { GroupLeaderboardTable } from "@/features/tournaments/ui/components/management/groups/GroupLeaderboardTable";
+
+// Extracted Tab Components
+import { TeamsTab } from "@/features/tournaments/ui/components/details/TeamsTab";
+import { ResultsTab } from "@/features/tournaments/ui/components/details/ResultsTab";
+import { RulesTab } from "@/features/tournaments/ui/components/details/RulesTab";
+import { PointsTab } from "@/features/tournaments/ui/components/details/PointsTab";
+import { ChatTab } from "@/features/tournaments/ui/components/details/ChatTab";
+import { useState } from "react";
 
 
 const TABS_CONFIG = [
@@ -33,28 +39,34 @@ const TABS_CONFIG = [
 ];
 
 const TournamentById = () => {
-    const { id } = useParams<{ id: string }>();
+    const { id = "" } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { user } = useAuthStore();
-    const { data: eventDetails, isLoading } = useGetTournamentDetailsQuery(id || "");
+    const [activeTab, setActiveTab] = useState("details");
+
+    const { data: eventDetails, isLoading } = useGetTournamentDetailsQuery(id);
 
     const teamIdStr = typeof user?.teamId === 'string' ? user.teamId : user?.teamId?._id;
-    const { data: regData } = useGetRegistrationStatusQuery(id || "", teamIdStr || "");
+    const { data: regData } = useGetRegistrationStatusQuery(id, teamIdStr || "");
     const { mutateAsync: registerTournament } = useRegisterTournamentMutation();
 
     const regStatus = regData?.status || "none";
 
-    // Final Results State
-    const { data: rounds = [] } = useGetRoundsQuery(id || "");
+    // Optimized: Only fetch results/leaderboard data if the results tab is active or tournament is completed
+    const isCompleted = eventDetails?.eventProgress === 'completed';
+    const shouldFetchResults = activeTab === 'results' || isCompleted;
+
+    const { data: rounds = [] } = useGetRoundsQuery(id);
     const lastRound = rounds[rounds.length - 1];
 
-    const { data: groupsData } = useGetGroupsQuery(lastRound?._id || "", 1, 20);
-    const groups = groupsData?.groups || [];
-    const grandFinaleGroup = groups[0];
+    const { data: groupsData } = useGetGroupsQuery(lastRound?._id || "", 1, 1, "", "", "", {
+        enabled: !!lastRound?._id && shouldFetchResults
+    });
+    const grandFinaleGroup = groupsData?.groups?.[0];
 
-    const { data: leaderboard } = useGetLeaderboardQuery(grandFinaleGroup?._id || "");
-
-    // useEffect for registration check is now handled by TanStack Query hook
+    const { data: leaderboard } = useGetLeaderboardQuery(grandFinaleGroup?._id || "", {
+        enabled: !!grandFinaleGroup?._id && shouldFetchResults
+    });
 
     if (isLoading) {
         return (
@@ -74,18 +86,10 @@ const TournamentById = () => {
     );
 
     const handleRegister = async () => {
-        if (!id) return;
-
         try {
             await registerTournament(id);
-            // Success is likely handled by the mutation's internal onSuccess (invalidate queries)
-            // But we can add a local success message if needed, though usually standard UI does this.
         } catch (error: any) {
             console.error("Registration failed:", error);
-            // Many apps use a global toast system. I'll use a standard alert if no toast is detected, 
-            // but usually, shadcn/ui projects have a toast hook.
-            // I'll check if toast is available or just rely on the mutation error state if the UI handles it.
-            // Looking at the imports, I don't see a toast import yet.
         }
     };
 
@@ -120,13 +124,13 @@ const TournamentById = () => {
 
                     {/* Tabbed Intelligence & Engagement Module */}
                     <div className="pt-4 sm:pt-8 mt-4 sm:mt-8 overflow-hidden">
-                        <Tabs defaultValue="details" className="space-y-6 sm:space-y-8">
-                            <div className="relative">
-                                {/* Horizontal Scroll Gradient Fades */}
-                                <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-brand-black to-transparent z-10 pointer-events-none opacity-0 sm:hidden" />
-                                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-brand-black to-transparent z-10 pointer-events-none sm:hidden" />
+                        <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab} className="space-y-6 sm:space-y-8">
+                            <div className="relative group/tabs">
+                                {/* Horizontal Scroll Gradient Fades - Enhanced Visibility on Mobile */}
+                                <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-brand-black to-transparent z-10 pointer-events-none opacity-100 sm:opacity-0 group-focus-within/tabs:opacity-0 transition-opacity" />
+                                <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-brand-black to-transparent z-10 pointer-events-none opacity-100 sm:opacity-0 transition-opacity" />
 
-                                <TabsList className="bg-transparent border-b border-white/10 p-0 h-auto rounded-none flex flex-nowrap overflow-x-auto scrollbar-hide justify-start w-full gap-8">
+                                <TabsList className="bg-transparent border-b border-white/10 p-0 h-auto rounded-none flex flex-nowrap overflow-x-auto scrollbar-hide justify-start w-full gap-8 relative px-4 sm:px-0">
                                     {TABS_CONFIG.filter(tab => {
                                         if (tab.value === 'roadmap' && eventDetails.eventType === 'scrims') return false;
                                         return true;
@@ -152,7 +156,7 @@ const TournamentById = () => {
                                     <TabsContent key={tab.value} value={tab.value} className="m-0">
                                         <tab.Component
                                             eventDetails={eventDetails}
-                                            eventId={eventDetails._id}
+                                            eventId={id}
                                             leaderboard={leaderboard}
                                         />
                                     </TabsContent>
@@ -165,80 +169,5 @@ const TournamentById = () => {
         </div>
     );
 };
-
-function TeamsTab({ eventId, eventDetails }: { eventId: string; eventDetails: any }) {
-    return (
-        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-6">
-            <RegisteredTeamsList
-                eventId={eventId}
-                eventDetails={eventDetails}
-                showSearch={false}
-                showStats={false}
-            />
-        </div>
-    );
-}
-
-function ResultsTab({ leaderboard }: { leaderboard: any }) {
-    return (
-        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-            {leaderboard ? (
-                <GroupLeaderboardTable
-                    leaderboard={leaderboard}
-                    isResultsMode={false}
-                    tempResults={{}}
-                    handleResultChange={() => { }}
-                    activeRoundTab="main"
-                    openMergeModal={() => { }}
-                    isGrandFinale={true}
-                />
-            ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-white/5 rounded-3xl border border-dashed border-white/10">
-                    <div className="h-16 w-16 rounded-full bg-white/5 flex items-center justify-center text-gray-500 mb-2">
-                        <Trophy size={32} />
-                    </div>
-                    <h3 className="text-xl font-bold text-white uppercase tracking-widest">Awaiting Finalization</h3>
-                    <p className="text-gray-500 max-w-sm text-sm">Tournament results are being verified by the Arena Master. Final standings will be broadcasted shortly.</p>
-                </div>
-            )}
-        </div>
-    );
-}
-
-function RulesTab() {
-    return (
-        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-white/5 rounded-3xl border border-dashed border-white/10">
-                <Gavel size={48} className="text-gray-400 mb-2" />
-                <h3 className="text-xl font-bold text-white uppercase tracking-widest">Standard Protocol</h3>
-                <p className="text-gray-500 max-w-sm text-sm">The official ruleset for this tournament is currently being encrypted. Please refer to general platform guidelines in the meantime.</p>
-            </div>
-        </div>
-    );
-}
-
-function PointsTab() {
-    return (
-        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-white/5 rounded-3xl border border-dashed border-white/10">
-                <ListOrdered size={48} className="text-gray-400 mb-2" />
-                <h3 className="text-xl font-bold text-white uppercase tracking-widest">Points Encryption</h3>
-                <p className="text-gray-500 max-w-sm text-sm">Detailed point distribution mechanics for each round will be displayed here once the tournament commences.</p>
-            </div>
-        </div>
-    );
-}
-
-function ChatTab() {
-    return (
-        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-white/5 rounded-3xl border border-dashed border-white/10">
-                <MessageSquare size={48} className="text-gray-400 mb-2" />
-                <h3 className="text-xl font-bold text-white uppercase tracking-widest">Secure Comm-Link</h3>
-                <p className="text-gray-500 max-w-sm text-sm">End-to-end encrypted communication channel between combat units and command center will be established pre-match.</p>
-            </div>
-        </div>
-    );
-}
 
 export default TournamentById;

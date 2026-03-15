@@ -58,9 +58,15 @@ export const RegisteredTeamsList = ({
         }
     }, [event, activeTab]);
 
-    const registeredQuery = useGetInfiniteRegisteredTeamsQuery(eventId, debouncedSearch);
-    const invitedQuery = useGetInfiniteInvitedTeamsQuery(eventId, debouncedSearch);
-    const t1SpecialQuery = useGetInfiniteT1SpecialTeamsQuery(eventId, debouncedSearch);
+    const registeredQuery = useGetInfiniteRegisteredTeamsQuery(eventId, debouncedSearch, {
+        enabled: activeTab === "registered"
+    });
+    const invitedQuery = useGetInfiniteInvitedTeamsQuery(eventId, debouncedSearch, {
+        enabled: activeTab === "invited"
+    });
+    const t1SpecialQuery = useGetInfiniteT1SpecialTeamsQuery(eventId, debouncedSearch, {
+        enabled: activeTab === "t1-special"
+    });
 
     const activeQuery = activeTab === "registered" ? registeredQuery : activeTab === "invited" ? invitedQuery : t1SpecialQuery;
     const { ref, inView } = useInView();
@@ -74,11 +80,11 @@ export const RegisteredTeamsList = ({
 
     const allTeams = useMemo(() => {
         if (!activeQuery.data?.pages) return [];
-        return activeQuery.data.pages.flatMap((page) => page?.teams || []) || [];
+        return activeQuery.data.pages.flatMap((page: any) => page?.teams || []) || [];
     }, [activeQuery.data]);
 
     return (
-        <div className="flex flex-col" style={{ height: '700px', minWidth: '300px' }}>
+        <div className="flex flex-col min-h-[700px] w-full">
             <div className="p-6 border border-white/5 rounded-2xl space-y-6 bg-gray-900/40 backdrop-blur-sm shadow-xl mb-6">
                 <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
                     <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full md:w-auto">
