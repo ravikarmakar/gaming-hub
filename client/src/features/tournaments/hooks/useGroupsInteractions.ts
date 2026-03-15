@@ -3,8 +3,8 @@ import {
     useGetLeaderboardQuery,
     useUpdateGroupResultsMutation,
     useMergeTeamsToGroupMutation,
-    Group
 } from './';
+import { Group } from '../types';
 
 interface UseGroupsInteractionsProps {
     rounds: any[];
@@ -51,7 +51,7 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoad
 
         const isLeague = round?.isLeague || group?.isLeague;
         const totalMatch = isLeague
-            ? (rm ? rm * 3 : group?.totalMatch || 18)
+            ? (rm ? rm * 1.5 : group?.totalMatch || 18)
             : (rm || group?.totalMatch || 1);
 
         return {
@@ -99,24 +99,27 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoad
     }, []);
 
     useEffect(() => {
-        // Only initialize tempResults if we have a leaderboard AND
-        // (we just entered results mode OR we don't have results yet)
-        if (leaderboard?.teamScore && (isResultsMode || Object.keys(tempResults).length === 0)) {
-            const hasExistingData = Object.keys(tempResults).length > 0;
+        // 1. If NOT in results mode, keep tempResults empty to avoid leaking aggregate stats
+        if (!isResultsMode) {
+            if (Object.keys(tempResults).length > 0) {
+                setTempResults({});
+            }
+            return;
+        }
 
-            // If we are already in results mode and have data, don't overwrite it
-            // This prevents data loss when the leaderboard query re-fetches in the background
-            if (isResultsMode && hasExistingData) return;
-
+        // 2. If IN results mode AND tempResults is empty, initialize with 0s for a new match
+        if (leaderboard?.teamScore && Object.keys(tempResults).length === 0) {
             const newResults: Record<string, { kills: number, rank: number }> = {};
             leaderboard.teamScore.forEach(t => {
                 newResults[t.teamId._id] = {
-                    kills: isResultsMode ? 0 : (t.kills || 0),
-                    rank: isResultsMode ? 0 : (t.position || 0)
+                    kills: 0,
+                    rank: 0
                 };
             });
             setTempResults(newResults);
         }
+        // If results mode is ON and tempResults is NOT empty, we don't overwrite
+        // to preserve user input during background leaderboard refreshes.
     }, [leaderboard, isResultsMode]);
 
     const handleResultChange = useCallback((teamId: string, field: 'kills' | 'rank', value: number) => {
@@ -156,6 +159,7 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoad
             setIsSaving(false);
             setIsResultsMode(false);
             setSelectedPairing(null);
+            setTempResults({});
         } catch (error) {
             console.error(error);
             setIsSaving(false);

@@ -761,15 +761,25 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
       "title", "game", "description", "startDate", "registrationEndsAt",
       "eventEndAt", "prizePool", "category", "eventType", "prizeDistribution",
       "hasRoadmap", "roadmap", "hasInvitedTeams", "invitedTeams", "invitedTeamsRoadmap", "roadmaps", "registeredTeams",
-      "isPaid", "entryFee", "matchCount", "map", "invitedRoundMappings", "maxInvitedSlots"
+      "isPaid", "entryFee", "matchCount", "map", "invitedRoundMappings", "maxInvitedSlots",
+      "hasT1SpecialTeams", "t1SpecialRoadmap", "t1SpecialRoundMappings", "t1SpecialTeams"
     ];
 
     const updateData = {};
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
-        updateData[field] = req.body[field];
+        if (field === "hasT1SpecialTeams" || field === "hasRoadmap" || field === "hasInvitedTeams" || field === "isPaid") {
+          updateData[field] = String(req.body[field]) === 'true' || req.body[field] === true;
+        } else {
+          updateData[field] = req.body[field];
+        }
       }
     });
+
+    // Handle T1 Special flag naming mismatch (client: hasT1SpecialRoadmap -> server: hasT1SpecialTeams)
+    if (req.body.hasT1SpecialRoadmap !== undefined) {
+      updateData.hasT1SpecialTeams = String(req.body.hasT1SpecialRoadmap) === 'true';
+    }
 
     // Map 'status' from frontend to 'registrationStatus'
     if (req.body.status) {
@@ -789,7 +799,7 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
     }
 
     // Handle roadmaps consolidation in update
-    if (req.body.roadmap || req.body.invitedTeamsRoadmap) {
+    if (req.body.roadmap || req.body.invitedTeamsRoadmap || req.body.t1SpecialRoadmap) {
       const roadmaps = event.roadmaps ? [...event.roadmaps] : [];
 
       if (req.body.roadmap) {
@@ -810,9 +820,19 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
         } catch (e) { logger.error("Error parsing invitedTeamsRoadmap in updateEvent:", e); }
       }
 
+      if (req.body.t1SpecialRoadmap) {
+        try {
+          const data = typeof req.body.t1SpecialRoadmap === 'string' ? JSON.parse(req.body.t1SpecialRoadmap) : req.body.t1SpecialRoadmap;
+          const idx = roadmaps.findIndex(r => r.type === "t1-special");
+          if (idx !== -1) roadmaps[idx].data = data;
+          else roadmaps.push({ type: "t1-special", data });
+        } catch (e) { logger.error("Error parsing t1SpecialRoadmap in updateEvent:", e); }
+      }
+
       updateData.roadmaps = roadmaps;
       delete updateData.roadmap;
       delete updateData.invitedTeamsRoadmap;
+      delete updateData.t1SpecialRoadmap;
     }
 
     if (updateData.invitedTeams) {
@@ -871,8 +891,47 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
       }
     }
 
-    if (updateData.hasRoadmap !== undefined) updateData.hasRoadmap = String(updateData.hasRoadmap) === 'true';
-    if (updateData.hasInvitedTeams !== undefined) updateData.hasInvitedTeams = String(updateData.hasInvitedTeams) === 'true';
+    if (updateData.hasRoadmap !== undefined) {
+      updateData.hasRoadmap = String(updateData.hasRoadmap) === 'true';
+      if (!updateData.hasRoadmap) {
+        updateData.roadmap = [];
+        // Also remove from roadmaps array if present
+        if (updateData.roadmaps) {
+          updateData.roadmaps = updateData.roadmaps.filter(r => r.type !== "tournament");
+        } else if (event.roadmaps) {
+          updateData.roadmaps = event.roadmaps.filter(r => r.type !== "tournament");
+        }
+      }
+    }
+
+    if (updateData.hasInvitedTeams !== undefined) {
+      updateData.hasInvitedTeams = String(updateData.hasInvitedTeams) === 'true';
+      if (!updateData.hasInvitedTeams) {
+        updateData.invitedTeams = [];
+        updateData.invitedRoundMappings = [];
+        updateData.maxInvitedSlots = 0;
+        // Also remove from roadmaps array if present
+        if (updateData.roadmaps) {
+          updateData.roadmaps = updateData.roadmaps.filter(r => r.type !== "invitedTeams");
+        } else if (event.roadmaps) {
+          updateData.roadmaps = event.roadmaps.filter(r => r.type !== "invitedTeams");
+        }
+      }
+    }
+
+    if (updateData.hasT1SpecialTeams !== undefined) {
+      // hasT1SpecialTeams is already a boolean from earlier mapping
+      if (!updateData.hasT1SpecialTeams) {
+        updateData.t1SpecialTeams = [];
+        updateData.t1SpecialRoundMappings = [];
+        // Also remove from roadmaps array if present
+        if (updateData.roadmaps) {
+          updateData.roadmaps = updateData.roadmaps.filter(r => r.type !== "t1-special");
+        } else if (event.roadmaps) {
+          updateData.roadmaps = event.roadmaps.filter(r => r.type !== "t1-special");
+        }
+      }
+    }
     if (updateData.isPaid !== undefined) {
       updateData.isPaid = String(updateData.isPaid) === 'true';
     }

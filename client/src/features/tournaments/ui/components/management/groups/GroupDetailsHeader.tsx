@@ -25,8 +25,10 @@ interface GroupDetailsHeaderProps {
     onEditGroup: (group: Group) => void;
     onDeleteGroup: (group: Group) => void;
     isSubmitting: boolean;
+    isSubmitDisabled?: boolean;
     isLoading?: boolean;
     onChat?: (group: Group) => void;
+    totalMatch?: number;
 }
 
 export const GroupDetailsHeader = ({
@@ -49,8 +51,10 @@ export const GroupDetailsHeader = ({
     onEditGroup,
     onDeleteGroup,
     isSubmitting,
+    isSubmitDisabled,
     isLoading,
-    onChat
+    onChat,
+    totalMatch
 }: GroupDetailsHeaderProps) => {
 
     if (!currentGroup) return null;
@@ -88,11 +92,15 @@ export const GroupDetailsHeader = ({
                             <Users className="w-3 h-3 text-indigo-400" />
                             <span>{currentGroup.teams?.length || 0} Teams</span>
                         </div>
-                        <div className="h-3 w-px bg-white/10" />
-                        <div className="flex items-center gap-2 text-gray-500 font-bold uppercase tracking-widest text-[9px]">
-                            <Swords className="w-3 h-3 text-indigo-400" />
-                            <span>{currentGroup.matchesPlayed || 0}/{currentGroup.totalMatch || 0} Matches</span>
-                        </div>
+                        {!currentGroup.isLeague && (
+                            <>
+                                <div className="h-3 w-px bg-white/10" />
+                                <div className="flex items-center gap-2 text-gray-500 font-bold uppercase tracking-widest text-[9px]">
+                                    <Swords className="w-3 h-3 text-indigo-400" />
+                                    <span>{currentGroup.matchesPlayed || 0}/{totalMatch ?? currentGroup.totalMatch ?? 0} Matches</span>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
@@ -139,7 +147,7 @@ export const GroupDetailsHeader = ({
                             </Button>
                             <Button
                                 onClick={onSubmitResults}
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || isSubmitDisabled}
                                 className="h-9 px-6 bg-green-600 hover:bg-green-700 text-white font-bold uppercase tracking-wider text-[10px] rounded-lg transition-all flex items-center gap-1.5"
                             >
                                 {isSubmitting ? <Activity className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}

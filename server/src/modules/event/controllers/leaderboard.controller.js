@@ -346,7 +346,7 @@ export const updateGroupResults = async (req, res) => {
       // 🏆 Calculate effective match limit
       const roundMatchesPerGroup = group.roundId?.matchesPerGroup;
       const effectiveTotalMatch = group.isLeague 
-        ? (roundMatchesPerGroup ? roundMatchesPerGroup * 3 : (group.totalMatch || 18))
+        ? (roundMatchesPerGroup ? Math.round(roundMatchesPerGroup * 1.5) : (group.totalMatch || 18))
         : (roundMatchesPerGroup || group.totalMatch || 1);
 
       // 🚫 Block if the group is already fully completed
@@ -440,16 +440,34 @@ export const updateGroupResults = async (req, res) => {
 
       const qualifyingLimit = (group.roundId?.qualifyingTeams) || 0;
 
-      if (matchesPlayedCount >= effectiveTotalMatch) {
+      // 🏆 Determine if the group should be completed
+      // We check both matchesPlayedCount against effectiveTotalMatch AND 
+      // the status of individual pairings for league groups.
+      let shouldComplete = matchesPlayedCount >= effectiveTotalMatch;
+      
+      // Additional check for League: if all pairings have reached their budget, it's definitely done
+      if (group.isLeague && group.pairingMatches) {
+        const pairingBudget = Math.floor(effectiveTotalMatch / 3);
+        const allPairingsDone = (group.pairingMatches.AxB >= pairingBudget) && 
+                                (group.pairingMatches.BxC >= pairingBudget) && 
+                                (group.pairingMatches.AxC >= pairingBudget);
+        if (allPairingsDone) shouldComplete = true;
+      }
+
+      if (shouldComplete) {
         group.status = "completed";
         group.totalSelectedTeam = qualifyingLimit;
 
+        // Synchronize points logic with Leaderboard model (score + kills * killPoint)
+        const killPoint = pointSystem.killPoint || 1;
         leaderboard.teamScore.forEach(entry => {
-          entry.totalPoints = (entry.score || 0) + (entry.kills || 0);
+          entry.totalPoints = (entry.score || 0) + (entry.kills || 0) * killPoint;
         });
 
-        leaderboard.teamScore.sort((a, b) => b.totalPoints - a.totalPoints);
+        // Sort descending by totalPoints
+        leaderboard.teamScore.sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
 
+        // Mark qualified teams based on limit
         leaderboard.teamScore.forEach((entry, index) => {
           entry.isQualified = qualifyingLimit > 0 && index < qualifyingLimit;
         });

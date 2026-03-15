@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import toast from "react-hot-toast";
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -39,10 +39,12 @@ export default function TournamentDashboard() {
     const [isFocusMode, setIsFocusMode] = useState(false);
 
     // Reset tab if current tab becomes hidden (e.g. event becomes pending)
-    const canShowRounds = eventDetails?.eventProgress !== "pending";
-    if (canShowRounds === false && (activeTab === 'rounds' || activeTab === 'scrims')) {
-        setActiveTab('overview');
-    }
+    useEffect(() => {
+        const canShowRounds = eventDetails?.eventProgress !== "pending";
+        if (canShowRounds === false && (activeTab === 'rounds' || activeTab === 'scrims')) {
+            setActiveTab('overview');
+        }
+    }, [eventDetails?.eventProgress, activeTab]);
 
     if (!id) {
         return <div className="p-6 text-white">Invalid Tournament ID</div>;
@@ -74,7 +76,6 @@ export default function TournamentDashboard() {
         setIsStarting(true);
         try {
             await startEvent(id);
-            toast.success("Tournament started successfully");
             // Cache update is handled by mutation onSuccess
         } catch (error) {
             console.error("Failed to start tournament:", error);

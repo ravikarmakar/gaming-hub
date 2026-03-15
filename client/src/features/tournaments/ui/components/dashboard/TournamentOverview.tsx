@@ -95,7 +95,10 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
                                     <p className="text-sm font-bold text-gray-400">{stats.totalSlots - stats.joinedSlots} slots remaining</p>
                                 </div>
                             </div>
-                            <Progress value={stats.fillPercentage} className="h-2 bg-white/5" />
+                            <Progress
+                                value={stats.fillPercentage}
+                                className="h-2 bg-purple-900/30 [&>div]:bg-gradient-to-r [&>div]:from-purple-500 [&>div]:to-violet-600"
+                            />
                         </div>
                     </div>
                 </div>

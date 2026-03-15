@@ -71,6 +71,7 @@ export const RoundsManagerDialogs: React.FC<RoundsManagerDialogsProps> = ({
                 type={activeRoundTab}
                 roadmapIndex={actionRound?.roadmapIndex}
                 initialName={actionRound?.roundName}
+                onSuccess={setSelectedRoundId}
             />
             
             {actionRound && !actionRound.isPlaceholder && (

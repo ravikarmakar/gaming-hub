@@ -27,7 +27,8 @@ function isTeamInActivePairing(
     allTeamIds: string[],
     isLeague: boolean
 ): boolean {
-    if (!isLeague || !pairingType) return true; // No pairing selected or not league → show all
+    if (!isLeague) return true;
+    if (!pairingType) return false;
 
     // If subGroupTeamSets exists and is populated, use it
     if (subGroupTeamSets && Object.keys(subGroupTeamSets).length > 0) {

@@ -31,9 +31,11 @@ interface CreateRoundDialogProps {
     roadmapIndex?: number;
     initialName?: string;
     isScrim?: boolean;
+    onSuccess?: (roundId: string) => void;
 }
 
 const GAP_OPTIONS = [
+    { label: "0 Min", value: "0" },
     { label: "10 Min", value: "10" },
     { label: "15 Min", value: "15" },
     { label: "20 Min", value: "20" },
@@ -44,9 +46,8 @@ const GAP_OPTIONS = [
     { label: "2 Hours", value: "120" },
 ];
 
-const WINNER_OPTIONS = ["1", "2", "3", "4", "5", "6"];
 
-export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIndex, initialName, isScrim = false }: CreateRoundDialogProps) => {
+export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIndex, initialName, isScrim = false, onSuccess }: CreateRoundDialogProps) => {
     const { data: event } = useGetTournamentDetailsQuery(eventId);
     const [newRoundName, setNewRoundName] = useState(initialName || "");
     const [newStartDate, setNewStartDate] = useState("");
@@ -110,7 +111,7 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
         }
 
         try {
-            await createRound({
+            const result = await createRound({
                 eventId,
                 params: {
                     roundName: newRoundName,
@@ -127,6 +128,11 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
                     roadmapIndex
                 }
             });
+
+            if (result?._id && onSuccess) {
+                onSuccess(result._id);
+            }
+
             onOpenChange(false);
             setNewStartDate("");
             setNewDailyStartTime("13:00");
@@ -143,12 +149,24 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
         }
     };
 
-    // Auto-sync end time for scrims if needed
+    const [showTimeWindow, setShowTimeWindow] = useState(true);
+
+    // Auto-sync end time and gap for single match modes
     useEffect(() => {
-        if (isScrim && newDailyStartTime) {
+        if (!showTimeWindow && newDailyStartTime) {
             setNewDailyEndTime(newDailyStartTime);
+            setNewGapMinutes(0);
         }
-    }, [isScrim, newDailyStartTime]);
+    }, [showTimeWindow, newDailyStartTime]);
+
+    // Derived logic for display, but now primarily controlled by the toggle
+    // We only auto-toggle it when the dialog first opens to avoid overriding manual user choices
+    useEffect(() => {
+        if (open) {
+            const isAutoSingle = isLeague || isScrim || /grand (final|finale)/i.test(newRoundName);
+            setShowTimeWindow(!isAutoSingle);
+        }
+    }, [open]); // Only run on open
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -175,7 +193,7 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
                     </div>
                 </DialogHeader>
 
-                <div className="px-6 pb-6">
+                <div className="px-6 pb-6 shadow-inner">
                     <AnimatePresence mode="wait">
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
@@ -183,52 +201,77 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
                             exit={{ opacity: 0, y: -10 }}
                             className="space-y-4"
                         >
+                            {/* Scheduling Mode Toggle */}
+                            <div className="p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label className="text-[10px] font-black uppercase text-white tracking-widest flex items-center gap-1.5">
+                                        <Clock className="w-3 h-3 text-indigo-400" />
+                                        Scheduling Mode
+                                    </Label>
+                                    <p className="text-[8px] text-indigo-200/40 font-medium">{showTimeWindow ? "Daily Time Window (Start to End)" : "Single Match Fixed Time"}</p>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setShowTimeWindow(!showTimeWindow)}
+                                    className={`h-7 px-3 text-[9px] font-black uppercase transition-all duration-300 ${showTimeWindow ? 'border-indigo-500/20 text-indigo-400' : 'bg-indigo-600 border-none shadow-lg shadow-indigo-600/20 text-white'}`}
+                                >
+                                    {showTimeWindow ? "Standard" : "Single Match"}
+                                </Button>
+                            </div>
+
                             {/* Match Date */}
                             <div className="space-y-1.5">
                                 <Label className="text-[9px] uppercase font-bold text-purple-200/40 tracking-wider">
                                     Match Date
                                 </Label>
                                 <div className="relative group">
-                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-500/50 group-focus-within:text-purple-400 transition-colors" />
+                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-400 transition-colors pointer-events-none" />
                                     <Input
                                         type="date"
                                         min={today}
                                         value={newStartDate}
                                         onChange={(e) => setNewStartDate(e.target.value)}
-                                        className="pl-9 h-10 text-xs bg-white/5 border-white/10 focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg text-white"
+                                        onKeyDown={(e) => e.preventDefault()}
+                                        onClick={(e) => e.currentTarget.showPicker()}
+                                        className="pl-9 h-10 text-xs bg-white/5 border-white/10 focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg text-white [color-scheme:dark] cursor-pointer"
                                     />
                                 </div>
                             </div>
 
                             {/* Daily Schedule Grid */}
-                            <div className={isScrim ? "space-y-4" : "grid grid-cols-2 gap-4"}>
+                            <div className={!showTimeWindow ? "space-y-4" : "grid grid-cols-2 gap-4"}>
                                 <div className="space-y-1.5">
                                     <Label className="text-[9px] uppercase font-bold text-purple-200/40 tracking-wider">
-                                        {isScrim ? "Match Start Time" : "Daily Start"}
+                                        {!showTimeWindow ? "Match Start Time" : "Daily Start"}
                                     </Label>
                                     <div className="relative group">
-                                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-500/50 group-focus-within:text-purple-400 transition-colors" />
+                                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-400 transition-colors pointer-events-none" />
                                         <Input
                                             type="time"
                                             value={newDailyStartTime}
                                             onChange={(e) => setNewDailyStartTime(e.target.value)}
-                                            className="pl-9 h-10 text-xs bg-white/5 border-white/10 focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg text-white"
+                                            onKeyDown={(e) => e.preventDefault()}
+                                            onClick={(e) => e.currentTarget.showPicker()}
+                                            className="pl-9 h-10 text-xs bg-white/5 border-white/10 focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg text-white [color-scheme:dark] cursor-pointer"
                                         />
                                     </div>
                                 </div>
                                 
-                                {!isScrim && (
+                                {showTimeWindow && (
                                     <div className="space-y-1.5">
                                         <Label className="text-[9px] uppercase font-bold text-purple-200/40 tracking-wider">
                                             Daily End
                                         </Label>
                                         <div className="relative group">
-                                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-500/50 group-focus-within:text-purple-400 transition-colors" />
+                                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-400 transition-colors pointer-events-none" />
                                             <Input
                                                 type="time"
                                                 value={newDailyEndTime}
                                                 onChange={(e) => setNewDailyEndTime(e.target.value)}
-                                                className="pl-9 h-10 text-xs bg-white/5 border-white/10 focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg text-white"
+                                                onKeyDown={(e) => e.preventDefault()}
+                                                onClick={(e) => e.currentTarget.showPicker()}
+                                                className="pl-9 h-10 text-xs bg-white/5 border-white/10 focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg text-white [color-scheme:dark] cursor-pointer"
                                             />
                                         </div>
                                     </div>
@@ -236,8 +279,8 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
                             </div>
 
                             {/* Gap and Matches */}
-                            <div className={isScrim ? "space-y-4" : "grid grid-cols-2 gap-4"}>
-                                {!isScrim && (
+                            <div className={!showTimeWindow ? "space-y-4" : "grid grid-cols-2 gap-4"}>
+                                {showTimeWindow && (
                                     <div className="space-y-1.5">
                                         <Label className="text-[9px] uppercase font-bold text-purple-200/40 tracking-wider">
                                             Match Gap
@@ -267,7 +310,7 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
                                         Matches Count
                                     </Label>
                                     <div className="relative group">
-                                        <Trophy className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-500/50 group-focus-within:text-purple-400 transition-colors" />
+                                        <Trophy className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-400 transition-colors" />
                                         <Input
                                             type="number"
                                             min="1"
@@ -387,7 +430,7 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
                                         </div>
                                     </SelectTrigger>
                                     <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
-                                        {WINNER_OPTIONS.map((val) => (
+                                        {(isLeague ? ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"] : ["1", "2", "3", "4", "5", "6"]).map((val) => (
                                             <SelectItem key={val} value={val}>
                                                 {val} {parseInt(val) === 1 ? 'Winner' : 'Winners'}
                                             </SelectItem>

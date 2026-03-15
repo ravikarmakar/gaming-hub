@@ -9,13 +9,25 @@ interface LeaguePairingSelectorProps {
 
 import { PAIRING_CONFIG } from "@/features/tournaments/lib/constants";
 
-export const LeaguePairingSelector = ({ 
-    selectedPairing, 
-    onPairingChange, 
-    pairingMatches, 
-    effectiveTotalMatch 
+export const LeaguePairingSelector = ({
+    selectedPairing,
+    onPairingChange,
+    pairingMatches,
+    effectiveTotalMatch
 }: LeaguePairingSelectorProps) => {
+    const totalTeamBudget = Math.floor(effectiveTotalMatch / 1.5);
     const totalPossiblePerPair = Math.max(1, Math.floor(effectiveTotalMatch / 3));
+
+    // Calculate cumulative matches played for each sub-group
+    const matchesA = (pairingMatches?.['AxB'] || 0) + (pairingMatches?.['AxC'] || 0);
+    const matchesB = (pairingMatches?.['AxB'] || 0) + (pairingMatches?.['BxC'] || 0);
+    const matchesC = (pairingMatches?.['BxC'] || 0) + (pairingMatches?.['AxC'] || 0);
+
+    const subGroupProgress = {
+        A: matchesA,
+        B: matchesB,
+        C: matchesC
+    };
 
     return (
         <div className="p-2 bg-black/30 border border-white/10 rounded-xl">
@@ -23,12 +35,19 @@ export const LeaguePairingSelector = ({
                 <Swords className="w-3 h-3 text-amber-400" />
                 Select match pairing to submit — only that pairing's 12 teams will be scored
             </p>
-            
+
             <div className="grid grid-cols-3 gap-2">
-                {PAIRING_CONFIG.map(({ key, label, color }) => {
+                {PAIRING_CONFIG.map(({ key, color }) => {
                     const isActive = selectedPairing === key;
                     const matchesPlayed = pairingMatches?.[key] || 0;
                     const isFull = matchesPlayed >= totalPossiblePerPair;
+
+                    // Derive sub-group labels from key (e.g. 'AxB' -> A and B)
+                    const [group1, group2] = key.split('x');
+                    const progress1 = subGroupProgress[group1 as keyof typeof subGroupProgress] || 0;
+                    const progress2 = subGroupProgress[group2 as keyof typeof subGroupProgress] || 0;
+
+                    const dynamicLabel = `Group ${group1}(${progress1}/${totalTeamBudget})x${group2}(${progress2}/${totalTeamBudget})`;
 
                     const colorStyles = {
                         blue: isActive
@@ -47,12 +66,12 @@ export const LeaguePairingSelector = ({
                             key={key}
                             onClick={() => onPairingChange(isActive ? null : key)}
                             disabled={isFull}
-                            className={`relative px-3 py-1.5 rounded-lg border text-xs font-black uppercase tracking-wider transition-all duration-200 ${colorStyles} ${isFull ? 'opacity-40 cursor-not-allowed' : ''}`}
+                            className={`relative px-3 py-1.5 rounded-lg border text-xs font-black tracking-wider transition-all duration-200 ${colorStyles} ${isFull ? 'opacity-40 cursor-not-allowed' : ''}`}
                         >
                             <div className="text-[9px] opacity-60 mb-0.5">
                                 {matchesPlayed}/{totalPossiblePerPair}
                             </div>
-                            <div className="text-[10px]">{label}</div>
+                            <div className="text-[9px] leading-tight">{dynamicLabel}</div>
                             {isActive && (
                                 <span className="absolute top-1 right-1.5 text-[8px] font-black uppercase tracking-widest opacity-80 z-10">
                                     ✓
@@ -67,7 +86,7 @@ export const LeaguePairingSelector = ({
                     );
                 })}
             </div>
-            
+
             {selectedPairing && (
                 <p className="text-[10px] text-green-400 mt-2 font-bold px-1">
                     ✓ Pairing selected — enter results below for those 12 teams

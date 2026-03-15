@@ -61,7 +61,7 @@ export const useStartTournamentMutation = () => {
             // Still invalidate to be safe, but setQueryData provides immediate UI update
             queryClient.invalidateQueries({ queryKey: tournamentKeys.details(eventId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
-            toast.success("Event started");
+            toast.success("Tournament started successfully");
         },
         onError: (err) => {
             toast.error(handleApiError(err, "Failed to start event"));

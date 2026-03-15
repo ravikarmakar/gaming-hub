@@ -105,7 +105,8 @@ export const groupDetails = async (req, res) => {
 // ⚡ High-Performance Batch Group Creation
 export const createGroups = async (req, res) => {
   try {
-    const { roundId, totalMatch = 1, matchTime, eventId } = req.body;
+    const { roundId, matchTime, eventId } = req.body;
+    const bodyTotalMatch = req.body.totalMatch;
 
     if (!roundId || !eventId) {
       return res.status(400).json({ message: "Round ID and Event ID are required!" });
@@ -266,8 +267,8 @@ export const createGroups = async (req, res) => {
       // For league groups, totalMatch is matches PER PAIRING x 3
       // e.g. if matchesPerGroup is 6, total matches = 18 (6 AxB + 6 BxC + 6 AxC)
       const computedTotalMatch = isLeague
-        ? (round.matchesPerGroup ? round.matchesPerGroup * 3 : 18)
-        : totalMatch;
+        ? (round.matchesPerGroup ? round.matchesPerGroup * 1.5 : 18)
+        : (bodyTotalMatch ?? round.matchesPerGroup ?? 1);
 
       // 🏆 For league groups: divide teams into 3 equal sub-groups (A, B, C)
       // These define AxB/BxC/AxC pairing. Each sub-group plays against the other two.
@@ -346,7 +347,6 @@ export const createGroups = async (req, res) => {
           group.matchTime = new Date(currentMatchTime);
         }
         // Apply other defaults
-        group.totalMatch = round.matchesPerGroup || group.totalMatch;
         group.totalSelectedTeam = round.qualifyingTeams || 1;
       });
     }
@@ -493,7 +493,7 @@ export const createSingleGroup = async (req, res) => {
         roundId,
         groupName: finalGroupName,
         matchTime: matchTime || new Date(Date.now() + 24 * 60 * 60 * 1000),
-        totalMatch: round.matchesPerGroup || 1,
+        totalMatch: round.isLeague ? (round.matchesPerGroup * 1.5 || 18) : (round.matchesPerGroup || 1),
         totalSelectedTeam: round.qualifyingTeams || 1,
         teams: [],
       }], { session });

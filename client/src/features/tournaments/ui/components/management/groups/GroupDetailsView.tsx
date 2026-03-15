@@ -59,6 +59,7 @@ export const GroupDetailsView = ({
     hasPreviousGroup,
     openEditModal,
     openDeleteModal,
+    openChatModal,
     currentGroupIndex,
     totalGroupsCount,
     isLoading,
@@ -124,7 +125,10 @@ export const GroupDetailsView = ({
                 onEditGroup={openEditModal}
                 onDeleteGroup={openDeleteModal}
                 isSubmitting={isSaving}
+                isSubmitDisabled={currentGroup.isLeague && !selectedPairing}
                 isLoading={isLoading}
+                onChat={openChatModal}
+                totalMatch={effectiveTotalMatch}
             />
 
             {currentGroup.isLeague && isResultsMode && (

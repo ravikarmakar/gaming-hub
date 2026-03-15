@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, Layers, Trophy } from "lucide-react";
+import { Loader2, Layers, Trophy, Clock, Calendar } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -36,7 +36,6 @@ interface EditRoundDialogProps {
     onOpenChange: (open: boolean) => void;
 }
 
-const WINNER_OPTIONS = ["1", "2", "3", "4", "5", "6"];
 
 export const EditRoundDialog = ({ 
     roundId, 
@@ -64,7 +63,8 @@ export const EditRoundDialog = ({
     const [groupSize, setGroupSize] = useState(initialGroupSize);
     const [isLeague, setIsLeague] = useState(initialIsLeague);
     const [leaguePairingType, setLeaguePairingType] = useState(initialLeaguePairingType);
-    
+    const [showTimeWindow, setShowTimeWindow] = useState(true);
+
     const { mutateAsync: updateRound, isPending } = useUpdateRoundMutation();
 
     useEffect(() => {
@@ -79,8 +79,20 @@ export const EditRoundDialog = ({
             setGroupSize(initialGroupSize);
             setIsLeague(initialIsLeague);
             setLeaguePairingType(initialLeaguePairingType);
+
+            // Initialize toggle based on data
+            const isSingle = initialDailyStartTime === initialDailyEndTime && initialGapMinutes === 0;
+            setShowTimeWindow(!isSingle);
         }
     }, [initialName, initialQualifyingTeams, initialMatchesPerGroup, initialStartTime, initialDailyStartTime, initialDailyEndTime, initialGapMinutes, initialGroupSize, initialIsLeague, initialLeaguePairingType, open]);
+
+    // Auto-sync for single match modes
+    useEffect(() => {
+        if (!showTimeWindow && dailyStartTime) {
+            setDailyEndTime(dailyStartTime);
+            setGapMinutes(0);
+        }
+    }, [showTimeWindow, dailyStartTime]);
 
     const handleSave = async () => {
         if (!editRoundName.trim()) {
@@ -129,6 +141,25 @@ export const EditRoundDialog = ({
                         />
                     </div>
 
+                    {/* Scheduling Mode Toggle */}
+                    <div className="p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-between">
+                        <div className="space-y-0.5">
+                            <label className="text-[10px] font-black uppercase text-white tracking-widest pl-1 flex items-center gap-1.5">
+                                <Clock className="w-3 h-3 text-indigo-400" />
+                                Scheduling Mode
+                            </label>
+                            <p className="text-[8px] text-indigo-200/40 font-medium">{showTimeWindow ? "Daily Time Window (Start to End)" : "Single Match Fixed Time"}</p>
+                        </div>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowTimeWindow(!showTimeWindow)}
+                            className={`h-7 px-3 text-[9px] font-black uppercase transition-all duration-300 ${showTimeWindow ? 'border-indigo-500/20 text-indigo-400' : 'bg-indigo-600 border-none shadow-lg shadow-indigo-600/20 text-white'}`}
+                        >
+                            {showTimeWindow ? "Standard" : "Single Match"}
+                        </Button>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase text-purple-200/40 tracking-widest pl-1 flex items-center gap-2">
@@ -143,7 +174,7 @@ export const EditRoundDialog = ({
                                     <SelectValue placeholder="Select qualifiers" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
-                                    {WINNER_OPTIONS.map((val) => (
+                                    {(isLeague ? ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"] : ["1", "2", "3", "4", "5", "6"]).map((val) => (
                                         <SelectItem key={val} value={val} className="focus:bg-purple-500/20 focus:text-white transition-colors">
                                             {val} {parseInt(val) === 1 ? 'Winner' : 'Winners'}
                                         </SelectItem>
@@ -151,61 +182,79 @@ export const EditRoundDialog = ({
                                 </SelectContent>
                             </Select>
                         </div>
-
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase text-purple-200/40 tracking-widest pl-1">Matches</label>
-                            <Input
-                                type="number"
-                                value={matchesPerGroup}
-                                onChange={(e) => setMatchesPerGroup(parseInt(e.target.value) || 1)}
-                                className="bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg h-11 text-sm"
-                                min={1}
-                            />
+                            <div className="relative group">
+                                <Trophy className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-400 transition-colors" />
+                                <Input
+                                    type="number"
+                                    value={matchesPerGroup}
+                                    onChange={(e) => setMatchesPerGroup(parseInt(e.target.value) || 1)}
+                                    className="pl-9 bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg h-11 text-sm"
+                                    min={1}
+                                />
+                            </div>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase text-purple-200/40 tracking-widest pl-1">Match Date</label>
-                            <Input
-                                type="date"
-                                value={startTime}
-                                onChange={(e) => setStartTime(e.target.value)}
-                                className="bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg h-11 text-sm"
-                            />
+                            <div className="relative group">
+                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-400 transition-colors pointer-events-none" />
+                                <Input
+                                    type="date"
+                                    value={startTime}
+                                    onChange={(e) => setStartTime(e.target.value)}
+                                    onClick={(e) => e.currentTarget.showPicker()}
+                                    className="pl-9 bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg h-11 text-sm [color-scheme:dark] cursor-pointer"
+                                />
+                            </div>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-purple-200/40 tracking-widest pl-1">Match Gap (Min)</label>
-                            <Input
-                                type="number"
-                                value={gapMinutes}
-                                onChange={(e) => setGapMinutes(parseInt(e.target.value) || 0)}
-                                className="bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg h-11 text-sm"
-                                min={0}
-                            />
+                            <label className="text-[10px] font-black uppercase text-purple-200/40 tracking-widest pl-1">
+                                {!showTimeWindow ? "Match Start Time" : "Daily Start"}
+                            </label>
+                            <div className="relative group">
+                                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-400 transition-colors pointer-events-none" />
+                                <Input
+                                    type="time"
+                                    value={dailyStartTime}
+                                    onChange={(e) => setDailyStartTime(e.target.value)}
+                                    onClick={(e) => e.currentTarget.showPicker()}
+                                    className="pl-9 bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg h-11 text-sm [color-scheme:dark] cursor-pointer"
+                                />
+                            </div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-purple-200/40 tracking-widest pl-1">Daily Start</label>
-                            <Input
-                                type="time"
-                                value={dailyStartTime}
-                                onChange={(e) => setDailyStartTime(e.target.value)}
-                                className="bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg h-11 text-sm"
-                            />
+                    {showTimeWindow && (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-purple-200/40 tracking-widest pl-1">Daily End</label>
+                                <div className="relative group">
+                                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-400 transition-colors pointer-events-none" />
+                                    <Input
+                                        type="time"
+                                        value={dailyEndTime}
+                                        onChange={(e) => setDailyEndTime(e.target.value)}
+                                        onClick={(e) => e.currentTarget.showPicker()}
+                                        className="pl-9 bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg h-11 text-sm [color-scheme:dark] cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-purple-200/40 tracking-widest pl-1">Match Gap (Min)</label>
+                                <Input
+                                    type="number"
+                                    value={gapMinutes}
+                                    onChange={(e) => setGapMinutes(parseInt(e.target.value) || 0)}
+                                    className="bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg h-11 text-sm"
+                                    min={0}
+                                />
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-purple-200/40 tracking-widest pl-1">Daily End</label>
-                            <Input
-                                type="time"
-                                value={dailyEndTime}
-                                onChange={(e) => setDailyEndTime(e.target.value)}
-                                className="bg-white/5 border-white/10 text-white focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg h-11 text-sm"
-                            />
-                        </div>
-                    </div>
+                    )}
 
                     <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 flex items-start gap-3">
                         <Trophy className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
