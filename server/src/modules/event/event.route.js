@@ -19,9 +19,10 @@ import {
   fetchTournamentsByTeam,
   fetchInvitedTeams,
   fetchT1SpecialTeams,
+  toggleLikeEvent,
 } from "./event.controller.js";
 
-import { isAuthenticated } from "../../shared/middleware/auth.middleware.js";
+import { isAuthenticated, optionalAuthenticate } from "../../shared/middleware/auth.middleware.js";
 import { cache } from "../../shared/middleware/cache.middleware.js";
 
 const router = express.Router();
@@ -29,7 +30,7 @@ const router = express.Router();
 // Public routes
 router.get("/all-events", cache(300), fetchAllEvents);
 router.get("/org-events/:orgId", cache(300), fetchEventByOrg);
-router.get("/event-details/:eventId", cache(300), fetchEventDetailsById);
+router.get("/event-details/:eventId", optionalAuthenticate, cache(300), fetchEventDetailsById);
 
 // Protected routes (RBAC handled by authorize)
 router.post("/create-event", isAuthenticated, authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), upload.single("image"), createEvent);
@@ -46,5 +47,6 @@ router.delete("/:eventId", isAuthenticated, authorize(Scopes.EVENT, [Roles.ORG.O
 router.patch("/close-registration/:eventId", isAuthenticated, authorize(Scopes.EVENT, [Roles.ORG.OWNER, Roles.ORG.MANAGER], { parentScope: Scopes.ORG, attachDoc: true }), closeRegistration);
 router.post("/:eventId/start", isAuthenticated, authorize(Scopes.EVENT, [Roles.ORG.OWNER, Roles.ORG.MANAGER], { parentScope: Scopes.ORG, attachDoc: true }), startEvent);
 router.post("/:eventId/finish", isAuthenticated, authorize(Scopes.EVENT, [Roles.ORG.OWNER, Roles.ORG.MANAGER], { parentScope: Scopes.ORG, attachDoc: true }), finishEvent);
+router.post("/:eventId/like", isAuthenticated, toggleLikeEvent);
 
 export default router;

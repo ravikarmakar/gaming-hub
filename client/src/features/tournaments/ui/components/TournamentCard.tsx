@@ -21,8 +21,8 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import { GlassCard, NeonBadge } from "./ThemedComponents";
-import { EVENT_ROUTES } from "@/features/events/lib";
+import { GlassCard, NeonBadge } from "../../../tournaments/ui/components/ThemedComponents";
+import { TOURNAMENT_ROUTES } from "../../lib/routes";
 import { Tournament } from "@/features/tournaments/types";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { cn, formatDate, formatCurrency } from "@/lib/utils";
@@ -60,7 +60,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
         if (onButtonClick) {
             onButtonClick(event._id);
         } else {
-            navigate(`${EVENT_ROUTES.TOURNAMENTS}/${event._id}`);
+            navigate(`${TOURNAMENT_ROUTES.TOURNAMENTS}/${event._id}`);
         }
     };
 
@@ -196,7 +196,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
                             <div className="flex flex-col gap-1.5">
                                 <p className="text-lg font-black text-white tracking-tight">{event.joinedSlots || 0}/{event.maxSlots}</p>
                                 <Progress
-                                    value={Math.min(((event.joinedSlots || 0) / event.maxSlots) * 100, 100)}
+                                    value={event.maxSlots > 0 ? Math.min(((event.joinedSlots || 0) / event.maxSlots) * 100, 100) : 0}
                                     className="h-1 bg-white/10"
                                     indicatorClassName="bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"
                                 />

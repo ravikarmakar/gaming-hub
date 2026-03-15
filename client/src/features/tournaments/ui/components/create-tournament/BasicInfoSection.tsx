@@ -6,12 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-import { GlassCard, SectionHeader } from "@/features/events/ui/components/ThemedComponents";
-import { categoryOptions, eventTypeOptions, registrationModeOptions, EventFormValues, GAMES_MAPS } from "@/features/events/lib";
+import { GlassCard, SectionHeader } from "@/features/tournaments/ui/components/ThemedComponents";
+import { categoryOptions, tournamentTypeOptions, registrationModeOptions, TournamentFormValues, GAMES_MAPS } from "../../../lib";
 import { Category, RegistrationMode } from "../../../types";
 
 export const BasicInfoSection = () => {
-    const { register, watch, setValue, control, formState: { errors } } = useFormContext<EventFormValues>();
+    const { register, watch, setValue, control, formState: { errors } } = useFormContext<TournamentFormValues>();
     const isPaid = watch("isPaid");
 
     return (
@@ -81,12 +81,12 @@ export const BasicInfoSection = () => {
 
                 <div className="space-y-1">
                     <Label className="text-[9px] font-black text-gray-500 uppercase tracking-widest pl-1">Type</Label>
-                    <Select value={watch("eventType")} onValueChange={(val) => setValue("eventType", val as EventFormValues["eventType"])}>
+                    <Select value={watch("eventType")} onValueChange={(val) => setValue("eventType", val as TournamentFormValues["eventType"])}>
                         <SelectTrigger className="bg-white/5 border-white/10 h-9 rounded-lg text-xs">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
-                            {eventTypeOptions.map((type) => (
+                            {tournamentTypeOptions.map((type) => (
                                 <SelectItem key={type.value} value={type.value} className="text-xs">
                                     {type.label}
                                 </SelectItem>

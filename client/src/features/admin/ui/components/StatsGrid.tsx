@@ -1,5 +1,5 @@
 import { Users, Trophy, Building2, Activity, Zap } from "lucide-react";
-import { MetricCard } from "@/features/events/ui/components/ThemedComponents";
+import { MetricCard } from "@/features/tournaments/ui/components/ThemedComponents";
 
 interface StatsGridProps {
     stats: {

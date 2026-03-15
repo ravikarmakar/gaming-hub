@@ -7,11 +7,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { formatDateToLocalHTML } from "@/lib/utils";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import {
-  EventFormValues,
-  eventSchema,
-  Category,
-  RegistrationStatus,
-} from "@/features/events/lib";
+  TournamentFormValues,
+  tournamentSchema,
+} from "../lib";
+import { Category, RegistrationStatus } from "../types";
 import { useCreateTournamentMutation, useUpdateTournamentMutation } from "./useTournamentMutations";
 import { useGetTournamentDetailsQuery } from "./useTournamentQueries";
 
@@ -29,8 +28,8 @@ export function useTournamentForm() {
   const isCreating = createTournamentMutation.isPending || updateTournamentMutation.isPending;
   const [isEditMode, setIsEditMode] = useState(false);
 
-  const methods = useForm<EventFormValues>({
-    resolver: zodResolver(eventSchema),
+  const methods = useForm<TournamentFormValues>({
+    resolver: zodResolver(tournamentSchema),
     mode: "onChange",
     defaultValues: {
       game: "free fire",
@@ -71,7 +70,7 @@ export function useTournamentForm() {
 
   useEffect(() => {
     if (isEditMode && eventDetails) {
-      const internalEventType = eventDetails.eventType as EventFormValues['eventType'];
+      const internalEventType = eventDetails.eventType as TournamentFormValues['eventType'];
       const internalIsPaid = !!eventDetails.isPaid;
 
       reset({
@@ -108,7 +107,7 @@ export function useTournamentForm() {
     }
   }, [isEditMode, eventDetails, reset, setValue]);
 
-  const onFormSubmit: SubmitHandler<EventFormValues> = async (data) => {
+  const onFormSubmit: SubmitHandler<TournamentFormValues> = async (data) => {
     try {
       const fd = new FormData();
       const backendEventType = data.eventType;

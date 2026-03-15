@@ -1,5 +1,4 @@
 export * from "./constants";
 export * from "./endpoints";
-export * from "./eventSchema";
+export * from "./tournamentSchema";
 export * from "./routes";
-export * from "./types";

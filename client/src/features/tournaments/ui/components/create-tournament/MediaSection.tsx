@@ -1,13 +1,13 @@
 import { lazy, Suspense } from "react";
 import { useFormContext, Controller } from "react-hook-form";
 import { ImageIcon } from "lucide-react";
-import { GlassCard, SectionHeader } from "@/features/events/ui/components/ThemedComponents";
-import { EventFormValues } from "@/features/events/lib";
+import { GlassCard, SectionHeader } from "@/features/tournaments/ui/components/ThemedComponents";
+import { TournamentFormValues } from "../../../lib";
 
 const FileUpload = lazy(() => import("@/components/FileUpload"));
 
 export const MediaSection = () => {
-    const { control } = useFormContext<EventFormValues>();
+    const { control } = useFormContext<TournamentFormValues>();
 
     return (
         <GlassCard className="p-8 space-y-6 border-purple-500/10">

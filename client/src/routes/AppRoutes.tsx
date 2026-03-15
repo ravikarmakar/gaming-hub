@@ -6,7 +6,7 @@ import { ROUTES } from "@/lib/routes";
 import { AUTH_ROUTES } from "@/features/auth/lib/routes";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
-import { EVENT_ROUTES } from "@/features/events/lib";
+import { TOURNAMENT_ROUTES } from "@/features/tournaments/lib/routes";
 import { PLAYER_ROUTES } from "@/features/player/lib/routes";
 import { ADMIN_ROUTES } from "@/features/admin/lib/routes";
 import { ADMIN_ACCESS } from "@/features/admin/lib/access";
@@ -34,7 +34,7 @@ const AppRoutes = () => {
             }>
                 {/* Public Routes */}
                 <Route index element={<pages.Home />} />
-                <Route path={EVENT_ROUTES.TOURNAMENTS} element={<pages.AllTournaments />} />
+                <Route path={TOURNAMENT_ROUTES.TOURNAMENTS} element={<pages.AllTournaments />} />
                 <Route path={TEAM_ROUTES.ALL_TEAMS} element={<pages.FindTeams />} />
                 <Route path={ORGANIZER_ROUTES.ORGANIZERS} element={<pages.FindOrganizers />} />
                 <Route path={ROUTES.SUPPORT} element={<pages.Support />} />
@@ -47,7 +47,7 @@ const AppRoutes = () => {
                     <Route path={PLAYER_ROUTES.PLAYER_SETTINGS} element={<pages.PlayerSettings />} />
                     <Route path={TEAM_ROUTES.PROFILE} element={<pages.TeamId />} />
                     <Route path={ROUTES.NOTIFICATIONS} element={<pages.Notifications />} />
-                    <Route path={EVENT_ROUTES.TOURNAMENT_DETAILS} element={<pages.TournamentById />} />
+                    <Route path={TOURNAMENT_ROUTES.TOURNAMENT_DETAILS} element={<pages.TournamentById />} />
                     <Route path={ROUTES.GROUP_TEAM_LIST} element={<pages.GroupTeamList />} />
                 </Route>
             </Route>

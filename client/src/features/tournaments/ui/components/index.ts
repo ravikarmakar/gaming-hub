@@ -4,3 +4,4 @@ export * from "./RoundsManager";
 export * from "./GroupsGrid";
 export * from "./tournaments/TournamentDashboardHeader";
 export * from "./tournaments/TournamentControlBar";
+export * from "./TournamentHeader";

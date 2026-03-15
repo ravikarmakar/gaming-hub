@@ -1,32 +1,32 @@
 import { axiosInstance } from "@/lib/axios";
-import { EVENT_ENDPOINTS } from "@/features/events/lib/endpoints";
+import { TOURNAMENT_ENDPOINTS } from "../lib";
 import { Tournament } from "../types";
 
 export const tournamentApi = {
     createTournament: async (data: FormData): Promise<Tournament> => {
-        const response = await axiosInstance.post(EVENT_ENDPOINTS.CREATE, data, {
+        const response = await axiosInstance.post(TOURNAMENT_ENDPOINTS.CREATE, data, {
             headers: { "Content-Type": "multipart/form-data" }
         });
         return response.data.data;
     },
     deleteTournament: async (eventId: string): Promise<boolean> => {
-        const response = await axiosInstance.delete(EVENT_ENDPOINTS.DELETE(eventId));
+        const response = await axiosInstance.delete(TOURNAMENT_ENDPOINTS.DELETE(eventId));
         return response.status >= 200 && response.status < 300;
     },
     updateTournament: async (data: { eventId: string; payload: FormData }): Promise<Tournament> => {
-        const response = await axiosInstance.put(EVENT_ENDPOINTS.UPDATE(data.eventId), data.payload, {
+        const response = await axiosInstance.put(TOURNAMENT_ENDPOINTS.UPDATE(data.eventId), data.payload, {
             headers: { "Content-Type": "multipart/form-data" }
         });
         return response.data.data;
     },
     getTournamentDetails: async (eventId: string, skipCache = false): Promise<Tournament> => {
-        const response = await axiosInstance.get(EVENT_ENDPOINTS.DETAILS(eventId), {
+        const response = await axiosInstance.get(TOURNAMENT_ENDPOINTS.DETAILS(eventId), {
             params: skipCache ? { skipCache: true } : {}
         });
         return response.data.data;
     },
     getOrgTournaments: async (orgId: string): Promise<Tournament[]> => {
-        const response = await axiosInstance.get(EVENT_ENDPOINTS.ORG_EVENTS(orgId));
+        const response = await axiosInstance.get(TOURNAMENT_ENDPOINTS.ORG_EVENTS(orgId));
         return response.data.data;
     },
     startTournament: async (eventId: string): Promise<Tournament> => {
@@ -146,5 +146,24 @@ export const tournamentApi = {
     // Other
     inviteToGroup: async (data: { targetId: string; playerId: string; targetModel: string; role?: string }): Promise<void> => {
         await axiosInstance.post("/invitations/invite-member", data);
+    },
+    toggleLike: async (eventId: string): Promise<{ likesCount: number; isLiked: boolean }> => {
+        const res = await axiosInstance.post(`/events/${eventId}/like`);
+        return res.data.data;
+    },
+    registerTournament: async (eventId: string): Promise<any> => {
+        const response = await axiosInstance.post(TOURNAMENT_ENDPOINTS.REGISTER(eventId), {});
+        return response.data;
+    },
+    getRegistrationStatus: async (eventId: string, teamId: string): Promise<{ registered: boolean; status: "approved" | "pending" | "none" }> => {
+        const response = await axiosInstance.get(TOURNAMENT_ENDPOINTS.IS_REGISTERED(eventId, teamId));
+        return {
+            registered: response.data.registered,
+            status: response.data.status || (response.data.registered ? "approved" : "none")
+        };
+    },
+    getTournaments: async (params: { search?: string; game?: string; category?: string; cursor?: string | null; limit?: number }): Promise<any> => {
+        const response = await axiosInstance.get(TOURNAMENT_ENDPOINTS.ALL, { params });
+        return response.data;
     },
 };

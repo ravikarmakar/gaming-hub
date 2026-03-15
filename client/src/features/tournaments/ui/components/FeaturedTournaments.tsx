@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Trophy } from "lucide-react";
@@ -7,16 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import TournamentGrid from "./TournamentGrid";
-import { EVENT_ROUTES } from "@/features/events/lib/routes";
-import { useEventStore } from "@/features/events/store/useEventStore";
+import { TOURNAMENT_ROUTES } from "../../lib/routes";
+import { useGetTournamentsQuery } from "../../hooks/useTournamentQueries";
 
-const FeaturedEvents = () => {
+const FeaturedTournaments = () => {
     const navigate = useNavigate();
-    const { events, isLoading, fetchEvents } = useEventStore();
-
-    useEffect(() => {
-        fetchEvents({ limit: 6 });
-    }, [fetchEvents]);
+    const { data: eventsData, isLoading } = useGetTournamentsQuery({ limit: 6 });
+    const events = eventsData?.data || [];
 
     return (
         <section id="tournaments" className="py-20 bg-[#02000a] relative overflow-hidden">
@@ -55,7 +51,7 @@ const FeaturedEvents = () => {
                     >
                         <Button
                             variant="outline"
-                            onClick={() => navigate(EVENT_ROUTES.TOURNAMENTS)}
+                            onClick={() => navigate(TOURNAMENT_ROUTES.TOURNAMENTS)}
                             className="hidden md:flex rounded-full border-white/10 bg-white/5 hover:bg-purple-500/10 hover:border-purple-500/50 hover:text-purple-400 transition-all"
                         >
                             View All Tournaments
@@ -101,7 +97,7 @@ const FeaturedEvents = () => {
                     <Button
                         size="lg"
                         variant="outline"
-                        onClick={() => navigate(EVENT_ROUTES.TOURNAMENTS)}
+                        onClick={() => navigate(TOURNAMENT_ROUTES.TOURNAMENTS)}
                         className="w-full rounded-full border-white/10 bg-white/5 hover:bg-purple-500/10 hover:border-purple-500/50 hover:text-purple-400 transition-all"
                     >
                         View All Tournaments
@@ -113,4 +109,4 @@ const FeaturedEvents = () => {
     );
 };
 
-export default FeaturedEvents;
+export default FeaturedTournaments;

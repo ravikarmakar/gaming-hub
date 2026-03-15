@@ -15,11 +15,22 @@ import { useGetInfiniteRegisteredTeamsQuery, useGetInfiniteInvitedTeamsQuery, us
 
 interface RegisteredTeamsListProps {
     eventId: string;
+    showSearch?: boolean;
+    showStats?: boolean;
+    eventDetails?: any;
 }
 
-export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
+export const RegisteredTeamsList = ({
+    eventId,
+    showSearch = true,
+    showStats = true,
+    eventDetails: propEvent
+}: RegisteredTeamsListProps) => {
     const navigate = useNavigate();
-    const { data: event } = useGetTournamentDetailsQuery(eventId);
+    const { data: fetchedEvent } = useGetTournamentDetailsQuery(eventId, {
+        enabled: !propEvent
+    });
+    const event = propEvent || fetchedEvent;
     const [activeTab, setActiveTab] = useState<"registered" | "invited" | "t1-special">("registered");
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -39,7 +50,7 @@ export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
     // Reset active tab if it becomes hidden
     useEffect(() => {
         if (!event) return; // Guard against undefined event during loading
-        
+
         const isInvitedHidden = !event?.hasInvitedTeams && activeTab === 'invited';
         const isT1Hidden = !event?.hasT1SpecialTeams && activeTab === 't1-special';
         if (isInvitedHidden || isT1Hidden) {
@@ -72,37 +83,43 @@ export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
                 <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
                     <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full md:w-auto">
                         <TabsList className="bg-black/40 border border-white/10 p-1">
-                            <TabsTrigger value="registered" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white uppercase text-[10px] font-black tracking-widest px-6">
+                            <TabsTrigger value="registered" className="data-[state=active]:bg-purple-900 data-[state=active]:text-white uppercase text-[10px] font-black tracking-widest px-6">
                                 Registered
                             </TabsTrigger>
                             {event?.hasInvitedTeams && (
-                                <TabsTrigger value="invited" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white uppercase text-[10px] font-black tracking-widest px-6">
+                                <TabsTrigger value="invited" className="data-[state=active]:bg-purple-800 data-[state=active]:text-white uppercase text-[10px] font-black tracking-widest px-6">
                                     Invited
                                 </TabsTrigger>
                             )}
                             {event?.hasT1SpecialTeams && (
-                                <TabsTrigger value="t1-special" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white uppercase text-[10px] font-black tracking-widest px-6">
+                                <TabsTrigger value="t1-special" className="data-[state=active]:bg-purple-800 data-[state=active]:text-white uppercase text-[10px] font-black tracking-widest px-6">
                                     T1 Special
                                 </TabsTrigger>
                             )}
                         </TabsList>
                     </Tabs>
 
-                    <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-center">
-                        <div className="relative w-full sm:w-80 group">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
-                            <Input
-                                placeholder="Search recruitment..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10 h-10 bg-white/5 border-white/10 text-white placeholder:text-gray-400 focus:ring-purple-500/20"
-                            />
+                    {(showSearch || showStats) && (
+                        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-center">
+                            {showSearch && (
+                                <div className="relative w-full sm:w-80 group">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
+                                    <Input
+                                        placeholder="Search recruitment..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="pl-10 h-10 bg-white/5 border-white/10 text-white placeholder:text-gray-400 focus:ring-purple-500/20"
+                                    />
+                                </div>
+                            )}
+                            {showStats && (
+                                <div className="flex items-center gap-2 px-4 h-10 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                    <Users className="w-3.5 h-3.5 text-purple-400" />
+                                    Loaded: {allTeams.length}
+                                </div>
+                            )}
                         </div>
-                        <div className="flex items-center gap-2 px-4 h-10 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                            <Users className="w-3.5 h-3.5 text-purple-400" />
-                            Loaded: {allTeams.length}
-                        </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
@@ -129,9 +146,9 @@ export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
                                             <h4 className="font-bold text-white truncate">{team.teamName || 'Unknown Team'}</h4>
                                             <p className="text-[10px] text-gray-500 uppercase tracking-widest">{team.tag || 'NO TAG'} • {team.teamMembers?.length || 0} Members</p>
                                         </div>
-                                        <Button 
-                                            size="icon" 
-                                            variant="ghost" 
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
                                             className="h-8 w-8 text-gray-400 hover:text-white"
                                             onClick={() => navigate(TEAM_ROUTES.PROFILE.replace(':id', team._id))}
                                         >
@@ -141,11 +158,6 @@ export const RegisteredTeamsList = ({ eventId }: RegisteredTeamsListProps) => {
                                 );
                             })}
                         </div>
-                        {activeQuery.isFetchingNextPage && (
-                            <div className="py-8 flex justify-center">
-                                <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
-                            </div>
-                        )}
                         <div ref={ref} className="h-10" />
                     </div>
                 )}

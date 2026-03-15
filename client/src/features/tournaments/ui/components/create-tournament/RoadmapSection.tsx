@@ -13,12 +13,12 @@ import {
     SelectTrigger,
     SelectValue
 } from "@/components/ui/select";
-import { GlassCard } from "@/features/events/ui/components/ThemedComponents";
+import { GlassCard } from "@/features/tournaments/ui/components/ThemedComponents";
 import { RoadmapHeader } from "./roadmaps/RoadmapHeader";
-import { EventFormValues } from "@/features/events/lib";
+import { TournamentFormValues } from "../../../lib";
 
 export const RoadmapSection = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
-    const { register, control, watch, setValue } = useFormContext<EventFormValues>();
+    const { register, control, watch, setValue } = useFormContext<TournamentFormValues>();
     const [isRoundsConfirmed, setIsRoundsConfirmed] = useState(false);
     const [leagueRoundIdx, setLeagueRoundIdx] = useState<number | null>(null);
     const [finaleRoundIdx, setFinaleRoundIdx] = useState<number | null>(null);
@@ -74,7 +74,7 @@ export const RoadmapSection = ({ isEmbedded = false }: { isEmbedded?: boolean })
         }
 
         const nextState = !isRoundsConfirmed;
-        
+
         // If entering edit mode, save current rounds as backup
 
         setIsRoundsConfirmed(nextState);
@@ -84,7 +84,7 @@ export const RoadmapSection = ({ isEmbedded = false }: { isEmbedded?: boolean })
             // Actually, nextState is !isRoundsConfirmed. 
             // If isRoundsConfirmed was true, nextState is false (Edit Mode).
         }
-        
+
         // If we were confirmed and are now becoming unconfirmed (entering edit mode)
         // the original code had some reset logic here but it's dangerous if user wants to just edit names.
         // The user wants a "Cancel" button, so we should keep the state and only reset if they cancel.

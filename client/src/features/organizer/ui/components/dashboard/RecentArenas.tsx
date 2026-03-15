@@ -1,9 +1,9 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Gamepad2, PlusCircle, Calendar, DollarSign, Eye } from "lucide-react";
-import { GlassCard, NeonBadge } from "@/features/events/ui/components/ThemedComponents";
+import { GlassCard, NeonBadge } from "@/features/tournaments/ui/components/ThemedComponents";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
-import { EVENT_ROUTES } from "@/features/events/lib/routes";
+import { TOURNAMENT_ROUTES } from "@/features/tournaments/lib/routes";
 
 interface RecentArenasProps {
     events: any[];
@@ -52,7 +52,7 @@ export const RecentArenas = ({ events }: RecentArenasProps) => {
                                     </div>
                                 </div>
 
-                                <Link to={EVENT_ROUTES.TOURNAMENT_DETAILS.replace(':id', event._id)} className="w-full sm:w-auto p-3 rounded-xl bg-white/5 hover:bg-purple-500/20 text-purple-400 transition-all flex items-center justify-center group/view">
+                                <Link to={TOURNAMENT_ROUTES.DETAILS(event._id)} className="w-full sm:w-auto p-3 rounded-xl bg-white/5 hover:bg-purple-500/20 text-purple-400 transition-all flex items-center justify-center group/view">
                                     <Eye size={18} className="transition-transform group-hover/view:scale-110 shadow-glow" />
                                 </Link>
                             </div>

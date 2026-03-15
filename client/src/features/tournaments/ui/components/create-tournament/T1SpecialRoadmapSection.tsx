@@ -12,14 +12,14 @@ import {
     SelectTrigger,
     SelectValue
 } from "@/components/ui/select";
-import { GlassCard } from "@/features/events/ui/components/ThemedComponents";
+import { GlassCard } from "@/features/tournaments/ui/components/ThemedComponents";
 import { RoadmapHeader } from "./roadmaps/RoadmapHeader";
-import { EventFormValues } from "@/features/events/lib";
+import { TournamentFormValues } from "../../../lib";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 
 export const T1SpecialRoadmapSection = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
-    const { register, control, watch, setValue } = useFormContext<EventFormValues>();
+    const { register, control, watch, setValue } = useFormContext<TournamentFormValues>();
     const [isRoundsConfirmed, setIsRoundsConfirmed] = useState(false);
     const [isMappingSaved, setIsMappingSaved] = useState(false);
     const [leagueRoundIdx, setLeagueRoundIdx] = useState<number | null>(null);

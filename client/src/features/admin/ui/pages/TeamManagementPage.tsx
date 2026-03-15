@@ -33,7 +33,7 @@ import {
 import { useAdminStore } from "../../store/useAdminStore";
 import { useDebounce } from "@/hooks/useDebounce";
 import { throttle } from "@/lib/utils";
-import { GlassCard, NeonBadge } from "@/features/events/ui/components/ThemedComponents";
+import { GlassCard, NeonBadge } from "@/features/tournaments/ui/components/ThemedComponents";
 
 import { cn } from "@/lib/utils";
 

@@ -82,7 +82,15 @@ const eventSchema = new mongoose.Schema(
     image: { type: String, default: "" },
     imageFileId: { type: String, default: null, trim: true },
     views: { type: Number, default: 0 },
-    likes: { type: Number, default: 0 },
+    // Likes count is synchronized atomically in the controller using $inc. 
+    // Always ensure any manual updates preserve consistency with 'likedBy' array.
+    likes: { type: Number, default: 0, min: [0, "Likes cannot be negative"] },
+    likedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      }
+    ],
     trending: { type: Boolean, default: false },
     eventEndAt: { type: Date },
     prizeDistribution: [

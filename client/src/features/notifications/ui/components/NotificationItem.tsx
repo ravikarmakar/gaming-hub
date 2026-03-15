@@ -7,7 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 
 import { Notification, useNotificationStore } from "../../store/useNotificationStore";
-import { EVENT_ROUTES } from "@/features/events/lib";
+import { TOURNAMENT_ROUTES } from "@/features/tournaments/lib/routes";
 
 interface NotificationItemProps {
     notification: Notification;
@@ -101,7 +101,7 @@ const NotificationItem = React.forwardRef<HTMLDivElement, NotificationItemProps>
         } else if (notification.relatedData?.teamId) {
             navigate(`/dashboard/team`);
         } else if (eventId) {
-            navigate(EVENT_ROUTES.TOURNAMENT_DETAILS.replace(":eventId", String(eventId)));
+            navigate(TOURNAMENT_ROUTES.DETAILS(String(eventId)));
         }
     };
 

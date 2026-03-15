@@ -17,7 +17,7 @@ import { useOrgDashboardStatsQuery } from "../../hooks/useOrganizerQueries";
 import {
   MetricCard,
   SectionHeader
-} from "@/features/events/ui/components/ThemedComponents";
+} from "@/features/tournaments/ui/components/ThemedComponents";
 
 // Extracted sub-components
 import { DashboardWelcome } from "../components/dashboard/DashboardWelcome";

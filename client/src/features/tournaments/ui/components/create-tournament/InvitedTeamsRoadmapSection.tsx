@@ -12,14 +12,14 @@ import {
     SelectTrigger,
     SelectValue
 } from "@/components/ui/select";
-import { GlassCard } from "@/features/events/ui/components/ThemedComponents";
+import { GlassCard } from "@/features/tournaments/ui/components/ThemedComponents";
 import { RoadmapHeader } from "./roadmaps/RoadmapHeader";
-import { EventFormValues } from "@/features/events/lib";
+import { TournamentFormValues } from "../../../lib";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 
 export const InvitedTeamsRoadmapSection = ({ isEmbedded = false }: { isEmbedded?: boolean }) => {
-    const { register, control, watch, setValue } = useFormContext<EventFormValues>();
+    const { register, control, watch, setValue } = useFormContext<TournamentFormValues>();
     const [isRoundsConfirmed, setIsRoundsConfirmed] = useState(false);
     const [isMappingSaved, setIsMappingSaved] = useState(false);
     const [leagueRoundIdx, setLeagueRoundIdx] = useState<number | null>(null);
@@ -87,7 +87,7 @@ export const InvitedTeamsRoadmapSection = ({ isEmbedded = false }: { isEmbedded?
         }
 
         const nextState = !isRoundsConfirmed;
-        
+
         // Save backups when entering edit mode
 
         setIsRoundsConfirmed(nextState);
@@ -143,7 +143,7 @@ export const InvitedTeamsRoadmapSection = ({ isEmbedded = false }: { isEmbedded?
                             <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Rounds Breakdown</h3>
                             <p className="text-[9px] text-gray-600 font-bold uppercase tracking-wider">Configure each stage of the invited teams progression</p>
                         </div>
-                        
+
                         <div className="space-y-2">
                             {!isRoundsConfirmed && fields.length > 0 && (
                                 <div className="grid grid-cols-[100px_1fr_40px] gap-4 px-4 py-1">

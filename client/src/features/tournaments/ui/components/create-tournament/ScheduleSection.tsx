@@ -5,12 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/DatePicker";
-import { GlassCard, SectionHeader } from "@/features/events/ui/components/ThemedComponents";
-import { registrationStatusOptions, EventFormValues, RegistrationStatus } from "@/features/events/lib";
+import { GlassCard, SectionHeader } from "@/features/tournaments/ui/components/ThemedComponents";
+import { registrationStatusOptions, TournamentFormValues } from "../../../lib";
+import { RegistrationStatus } from "../../../types";
 import { formatDateToLocalHTML } from "@/lib/utils";
 
 export const ScheduleSection = () => {
-    const { register, control, watch, setValue } = useFormContext<EventFormValues>();
+    const { register, control, watch, setValue } = useFormContext<TournamentFormValues>();
     const minDate = formatDateToLocalHTML(new Date());
     const eventType = watch("eventType");
 

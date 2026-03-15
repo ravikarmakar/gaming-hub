@@ -3,11 +3,11 @@ import { IndianRupee, Trophy, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { GlassCard, SectionHeader } from "@/features/events/ui/components/ThemedComponents";
-import { EventFormValues } from "@/features/events/lib";
+import { GlassCard, SectionHeader } from "@/features/tournaments/ui/components/ThemedComponents";
+import { TournamentFormValues } from "../../../lib";
 
 export const PrizeSection = () => {
-    const { register, control, watch } = useFormContext<EventFormValues>();
+    const { register, control, watch } = useFormContext<TournamentFormValues>();
 
     const { fields, append, replace } = useFieldArray({
         control,

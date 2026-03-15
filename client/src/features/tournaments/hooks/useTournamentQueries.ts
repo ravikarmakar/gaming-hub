@@ -15,9 +15,17 @@ export const tournamentKeys = {
     registeredTeams: (eventId: string, search: string, type: 'infinite' | 'standard' = 'standard') => [...tournamentKeys.all, 'registered-teams', type, eventId, search] as const,
     invitedTeams: (eventId: string, search: string, type: 'infinite' | 'standard' = 'standard') => [...tournamentKeys.all, 'invited-teams', type, eventId, search] as const,
     t1SpecialTeams: (eventId: string, search: string, type: 'infinite' | 'standard' = 'standard') => [...tournamentKeys.all, 't1-special-teams', type, eventId, search] as const,
+    registrationStatus: (eventId: string, teamId: string) => [...tournamentKeys.all, 'registration-status', eventId, teamId] as const,
 };
 
 // Queries
+export const useGetRegistrationStatusQuery = (eventId: string, teamId: string) => {
+    return useQuery({
+        queryKey: tournamentKeys.registrationStatus(eventId, teamId),
+        queryFn: () => tournamentApi.getRegistrationStatus(eventId, teamId),
+        enabled: !!eventId && !!teamId,
+    });
+};
 export const useGetRoundsQuery = (eventId: string) => {
     return useQuery<Round[]>({
         queryKey: tournamentKeys.rounds(eventId),
@@ -51,11 +59,12 @@ export const useGetLeaderboardQuery = (groupId: string) => {
     });
 };
 
-export const useGetTournamentDetailsQuery = (eventId: string) => {
+export const useGetTournamentDetailsQuery = (eventId: string, options: any = {}) => {
     return useQuery<Tournament>({
         queryKey: tournamentKeys.details(eventId),
         queryFn: () => tournamentApi.getTournamentDetails(eventId),
-        enabled: !!eventId,
+        ...options,
+        enabled: (options.enabled !== undefined ? options.enabled : true) && !!eventId,
     });
 };
 
@@ -113,6 +122,13 @@ export const useGetT1SpecialTeamsQuery = (eventId: string, search = "") => {
             return data?.teams || [];
         },
         enabled: !!eventId,
+    });
+};
+
+export const useGetTournamentsQuery = (params: { search?: string; game?: string; category?: string; cursor?: string | null; limit?: number }) => {
+    return useQuery({
+        queryKey: [...tournamentKeys.all, 'list', params],
+        queryFn: () => tournamentApi.getTournaments(params),
     });
 };
 

@@ -3,7 +3,7 @@ import { Loader2, Trophy, Plus, LayoutGrid } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { TournamentGrid } from "@/features/events/ui/components/TournamentGrid";
+import { TournamentGrid } from "@/features/tournaments/ui/components/TournamentGrid";
 import { Button } from "@/components/ui/button";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";

@@ -297,3 +297,43 @@ export const useMergeTeamsToGroupMutation = () => {
         }
     });
 };
+
+export const useLikeTournamentMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (eventId: string) => tournamentApi.toggleLike(eventId),
+        onSuccess: (data, eventId) => {
+            // Update the specific tournament details query cache immediately
+            queryClient.setQueryData(tournamentKeys.details(eventId), (oldData: any) => {
+                if (!oldData) return oldData;
+                return {
+                    ...oldData,
+                    likes: data.likesCount,
+                    isLiked: data.isLiked
+                };
+            });
+
+            // Still invalidate to be safe and sync with potential other changes
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.details(eventId) });
+        },
+        onError: (err) => {
+            toast.error(handleApiError(err, "Failed to toggle like"));
+        }
+    });
+};
+
+export const useRegisterTournamentMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: tournamentApi.registerTournament,
+        onSuccess: (data, eventId) => {
+            queryClient.invalidateQueries({ queryKey: [...tournamentKeys.all, 'registration-status', eventId] });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.details(eventId) });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
+            toast.success(data.message || "Successfully deployed to arena!");
+        },
+        onError: (err) => {
+            toast.error(handleApiError(err, "Deployment failed. Request backup."));
+        }
+    });
+};

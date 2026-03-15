@@ -14,19 +14,21 @@ const roadmapItemSchema = z.object({
     leagueType: z.enum(["12-teams", "18-teams"]).optional(),
     grandFinaleType: z.string().optional(),
     groups: z.string().optional(),
-    // groupSize: z.union([z.string(), z.number()]).optional(),
 });
 
 const invitedRoundMappingSchema = z.object({
     startRound: z.number().min(0),
     endRound: z.number().min(0),
     targetMainRound: z.number().min(0),
+}).refine((data) => data.endRound >= data.startRound, {
+    message: "End round must be greater than or equal to start round",
+    path: ["endRound"],
 });
 
-export const eventSchema = z.object({
+export const tournamentSchema = z.object({
     title: z.string().min(3, "Tournament title must be at least 3 characters"),
     game: z.string().min(2, "Game name is required"),
-    eventType: z.enum(["scrims", "tournament", "invited-tournament"]),
+    eventType: z.enum(["scrims", "tournament", "invited-tournament", "t1-special"]),
     isPaid: z.boolean(),
     startDate: z.string().min(1, "Start date is required"),
     registrationEndsAt: z.string().nullable().optional(),
@@ -61,8 +63,11 @@ export const eventSchema = z.object({
     })).optional(),
     image: z.any()
         .refine((file) => {
-            if (!file || !(file instanceof File)) return true;
-            return file.size <= 10 * 1024 * 1024;
+            if (!file) return true;
+            if (typeof File !== "undefined" && file instanceof File) {
+                return file.size <= 10 * 1024 * 1024;
+            }
+            return true;
         }, "File too large (max 10MB)")
         .optional(),
 }).refine((data) => {
@@ -112,4 +117,4 @@ export const eventSchema = z.object({
     path: ["prizeDistribution"],
 });
 
-export type EventFormValues = z.infer<typeof eventSchema>;
+export type TournamentFormValues = z.infer<typeof tournamentSchema>;

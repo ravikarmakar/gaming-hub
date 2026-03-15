@@ -4,10 +4,11 @@ export const registrationStatusOptions = [
     { value: "live", label: "Live" },
 ];
 
-export const eventTypeOptions = [
+export const tournamentTypeOptions = [
     { value: "tournament", label: "Tournament" },
     { value: "scrims", label: "Scrims" },
     { value: "invited-tournament", label: "Invited Tournament" },
+    { value: "t1-special", label: "T1 Special" },
 ];
 
 export const categoryOptions = [

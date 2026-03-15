@@ -2,11 +2,11 @@ import { useFormContext } from "react-hook-form";
 import { LayoutGrid } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { GlassCard, SectionHeader } from "@/features/events/ui/components/ThemedComponents";
-import { EventFormValues } from "@/features/events/lib";
+import { GlassCard, SectionHeader } from "@/features/tournaments/ui/components/ThemedComponents";
+import { TournamentFormValues } from "../../../lib";
 
 export const DescriptionSection = () => {
-    const { register, formState: { errors } } = useFormContext<EventFormValues>();
+    const { register, formState: { errors } } = useFormContext<TournamentFormValues>();
 
     return (
         <GlassCard className="p-8 space-y-6">

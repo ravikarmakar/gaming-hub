@@ -39,6 +39,7 @@ export interface Tournament {
     views?: number;
     likes?: number;
     trending?: boolean;
+    isLiked?: boolean;
     eventEndAt?: string;
     slots?: number; // Adding slots for UI compatibility
     matchCount?: number;

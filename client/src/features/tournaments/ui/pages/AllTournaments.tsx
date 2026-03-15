@@ -9,38 +9,36 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
-import { useEventStore } from "@/features/events/store/useEventStore";
-import { GlassCard, SectionHeader } from "@/features/events/ui/components/ThemedComponents";
-import { TournamentGrid } from "@/features/events/ui/components/TournamentGrid";
+import { useGetTournamentsQuery } from "../../hooks/useTournamentQueries";
+import { GlassCard, SectionHeader } from "../components/ThemedComponents";
+import { TournamentGrid } from "../components/TournamentGrid";
 import { categoryOptions } from "../../lib/constants";
 
 
 const AllTournaments = () => {
-    const { events, isLoading, fetchEvents, clearEvents } = useEventStore();
-
     const [gameFilter, setGameFilter] = useState("all");
     const [categoryFilter, setCategoryFilter] = useState("all");
     const [searchTerm, setSearchTerm] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
 
     useEffect(() => {
-        const delayDebounceFn = setTimeout(() => {
-            fetchEvents({
-                search: searchTerm || undefined,
-                game: gameFilter !== "all" ? gameFilter : undefined,
-                category: categoryFilter !== "all" ? categoryFilter : undefined,
-                append: false
-            });
+        const handler = setTimeout(() => {
+            setDebouncedSearch(searchTerm);
         }, 500);
+        return () => clearTimeout(handler);
+    }, [searchTerm]);
 
-        return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, gameFilter, categoryFilter, fetchEvents]);
+    const { data: eventsData, isLoading } = useGetTournamentsQuery({
+        search: debouncedSearch || undefined,
+        game: gameFilter !== "all" ? gameFilter : undefined,
+        category: categoryFilter !== "all" ? categoryFilter : undefined,
+        limit: 100 // Loading a reasonable amount for the hub
+    });
 
-    useEffect(() => {
-        return () => clearEvents();
-    }, [clearEvents]);
+    const events = eventsData?.data || [];
 
     const uniqueGames = useMemo(() => {
-        const games = new Set(events.map((e) => e.game));
+        const games = new Set(events.map((e: any) => e.game));
         return Array.from(games);
     }, [events]);
 
@@ -68,7 +66,9 @@ const AllTournaments = () => {
                     <div className="hidden lg:flex items-center justify-end gap-12">
                         <div className="text-right">
                             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Total Prize Pool</p>
-                            <p className="text-3xl font-black text-white">$120,450</p>
+                            <p className="text-3xl font-black text-white">
+                                ₹{events.reduce((acc: number, e: any) => acc + (Number(e.prizePool) || 0), 0).toLocaleString()}
+                            </p>
                         </div>
                         <div className="text-right">
                             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Active Arenas</p>
@@ -86,6 +86,7 @@ const AllTournaments = () => {
                             placeholder="Search tournaments, games, or arenas..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
+                            aria-label="Search tournaments"
                             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 transition-all font-medium"
                         />
                     </div>

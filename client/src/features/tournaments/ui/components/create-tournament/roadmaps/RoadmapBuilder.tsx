@@ -4,14 +4,14 @@ import { Map as MapIcon, Users, Zap, Trophy, ChevronRight } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { GlassCard } from "@/features/events/ui/components/ThemedComponents";
-import { EventFormValues } from "@/features/events/lib";
+import { GlassCard } from "@/features/tournaments/ui/components/ThemedComponents";
+import { TournamentFormValues } from "../../../../lib";
 import { RoadmapSection } from "../RoadmapSection";
 import { InvitedTeamsRoadmapSection } from "../InvitedTeamsRoadmapSection";
 import { T1SpecialRoadmapSection } from "../T1SpecialRoadmapSection";
 
 export const RoadmapBuilder = () => {
-    const { watch, setValue } = useFormContext<EventFormValues>();
+    const { watch, setValue } = useFormContext<TournamentFormValues>();
     const [activeTab, setActiveTab] = useState<"standard" | "invited" | "special">("standard");
 
     const eventType = watch("eventType");

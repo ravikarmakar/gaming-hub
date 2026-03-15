@@ -18,12 +18,13 @@ import { CustomError } from "../../shared/utils/CustomError.js";
 import { findUserById } from "../user/user.service.js";
 import { findTeamById } from "../team/team.service.js";
 import { findEventById } from "../event/event.service.js";
+import { redis } from "../../shared/config/redis.js";
+import { clearL1Cache } from "../../shared/middleware/cache.middleware.js";
 import { uploadOnImageKit, deleteFromImageKit } from "../../shared/services/imagekit.service.js";
 import { logger } from "../../shared/utils/logger.js";
 import Team from "../team/team.model.js";
 import { withOptionalTransaction } from "../../shared/utils/withOptionalTransaction.js";
 import { getTournamentRegistrants } from "../../shared/utils/tournament.js";
-import { redis } from "../../shared/config/redis.js";
 
 
 /**
@@ -287,16 +288,24 @@ export const fetchEventDetailsById = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Invalid event id", 400));
   }
 
-  const event = await Event.findByIdAndUpdate(eventId, { $inc: { views: 1 } }, { new: true });
+  const event = await Event.findByIdAndUpdate(eventId, { $inc: { views: 1 } }, { new: true })
+    .populate("orgId", "name imageUrl isVerified slug")
+    .lean();
 
   if (!event) {
     return next(new CustomError("Event not found", 404));
   }
 
+  // Handle isLiked status if user is authenticated
+  const isLiked = req.user && event.likedBy && event.likedBy.some(id => id.toString() === req.user.userId.toString());
+
   res.status(200).json({
     success: true,
     message: "Event details fetched successfully",
-    data: event,
+    data: {
+      ...event,
+      isLiked: !!isLiked
+    },
   });
 });
 
@@ -1223,6 +1232,81 @@ export const fetchT1SpecialTeams = TryCatchHandler(async (req, res, next) => {
     teams,
     nextCursor,
     hasMore
+  });
+});
+
+export const toggleLikeEvent = TryCatchHandler(async (req, res, next) => {
+  const { eventId } = req.params;
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    throw new CustomError("Authentication required", 401);
+  }
+
+  if (!isValidObjectId(eventId)) {
+    throw new CustomError("Invalid Event ID", 400);
+  }
+
+  const event = await Event.findById(eventId);
+  if (!event) {
+    throw new CustomError("Event not found", 404);
+  }
+
+  // Check if already liked using string comparison or Mongoose's built-in behavior
+  const alreadyLiked = event.likedBy && event.likedBy.some(id => id.toString() === userId.toString());
+
+  let updatedEvent;
+  if (alreadyLiked) {
+    // Atomic Unlike
+    updatedEvent = await Event.findByIdAndUpdate(
+      eventId,
+      {
+        $pull: { likedBy: userId },
+        $inc: { likes: -1 }
+      },
+      { new: true }
+    );
+    // Ensure likes doesn't go below 0
+    if (updatedEvent.likes < 0) {
+      await Event.findByIdAndUpdate(eventId, { $set: { likes: 0 } });
+      updatedEvent.likes = 0;
+    }
+  } else {
+    // Atomic Like
+    updatedEvent = await Event.findByIdAndUpdate(
+      eventId,
+      {
+        $addToSet: { likedBy: userId },
+        $inc: { likes: 1 }
+      },
+      { new: true }
+    );
+  }
+
+  // Invalidate Cache for this tournament's details for all users (L1 + L2)
+  const detailsPrefix = `__express__GET:/api/v1/events/event-details/${eventId}`;
+  const listPrefix = `__express__GET:/api/v1/events/all-events`;
+  const orgPrefix = `__express__GET:/api/v1/events/org-events/`;
+
+  clearL1Cache(detailsPrefix);
+  clearL1Cache(listPrefix);
+  clearL1Cache(orgPrefix);
+
+  await Promise.all([
+    redis.delByPrefix(detailsPrefix),
+    redis.delByPrefix(listPrefix),
+    redis.delByPrefix(orgPrefix)
+  ]).catch(err => {
+    logger.error(`[CACHE ERROR] Failed to invalidate event caches: ${err.message}`);
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: alreadyLiked ? "Tournament unliked" : "Tournament liked",
+    data: {
+      likesCount: updatedEvent.likes,
+      isLiked: !alreadyLiked
+    }
   });
 });
 
