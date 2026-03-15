@@ -82,7 +82,8 @@ const eventSchema = new mongoose.Schema(
     image: { type: String, default: "" },
     imageFileId: { type: String, default: null, trim: true },
     views: { type: Number, default: 0 },
-    // Likes count is synchronized atomically in the controller using $inc. 
+    // Likes count is synchronized atomically in the controller using aggregation pipelines ($max) 
+    // to prevent negative values, as Mongoose validators may not run on atomic updates.
     // Always ensure any manual updates preserve consistency with 'likedBy' array.
     likes: { type: Number, default: 0, min: [0, "Likes cannot be negative"] },
     likedBy: [

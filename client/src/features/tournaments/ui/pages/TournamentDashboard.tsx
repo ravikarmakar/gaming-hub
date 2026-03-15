@@ -6,15 +6,15 @@ import {
     Users,
     Swords,
     Settings,
+    Zap
 } from "lucide-react";
 
-import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { useStartTournamentMutation, useDeleteTournamentMutation, useGetTournamentDetailsQuery } from "../../hooks";
 import { RoundsManager } from "../components/RoundsManager";
+import { ScrimsManager } from "../components/ScrimsManager";
 import { TournamentOverview } from "../components/TournamentOverview";
 import { RegisteredTeamsList } from "../components/RegisteredTeamsList";
 import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
@@ -35,6 +35,12 @@ export default function TournamentDashboard() {
     const { mutateAsync: startEvent } = useStartTournamentMutation();
     const { mutateAsync: deleteTournament } = useDeleteTournamentMutation();
     const [isFocusMode, setIsFocusMode] = useState(false);
+
+    // Reset tab if current tab becomes hidden (e.g. event becomes pending)
+    const canShowRounds = eventDetails?.eventProgress !== "pending";
+    if (canShowRounds === false && (activeTab === 'rounds' || activeTab === 'scrims')) {
+        setActiveTab('overview');
+    }
 
     if (!id) {
         return <div className="p-6 text-white">Invalid Tournament ID</div>;
@@ -87,6 +93,7 @@ export default function TournamentDashboard() {
                     title={eventDetails?.title || ""}
                     registrationStatus={eventDetails?.registrationStatus || ""}
                     eventProgress={eventDetails?.eventProgress || ""}
+                    eventType={eventDetails?.eventType}
                     onBack={() => navigate(ORGANIZER_ROUTES.TOURNAMENTS)}
                     onStartEvent={() => setIsStartDialogOpen(true)}
                 />
@@ -96,49 +103,64 @@ export default function TournamentDashboard() {
             {/* Main Content Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
                 {!isFocusMode && (
-                    <TabsList className="bg-gray-900/60 p-1 border border-white/5 h-auto grid grid-cols-4 lg:inline-flex lg:w-auto gap-2">
-                        <TabsTrigger value="overview" className="data-[state=active]:bg-purple-600/20 data-[state=active]:text-purple-300">
-                            <Trophy className="w-4 h-4 mr-2" />
-                            Overview
-                        </TabsTrigger>
-
-                        {/* Hide Rounds Tab if not started */}
-                        {!(eventDetails?.registrationStatus === "registration-open" && eventDetails?.eventProgress === "pending") && (
-                            <TabsTrigger value="rounds" className="data-[state=active]:bg-blue-600/20 data-[state=active]:text-blue-300">
-                                <Swords className="w-4 h-4 mr-2" />
-                                Rounds & Groups
+                    <div className="space-y-4">
+                        <TabsList className="bg-transparent p-0 h-auto flex flex-nowrap overflow-x-auto scrollbar-hide justify-start w-full gap-8 border-b border-white/5 px-6">
+                            <TabsTrigger value="overview" className="relative rounded-none px-0 py-4 bg-transparent data-[state=active]:bg-transparent text-gray-500 data-[state=active]:text-white font-bold uppercase tracking-widest text-[11px] whitespace-nowrap flex-shrink-0 transition-all border-b-2 border-transparent data-[state=active]:border-purple-700">
+                                <Trophy className="w-4 h-4 mr-2" />
+                                Overview
                             </TabsTrigger>
-                        )}
 
-                        <TabsTrigger value="teams" className="data-[state=active]:bg-green-600/20 data-[state=active]:text-green-300">
-                            <Users className="w-4 h-4 mr-2" />
-                            Teams
-                        </TabsTrigger>
-                        <TabsTrigger value="settings" className="data-[state=active]:bg-orange-600/20 data-[state=active]:text-orange-300">
-                            <Settings className="w-4 h-4 mr-2" />
-                            Settings
-                        </TabsTrigger>
-                    </TabsList>
+                            {/* Hide Scrims/Rounds Tab if not started */}
+                            {(eventDetails?.eventProgress !== "pending") && (
+                                eventDetails?.eventType === "scrims" ? (
+                                    <TabsTrigger value="scrims" className="relative rounded-none px-0 py-4 bg-transparent data-[state=active]:bg-transparent text-gray-500 data-[state=active]:text-white font-bold uppercase tracking-widest text-[11px] whitespace-nowrap flex-shrink-0 transition-all border-b-2 border-transparent data-[state=active]:border-purple-700">
+                                        <Zap className="w-4 h-4 mr-2" />
+                                        Scrims
+                                    </TabsTrigger>
+                                ) : (
+                                    <TabsTrigger value="rounds" className="relative rounded-none px-0 py-4 bg-transparent data-[state=active]:bg-transparent text-gray-500 data-[state=active]:text-white font-bold uppercase tracking-widest text-[11px] whitespace-nowrap flex-shrink-0 transition-all border-b-2 border-transparent data-[state=active]:border-blue-700">
+                                        <Swords className="w-4 h-4 mr-2" />
+                                        Rounds & Groups
+                                    </TabsTrigger>
+                                )
+                            )}
+
+                            <TabsTrigger value="teams" className="relative rounded-none px-0 py-4 bg-transparent data-[state=active]:bg-transparent text-gray-500 data-[state=active]:text-white font-bold uppercase tracking-widest text-[11px] whitespace-nowrap flex-shrink-0 transition-all border-b-2 border-transparent data-[state=active]:border-green-700">
+                                <Users className="w-4 h-4 mr-2" />
+                                Teams
+                            </TabsTrigger>
+                            <TabsTrigger value="settings" className="relative rounded-none px-0 py-4 bg-transparent data-[state=active]:bg-transparent text-gray-500 data-[state=active]:text-white font-bold uppercase tracking-widest text-[11px] whitespace-nowrap flex-shrink-0 transition-all border-b-2 border-transparent data-[state=active]:border-orange-700">
+                                <Settings className="w-4 h-4 mr-2" />
+                                Settings
+                            </TabsTrigger>
+                        </TabsList>
+                    </div>
                 )}
 
-                <Card className="min-h-[500px] border-white/5 bg-gray-900/20 backdrop-blur-md">
+                <div className="min-h-[500px] mt-0 bg-gray-900/20 border border-white/5 rounded-2xl p-6 backdrop-blur-sm shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-700">
                     <TabsContent value="overview" className="m-0">
                         <TournamentOverview eventDetails={eventDetails} />
                     </TabsContent>
 
-                    {!(eventDetails?.registrationStatus === "registration-open" && eventDetails?.eventProgress === "pending") && (
-                        <TabsContent value="rounds" className="m-0">
-                            <RoundsManager
-                                eventId={id}
-                                isFocusMode={isFocusMode}
-                                onToggleFocus={() => setIsFocusMode(!isFocusMode)}
-                            />
-                        </TabsContent>
+                    {(eventDetails?.eventProgress !== "pending") && (
+                        eventDetails?.eventType === "scrims" ? (
+                            <TabsContent value="scrims" className="m-0">
+                                <ScrimsManager eventId={id} />
+                            </TabsContent>
+                        ) : (
+                            <TabsContent value="rounds" className="m-0">
+                                <RoundsManager
+                                    eventId={id}
+                                    isFocusMode={isFocusMode}
+                                    onToggleFocus={() => setIsFocusMode(!isFocusMode)}
+                                />
+                            </TabsContent>
+                        )
                     )}
                     <TabsContent value="teams" className="m-0">
                         <RegisteredTeamsList eventId={id} />
                     </TabsContent>
-                    <TabsContent value="settings" className="m-0 p-6">
+                    <TabsContent value="settings" className="m-0">
                         <TournamentSettings
                             eventId={id}
                             eventType={eventDetails?.eventType}
@@ -147,7 +169,7 @@ export default function TournamentDashboard() {
                             onDelete={() => setIsDeleteDialogOpen(true)}
                         />
                     </TabsContent>
-                </Card>
+                </div>
             </Tabs>
 
             <ConfirmActionDialog

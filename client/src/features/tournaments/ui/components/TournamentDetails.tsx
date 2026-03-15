@@ -1,6 +1,8 @@
 import React from 'react';
-import { Shield, Sword, Trophy } from 'lucide-react';
+import { Shield, Sword } from 'lucide-react';
+import { PrizeDistribution } from "./PrizeDistribution";
 import { GlassCard, SectionHeader } from "@/features/tournaments/ui/components/ThemedComponents";
+import { formatCurrency } from "@/lib/utils";
 
 interface TournamentDetailsProps {
     eventDetails: any;
@@ -12,15 +14,15 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({ eventDetails }) =
     return (
         <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-500">
             {/* Essentials Meta Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 bg-white/[0.02] border border-white/[0.05] p-6 rounded-3xl">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 bg-white/[0.02] border border-white/[0.05] p-6 rounded-3xl">
                 <div className="space-y-1.5">
                     <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Starts On</p>
                     <p className="text-xs font-bold text-white/90">
                         {(() => {
                             if (!eventDetails.startDate) return "TBD";
                             const date = new Date(eventDetails.startDate);
-                            return isNaN(date.getTime()) 
-                                ? "TBD" 
+                            return isNaN(date.getTime())
+                                ? "TBD"
                                 : date.toLocaleDateString(undefined, {
                                     month: 'short',
                                     day: 'numeric',
@@ -43,10 +45,16 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({ eventDetails }) =
                     <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Format</p>
                     <p className="text-xs font-bold text-white/90 uppercase">{eventDetails.category || 'Squad'}</p>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 pl-3 border-l border-white/5">
+                    <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Bounty</p>
+                    <p className="text-xs font-bold text-amber-400">
+                        ₹{formatCurrency(eventDetails.prizePool)}
+                    </p>
+                </div>
+                <div className="space-y-1.5 pl-3 border-l border-white/5">
                     <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Entry</p>
                     <p className="text-xs font-bold text-emerald-400">
-                        {eventDetails.isPaid ? `₹${eventDetails.entryFee}` : 'FREE'}
+                        {eventDetails.isPaid ? `₹${formatCurrency(eventDetails.entryFee)}` : 'FREE'}
                     </p>
                 </div>
             </div>
@@ -74,27 +82,13 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({ eventDetails }) =
                 </div>
             )}
 
-            {/* Rank Rewards */}
+            {/* Rank Rewards Section */}
             {eventDetails.prizeDistribution && eventDetails.prizeDistribution.length > 0 && (
                 <div className="space-y-4 sm:space-y-6">
-                    <SectionHeader title="Rank Rewards" icon={Trophy} />
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-6">
-                        {eventDetails.prizeDistribution.map((prize: any, index: number) => (
-                            <GlassCard key={index} className="p-4 sm:p-6 relative group border-purple-500/5 hover:border-purple-500/20 transition-all overflow-hidden">
-                                <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                                    <Trophy size={32} className="text-amber-500 sm:hidden" />
-                                    <Trophy size={48} className="text-amber-500 hidden sm:block" />
-                                </div>
-                                <p className="text-[8px] sm:text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Rank {prize.rank}</p>
-                                <p className="text-lg sm:text-2xl font-black text-white tracking-tight">
-                                    ₹{prize.amount !== undefined && prize.amount !== null 
-                                        ? prize.amount.toLocaleString() 
-                                        : "0"}
-                                </p>
-                                {prize.label && <p className="mt-1 text-[8px] sm:text-xs font-bold text-purple-400 uppercase tracking-widest truncate">{prize.label}</p>}
-                            </GlassCard>
-                        ))}
-                    </div>
+                    <PrizeDistribution
+                        prizes={eventDetails.prizeDistribution}
+                        title="Rewards Distribution"
+                    />
                 </div>
             )}
         </div>

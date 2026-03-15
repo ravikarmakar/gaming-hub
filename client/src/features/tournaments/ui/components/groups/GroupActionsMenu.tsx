@@ -10,7 +10,7 @@ import {
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-import { Group } from "../../../hooks";
+import { Group } from "@/features/tournaments/types";
 
 interface GroupActionsMenuProps {
     group: Group;
@@ -50,7 +50,7 @@ export const GroupActionsMenu = memo(({
             </DropdownMenuTrigger>
             <DropdownMenuContent align={align} className="bg-gray-900 border-white/10 text-white min-w-[140px]">
                 <DropdownMenuItem
-                    className="focus:bg-white/5 focus:text-white cursor-pointer py-2"
+                    className="focus:bg-white/5 focus:text-white cursor-pointer py-1.5"
                     disabled={group.status === 'completed'}
                     onSelect={(e) => {
                         e.preventDefault();
@@ -58,12 +58,12 @@ export const GroupActionsMenu = memo(({
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <Edit2 className="w-3.5 h-3.5 mr-2" />
-                    <span className="text-xs font-bold uppercase tracking-tight">Edit Group</span>
+                    <Edit2 className="w-3.5 h-3.5 mr-2 opacity-50" />
+                    <span className="text-xs font-medium uppercase tracking-wider">Edit</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-white/5" />
                 <DropdownMenuItem
-                    className="focus:bg-red-500/10 focus:text-red-500 cursor-pointer text-red-500 py-2"
+                    className="focus:bg-red-500/10 focus:text-red-500 cursor-pointer text-red-500 py-1.5"
                     disabled={group.status === 'completed'}
                     onSelect={(e) => {
                         e.preventDefault();
@@ -71,22 +71,22 @@ export const GroupActionsMenu = memo(({
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <Trash2 className="w-3.5 h-3.5 mr-2" />
-                    <span className="text-xs font-bold uppercase tracking-tight">Delete Group</span>
+                    <Trash2 className="w-3.5 h-3.5 mr-2 opacity-50" />
+                    <span className="text-xs font-medium uppercase tracking-wider">Delete</span>
                 </DropdownMenuItem>
                 {showMerge && (
                     <>
                         <DropdownMenuSeparator className="bg-white/5" />
                         <DropdownMenuItem
-                            className="focus:bg-indigo-500/10 focus:text-indigo-400 cursor-pointer py-2"
+                            className="focus:bg-indigo-500/10 focus:text-indigo-400 cursor-pointer py-1.5"
                             onSelect={(e) => {
                                 e.preventDefault();
                                 onMerge?.();
                             }}
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <RefreshCw className="w-3.5 h-3.5 mr-2" />
-                            <span className="text-xs font-bold uppercase tracking-tight">Merge Qualified Teams</span>
+                            <RefreshCw className="w-3.5 h-3.5 mr-2 opacity-50" />
+                            <span className="text-xs font-medium uppercase tracking-wider">Merge</span>
                         </DropdownMenuItem>
                     </>
                 )}

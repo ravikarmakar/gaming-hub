@@ -108,7 +108,8 @@ export const tournamentSchema = z.object({
     message: "Tournament must start after the registration deadline",
     path: ["startDate"],
 }).refine((data) => {
-    if (data.eventType !== "scrims") {
+    const pool = Number(data.prizePool) || 0;
+    if (pool > 0) {
         return data.prizeDistribution && data.prizeDistribution.length > 0;
     }
     return true;

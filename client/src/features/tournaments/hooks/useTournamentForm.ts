@@ -126,9 +126,7 @@ export function useTournamentForm() {
               "hasRoadmap",
               "hasInvitedTeams",
               "invitedTeams",
-              "invitedTeamsRoadmap",
-              "prizePool",
-              "prizeDistribution"
+              "invitedTeamsRoadmap"
             ];
             if (irrelevantFields.includes(key)) return;
           }

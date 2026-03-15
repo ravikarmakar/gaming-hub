@@ -6,6 +6,7 @@ interface TournamentDashboardHeaderProps {
     title: string;
     registrationStatus: string;
     eventProgress: string;
+    eventType?: string;
     onStartEvent: () => void;
     onBack: () => void;
 }
@@ -14,11 +15,12 @@ export const TournamentDashboardHeader = ({
     title,
     registrationStatus,
     eventProgress,
+    eventType,
     onStartEvent,
     onBack,
 }: TournamentDashboardHeaderProps) => {
     return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-900/40 p-3 md:p-4 rounded-xl border border-white/5 backdrop-blur-xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-900/40 p-3 md:p-4 rounded-xl border border-white/5 backdrop-blur-xl mb-6">
             <div className="flex items-center gap-3">
                 <Button
                     variant="ghost"
@@ -55,7 +57,7 @@ export const TournamentDashboardHeader = ({
                         onClick={onStartEvent}
                     >
                         <PlayCircle className="w-3.5 h-3.5 mr-1.5" />
-                        Start Event
+                        {eventType === "scrims" ? "Start Scrim" : "Start Tournament"}
                     </Button>
                 )}
 

@@ -4,7 +4,7 @@ import { FixedSizeGrid, GridChildComponentProps } from "react-window";
 import { AutoSizer } from "react-virtualized-auto-sizer";
 import { Button } from "@/components/ui/button";
 import { GroupCard } from "./GroupCard";
-import { Group } from "../../../hooks";
+import { Group } from "@/features/tournaments/types";
 
 interface GroupGridViewProps {
     groups: Group[];
@@ -90,7 +90,7 @@ export const GroupGridView = ({
 }: GroupGridViewProps) => {
     return (
         <div className="space-y-4">
-            <div className="rounded-xl border border-white/5 bg-gray-900/40 overflow-hidden h-[600px]">
+            <div className="bg-transparent overflow-hidden h-[600px]">
                 <AutoSizer renderProp={({ width, height }) => {
                     let columnCount = 1;
                     if (width && width >= 1280) columnCount = 4;

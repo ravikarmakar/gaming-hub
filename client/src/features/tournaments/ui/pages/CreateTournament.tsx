@@ -33,8 +33,6 @@ export default function CreateTournament() {
     handleSubmit
   } = useTournamentForm();
 
-  const watch = methods.watch;
-
   return (
     <FormProvider {...methods}>
       <div className="relative min-h-screen pb-20">
@@ -162,7 +160,7 @@ export default function CreateTournament() {
                   </div>
                   <div className="space-y-8">
                     <ScheduleSection />
-                    {watch("eventType") !== "scrims" && <PrizeSection />}
+                    <PrizeSection />
                     <MediaSection />
                   </div>
                 </div>

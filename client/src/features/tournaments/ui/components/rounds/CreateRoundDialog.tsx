@@ -30,6 +30,7 @@ interface CreateRoundDialogProps {
     type: "tournament" | "invited-tournament" | "t1-special";
     roadmapIndex?: number;
     initialName?: string;
+    isScrim?: boolean;
 }
 
 const GAP_OPTIONS = [
@@ -45,7 +46,7 @@ const GAP_OPTIONS = [
 
 const WINNER_OPTIONS = ["1", "2", "3", "4", "5", "6"];
 
-export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIndex, initialName }: CreateRoundDialogProps) => {
+export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIndex, initialName, isScrim = false }: CreateRoundDialogProps) => {
     const { data: event } = useGetTournamentDetailsQuery(eventId);
     const [newRoundName, setNewRoundName] = useState(initialName || "");
     const [newStartDate, setNewStartDate] = useState("");
@@ -142,6 +143,13 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
         }
     };
 
+    // Auto-sync end time for scrims if needed
+    useEffect(() => {
+        if (isScrim && newDailyStartTime) {
+            setNewDailyEndTime(newDailyStartTime);
+        }
+    }, [isScrim, newDailyStartTime]);
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
@@ -193,10 +201,10 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
                             </div>
 
                             {/* Daily Schedule Grid */}
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className={isScrim ? "space-y-4" : "grid grid-cols-2 gap-4"}>
                                 <div className="space-y-1.5">
                                     <Label className="text-[9px] uppercase font-bold text-purple-200/40 tracking-wider">
-                                        Daily Start
+                                        {isScrim ? "Match Start Time" : "Daily Start"}
                                     </Label>
                                     <div className="relative group">
                                         <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-500/50 group-focus-within:text-purple-400 transition-colors" />
@@ -208,47 +216,52 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
                                         />
                                     </div>
                                 </div>
-                                <div className="space-y-1.5">
-                                    <Label className="text-[9px] uppercase font-bold text-purple-200/40 tracking-wider">
-                                        Daily End
-                                    </Label>
-                                    <div className="relative group">
-                                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-500/50 group-focus-within:text-purple-400 transition-colors" />
-                                        <Input
-                                            type="time"
-                                            value={newDailyEndTime}
-                                            onChange={(e) => setNewDailyEndTime(e.target.value)}
-                                            className="pl-9 h-10 text-xs bg-white/5 border-white/10 focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg text-white"
-                                        />
+                                
+                                {!isScrim && (
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[9px] uppercase font-bold text-purple-200/40 tracking-wider">
+                                            Daily End
+                                        </Label>
+                                        <div className="relative group">
+                                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-purple-500/50 group-focus-within:text-purple-400 transition-colors" />
+                                            <Input
+                                                type="time"
+                                                value={newDailyEndTime}
+                                                onChange={(e) => setNewDailyEndTime(e.target.value)}
+                                                className="pl-9 h-10 text-xs bg-white/5 border-white/10 focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg text-white"
+                                            />
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
 
                             {/* Gap and Matches */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <Label className="text-[9px] uppercase font-bold text-purple-200/40 tracking-wider">
-                                        Match Gap
-                                    </Label>
-                                    <Select
-                                        value={newGapMinutes.toString()}
-                                        onValueChange={(v) => setNewGapMinutes(parseInt(v))}
-                                    >
-                                        <SelectTrigger className="h-10 text-xs bg-white/5 border-white/10 focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg text-white">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                                                <SelectValue />
-                                            </div>
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
-                                            {GAP_OPTIONS.map((opt) => (
-                                                <SelectItem key={opt.value} value={opt.value}>
-                                                    {opt.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                            <div className={isScrim ? "space-y-4" : "grid grid-cols-2 gap-4"}>
+                                {!isScrim && (
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[9px] uppercase font-bold text-purple-200/40 tracking-wider">
+                                            Match Gap
+                                        </Label>
+                                        <Select
+                                            value={newGapMinutes.toString()}
+                                            onValueChange={(v) => setNewGapMinutes(parseInt(v))}
+                                        >
+                                            <SelectTrigger className="h-10 text-xs bg-white/5 border-white/10 focus:ring-purple-500 focus:border-purple-500 transition-all rounded-lg text-white">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                                                    <SelectValue />
+                                                </div>
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
+                                                {GAP_OPTIONS.map((opt) => (
+                                                    <SelectItem key={opt.value} value={opt.value}>
+                                                        {opt.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
                                 <div className="space-y-1.5">
                                     <Label className="text-[9px] uppercase font-bold text-purple-200/40 tracking-wider">
                                         Matches Count

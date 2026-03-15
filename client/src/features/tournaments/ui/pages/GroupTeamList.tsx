@@ -99,7 +99,7 @@ export default function GroupTeamList() {
                             <span className="text-xs font-bold uppercase tracking-wider">Matches</span>
                         </div>
                         <p className="text-xl font-bold">
-                            {group.totalMatch} Full Matches
+                            {group.matchesPlayed || 0}/{group.totalMatch} Matches
                         </p>
                     </Card>
                 </div>

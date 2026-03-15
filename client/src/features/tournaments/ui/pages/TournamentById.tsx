@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { Trophy, Users, MessageSquare, ListOrdered, Gavel, Info, } from "lucide-react";
+import { Trophy, Users, MessageSquare, ListOrdered, Gavel, Info, Map } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -17,10 +17,12 @@ import { GroupLeaderboardTable } from "../components/groups/GroupLeaderboardTabl
 import { TournamentHeader } from "../components/TournamentHeader";
 import { TournamentQuickStats } from "../components/TournamentQuickStats";
 import TournamentDetails from "../components/TournamentDetails";
+import { Roadmaps } from "../components/Roadmaps";
 
 
 const TABS_CONFIG = [
     { value: 'details', label: 'Details', icon: Info, color: 'purple', Component: TournamentDetails },
+    { value: 'roadmap', label: 'Roadmap', icon: Map, color: 'indigo', Component: Roadmaps },
     { value: 'rules', label: 'Rules', icon: Gavel, color: 'zinc', Component: RulesTab },
     { value: 'points', label: 'Points', icon: ListOrdered, color: 'zinc', Component: PointsTab },
     { value: 'teams', label: 'Teams', icon: Users, color: 'blue', Component: TeamsTab },
@@ -71,7 +73,7 @@ const TournamentById = () => {
 
     const handleRegister = async () => {
         if (!id) return;
-        
+
         try {
             await registerTournament(id);
             // Success is likely handled by the mutation's internal onSuccess (invalidate queries)
@@ -123,7 +125,10 @@ const TournamentById = () => {
                                 <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-brand-black to-transparent z-10 pointer-events-none sm:hidden" />
 
                                 <TabsList className="bg-transparent border-b border-white/10 p-0 h-auto rounded-none flex flex-nowrap overflow-x-auto scrollbar-hide justify-start w-full gap-8">
-                                    {TABS_CONFIG.map((tab) => (
+                                    {TABS_CONFIG.filter(tab => {
+                                        if (tab.value === 'roadmap' && eventDetails.eventType === 'scrims') return false;
+                                        return true;
+                                    }).map((tab) => (
                                         <TabsTrigger
                                             key={tab.value}
                                             value={tab.value}
@@ -137,15 +142,20 @@ const TournamentById = () => {
                                 </TabsList>
                             </div>
 
-                            {TABS_CONFIG.map((tab) => (
-                                <TabsContent key={tab.value} value={tab.value}>
-                                    <tab.Component
-                                        eventDetails={eventDetails}
-                                        eventId={eventDetails._id}
-                                        leaderboard={leaderboard}
-                                    />
-                                </TabsContent>
-                            ))}
+                            <div className="bg-gray-900/20 border border-white/5 rounded-2xl p-6 backdrop-blur-sm shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-700">
+                                {TABS_CONFIG.filter(tab => {
+                                    if (tab.value === 'roadmap' && eventDetails.eventType === 'scrims') return false;
+                                    return true;
+                                }).map((tab) => (
+                                    <TabsContent key={tab.value} value={tab.value} className="m-0">
+                                        <tab.Component
+                                            eventDetails={eventDetails}
+                                            eventId={eventDetails._id}
+                                            leaderboard={leaderboard}
+                                        />
+                                    </TabsContent>
+                                ))}
+                            </div>
                         </Tabs>
                     </div>
                 </div>

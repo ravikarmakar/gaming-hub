@@ -2,7 +2,7 @@ import { Edit2, AlertTriangle, Trash2, Info, ArrowRight, ShieldAlert, Map } from
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 
@@ -21,7 +21,7 @@ export function TournamentSettings({ eventId, eventType, registrationStatus, onE
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
             {/* Header / Info Section */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500/10 via-brand-black to-brand-black border border-indigo-500/20 p-6">
+            <div className="relative overflow-hidden rounded-2xl bg-gray-900/40 border border-white/5 p-6 backdrop-blur-sm">
                 <div className="relative z-10 flex items-start gap-4">
                     <div className="p-3 bg-indigo-500/20 rounded-xl">
                         <Info className="w-5 h-5 text-indigo-400" />
@@ -50,9 +50,9 @@ export function TournamentSettings({ eventId, eventType, registrationStatus, onE
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Edit Card */}
-                    <Card
+                    <div
                         onClick={canEdit ? onEdit : undefined}
-                        className={`group relative overflow-hidden border-white/5 bg-gray-900/40 backdrop-blur-sm transition-all duration-300 ${canEdit ? 'hover:border-purple-500/40 hover:bg-purple-500/5 cursor-pointer' : 'opacity-60 grayscale'}`}
+                        className={`group relative overflow-hidden bg-gray-900/40 border border-white/5 rounded-2xl transition-all duration-300 ${canEdit ? 'hover:border-purple-500/40 hover:bg-white/[0.02] cursor-pointer' : 'opacity-60 grayscale'}`}
                     >
                         <CardContent className="p-6">
                             <div className="flex items-start justify-between mb-4">
@@ -73,12 +73,12 @@ export function TournamentSettings({ eventId, eventType, registrationStatus, onE
                                 Update the tournament title, game details, banner image, and match rules.
                             </p>
                         </CardContent>
-                    </Card>
+                    </div>
 
                     {/* Platform Terms Card */}
-                    <Card
+                    <div
                         onClick={() => navigate('/terms')}
-                        className="group relative overflow-hidden border-white/5 bg-gray-900/40 backdrop-blur-sm hover:border-blue-500/40 hover:bg-blue-500/5 cursor-pointer transition-all duration-300"
+                        className="group relative overflow-hidden bg-gray-900/40 border border-white/5 rounded-2xl hover:border-blue-500/40 hover:bg-white/[0.02] cursor-pointer transition-all duration-300"
                     >
                         <CardContent className="p-6">
                             <div className="flex items-start justify-between mb-4">
@@ -94,13 +94,13 @@ export function TournamentSettings({ eventId, eventType, registrationStatus, onE
                                 Review the organizer terms of service and platform fair play guidelines.
                             </p>
                         </CardContent>
-                    </Card>
+                    </div>
 
                     {/* Roadmap Card */}
                     {eventType && eventType !== "scrims" && (
-                        <Card
+                        <div
                             onClick={canEdit ? () => navigate(`${ORGANIZER_ROUTES.EDIT_TOURNAMENT.replace(":eventId", eventId || "")}?tab=roadmap`) : undefined}
-                            className={`group relative overflow-hidden border-white/5 bg-gray-900/40 backdrop-blur-sm transition-all duration-300 ${canEdit ? 'hover:border-amber-500/40 hover:bg-amber-500/5 cursor-pointer' : 'opacity-60 grayscale'}`}
+                            className={`group relative overflow-hidden bg-gray-900/40 border border-white/5 rounded-2xl transition-all duration-300 ${canEdit ? 'hover:border-amber-500/40 hover:bg-white/[0.02] cursor-pointer' : 'opacity-60 grayscale'}`}
                         >
                             <CardContent className="p-6">
                                 <div className="flex items-start justify-between mb-4">
@@ -121,7 +121,7 @@ export function TournamentSettings({ eventId, eventType, registrationStatus, onE
                                     Set up tournament rounds, leagues, and the grand finale stage.
                                 </p>
                             </CardContent>
-                        </Card>
+                        </div>
                     )}
                 </div>
             </section>
@@ -133,7 +133,7 @@ export function TournamentSettings({ eventId, eventType, registrationStatus, onE
                     <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">Danger Zone</h3>
                 </div>
 
-                <Card className="border-rose-500/10 bg-rose-500/[0.02] overflow-hidden">
+                <div className="border border-white/5 bg-gray-900/40 overflow-hidden rounded-2xl backdrop-blur-sm">
                     <CardContent className="p-6">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div className="space-y-1">
@@ -157,7 +157,7 @@ export function TournamentSettings({ eventId, eventType, registrationStatus, onE
                             </Button>
                         </div>
                     </CardContent>
-                </Card>
+                </div>
             </section>
         </div>
     );

@@ -96,7 +96,7 @@ export const GroupLeaderboardTable = ({
     if (!leaderboard || !leaderboard.teamScore) return null;
 
     return (
-        <div className="bg-gray-900/40 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm">
+        <div className="bg-gray-900/40 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm shadow-lg">
             <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left text-gray-400 border-collapse">
                     <thead className="text-[10px] text-gray-400 uppercase bg-gradient-to-b from-black/60 to-black/40 border-b border-white/10">

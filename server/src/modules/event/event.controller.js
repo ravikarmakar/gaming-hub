@@ -1247,40 +1247,65 @@ export const toggleLikeEvent = TryCatchHandler(async (req, res, next) => {
     throw new CustomError("Invalid Event ID", 400);
   }
 
-  const event = await Event.findById(eventId);
+  // Initial check to decide action
+  const event = await Event.findById(eventId).select("likedBy");
   if (!event) {
     throw new CustomError("Event not found", 404);
   }
 
-  // Check if already liked using string comparison or Mongoose's built-in behavior
   const alreadyLiked = event.likedBy && event.likedBy.some(id => id.toString() === userId.toString());
 
   let updatedEvent;
   if (alreadyLiked) {
-    // Atomic Unlike
-    updatedEvent = await Event.findByIdAndUpdate(
-      eventId,
-      {
-        $pull: { likedBy: userId },
-        $inc: { likes: -1 }
-      },
+    // Truly Atomic Unlike using aggregation pipeline to handle negative likes protection ($max)
+    // and filter out the user ID in a single operation.
+    updatedEvent = await Event.findOneAndUpdate(
+      { _id: eventId, likedBy: userId },
+      [
+        {
+          $set: {
+            likes: { $max: [0, { $subtract: ["$likes", 1] }] },
+            likedBy: {
+              $filter: {
+                input: "$likedBy",
+                as: "id",
+                cond: { $ne: ["$$id", new mongoose.Types.ObjectId(userId)] }
+              }
+            }
+          }
+        }
+      ],
       { new: true }
     );
-    // Ensure likes doesn't go below 0
-    if (updatedEvent.likes < 0) {
-      await Event.findByIdAndUpdate(eventId, { $set: { likes: 0 } });
-      updatedEvent.likes = 0;
-    }
   } else {
-    // Atomic Like
-    updatedEvent = await Event.findByIdAndUpdate(
-      eventId,
+    // Atomic Like: Only add if not already present, increment likes
+    updatedEvent = await Event.findOneAndUpdate(
+      { _id: eventId, likedBy: { $ne: userId } },
       {
         $addToSet: { likedBy: userId },
         $inc: { likes: 1 }
       },
       { new: true }
     );
+  }
+
+  // If updatedEvent is null, it means a concurrent request already toggled the state.
+  // We simply return the latest status in that case.
+  if (!updatedEvent) {
+    const currentEvent = await Event.findById(eventId);
+    if (!currentEvent) {
+      throw new CustomError("Event not found", 404);
+    }
+    const finalLiked = currentEvent.likedBy && currentEvent.likedBy.some(id => id.toString() === userId.toString());
+    
+    return res.status(200).json({
+      success: true,
+      message: finalLiked ? "Tournament liked" : "Tournament unliked",
+      data: {
+        likesCount: currentEvent.likes,
+        isLiked: finalLiked
+      }
+    });
   }
 
   // Invalidate Cache for this tournament's details for all users (L1 + L2)
@@ -1300,12 +1325,14 @@ export const toggleLikeEvent = TryCatchHandler(async (req, res, next) => {
     logger.error(`[CACHE ERROR] Failed to invalidate event caches: ${err.message}`);
   });
 
+  const finalLiked = updatedEvent.likedBy && updatedEvent.likedBy.some(id => id.toString() === userId.toString());
+
   return res.status(200).json({
     success: true,
-    message: alreadyLiked ? "Tournament unliked" : "Tournament liked",
+    message: finalLiked ? "Tournament liked" : "Tournament unliked",
     data: {
       likesCount: updatedEvent.likes,
-      isLiked: !alreadyLiked
+      isLiked: finalLiked
     }
   });
 });
