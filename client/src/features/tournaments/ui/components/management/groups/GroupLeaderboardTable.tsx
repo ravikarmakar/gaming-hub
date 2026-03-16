@@ -15,7 +15,7 @@ interface GroupLeaderboardTableProps {
     selectedPairing?: 'AxB' | 'BxC' | 'AxC' | null;
     isLeague?: boolean;
     subGroupTeamSets?: Record<string, Set<string>>; // {"Sub-Group A": Set<id>, ...}
-    isGrandFinale?: boolean;
+
 }
 
 // Determine which sub-group a team belongs to based on pairingType
@@ -92,7 +92,7 @@ export const GroupLeaderboardTable = ({
     selectedPairing,
     isLeague = false,
     subGroupTeamSets,
-    isGrandFinale,
+
 }: GroupLeaderboardTableProps) => {
     if (!leaderboard || !leaderboard.teamScore) return null;
 
@@ -228,7 +228,7 @@ export const GroupLeaderboardTable = ({
                                                 </span>
                                                 {entry.isQualified && (
                                                     <span className={`text-[9px] uppercase tracking-widest font-black ${nameColor} opacity-60 mt-0.5`}>
-                                                        {isGrandFinale ? 'Winner' : 'Finalist'}
+                                                        Finalist
                                                     </span>
                                                 )}
                                             </div>

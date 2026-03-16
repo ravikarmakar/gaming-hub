@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useRoundsSidebar, useRoundActions } from "@/features/tournaments/hooks";
 import { RoundHeader } from "./rounds/RoundHeader";
 import { GroupsGrid } from "./GroupsGrid";
-import { RoadmapTabs } from "..";
+import { RoadmapTabs } from "../details/RoadmapTabs";
 import { RoundsSidebar } from "./RoundsSidebar";
 import { RoundsManagerDialogs } from "./RoundsManagerDialogs";
 
@@ -73,11 +73,11 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
         isCreatingGroups,
         isCreatingSingleGroup,
         isMergingTeams
-    } = useRoundActions(eventId, rounds, activeRoundTab);
+    } = useRoundActions(eventId);
 
     return (
         <div className="flex flex-col h-full w-full">
-            <div className="px-6 py-2 border-b border-white/5 bg-black/5 flex items-center justify-between">
+            <div className="py-2 border-b border-white/5 bg-black/5 flex items-center justify-between">
                 <RoadmapTabs
                     activeTab={activeRoundTab}
                     onTabChange={setActiveRoundTab}
@@ -99,7 +99,7 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
             </div>
 
             <div className="flex flex-1 min-h-0 overflow-hidden">
-                <RoundsSidebar 
+                <RoundsSidebar
                     isLoading={isLoading}
                     event={event}
                     rounds={rounds}
@@ -155,7 +155,7 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
                             />
 
                             {/* Scrollable Groups Grid Area */}
-                            <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
+                            <div className="flex-1 py-2 overflow-y-auto custom-scrollbar">
                                 {!selectedRound.isPlaceholder ? (
                                     <GroupsGrid
                                         roundId={selectedRound._id}
@@ -187,7 +187,7 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
                 </div>
             </div>
 
-            <RoundsManagerDialogs 
+            <RoundsManagerDialogs
                 eventId={eventId}
                 activeRoundTab={activeRoundTab}
                 actionRound={actionRound}

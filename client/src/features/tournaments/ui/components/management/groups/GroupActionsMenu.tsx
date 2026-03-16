@@ -16,6 +16,7 @@ interface GroupActionsMenuProps {
     group: Group;
     onEdit: (group: Group) => void;
     onDelete: (group: Group) => void;
+    onReset?: (group: Group) => void;
     onMerge?: () => void;
     showMerge?: boolean;
     align?: "start" | "end" | "center";
@@ -27,6 +28,7 @@ export const GroupActionsMenu = memo(({
     group,
     onEdit,
     onDelete,
+    onReset,
     onMerge,
     showMerge = false,
     align = "end",
@@ -74,6 +76,22 @@ export const GroupActionsMenu = memo(({
                     <Trash2 className="w-3.5 h-3.5 mr-2 opacity-50" />
                     <span className="text-xs font-medium uppercase tracking-wider">Delete</span>
                 </DropdownMenuItem>
+                {onReset && (
+                    <>
+                        <DropdownMenuSeparator className="bg-white/5" />
+                        <DropdownMenuItem
+                            className="focus:bg-orange-500/10 focus:text-orange-500 cursor-pointer py-1.5"
+                            onSelect={(e) => {
+                                e.preventDefault();
+                                onReset(group);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <RefreshCw className="w-3.5 h-3.5 mr-2 opacity-50 text-orange-500" />
+                            <span className="text-xs font-medium uppercase tracking-wider text-orange-500">Reset Match</span>
+                        </DropdownMenuItem>
+                    </>
+                )}
                 {showMerge && (
                     <>
                         <DropdownMenuSeparator className="bg-white/5" />

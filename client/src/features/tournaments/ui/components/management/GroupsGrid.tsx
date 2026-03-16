@@ -42,6 +42,8 @@ export const GroupsGrid = ({
         isSaving,
         isConfirmOpen,
         setIsConfirmOpen,
+        isResetConfirmOpen,
+        setIsResetConfirmOpen,
         editingGroup,
         isEditOpen,
         setIsEditOpen,
@@ -76,20 +78,19 @@ export const GroupsGrid = ({
         handleSubmitResults,
         handleResultChange,
         handleConfirmSubmit,
+        handleResetGroup,
+        handleConfirmReset,
         currentGroupIndex,
         totalGroupsCount,
         isLeaderboardLoading,
+        isFetching,
     } = useGroupsGrid({ roundId, eventId, externalSearch, externalStatusFilter, externalSortBy });
 
     const currentRound = rounds.find((r: any) => r._id === roundId);
-    
-    // Improved Grand Finale detection
-    const roadmapData = (currentRound as any)?.roadmapData;
-    const isGrandFinale = roadmapData?.isFinale === true || 
-                        roadmapData?.grandFinaleType || 
-                        (roadmapData?.title?.toLowerCase().includes('final') && !roadmapData?.title?.toLowerCase().includes('semi'));
 
-    if (isLoading && groups.length === 0 && !selectedGroupId) {
+
+
+    if ((isLoading || isFetching) && groups.length === 0 && !selectedGroupId) {
         return (
             <div className="flex h-64 items-center justify-center">
                 <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
@@ -97,7 +98,7 @@ export const GroupsGrid = ({
         );
     }
 
-    if (!isLoading && groups.length === 0) {
+    if (!isLoading && !isFetching && groups.length === 0) {
         if (search || statusFilter) {
             return (
                 <div className="flex flex-col h-64 items-center justify-center gap-4 text-center">
@@ -160,11 +161,12 @@ export const GroupsGrid = ({
                     hasPreviousGroup={hasPreviousGroup}
                     openEditModal={openEditModal}
                     openDeleteModal={openDeleteModal}
+                    onResetGroup={handleResetGroup}
                     openChatModal={openChatModal}
                     currentGroupIndex={currentGroupIndex}
                     totalGroupsCount={totalGroupsCount}
                     isLoading={isLeaderboardLoading}
-                    isGrandFinale={isGrandFinale}
+
                 />
             ) : (
                 <GroupGridView
@@ -183,6 +185,7 @@ export const GroupsGrid = ({
                     onMergeToGroup={handleMergeToGroup}
                     activeRoundTab={activeRoundTab}
                     round={currentRound}
+                    onResetGroup={handleResetGroup}
                 />
             )}
 
@@ -204,9 +207,12 @@ export const GroupsGrid = ({
                 inviteGroup={inviteGroup}
                 isConfirmOpen={isConfirmOpen}
                 setIsConfirmOpen={setIsConfirmOpen}
+                isResetConfirmOpen={isResetConfirmOpen}
+                setIsResetConfirmOpen={setIsResetConfirmOpen}
                 currentGroup={currentGroup}
                 effectiveTotalMatch={effectiveTotalMatch}
                 handleConfirmSubmit={handleConfirmSubmit}
+                handleConfirmReset={handleConfirmReset}
                 isSaving={isSaving}
                 isMergeOpen={isMergeOpen}
                 setIsMergeOpen={setIsMergeOpen}

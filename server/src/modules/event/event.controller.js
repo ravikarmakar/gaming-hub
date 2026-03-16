@@ -202,17 +202,50 @@ export const createEvent = TryCatchHandler(async (req, res, next) => {
           const roadmaps = [];
           if (req.body.roadmap) {
             try {
-              const data = typeof req.body.roadmap === 'string' ? JSON.parse(req.body.roadmap) : req.body.roadmap;
+              let data = typeof req.body.roadmap === 'string' ? JSON.parse(req.body.roadmap) : req.body.roadmap;
+              if (Array.isArray(data)) {
+                data = data.map((r, i) => ({ ...r, name: `Round ${i + 1}` }));
+              }
               roadmaps.push({ type: "tournament", data });
             } catch (e) { logger.error("Error parsing roadmap in createEvent:", e); }
           }
           if (req.body.invitedTeamsRoadmap) {
             try {
-              const data = typeof req.body.invitedTeamsRoadmap === 'string' ? JSON.parse(req.body.invitedTeamsRoadmap) : req.body.invitedTeamsRoadmap;
+              let data = typeof req.body.invitedTeamsRoadmap === 'string' ? JSON.parse(req.body.invitedTeamsRoadmap) : req.body.invitedTeamsRoadmap;
+              if (Array.isArray(data)) {
+                data = data.map((r, i) => ({ ...r, name: `Round ${i + 1}` }));
+              }
               roadmaps.push({ type: "invitedTeams", data });
             } catch (e) { logger.error("Error parsing invitedTeamsRoadmap in createEvent:", e); }
           }
+          if (req.body.t1SpecialRoadmap) {
+            try {
+              let data = typeof req.body.t1SpecialRoadmap === 'string' ? JSON.parse(req.body.t1SpecialRoadmap) : req.body.t1SpecialRoadmap;
+              if (Array.isArray(data)) {
+                data = data.map((r, i) => ({ ...r, name: `Round ${i + 1}` }));
+              }
+              roadmaps.push({ type: "t1-special", data });
+            } catch (e) { logger.error("Error parsing t1SpecialRoadmap in createEvent:", e); }
+          }
           return roadmaps;
+        })(),
+        invitedRoundMappings: (() => {
+          if (!req.body.invitedRoundMappings) return [];
+          try {
+            const mappings = typeof req.body.invitedRoundMappings === 'string'
+              ? JSON.parse(req.body.invitedRoundMappings)
+              : req.body.invitedRoundMappings;
+            return Array.isArray(mappings) ? mappings : [];
+          } catch (e) { return []; }
+        })(),
+        t1SpecialRoundMappings: (() => {
+          if (!req.body.t1SpecialRoundMappings) return [];
+          try {
+            const mappings = typeof req.body.t1SpecialRoundMappings === 'string'
+              ? JSON.parse(req.body.t1SpecialRoundMappings)
+              : req.body.t1SpecialRoundMappings;
+            return Array.isArray(mappings) ? mappings : [];
+          } catch (e) { return []; }
         })(),
         hasInvitedTeams: req.body.hasInvitedTeams === 'true' || req.body.hasInvitedTeams === true,
         invitedTeams: (() => {
@@ -804,7 +837,10 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
 
       if (req.body.roadmap) {
         try {
-          const data = typeof req.body.roadmap === 'string' ? JSON.parse(req.body.roadmap) : req.body.roadmap;
+          let data = typeof req.body.roadmap === 'string' ? JSON.parse(req.body.roadmap) : req.body.roadmap;
+          if (Array.isArray(data)) {
+            data = data.map((r, i) => ({ ...r, name: `Round ${i + 1}` }));
+          }
           const idx = roadmaps.findIndex(r => r.type === "tournament");
           if (idx !== -1) roadmaps[idx].data = data;
           else roadmaps.push({ type: "tournament", data });
@@ -813,7 +849,10 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
 
       if (req.body.invitedTeamsRoadmap) {
         try {
-          const data = typeof req.body.invitedTeamsRoadmap === 'string' ? JSON.parse(req.body.invitedTeamsRoadmap) : req.body.invitedTeamsRoadmap;
+          let data = typeof req.body.invitedTeamsRoadmap === 'string' ? JSON.parse(req.body.invitedTeamsRoadmap) : req.body.invitedTeamsRoadmap;
+          if (Array.isArray(data)) {
+            data = data.map((r, i) => ({ ...r, name: `Round ${i + 1}` }));
+          }
           const idx = roadmaps.findIndex(r => r.type === "invitedTeams");
           if (idx !== -1) roadmaps[idx].data = data;
           else roadmaps.push({ type: "invitedTeams", data });
@@ -822,7 +861,10 @@ export const updateEvent = TryCatchHandler(async (req, res, next) => {
 
       if (req.body.t1SpecialRoadmap) {
         try {
-          const data = typeof req.body.t1SpecialRoadmap === 'string' ? JSON.parse(req.body.t1SpecialRoadmap) : req.body.t1SpecialRoadmap;
+          let data = typeof req.body.t1SpecialRoadmap === 'string' ? JSON.parse(req.body.t1SpecialRoadmap) : req.body.t1SpecialRoadmap;
+          if (Array.isArray(data)) {
+            data = data.map((r, i) => ({ ...r, name: `Round ${i + 1}` }));
+          }
           const idx = roadmaps.findIndex(r => r.type === "t1-special");
           if (idx !== -1) roadmaps[idx].data = data;
           else roadmaps.push({ type: "t1-special", data });
@@ -1356,7 +1398,7 @@ export const toggleLikeEvent = TryCatchHandler(async (req, res, next) => {
       throw new CustomError("Event not found", 404);
     }
     const finalLiked = currentEvent.likedBy && currentEvent.likedBy.some(id => id.toString() === userId.toString());
-    
+
     return res.status(200).json({
       success: true,
       message: finalLiked ? "Tournament liked" : "Tournament unliked",

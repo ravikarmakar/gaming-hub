@@ -40,9 +40,8 @@ export function useTournamentForm() {
       registrationMode: "open",
       hasRoadmap: true,
       hasInvitedTeams: false,
+      hasInvitedTeamsRoadmap: false,
       invitedTeams: [],
-      invitedTeamsRoadmap: [],
-      maxInvitedSlots: "",
       hasT1SpecialRoadmap: false,
       t1SpecialRoadmap: [],
       t1SpecialRoundMappings: [],
@@ -108,6 +107,12 @@ export function useTournamentForm() {
   }, [isEditMode, eventDetails, reset, setValue]);
 
   const onFormSubmit: SubmitHandler<TournamentFormValues> = async (data) => {
+    // FINAL SAFETY GUARD: If on details tab and roadmap is available, do not submit.
+    if (activeTab === "details" && isRoadmapAvailable) {
+      nextStep();
+      return;
+    }
+
     try {
       const fd = new FormData();
       const backendEventType = data.eventType;
@@ -186,7 +191,7 @@ export function useTournamentForm() {
   };
 
   const nextStep = async () => {
-    const isBasicValid = await trigger(["title", "game", "slots", "startDate", "description"]);
+    const isBasicValid = await trigger(["title", "game", "slots", "startDate", "registrationEndsAt", "description", "category", "eventType", "registrationMode"]);
     if (isBasicValid) {
       setActiveTab("roadmap");
       window.scrollTo({ top: 0, behavior: "smooth" });

@@ -29,12 +29,15 @@ interface GroupDetailsViewProps {
     hasPreviousGroup?: boolean;
     openEditModal: (group: Group) => void;
     openDeleteModal: (group: Group) => void;
+    onResetGroup?: () => void;
     openChatModal: (group: Group) => void;
     currentGroupIndex?: number;
     totalGroupsCount?: number;
     isLoading?: boolean;
-    isGrandFinale?: boolean;
+
+    showMerge?: boolean;
 }
+
 
 export const GroupDetailsView = ({
     currentGroup,
@@ -59,14 +62,17 @@ export const GroupDetailsView = ({
     hasPreviousGroup,
     openEditModal,
     openDeleteModal,
+    onResetGroup,
     openChatModal,
     currentGroupIndex,
     totalGroupsCount,
     isLoading,
-    isGrandFinale,
+
+    showMerge,
 }: GroupDetailsViewProps) => {
     // Stash the last valid leaderboard to prevent "blinking" empty state during navigation
     const [stashedLeaderboard, setStashedLeaderboard] = useState<any>(null);
+
 
     useEffect(() => {
         if (leaderboard && !isLoading) {
@@ -97,8 +103,8 @@ export const GroupDetailsView = ({
     }
 
     // Calculate qualified count from leaderboard if available, fallback to group teams
-    const qualifiedCount = (activeLeaderboard?.teamScore || activeLeaderboard)?.filter?.((t: any) => t.isQualified).length || 
-                           currentGroup?.teams?.filter((t: any) => t.isQualified).length || 0;
+    const qualifiedCount = (activeLeaderboard?.teamScore || activeLeaderboard)?.filter?.((t: any) => t.isQualified).length ||
+        currentGroup?.teams?.filter((t: any) => t.isQualified).length || 0;
 
     return (
         <div className="space-y-4">
@@ -111,7 +117,6 @@ export const GroupDetailsView = ({
                 hasNextGroup={!!hasNextGroup}
                 qualifyingTeams={qualifyingTeams}
                 qualifiedCount={qualifiedCount}
-                isGrandFinale={isGrandFinale}
                 currentGroupIndex={currentGroupIndex}
                 totalGroupsCount={totalGroupsCount}
                 isResultsMode={isResultsMode}
@@ -124,12 +129,16 @@ export const GroupDetailsView = ({
                 onInviteTeam={() => openInviteModal(currentGroup)}
                 onEditGroup={openEditModal}
                 onDeleteGroup={openDeleteModal}
+                onResetGroup={onResetGroup}
                 isSubmitting={isSaving}
                 isSubmitDisabled={currentGroup.isLeague && !selectedPairing}
                 isLoading={isLoading}
                 onChat={openChatModal}
                 totalMatch={effectiveTotalMatch}
+                showMerge={showMerge}
+                onMerge={() => openMergeModal(currentGroup)}
             />
+
 
             {currentGroup.isLeague && isResultsMode && (
                 <LeaguePairingSelector

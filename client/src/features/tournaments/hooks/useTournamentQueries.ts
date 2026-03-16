@@ -25,7 +25,7 @@ export const tournamentKeys = {
 
 // Queries
 export const useGetRegistrationStatusQuery = (eventId: string, teamId: string, options: any = {}) => {
-    return useQuery({
+    return useQuery<any>({
         ...TOURNAMENT_QUERY_CONFIG,
         ...options,
         queryKey: tournamentKeys.registrationStatus(eventId, teamId),

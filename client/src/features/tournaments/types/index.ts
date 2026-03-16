@@ -9,10 +9,8 @@ export type RoundTabType = "tournament" | "invited-tournament" | "t1-special";
 export interface RoadmapItem {
     name: string;
     title: string;
-    isFinale?: boolean;
     isLeague?: boolean;
     leagueType?: "12-teams" | "18-teams";
-    grandFinaleType?: string;
     groups?: string;
     roundId?: string;
     status?: string;
@@ -52,14 +50,12 @@ export interface Tournament {
     maxInvitedSlots?: number;
     invitedTeamsRoadmap?: RoadmapItem[];
     invitedRoundMappings?: {
-        startRound: number;
-        endRound: number;
-        targetMainRound: number;
+        sourceRound: { roundNumber: number; roundName: string };
+        targetMainRound: { roundNumber: number; roundName: string };
     }[];
     t1SpecialRoundMappings?: {
-        startRound: number;
-        endRound: number;
-        targetMainRound: number;
+        sourceRound: { roundNumber: number; roundName: string };
+        targetMainRound: { roundNumber: number; roundName: string };
     }[];
     roadmaps?: Array<{ type: RoadmapType; data: RoadmapItem[] }>;
     hasInvitedTeams?: boolean;

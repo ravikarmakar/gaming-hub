@@ -4,22 +4,36 @@ import { Button } from "@/components/ui/button";
 
 interface RoundItemProps {
     round: any;
-    isSelected: boolean;
-    isSidebarCollapsed: boolean;
-    activeRoundTab: string;
-    onSelect: (id: string) => void;
-    onEditClick: (round: any) => void;
-    onDeleteClick: (round: any) => void;
+    isSelected?: boolean;
+    isSidebarCollapsed?: boolean;
+    activeRoundTab?: string;
+    onSelect?: (id: string) => void;
+    onEditClick?: (round: any) => void;
+    onDeleteClick?: (round: any) => void;
+    isReadOnly?: boolean;
 }
 
-export const RoundItem = memo(({ round, isSelected, isSidebarCollapsed, activeRoundTab, onSelect, onEditClick, onDeleteClick }: RoundItemProps) => {
+export const RoundItem = memo(({
+    round,
+    isSelected = false,
+    isSidebarCollapsed = false,
+    activeRoundTab,
+    onSelect,
+    onEditClick,
+    onDeleteClick,
+    isReadOnly = false
+}: RoundItemProps) => {
+    const handleSelect = () => {
+        if (!isReadOnly && onSelect) onSelect(round._id);
+    };
+
     return (
         <div
-            onClick={() => onSelect(round._id)}
+            onClick={handleSelect}
             onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    onSelect(round._id);
+                    handleSelect();
                 }
             }}
             tabIndex={0}
@@ -52,22 +66,35 @@ export const RoundItem = memo(({ round, isSelected, isSidebarCollapsed, activeRo
             ) : (
                 <div className="flex justify-between items-start">
                     <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className={`font-bold ${isSelected ? 'text-purple-300' : 'text-gray-300'}`}>
-                                {round.roundNumber ? `R${round.roundNumber} - ` : ""}{round.roundName}
-                            </span>
-                            {round.status === 'ongoing' && (
-                                <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                            )}
-                        </div>
+                        {isReadOnly ? (
+                            <div>
+                                <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-0.5">
+                                    Round {round.roundNumber || "?"}
+                                </p>
+                                <h4 className={`text-lg font-black tracking-tight ${isSelected ? 'text-purple-300' : 'text-white'}`}>
+                                    {round.roundName}
+                                </h4>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className={`font-bold ${isSelected ? 'text-purple-300' : 'text-gray-300'}`}>
+                                    {round.roundNumber ? `R${round.roundNumber} - ` : ""}{round.roundName}
+                                </span>
+                                {round.status === 'ongoing' && (
+                                    <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                                )}
+                            </div>
+                        )}
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2">
-                                <span className={`text-[8px] px-1.5 py-0.5 rounded-sm font-black tracking-widest uppercase border ${round.isLeague
+                                {!isReadOnly && (
+                                    <span className={`text-[8px] px-1.5 py-0.5 rounded-sm font-black tracking-widest uppercase border ${round.isLeague
                                         ? "bg-amber-500/10 border-amber-500/20 text-amber-500"
                                         : "bg-blue-500/10 border-blue-500/20 text-blue-400"
-                                    }`}>
-                                    {round.isLeague ? "League" : "Standard"}
-                                </span>
+                                        }`}>
+                                        {round.isLeague ? "League" : "Standard"}
+                                    </span>
+                                )}
                                 {(round.roadmapData?.isLeague || round.roadmapData?.isFinale) && (round.roadmapData?.leagueType || round.roadmapData?.grandFinaleType) && (
                                     <span className="text-[10px] text-gray-500 uppercase font-black tracking-tight flex items-center gap-1">
                                         <span className="w-1 h-1 rounded-full bg-white/20" />
@@ -107,13 +134,13 @@ export const RoundItem = memo(({ round, isSelected, isSidebarCollapsed, activeRo
                                 <CheckCircle2 className="w-4 h-4 text-green-500" />
                             </div>
                         )}
-                        {!round.isPlaceholder && round.status !== 'completed' && activeRoundTab !== 't1-special' && (
+                        {!isReadOnly && !round.isPlaceholder && round.status !== 'completed' && activeRoundTab !== 't1-special' && (
                             <div className="flex items-center gap-1">
                                 <Button
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-gray-400/50 hover:text-purple-400 hover:bg-purple-500/10"
-                                    onClick={(e) => { e.stopPropagation(); onEditClick(round); }}
+                                    onClick={(e) => { e.stopPropagation(); onEditClick?.(round); }}
                                     aria-label="Edit timing and scheduling"
                                 >
                                     <Clock className="w-3.5 h-3.5" />
@@ -122,7 +149,7 @@ export const RoundItem = memo(({ round, isSelected, isSidebarCollapsed, activeRo
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-gray-400 hover:text-white hover:bg-white/10"
-                                    onClick={(e) => { e.stopPropagation(); onEditClick(round); }}
+                                    onClick={(e) => { e.stopPropagation(); onEditClick?.(round); }}
                                     aria-label={`Edit ${round.roundName} name and settings`}
                                 >
                                     <Edit className="w-3.5 h-3.5" />
@@ -132,7 +159,7 @@ export const RoundItem = memo(({ round, isSelected, isSidebarCollapsed, activeRo
                                         variant="ghost"
                                         size="icon"
                                         className="h-7 w-7 text-red-500/50 hover:text-red-400 hover:bg-red-500/10"
-                                        onClick={(e) => { e.stopPropagation(); onDeleteClick(round); }}
+                                        onClick={(e) => { e.stopPropagation(); onDeleteClick?.(round); }}
                                         aria-label={`Delete ${round.roundName}`}
                                     >
                                         <Trash2 className="w-3.5 h-3.5" />

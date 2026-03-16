@@ -8,6 +8,7 @@ import {
   deleteGroup,
   injectTeam,
   mergeQualifiedTeamsIntoGroup,
+  resetGroup,
 } from "../controllers/group.controller.js";
 import { authorize } from "../../../shared/middleware/rbac.middleware.js";
 import { isAuthenticated } from "../../../shared/middleware/auth.middleware.js";
@@ -59,5 +60,11 @@ router.post(
 
 router.get("/:groupId", isAuthenticated, authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), groupDetails);
 router.get("/", isAuthenticated, authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), getGroups);
+router.post(
+  "/:groupId/reset",
+  isAuthenticated,
+  authorize(Scopes.EVENT, [Roles.ORG.OWNER, Roles.ORG.MANAGER], { parentScope: Scopes.ORG }),
+  resetGroup
+);
 
 export default router;

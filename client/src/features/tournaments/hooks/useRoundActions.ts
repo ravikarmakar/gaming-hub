@@ -1,15 +1,15 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { 
-    useUpdateRoundStatusMutation, 
-    useCreateGroupsMutation, 
+import {
+    useUpdateRoundStatusMutation,
+    useCreateGroupsMutation,
     useCreateSingleGroupMutation,
-    useMergeTeamsToRoundMutation 
+    useMergeTeamsToRoundMutation
 } from './useTournamentMutations';
 import { tournamentKeys } from './useTournamentQueries';
 import toast from "react-hot-toast";
 
-export const useRoundActions = (eventId: string, rounds: any[], activeRoundTab: string) => {
+export const useRoundActions = (eventId: string) => {
     const { mutateAsync: updateRoundStatus } = useUpdateRoundStatusMutation();
     const { mutateAsync: createGroups, isPending: isCreatingGroups } = useCreateGroupsMutation();
     const { mutateAsync: createSingleGroup, isPending: isCreatingSingleGroup } = useCreateSingleGroupMutation();
@@ -38,7 +38,7 @@ export const useRoundActions = (eventId: string, rounds: any[], activeRoundTab: 
 
     const handleRefresh = useCallback((refetchFns: (() => void)[], roundId?: string) => {
         if (cooldown > 0) return;
-        
+
         // 1. Run local refetch functions (usually rounds and event details)
         refetchFns.forEach(fn => fn());
 
@@ -52,11 +52,6 @@ export const useRoundActions = (eventId: string, rounds: any[], activeRoundTab: 
         setCooldown(30);
         toast.success("Data refreshed!");
     }, [cooldown, queryClient]);
-
-    const isGrandFinale = useMemo(() => {
-        const latestActual = rounds.filter(r => (r.type || "tournament") === activeRoundTab).pop();
-        return latestActual?.groups && latestActual.groups.length === 1;
-    }, [rounds, activeRoundTab]);
 
     const handleCreateGroups = useCallback(async (roundId: string) => {
         try {
@@ -80,16 +75,14 @@ export const useRoundActions = (eventId: string, rounds: any[], activeRoundTab: 
         try {
             await updateRoundStatus({ roundId: round._id, eventId, status: 'completed' });
             toast.success(`${round.roundName} marked as completed!`);
-            if (isGrandFinale) {
-                toast.success("Grand Finale completed! You can now finish the tournament.");
-            }
+
         } catch (error) {
             console.error(error);
             toast.error("Failed to complete round.");
         } finally {
             setIsSavingStatus(false);
         }
-    }, [eventId, updateRoundStatus, isGrandFinale]);
+    }, [eventId, updateRoundStatus]);
 
     const handleMergeTeams = useCallback(async (roundId: string) => {
         const loadingToast = toast.loading("Merging teams...");

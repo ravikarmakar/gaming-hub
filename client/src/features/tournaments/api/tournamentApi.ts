@@ -90,6 +90,10 @@ export const tournamentApi = {
     updateGroup: async (data: { groupId: string; eventId: string; payload: any }): Promise<void> => {
         await axiosInstance.put(`/groups/${data.groupId}`, { ...data.payload, eventId: data.eventId });
     },
+    resetGroup: async (data: { groupId: string; eventId: string }): Promise<any> => {
+        const { data: resData } = await axiosInstance.post(`/groups/${data.groupId}/reset`, { eventId: data.eventId });
+        return resData;
+    },
     deleteGroup: async (data: { groupId: string; eventId: string }): Promise<any> => {
         const { data: resData } = await axiosInstance.delete(`/groups/${data.groupId}`, { params: { eventId: data.eventId } });
         return resData;

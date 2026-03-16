@@ -19,9 +19,11 @@ interface GroupGridViewProps {
     totalPages: number;
     isLoading: boolean;
     handlePageChange: (page: number) => void;
+    onResetGroup?: (group: Group) => void;
     onMergeToGroup: (id: string) => void;
     activeRoundTab: string;
     round: any;
+
 }
 
 const MemoizedGroupCard = React.memo(GroupCard);
@@ -41,9 +43,10 @@ const GridCell = ({
         openDeleteModal, 
         openChatModal, 
         openInviteModal, 
+        onResetGroup,
         onMergeToGroup, 
         activeRoundTab, 
-        round 
+        round
     } = data;
     
     const index = rowIndex * columnCount + columnIndex;
@@ -62,9 +65,11 @@ const GridCell = ({
                     onDelete={openDeleteModal}
                     onChat={openChatModal}
                     onInvite={openInviteModal}
+                    onReset={onResetGroup}
                     onMerge={() => onMergeToGroup(group._id)}
                     activeRoundTab={activeRoundTab}
                     round={round}
+
                 />
             </div>
         </div>
@@ -84,9 +89,10 @@ export const GroupGridView = ({
     totalPages,
     isLoading,
     handlePageChange,
+    onResetGroup,
     onMergeToGroup,
     activeRoundTab,
-    round // Ensure this is destructured correctly
+    round
 }: GroupGridViewProps) => {
     return (
         <div className="space-y-4">
@@ -109,6 +115,7 @@ export const GroupGridView = ({
                         openDeleteModal,
                         openChatModal,
                         openInviteModal,
+                        onResetGroup,
                         onMergeToGroup,
                         activeRoundTab,
                         round

@@ -9,20 +9,19 @@ const prizeDistributionItemSchema = z.object({
 const roadmapItemSchema = z.object({
     name: z.string().optional(),
     title: z.string().optional(),
-    isFinale: z.boolean().optional(),
     isLeague: z.boolean().optional(),
     leagueType: z.enum(["12-teams", "18-teams"]).optional(),
-    grandFinaleType: z.string().optional(),
     groups: z.string().optional(),
 });
 
-const invitedRoundMappingSchema = z.object({
-    startRound: z.number().min(0),
-    endRound: z.number().min(0),
-    targetMainRound: z.number().min(0),
-}).refine((data) => data.endRound >= data.startRound, {
-    message: "End round must be greater than or equal to start round",
-    path: ["endRound"],
+export const roundRefSchema = z.object({
+    roundNumber: z.number().min(0),
+    roundName: z.string().min(1),
+});
+
+const roadmapMergeMappingSchema = z.object({
+    sourceRound: roundRefSchema,
+    targetMainRound: roundRefSchema,
 });
 
 export const tournamentSchema = z.object({
@@ -47,16 +46,22 @@ export const tournamentSchema = z.object({
     hasRoadmap: z.boolean().optional(),
     roadmap: z.array(roadmapItemSchema).optional(),
     hasInvitedTeams: z.boolean().optional(),
-    invitedTeams: z.array(z.object({
-        teamName: z.string().min(1, "Team name is required"),
-        email: z.string().email("Invalid email format").optional().or(z.literal("")),
-    })).optional(),
+    invitedTeams: z.array(z.union([
+        z.object({
+            teamName: z.string().min(1, "Team name is required"),
+            email: z.string().email("Invalid email format").optional().or(z.literal("")),
+            teamId: z.string().optional(),
+            _id: z.string().optional(),
+        }),
+        z.string()
+    ])).optional(),
     maxInvitedSlots: z.union([z.string(), z.number()]).optional(),
+    hasInvitedTeamsRoadmap: z.boolean().optional(),
     invitedTeamsRoadmap: z.array(roadmapItemSchema).optional(),
-    invitedRoundMappings: z.array(invitedRoundMappingSchema).optional(),
+    invitedRoundMappings: z.array(roadmapMergeMappingSchema).optional(),
     hasT1SpecialRoadmap: z.boolean().optional(),
     t1SpecialRoadmap: z.array(roadmapItemSchema).optional(),
-    t1SpecialRoundMappings: z.array(invitedRoundMappingSchema).optional(),
+    t1SpecialRoundMappings: z.array(roadmapMergeMappingSchema).optional(),
     roadmaps: z.array(z.object({
         type: z.enum(["tournament", "invitedTeams", "t1-special"]),
         data: z.array(roadmapItemSchema)

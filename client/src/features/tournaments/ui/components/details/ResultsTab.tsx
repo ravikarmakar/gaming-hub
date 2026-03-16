@@ -16,7 +16,6 @@ export function ResultsTab({ leaderboard }: ResultsTabProps) {
                     handleResultChange={() => { }}
                     activeRoundTab="main"
                     openMergeModal={() => { }}
-                    isGrandFinale={true}
                 />
             ) : (
                 <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-white/5 rounded-3xl border border-dashed border-white/10">

@@ -1,4 +1,4 @@
-import { RegisteredTeamsList } from "@/features/tournaments/ui/components";
+import { RegisteredTeamsList } from "../shared/RegisteredTeamsList";
 
 interface TeamsTabProps {
     eventId: string;

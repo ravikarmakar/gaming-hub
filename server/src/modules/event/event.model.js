@@ -8,6 +8,17 @@ import {
   eventRoadmapTypeEnum
 } from "./event.constants.js";
 
+
+export const roundRefSchema = {
+  roundNumber: { type: Number, required: true },
+  roundName: { type: String, required: true }
+};
+
+export const roadmapMergeMappingSchema = {
+  sourceRound: roundRefSchema,
+  targetMainRound: roundRefSchema,
+};
+
 const eventSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
@@ -128,20 +139,8 @@ const eventSchema = new mongoose.Schema(
         ref: "Team",
       }
     ],
-    invitedRoundMappings: [
-      {
-        startRound: { type: Number, required: true },
-        endRound: { type: Number, required: true },
-        targetMainRound: { type: Number, required: true },
-      }
-    ],
-    t1SpecialRoundMappings: [
-      {
-        startRound: { type: Number, required: true },
-        endRound: { type: Number, required: true },
-        targetMainRound: { type: Number, required: true },
-      }
-    ],
+    invitedRoundMappings: [roadmapMergeMappingSchema],
+    t1SpecialRoundMappings: [roadmapMergeMappingSchema]
   },
   { timestamps: true }
 );

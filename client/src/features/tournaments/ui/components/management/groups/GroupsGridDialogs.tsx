@@ -4,6 +4,16 @@ import { GroupChatDialog } from "./GroupChatDialog";
 import { AddTeamDialog } from "@/features/tournaments/ui/components/dialogs/AddTeamDialog";
 import { SubmitResultsDialog } from "@/features/tournaments/ui/components/dialogs/SubmitResultsDialog";
 import { MergeTeamToGroupDialog } from "./MergeTeamToGroupDialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Group } from "@/features/tournaments/types";
 
 interface GroupsGridDialogsProps {
@@ -24,9 +34,12 @@ interface GroupsGridDialogsProps {
     inviteGroup: Group | null;
     isConfirmOpen: boolean;
     setIsConfirmOpen: (open: boolean) => void;
+    isResetConfirmOpen: boolean;
+    setIsResetConfirmOpen: (open: boolean) => void;
     currentGroup: Group | undefined;
     effectiveTotalMatch: number;
     handleConfirmSubmit: () => void;
+    handleConfirmReset: () => void;
     isSaving: boolean;
     isMergeOpen: boolean;
     setIsMergeOpen: (open: boolean) => void;
@@ -51,9 +64,12 @@ export const GroupsGridDialogs = ({
     inviteGroup,
     isConfirmOpen,
     setIsConfirmOpen,
+    isResetConfirmOpen,
+    setIsResetConfirmOpen,
     currentGroup,
     effectiveTotalMatch,
     handleConfirmSubmit,
+    handleConfirmReset,
     isSaving,
     isMergeOpen,
     setIsMergeOpen,
@@ -107,6 +123,28 @@ export const GroupsGridDialogs = ({
                 team={mergeTeam}
                 sourceRoundId={roundId}
             />
+
+            <AlertDialog open={isResetConfirmOpen} onOpenChange={setIsResetConfirmOpen}>
+                <AlertDialogContent className="bg-gray-900 border-white/10 text-white">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Reset Group Matches?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-gray-400">
+                            This will permanently delete all entered results for <span className="text-white font-bold">{currentGroup?.groupName}</span> and reset its status to pending. This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10">
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleConfirmReset}
+                            className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                            Reset Matches
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 };

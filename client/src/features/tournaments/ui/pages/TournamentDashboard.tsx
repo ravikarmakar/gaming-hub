@@ -139,7 +139,7 @@ export default function TournamentDashboard() {
                     </div>
                 )}
 
-                <div className="min-h-[500px] mt-0 bg-gray-900/20 border border-white/5 rounded-2xl p-6 backdrop-blur-sm shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="min-h-[500px] mt-0 bg-gray-900/20 border border-white/5 rounded-2xl px-2 backdrop-blur-sm shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-700">
                     <TabsContent value="overview" className="m-0">
                         <TournamentOverview eventDetails={eventDetails} />
                     </TabsContent>

@@ -3,6 +3,7 @@ import {
     useGetLeaderboardQuery,
     useUpdateGroupResultsMutation,
     useMergeTeamsToGroupMutation,
+    useResetGroupMutation,
 } from './';
 import { Group } from '../types';
 
@@ -19,6 +20,7 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoad
     const { data: leaderboard, isLoading: isLeaderboardLoading } = useGetLeaderboardQuery(selectedGroupId ?? "");
     const { mutateAsync: updateGroupResults } = useUpdateGroupResultsMutation();
     const { mutateAsync: mergeTeamsToGroup, isPending: isMergingToGroup } = useMergeTeamsToGroupMutation();
+    const { mutateAsync: resetGroup } = useResetGroupMutation();
 
     const [editingGroup, setEditingGroup] = useState<Group | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
@@ -41,27 +43,33 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoad
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     // For league groups: which sub-group pairing is active (AxB | BxC | AxC)
     const [selectedPairing, setSelectedPairing] = useState<'AxB' | 'BxC' | 'AxC' | null>(null);
+    const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
     // Derived State
-    const { currentGroup, effectiveTotalMatch, isGroupCompleted, roundMatches, qualifyingTeams } = useMemo(() => {
-        const round = rounds.find(r => r._id === roundId);
-        const group = groups.find(g => g._id === selectedGroupId);
+    const { currentGroup, effectiveTotalMatch, isGroupCompleted, roundMatches, qualifyingTeams, showMerge } = useMemo(() => {
+        const round = rounds.find(r => String(r._id) === String(roundId));
+        const group = groups.find(g => String(g._id) === String(selectedGroupId));
         const rm = round?.matchesPerGroup;
         const qt = round?.qualifyingTeams || 0;
 
         const isLeague = round?.isLeague || group?.isLeague;
         const totalMatch = isLeague
-            ? (rm ? rm * 1.5 : group?.totalMatch || 18)
+            ? (rm ? rm * 3 : group?.totalMatch || 18)
             : (rm || group?.totalMatch || 1);
+
+        // Show merge option if this round is a recipient in cross-track mappings
+        const hasIncomingMappings = round?.mergeInfo?.type === 'receives-from';
 
         return {
             currentGroup: group,
             effectiveTotalMatch: totalMatch,
             isGroupCompleted: group?.status === 'completed',
             roundMatches: rm,
-            qualifyingTeams: qt
+            qualifyingTeams: qt || group?.totalSelectedTeam || 0,
+            showMerge: hasIncomingMappings
         };
     }, [rounds, groups, roundId, selectedGroupId]);
+
 
     const openEditModal = useCallback((group: Group) => {
         setTimeout(() => {
@@ -136,7 +144,7 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoad
         if (!selectedGroupId || !leaderboard || !currentGroup) return;
         setIsConfirmOpen(true);
     };
-
+    
     const handleConfirmSubmit = async () => {
         if (!selectedGroupId || !currentGroup) return;
 
@@ -165,6 +173,25 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoad
             setIsSaving(false);
         }
     };
+    
+    const handleResetGroup = useCallback(() => {
+        setIsResetConfirmOpen(true);
+    }, []);
+
+    const handleConfirmReset = async () => {
+        if (!selectedGroupId) return;
+        setIsSaving(true);
+        setIsResetConfirmOpen(false);
+        try {
+            await resetGroup({ groupId: selectedGroupId, eventId });
+            setIsSaving(false);
+            setIsResultsMode(false);
+            setSelectedPairing(null);
+        } catch (error) {
+            console.error(error);
+            setIsSaving(false);
+        }
+    };
 
     useEffect(() => {
         if (selectedGroupId) {
@@ -183,7 +210,7 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoad
 
     useEffect(() => {
         if (selectedGroupId && groups.length > 0) {
-            const index = groups.findIndex(g => g._id === selectedGroupId);
+            const index = groups.findIndex(g => String(g._id) === String(selectedGroupId));
             if (index !== -1) {
                 setLastSelectedIndex(index);
             }
@@ -194,7 +221,7 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoad
     useEffect(() => {
         if (!selectedGroupId || isLoading) return;
 
-        const groupExists = groups.some(g => g._id === selectedGroupId);
+        const groupExists = groups.some(g => String(g._id) === String(selectedGroupId));
         if (!groupExists) {
             if (groups.length === 0) {
                 setSelectedGroupId(null);
@@ -241,7 +268,7 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoad
 
     const handleNextGroup = useCallback(() => {
         if (!selectedGroupId || groups.length === 0) return;
-        const currentIndex = groups.findIndex(g => g._id === selectedGroupId);
+        const currentIndex = groups.findIndex(g => String(g._id) === String(selectedGroupId));
         if (currentIndex !== -1 && currentIndex < groups.length - 1) {
             setSelectedGroupId(groups[currentIndex + 1]._id);
         }
@@ -249,7 +276,7 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoad
 
     const handlePreviousGroup = useCallback(() => {
         if (!selectedGroupId || groups.length === 0) return;
-        const currentIndex = groups.findIndex(g => g._id === selectedGroupId);
+        const currentIndex = groups.findIndex(g => String(g._id) === String(selectedGroupId));
         if (currentIndex > 0) {
             setSelectedGroupId(groups[currentIndex - 1]._id);
         }
@@ -257,20 +284,20 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoad
 
     const hasNextGroup = useMemo(() => {
         if (!selectedGroupId || groups.length === 0) return false;
-        const currentIndex = groups.findIndex(g => g._id === selectedGroupId);
+        const currentIndex = groups.findIndex(g => String(g._id) === String(selectedGroupId));
         return currentIndex !== -1 && currentIndex < groups.length - 1;
     }, [selectedGroupId, groups]);
 
     const hasPreviousGroup = useMemo(() => {
         if (!selectedGroupId || groups.length === 0) return false;
-        const currentIndex = groups.findIndex(g => g._id === selectedGroupId);
+        const currentIndex = groups.findIndex(g => String(g._id) === String(selectedGroupId));
         return currentIndex > 0;
     }, [selectedGroupId, groups]);
 
     const { currentGroupIndex, totalGroupsCount } = useMemo(() => {
         if (!selectedGroupId || groups.length === 0) return { currentGroupIndex: 0, totalGroupsCount: 0 };
         return {
-            currentGroupIndex: groups.findIndex(g => g._id === selectedGroupId) + 1,
+            currentGroupIndex: groups.findIndex(g => String(g._id) === String(selectedGroupId)) + 1,
             totalGroupsCount: groups.length
         };
     }, [selectedGroupId, groups]);
@@ -301,6 +328,8 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoad
         isSaving,
         isConfirmOpen,
         setIsConfirmOpen,
+        isResetConfirmOpen,
+        setIsResetConfirmOpen,
         currentGroup,
         effectiveTotalMatch,
         isGroupCompleted,
@@ -314,6 +343,8 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoad
         handleResultChange,
         handleSubmitResults,
         handleConfirmSubmit,
+        handleResetGroup,
+        handleConfirmReset,
         handleMergeToGroup,
         isMergingToGroup,
         selectedPairing,
@@ -323,6 +354,8 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoad
         hasNextGroup,
         hasPreviousGroup,
         currentGroupIndex,
-        totalGroupsCount
+        totalGroupsCount,
+        showMerge
     };
 };
+

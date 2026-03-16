@@ -15,12 +15,14 @@ interface GroupCardProps {
     onDelete: (group: Group) => void;
     onChat: (group: Group) => void;
     onInvite: (group: Group) => void;
+    onReset?: (group: Group) => void;
     onMerge?: () => void;
     activeRoundTab?: string;
     round?: any;
+
 }
 
-export const GroupCard = memo(({ group, roundMatches, onSelect, onEdit, onDelete, onChat, onInvite, onMerge, activeRoundTab, round }: GroupCardProps) => {
+export const GroupCard = memo(({ group, roundMatches, onSelect, onEdit, onDelete, onChat, onInvite, onReset, onMerge, activeRoundTab, round }: GroupCardProps) => {
     // Determine if merge option should be available
     // Determine if merge option should be available
     const hasMappings = round?.mergeInfo?.sources?.some((s: any) => s.hasTeamsToMerge);
@@ -38,10 +40,11 @@ export const GroupCard = memo(({ group, roundMatches, onSelect, onEdit, onDelete
                 </h4>
 
                 <div className="flex items-center gap-1 -mt-1 -mr-1">
-                    <GroupActionsMenu
+                     <GroupActionsMenu
                         group={group}
                         onEdit={onEdit}
                         onDelete={onDelete}
+                        onReset={onReset}
                         onMerge={onMerge}
                         showMerge={showMerge}
                         className="opacity-0 group-hover:opacity-100 h-7 w-7"

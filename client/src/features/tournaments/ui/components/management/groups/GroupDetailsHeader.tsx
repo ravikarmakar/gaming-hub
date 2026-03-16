@@ -14,7 +14,7 @@ interface GroupDetailsHeaderProps {
     hasNextGroup: boolean;
     qualifyingTeams: number;
     qualifiedCount: number;
-    isGrandFinale?: boolean;
+
     currentGroupIndex?: number;
     totalGroupsCount?: number;
     isResultsMode: boolean;
@@ -24,11 +24,14 @@ interface GroupDetailsHeaderProps {
     onInviteTeam: () => void;
     onEditGroup: (group: Group) => void;
     onDeleteGroup: (group: Group) => void;
+    onResetGroup?: (group: Group) => void;
     isSubmitting: boolean;
     isSubmitDisabled?: boolean;
     isLoading?: boolean;
     onChat?: (group: Group) => void;
     totalMatch?: number;
+    showMerge?: boolean;
+    onMerge?: () => void;
 }
 
 export const GroupDetailsHeader = ({
@@ -40,7 +43,7 @@ export const GroupDetailsHeader = ({
     hasNextGroup,
     qualifyingTeams,
     qualifiedCount,
-    isGrandFinale,
+
     currentGroupIndex,
     totalGroupsCount,
     isResultsMode,
@@ -50,12 +53,16 @@ export const GroupDetailsHeader = ({
     onInviteTeam,
     onEditGroup,
     onDeleteGroup,
+    onResetGroup,
     isSubmitting,
     isSubmitDisabled,
     isLoading,
     onChat,
-    totalMatch
+    totalMatch,
+    showMerge,
+    onMerge
 }: GroupDetailsHeaderProps) => {
+
 
     if (!currentGroup) return null;
 
@@ -109,7 +116,7 @@ export const GroupDetailsHeader = ({
                 <QualificationMonitor
                     qualifiedCount={qualifiedCount}
                     targetCount={qualifyingTeams}
-                    label={isGrandFinale ? 'Winners' : 'Qualified'}
+                    label='Qualified'
                 />
 
                 <div className="flex items-center gap-2 bg-transparent rounded-xl">
@@ -141,6 +148,7 @@ export const GroupDetailsHeader = ({
                             <Button
                                 variant="ghost"
                                 onClick={onCancelResults}
+                                disabled={isSubmitting}
                                 className="h-9 px-4 text-gray-400 hover:text-white font-bold uppercase tracking-wider text-[10px] rounded-lg transition-all"
                             >
                                 Cancel
@@ -196,7 +204,15 @@ export const GroupDetailsHeader = ({
                         </Button>
                     </div>
                     <div className="h-6 w-px bg-white/5 mx-0.5" />
-                    <GroupActionsMenu group={currentGroup} onEdit={onEditGroup} onDelete={onDeleteGroup} />
+                    <GroupActionsMenu 
+                        group={currentGroup} 
+                        onEdit={onEditGroup} 
+                        onDelete={onDeleteGroup} 
+                        onReset={onResetGroup}
+                        showMerge={showMerge}
+                        onMerge={onMerge}
+                    />
+
                 </div>
             </div>
         </div>

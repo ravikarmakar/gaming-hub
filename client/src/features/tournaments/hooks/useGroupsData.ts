@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useGetGroupsQuery, useRoundsSidebar } from './';
 import { useDebounce } from '@/hooks/useDebounce';
 
@@ -27,6 +27,11 @@ export const useGroupsData = ({ roundId, eventId, externalSearch, externalStatus
 
     // Debounce search input
     const debouncedSearch = useDebounce(search, 500);
+
+    // Reset pagination to page 1 when search or status filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [debouncedSearch, statusFilter]);
 
     const { activeRoundTab, filteredSidebarItems: enrichedRounds } = useRoundsSidebar(eventId);
     const { data: groupsData, isLoading, isFetching } = useGetGroupsQuery(

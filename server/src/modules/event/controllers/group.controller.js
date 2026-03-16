@@ -7,6 +7,8 @@ import EventRegistration from "../models/event-registration.model.js";
 import { logger } from "../../../shared/utils/logger.js";
 import { TryCatchHandler } from "../../../shared/middleware/error.middleware.js";
 import { withOptionalTransaction } from "../../../shared/utils/withOptionalTransaction.js";
+import { resolveSourceTeams } from "../utils/team-resolver.js";
+
 
 // ✅ Get All Groups (With Pagination)
 export const getGroups = async (req, res) => {
@@ -16,7 +18,7 @@ export const getGroups = async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
-    const query = {};
+    const query = { isDeleted: false };
     if (roundId) {
       if (!mongoose.Types.ObjectId.isValid(roundId)) {
         return res.status(400).json({ message: "Invalid Round ID!" });
@@ -122,101 +124,19 @@ export const createGroups = async (req, res) => {
       return res.status(404).json({ message: "Round not found!" });
     }
 
-    // 2️⃣ Identify Sequence Position and Fetch Teams
+    // 2️⃣ Resolve Sequence Position and Fetch Teams
     let allTeams = [];
     
     if (round.eligibleTeams && round.eligibleTeams.length > 0) {
       allTeams = round.eligibleTeams;
       logger.info(`Using ${allTeams.length} pre-merged/eligible teams for Round ${round.roundNumber}`);
     } else {
-      const roadmapTypeMap = {
-        "tournament": "tournament",
-        "invited-tournament": "invitedTeams",
-        "t1-special": "t1-special"
-      };
-      const roadmapType = roadmapTypeMap[round.type] || "tournament";
-      const roadmapItem = round.eventId.roadmaps.find(r => r.type === roadmapType);
-      
-      let currentRoundIndex = -1;
-      if (roadmapItem && Array.isArray(roadmapItem.data)) {
-        currentRoundIndex = roadmapItem.data.findIndex(entry => 
-          entry.roundId && entry.roundId.toString() === roundId.toString()
-        );
-      }
-
-      // Determine if this is the absolute "start" of its sequence
-      let isFirstInSequence = false;
-      if (currentRoundIndex === 0) {
-        isFirstInSequence = true;
-      } else if (currentRoundIndex === -1) {
-        // Fallback for manual/unlinked rounds: Check if any previous rounds of the SAME type exist
-        const earlierRound = await Round.findOne({
-          eventId: round.eventId._id,
-          type: round.type,
-          roundNumber: { $lt: round.roundNumber }
-        });
-        if (!earlierRound) {
-          isFirstInSequence = true;
-        }
-      }
-
-      if (isFirstInSequence) {
-        // Logic for START of a sequence (Fetch from Event object or Registrations)
-        if (round.type === "t1-special") {
-          allTeams = round.eventId.t1SpecialTeams || [];
-        } else if (round.type === "invited-tournament") {
-          allTeams = round.eventId.invitedTeams || [];
-        } else {
-          // Fetch Approved Teams from Registrations for Main Tournament
-          const registrations = await EventRegistration.find({
-            eventId: eventId,
-            status: "approved"
-          });
-          allTeams = registrations.map((reg) => reg.teamId);
-        }
-      } else {
-        // Logic for PROGRESSIVE ROUNDS (Pull from previous round in identified sequence)
-        let prevRoundId = null;
-        if (currentRoundIndex > 0) {
-          prevRoundId = roadmapItem.data[currentRoundIndex - 1].roundId;
-        }
-
-        let prevRound;
-        if (prevRoundId) {
-          prevRound = await Round.findById(prevRoundId);
-        } else {
-          // Fallback: strictly find previous round of SAME type
-          prevRound = await Round.findOne({
-            eventId: round.eventId._id,
-            type: round.type,
-            roundNumber: { $lt: round.roundNumber }
-          }).sort({ roundNumber: -1 });
-        }
-
-        if (!prevRound) {
-          return res.status(404).json({ message: `Previous round for ${round.type} not found!` });
-        }
-
-        // Find all groups in the previous round
-        const prevGroups = await Group.find({ roundId: prevRound._id });
-        const prevGroupIds = prevGroups.map(g => g._id);
-
-        // Find all qualified teams from leaderboards of these groups
-        const leaderboards = await Leaderboard.find({
-          groupId: { $in: prevGroupIds }
-        });
-
-        leaderboards.forEach(lb => {
-          lb.teamScore.forEach(entry => {
-            if (entry.isQualified) {
-              allTeams.push(entry.teamId);
-            }
-          });
-        });
-      }
+      allTeams = await resolveSourceTeams({ roundId, eventId });
+      logger.info(`Resolved ${allTeams.length} teams for Round ${round.roundNumber} using Unified Resolver`);
     }
 
     if (!allTeams || allTeams.length === 0) {
+
       const source = round.roundNumber === 1 ? "registrations" : "qualified teams from the previous round";
       return res.status(400).json({ message: `No ${source} found for this event!` });
     }
@@ -236,10 +156,13 @@ export const createGroups = async (req, res) => {
       [allTeams[i], allTeams[j]] = [allTeams[j], allTeams[i]];
     }
 
-    const teamsPerGroup = round.groupSize || 12; // Dynamic Group Size (Default 12)
-    const totalGroups = round.isLeague ? 1 : Math.ceil(allTeams.length / teamsPerGroup);
+    // 4️⃣ Detect League Mode (18 teams) or Standard (12 teams)
+    // Based on user feedback: "league" means 18 teams per group.
+    const isLeague = round.isLeague || allTeams.length === 18;
+    const teamsPerGroup = isLeague ? 18 : (round.groupSize || 12);
+    const totalGroups = Math.ceil(allTeams.length / teamsPerGroup);
 
-    logger.info(`Creating ${totalGroups} groups for ${allTeams.length} teams (Group Size: ${teamsPerGroup})...`);
+    logger.info(`Creating ${totalGroups} groups for ${allTeams.length} teams (Type: ${isLeague ? "LEAGUE" : "STANDARD"})...`);
 
     // 5️⃣ Prepare Groups Data (In-Memory)
     const groupsData = [];
@@ -263,11 +186,10 @@ export const createGroups = async (req, res) => {
       const groupName = generateGroupName(i);
       groupToTeamsMap[groupName] = groupTeams;
 
-      const isLeague = round.isLeague || false;
       // For league groups, totalMatch is matches PER PAIRING x 3
       // e.g. if matchesPerGroup is 6, total matches = 18 (6 AxB + 6 BxC + 6 AxC)
       const computedTotalMatch = isLeague
-        ? (round.matchesPerGroup ? round.matchesPerGroup * 1.5 : 18)
+        ? (round.matchesPerGroup ? round.matchesPerGroup * 3 : 18)
         : (bodyTotalMatch ?? round.matchesPerGroup ?? 1);
 
       // 🏆 For league groups: divide teams into 3 equal sub-groups (A, B, C)
@@ -292,9 +214,11 @@ export const createGroups = async (req, res) => {
         isLeague,
         leaguePairingType: round.leaguePairingType || "standard",
         groupSize: teamsPerGroup,
+        totalSelectedTeam: round.qualifyingTeams || 0,
         subGroups,
       });
     }
+
 
     // 5.5 Apply Round Scheduling (Overwrites if manual passed for entire batch, but usually automated)
     // If Round has startTime and gapMinutes, apply them unless matchTime was specifically passed
@@ -493,8 +417,8 @@ export const createSingleGroup = async (req, res) => {
         roundId,
         groupName: finalGroupName,
         matchTime: matchTime || new Date(Date.now() + 24 * 60 * 60 * 1000),
-        totalMatch: round.isLeague ? (round.matchesPerGroup * 1.5 || 18) : (round.matchesPerGroup || 1),
-        totalSelectedTeam: round.qualifyingTeams || 1,
+        totalMatch: round.isLeague ? (round.matchesPerGroup * 3 || 18) : (round.matchesPerGroup || 1),
+        totalSelectedTeam: round.qualifyingTeams || 0,
         teams: [],
       }], { session });
 
@@ -567,6 +491,47 @@ export const updateGroup = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+export const resetGroup = TryCatchHandler(async (req, res) => {
+  const { groupId } = req.params;
+
+  if (!groupId || !mongoose.Types.ObjectId.isValid(groupId)) {
+    return res.status(400).json({ message: "Invalid Group ID" });
+  }
+
+  const result = await withOptionalTransaction(async (session) => {
+    const group = await Group.findById(groupId).session(session);
+    if (!group) throw new Error("Group not found");
+
+    // 1. Reset Group Status and Matches
+    group.matchesPlayed = 0;
+    group.status = "pending";
+    group.pairingMatches = { AxB: 0, BxC: 0, AxC: 0 };
+    await group.save({ session });
+
+    // 2. Reset Leaderboard Scores
+    const leaderboard = await Leaderboard.findOne({ groupId }).session(session);
+    if (leaderboard) {
+      leaderboard.teamScore.forEach((entry) => {
+        entry.score = 0;
+        entry.kills = 0;
+        entry.wins = 0;
+        entry.totalPoints = 0;
+        entry.matchesPlayed = 0;
+        entry.isQualified = false;
+      });
+      await leaderboard.save({ session });
+    }
+
+    return group;
+  });
+
+  return res.status(200).json({
+    success: true,
+    message: "Group matches reset successfully",
+    group: result,
+  });
+});
 
 export const deleteGroup = async (req, res) => {
   try {
@@ -692,60 +657,11 @@ export const mergeQualifiedTeamsIntoGroup = TryCatchHandler(async (req, res) => 
     const group = await Group.findById(groupId).populate("roundId").session(session);
     if (!group) throw new Error("Group not found");
 
-    const round = group.roundId;
-    const event = await Event.findById(eventId).session(session);
-    if (!event) throw new Error("Event not found");
-
-    // 1. Determine this round's index in the main roadmap
-    const mainRoadmap = event.roadmaps?.find(r => r.type === "tournament");
-    if (!mainRoadmap) throw new Error("Main roadmap not found");
-
-    const roundIndex = mainRoadmap.data?.findIndex(item => 
-      item.roundId && item.roundId.toString() === round._id.toString()
-    );
-
-    if (roundIndex === -1) throw new Error("Round not found in main roadmap");
-    const displayRoundNumber = roundIndex + 1;
-
-    // 2. Identify mappings
-    const invitedMappings = event.invitedRoundMappings?.filter(m => m.targetMainRound === displayRoundNumber) || [];
-    const t1Mappings = event.t1SpecialRoundMappings?.filter(m => m.targetMainRound === displayRoundNumber) || [];
+    const roundId = group.roundId._id;
+    const allResolvedTeams = await resolveSourceTeams({ roundId, eventId, session });
 
     const groupTeamsSet = new Set(group.teams.map(id => id.toString()));
-    const newTeams = [];
-
-    const processMappings = async (mappings, roadmapType) => {
-      const roadmap = event.roadmaps.find(r => r.type === roadmapType);
-      if (!roadmap || !roadmap.data) return;
-
-      for (const mapping of mappings) {
-        for (let i = mapping.startRound - 1; i <= mapping.endRound - 1; i++) {
-          const roadmapItem = roadmap.data[i];
-          if (!roadmapItem || !roadmapItem.roundId) continue;
-
-          const prevRound = await Round.findById(roadmapItem.roundId).session(session);
-          if (!prevRound || prevRound.status !== "completed") continue;
-
-          const Leaderboard = mongoose.model("Leaderboard");
-          const prevGroups = await Group.find({ roundId: prevRound._id }).session(session);
-          const prevGroupIds = prevGroups.map(g => g._id);
-          
-          const leaderboards = await Leaderboard.find({ groupId: { $in: prevGroupIds } }).session(session);
-          
-          leaderboards.forEach(lb => {
-            lb.teamScore.forEach(entry => {
-              if (entry.isQualified && !groupTeamsSet.has(entry.teamId.toString())) {
-                groupTeamsSet.add(entry.teamId.toString());
-                newTeams.push(entry.teamId);
-              }
-            });
-          });
-        }
-      }
-    };
-
-    await processMappings(invitedMappings, "invitedTeams");
-    await processMappings(t1Mappings, "t1-special");
+    const newTeams = allResolvedTeams.filter(id => !groupTeamsSet.has(id.toString()));
 
     if (newTeams.length > 0) {
       // Add teams to group
@@ -767,12 +683,14 @@ export const mergeQualifiedTeamsIntoGroup = TryCatchHandler(async (req, res) => 
             isQualified: false
           });
         });
+        leaderboard.markModified('teamScore');
         await leaderboard.save({ session });
       }
     }
 
     return { group, mergedCount: newTeams.length };
   });
+
 
   return res.status(200).json({
     success: true,

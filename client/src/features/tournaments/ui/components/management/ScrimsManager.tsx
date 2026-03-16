@@ -24,7 +24,7 @@ export const ScrimsManager = ({ eventId }: ScrimsManagerProps) => {
         setIsConfirmGroupsOpen,
         isCreateRoundOpen = false,
         setIsCreateRoundOpen
-    } = useRoundActions(eventId, rounds, "tournament");
+    } = useRoundActions(eventId);
 
     // The first round is our scrim round
     const scrimRound = rounds.find(r => (r.type || "tournament") === "tournament") || null;

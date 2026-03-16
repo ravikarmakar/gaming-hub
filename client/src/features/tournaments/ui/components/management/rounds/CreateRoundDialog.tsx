@@ -82,20 +82,34 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
 
     // Initialize league state based on roadmap config when dialog opens
     useEffect(() => {
-        if (open && isRoundLeagueInRoadmap) {
-            setIsLeague(true);
-            setGroupSize(18);
-            setNewMatches(6);
-            setNewQualify(6);
-            setPairingType("axb-bxc-axc");
-        } else if (open) {
-            setIsLeague(false);
-            setGroupSize(12);
-            setNewMatches(1);
-            setNewQualify(1);
-            setPairingType("standard");
+        if (open) {
+            const roadmapType = type === 'invited-tournament' ? 'invitedTeams' : type;
+            const roadmap = event?.roadmaps?.find((r: any) => r.type === roadmapType);
+            const roadmapItem = roadmap?.data?.[roadmapIndex!];
+            
+            const isLeagueRound = !!roadmapItem?.isLeague;
+            const size = roadmapItem?.leagueType === "18-teams" ? 18 : 12;
+
+            setIsLeague(isLeagueRound);
+            setGroupSize(size);
+
+            if (isLeagueRound) {
+                if (size === 18) {
+                    setNewMatches(6);
+                    setNewQualify(6);
+                    setPairingType("axb-bxc-axc");
+                } else {
+                    setNewMatches(3);
+                    setNewQualify(6);
+                    setPairingType("standard");
+                }
+            } else {
+                setNewMatches(1);
+                setNewQualify(1);
+                setPairingType("standard");
+            }
         }
-    }, [open, isRoundLeagueInRoadmap]);
+    }, [open, isRoundLeagueInRoadmap, event, roadmapIndex, type]);
 
     const { mutateAsync: createRound, isPending: isCreating } = useCreateRoundMutation();
 
@@ -322,17 +336,18 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
                                 </div>
                             </div>
 
-                            {/* League Mode Configuration */}
-                            {isRoundLeagueInRoadmap && (
-                                <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/10 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-0.5">
-                                            <Label className="text-[10px] font-black uppercase text-white tracking-widest flex items-center gap-1.5">
-                                                <Layers className="w-3 h-3 text-purple-400" />
-                                                League Mode
-                                            </Label>
-                                            <p className="text-[8px] text-purple-200/40 font-medium">Single group with shared leaderboard.</p>
-                                        </div>
+                            {/* Round Advanced Configuration */}
+                            <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/10 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-0.5">
+                                        <Label className="text-[10px] font-black uppercase text-white tracking-widest flex items-center gap-1.5">
+                                            <Layers className="w-3 h-3 text-purple-400" />
+                                            Advanced Config
+                                        </Label>
+                                        <p className="text-[8px] text-purple-200/40 font-medium">Configure team sizes and league settings.</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[9px] font-bold text-gray-500 uppercase mr-1">League</span>
                                         <Button
                                             size="sm"
                                             variant={isLeague ? "default" : "outline"}
@@ -340,78 +355,90 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
                                                 const newState = !isLeague;
                                                 setIsLeague(newState);
                                                 if (newState) {
-                                                    setGroupSize(18);
-                                                    setNewMatches(6);
-                                                    setNewQualify(6);
-                                                    setPairingType("axb-bxc-axc");
+                                                    if (groupSize === 18) {
+                                                        setNewMatches(6);
+                                                        setNewQualify(6);
+                                                        setPairingType("axb-bxc-axc");
+                                                    } else {
+                                                        setNewMatches(3);
+                                                        setNewQualify(6);
+                                                        setPairingType("standard");
+                                                    }
                                                 } else {
-                                                    setGroupSize(12);
                                                     setNewMatches(1);
                                                     setNewQualify(1);
                                                     setPairingType("standard");
                                                 }
                                             }}
-                                            className={`h-7 px-3 text-[9px] font-black uppercase ${isLeague ? 'bg-purple-600 border-none' : 'border-purple-500/20 text-purple-400'}`}
+                                            className={`h-6 px-2 text-[8px] font-black uppercase ${isLeague ? 'bg-purple-600 border-none' : 'border-purple-500/20 text-purple-400'}`}
                                         >
                                             {isLeague ? "ON" : "OFF"}
                                         </Button>
                                     </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 pt-1">
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[9px] uppercase font-bold text-purple-200/40 tracking-wider">
+                                            Group Size
+                                        </Label>
+                                        <Select
+                                            value={groupSize.toString()}
+                                            onValueChange={(v) => {
+                                                const size = parseInt(v);
+                                                setGroupSize(size);
+                                                if (isLeague) {
+                                                    if (size === 18) {
+                                                        setNewMatches(6);
+                                                        setNewQualify(6);
+                                                        setPairingType("axb-bxc-axc");
+                                                    } else {
+                                                        setNewMatches(3);
+                                                        setNewQualify(6);
+                                                        setPairingType("standard");
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            <SelectTrigger className="h-8 text-xs bg-white/5 border-white/10 text-white rounded-lg">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
+                                                <SelectItem value="12">12 Teams</SelectItem>
+                                                <SelectItem value="18">18 Teams</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
 
                                     {isLeague && (
-                                        <div className="grid grid-cols-2 gap-4 pt-1 animate-in fade-in slide-in-from-top-2 duration-300">
-                                            <div className="space-y-1.5">
-                                                <Label className="text-[9px] uppercase font-bold text-purple-200/40 tracking-wider">
-                                                    Group Size
-                                                </Label>
-                                                <Select
-                                                    value={groupSize.toString()}
-                                                    onValueChange={(v) => {
-                                                        const size = parseInt(v);
-                                                        setGroupSize(size);
-                                                        if (size === 18) {
-                                                            setNewMatches(6);
-                                                            setNewQualify(6);
-                                                            setPairingType("axb-bxc-axc");
-                                                        }
-                                                    }}
-                                                >
-                                                    <SelectTrigger className="h-8 text-xs bg-white/5 border-white/10 text-white rounded-lg">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
-                                                        <SelectItem value="12">12 Teams</SelectItem>
-                                                        <SelectItem value="18">18 Teams</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <Label className="text-[9px] uppercase font-bold text-purple-200/40 tracking-wider">
-                                                    Match Logic
-                                                </Label>
-                                                <Select
-                                                    value={pairingType}
-                                                    onValueChange={(v: any) => setPairingType(v)}
-                                                >
-                                                    <SelectTrigger className="h-8 text-xs bg-white/5 border-white/10 text-white rounded-lg">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
-                                                        <SelectItem value="standard">Standard (All Play)</SelectItem>
-                                                        <SelectItem value="axb-bxc-axc">AxB, BxC, AxC</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {isLeague && groupSize === 18 && pairingType === "axb-bxc-axc" && (
-                                        <div className="mt-2 p-2 rounded bg-blue-500/10 border border-blue-500/20">
-                                            <p className="text-[8px] text-blue-300 leading-tight">
-                                                <span className="font-black">Pairing Info:</span> 18 teams are split into 3 groups (A, B, C) of 6 teams. Each match features only 12 teams (2 groups pairing). Total 6 matches ensures every group plays 4 matches. Winners are selected from the final 18-team shared leaderboard.
-                                            </p>
+                                        <div className="space-y-1.5 animate-in fade-in slide-in-from-left-2 duration-300">
+                                            <Label className="text-[9px] uppercase font-bold text-purple-200/40 tracking-wider">
+                                                Match Logic
+                                            </Label>
+                                            <Select
+                                                value={pairingType}
+                                                onValueChange={(v: any) => setPairingType(v)}
+                                            >
+                                                <SelectTrigger className="h-8 text-xs bg-white/5 border-white/10 text-white rounded-lg">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
+                                                    <SelectItem value="standard">Standard (All Play)</SelectItem>
+                                                    <SelectItem value="axb-bxc-axc">AxB, BxC, AxC</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                     )}
                                 </div>
-                            )}
+
+                                {isLeague && groupSize === 18 && pairingType === "axb-bxc-axc" && (
+                                    <div className="mt-2 p-2 rounded bg-blue-500/10 border border-blue-500/20 animate-in fade-in duration-500">
+                                        <p className="text-[8px] text-blue-300 leading-tight">
+                                            <span className="font-black">Pairing Info:</span> 18 teams are split into 3 groups (A, B, C) of 6 teams. Each match features only 12 teams (2 groups pairing). Total 6 matches ensures every group plays 4 matches. Winners are selected from the final 18-team shared leaderboard.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
 
                             {/* Winner Selection */}
                             <div className="space-y-1.5 pt-2 border-t border-white/5">
@@ -430,7 +457,7 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
                                         </div>
                                     </SelectTrigger>
                                     <SelectContent className="bg-[#0B0C1A] border-white/10 text-white">
-                                        {(isLeague ? ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"] : ["1", "2", "3", "4", "5", "6"]).map((val) => (
+                                        {Array.from({ length: isLeague ? 12 : (groupSize === 18 ? 12 : 6) }, (_, i) => (i + 1).toString()).map((val) => (
                                             <SelectItem key={val} value={val}>
                                                 {val} {parseInt(val) === 1 ? 'Winner' : 'Winners'}
                                             </SelectItem>

@@ -16,7 +16,7 @@ export const RoadmapBuilder = () => {
 
     const eventType = watch("eventType");
     const hasStandardRoadmap = watch("hasRoadmap") ?? (eventType === "tournament");
-    const hasInvitedRoadmap = watch("hasInvitedTeams");
+    const hasInvitedRoadmap = watch("hasInvitedTeamsRoadmap") || watch("hasInvitedTeams");
     const hasSpecialRoadmap = watch("hasT1SpecialRoadmap");
 
     const tabs = [
@@ -76,7 +76,10 @@ export const RoadmapBuilder = () => {
                                 <Checkbox
                                     id="toggle-invited"
                                     checked={hasInvitedRoadmap}
-                                    onCheckedChange={(checked) => setValue("hasInvitedTeams", !!checked)}
+                                    onCheckedChange={(checked) => {
+                                        setValue("hasInvitedTeams", !!checked);
+                                        setValue("hasInvitedTeamsRoadmap", !!checked);
+                                    }}
                                     className="data-[state=checked]:bg-indigo-500 border-white/20"
                                 />
                             </div>

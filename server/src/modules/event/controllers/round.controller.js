@@ -5,6 +5,8 @@ import mongoose from "mongoose";
 import { logger } from "../../../shared/utils/logger.js";
 import { TryCatchHandler } from "../../../shared/middleware/error.middleware.js";
 import { withOptionalTransaction } from "../../../shared/utils/withOptionalTransaction.js";
+import { resolveSourceTeams } from "../utils/team-resolver.js";
+
 
 export const getRounds = TryCatchHandler(async (req, res) => {
   const { eventId } = req.query;
@@ -45,8 +47,8 @@ export const getRounds = TryCatchHandler(async (req, res) => {
     };
 
     if (displayRoundNumber) {
-      const invitedMappings = event.invitedRoundMappings?.filter(m => m.targetMainRound === displayRoundNumber) || [];
-      const t1Mappings = event.t1SpecialRoundMappings?.filter(m => m.targetMainRound === displayRoundNumber) || [];
+      const invitedMappings = event.invitedRoundMappings?.filter(m => m.targetMainRound?.roundNumber === displayRoundNumber) || [];
+      const t1Mappings = event.t1SpecialRoundMappings?.filter(m => m.targetMainRound?.roundNumber === displayRoundNumber) || [];
 
       const currentEligibleSet = new Set(round.eligibleTeams?.map(id => id.toString()) || []);
 
@@ -57,52 +59,38 @@ export const getRounds = TryCatchHandler(async (req, res) => {
         for (const mapping of mappings) {
           let pendingCount = 0;
           let mergedCount = 0;
-          let allSourcesCompleted = true;
-          const sourceRoundNames = [];
-
-          // Track readiness across ALL rounds in the mapping range
-          for (let i = Math.max(0, mapping.startRound - 1); i <= mapping.endRound - 1; i++) {
-            const item = sourceRoadmap.data[i];
-            if (!item || !item.roundId) continue;
-
-            const roundDoc = await Round.findById(item.roundId).lean();
-            if (!roundDoc) { allSourcesCompleted = false; continue; }
-            if (roundDoc.status !== "completed") allSourcesCompleted = false;
-            sourceRoundNames.push(roundDoc.roundName || `Round-${roundDoc.roundNumber || '?'}`);
-          }
-
-          // Only count qualified teams from the FINAL round in the mapping.
-          // Teams flow through rounds: Round1 → Round2 → FinalRound.
-          // Counting all rounds would triple-count the same teams.
-          const finalItemIndex = mapping.endRound - 1;
-          const finalItem = sourceRoadmap.data[finalItemIndex];
-          if (finalItem && finalItem.roundId) {
-            const finalRound = await Round.findById(finalItem.roundId).lean();
-            if (finalRound) {
-              const Group = mongoose.model("Group");
-              const Leaderboard = mongoose.model("Leaderboard");
-              const groupIds = (await Group.find({ roundId: finalRound._id }).lean()).map(g => g._id);
-              const leaderboards = await Leaderboard.find({ groupId: { $in: groupIds } }).lean();
-
-              leaderboards.forEach(lb => {
-                lb.teamScore.forEach(entry => {
-                  if (entry.isQualified) {
-                    if (currentEligibleSet.has(entry.teamId.toString())) {
-                      mergedCount++;
-                    } else if (finalRound.status === 'completed') {
-                      pendingCount++;
-                    }
-                  }
-                });
-              });
-            }
-          }
-
+          let isSourceCompleted = false;
           let sourceRoundName = "Unknown Round";
-          if (sourceRoundNames.length === 1) {
-            sourceRoundName = sourceRoundNames[0];
-          } else if (sourceRoundNames.length > 1) {
-            sourceRoundName = `${sourceRoundNames[0]} - ${sourceRoundNames[sourceRoundNames.length - 1]}`;
+
+          // Identify the specific source round from the mapping
+          const sourceRoundNum = mapping.sourceRound?.roundNumber;
+          if (sourceRoundNum !== undefined) {
+            const item = sourceRoadmap.data[sourceRoundNum - 1];
+            if (item && item.roundId) {
+              const roundDoc = await Round.findById(item.roundId).lean();
+              if (roundDoc) {
+                isSourceCompleted = roundDoc.status === "completed";
+                sourceRoundName = roundDoc.roundName || `Round-${roundDoc.roundNumber || sourceRoundNum}`;
+
+                // Process qualified teams from this single source round
+                const Group = mongoose.model("Group");
+                const Leaderboard = mongoose.model("Leaderboard");
+                const groupIds = (await Group.find({ roundId: roundDoc._id }).lean()).map(g => g._id);
+                const leaderboards = await Leaderboard.find({ groupId: { $in: groupIds } }).lean();
+
+                leaderboards.forEach(lb => {
+                  lb.teamScore.forEach(entry => {
+                    if (entry.isQualified) {
+                      if (currentEligibleSet.has(entry.teamId.toString())) {
+                        mergedCount++;
+                      } else if (roundDoc.status === 'completed') {
+                        pendingCount++;
+                      }
+                    }
+                  });
+                });
+              }
+            }
           }
 
           mergeInfo.sources.push({
@@ -111,7 +99,7 @@ export const getRounds = TryCatchHandler(async (req, res) => {
             type: roadmapType === 'invitedTeams' ? 'Invited' : 'T1 Special',
             pendingCount,
             mergedCount,
-            isReady: allSourcesCompleted,
+            isReady: isSourceCompleted,
             hasTeamsToMerge: pendingCount > 0
           });
         }
@@ -338,40 +326,56 @@ export const updateRound = TryCatchHandler(async (req, res) => {
 
   if (!round) return res.status(404).json({ message: "Round not found" });
 
-  // Sync leaderboards and groups if qualifyingTeams changed
-  if (qualifyingTeams !== undefined) {
+  // Sync leaderboards and groups if qualifyingTeams or matchesPerGroup changed
+  if (qualifyingTeams !== undefined || matchesPerGroup !== undefined) {
     try {
       const Group = mongoose.model("Group");
       const Leaderboard = mongoose.model("Leaderboard");
-      const qLimit = Number(qualifyingTeams);
+      const qLimit = qualifyingTeams !== undefined ? Number(qualifyingTeams) : round.qualifyingTeams;
+      const mLimit = matchesPerGroup !== undefined ? Number(matchesPerGroup) : round.matchesPerGroup;
       
       const groups = await Group.find({ roundId });
       for (const group of groups) {
-        // Update group-level count
-        group.totalSelectedTeam = qLimit;
-        await group.save();
+        // Update group-level counts
+        let modified = false;
+        if (qualifyingTeams !== undefined) {
+           group.totalSelectedTeam = qLimit;
+           modified = true;
+        }
+        if (matchesPerGroup !== undefined) {
+           // For league groups, totalMatch is matches PER PAIRING x 3 (assuming 1.5 multiplier for standard representation)
+           // Actually, the logic in createGroups was: isLeague ? matchesPerGroup * 1.5 : matchesPerGroup
+           group.totalMatch = group.isLeague ? Math.round(mLimit * 1.5) : mLimit;
+           modified = true;
+        }
 
-        const leaderboard = await Leaderboard.findOne({ groupId: group._id });
-        if (leaderboard && leaderboard.teamScore && leaderboard.teamScore.length > 0) {
-          // Re-calculate isQualified for all teams based on new limit
-          leaderboard.teamScore.forEach((entry) => {
-            entry.totalPoints = (entry.score || 0) + (entry.kills || 0);
-          });
+        if (modified) {
+          await group.save();
+        }
 
-          // Sort by points to identify new qualifiers
-          leaderboard.teamScore.sort((a, b) => b.totalPoints - a.totalPoints);
-          
-          leaderboard.teamScore.forEach((entry, index) => {
-            entry.isQualified = qLimit > 0 && index < qLimit;
-          });
-          
-          leaderboard.markModified('teamScore');
-          await leaderboard.save();
+        if (qualifyingTeams !== undefined) {
+          const leaderboard = await Leaderboard.findOne({ groupId: group._id });
+          if (leaderboard && leaderboard.teamScore && leaderboard.teamScore.length > 0) {
+            // Re-calculate isQualified for all teams based on new limit
+            leaderboard.teamScore.forEach((entry) => {
+              entry.totalPoints = (entry.score || 0) + (entry.kills || 0);
+            });
+
+            // Sort by points to identify new qualifiers
+            leaderboard.teamScore.sort((a, b) => b.totalPoints - a.totalPoints);
+            
+            leaderboard.teamScore.forEach((entry, index) => {
+              entry.isQualified = qLimit > 0 && index < qLimit;
+            });
+            
+            leaderboard.markModified('teamScore');
+            await leaderboard.save();
+          }
         }
       }
-      logger.info(`Synchronized isQualified flags and totalSelectedTeam for ${groups.length} groups in round ${roundId} due to qualifier count change to ${qLimit}`);
+      logger.info(`Synchronized groups in round ${roundId} due to config change. Qualifiers: ${qLimit}, Matches: ${mLimit}`);
     } catch (syncError) {
-      logger.error("Error synchronizing leaderboards after qualifyingTeams update:", syncError);
+      logger.error("Error synchronizing leaderboards after round update:", syncError);
     }
   }
 
@@ -572,67 +576,9 @@ export const mergeQualifiedTeams = TryCatchHandler(async (req, res) => {
     }
     const displayRoundNumber = roundIndex + 1;
 
-    // 2. Identify mappings for this targetMainRound
-    const invitedMappings = event.invitedRoundMappings?.filter(m => m.targetMainRound === displayRoundNumber) || [];
-    const t1Mappings = event.t1SpecialRoundMappings?.filter(m => m.targetMainRound === displayRoundNumber) || [];
+    const allResolvedTeams = await resolveSourceTeams({ roundId, eventId, session });
+    const qualifiedTeamIds = new Set(allResolvedTeams.map(id => id.toString()));
 
-    const qualifiedTeamIds = new Set(round.eligibleTeams?.map(id => id.toString()) || []);
-
-    // 🔧 FIX: Seed the set with qualified teams from the PREVIOUS MAIN round.
-    // Without this, only invited/T1 teams are added and the main finalists are lost.
-    if (roundIndex > 0) {
-      const prevMainItem = mainRoadmap.data[roundIndex - 1];
-      if (prevMainItem?.roundId) {
-        const prevMainRound = await Round.findById(prevMainItem.roundId).session(session);
-        if (prevMainRound && prevMainRound.status === "completed") {
-          const Group = mongoose.model("Group");
-          const Leaderboard = mongoose.model("Leaderboard");
-          const prevGroups = await Group.find({ roundId: prevMainRound._id }).session(session);
-          const prevGroupIds = prevGroups.map(g => g._id);
-          const prevLeaderboards = await Leaderboard.find({ groupId: { $in: prevGroupIds } }).session(session);
-          prevLeaderboards.forEach(lb => {
-            lb.teamScore.forEach(entry => {
-              if (entry.isQualified) qualifiedTeamIds.add(entry.teamId.toString());
-            });
-          });
-          logger.info(`[mergeQualifiedTeams] Seeded ${qualifiedTeamIds.size} main-roadmap qualified teams from ${prevMainRound.roundName}`);
-        }
-      }
-    }
-
-    const processMappings = async (mappings, roadmapType) => {
-      const roadmap = event.roadmaps.find(r => r.type === roadmapType);
-      if (!roadmap || !roadmap.data) return;
-
-      for (const mapping of mappings) {
-        // Only pull qualified teams from the FINAL round in the mapping.
-        // Teams flow through rounds sequentially; the final round has the ultimate surviving qualifiers.
-        const finalIndex = mapping.endRound - 1;
-        const roadmapItem = roadmap.data[finalIndex];
-        if (!roadmapItem || !roadmapItem.roundId) continue;
-
-        // Only pull from COMPLETED rounds
-        const finalRound = await Round.findById(roadmapItem.roundId).session(session);
-        if (!finalRound || finalRound.status !== "completed") continue;
-
-        const Group = mongoose.model("Group");
-        const Leaderboard = mongoose.model("Leaderboard");
-        const groups = await Group.find({ roundId: finalRound._id }).session(session);
-        const groupIds = groups.map(g => g._id);
-        const leaderboards = await Leaderboard.find({ groupId: { $in: groupIds } }).session(session);
-
-        leaderboards.forEach(lb => {
-          lb.teamScore.forEach(entry => {
-            if (entry.isQualified) {
-              qualifiedTeamIds.add(entry.teamId.toString());
-            }
-          });
-        });
-      }
-    };
-
-    await processMappings(invitedMappings, "invitedTeams");
-    await processMappings(t1Mappings, "t1-special");
 
     // 3. Update the round with merged teams
     round.eligibleTeams = Array.from(qualifiedTeamIds);
