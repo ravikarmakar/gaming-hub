@@ -5,8 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
 import { formatDate } from "@/lib/utils";
-import { useGetRoundsQuery } from "@/features/tournaments/hooks";
-import { Tournament, Round } from "@/features/tournaments/types";
+import { Tournament } from "@/features/tournaments/types";
 
 import {
     Roadmaps,
@@ -19,7 +18,8 @@ interface TournamentOverviewProps {
 }
 
 export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) => {
-    const { data: rounds = [] } = useGetRoundsQuery(eventDetails?._id || "");
+    // No longer fetching rounds directly - using roadmap status from event object instead
+    // const { data: rounds = [] } = useGetRoundsQuery(eventDetails?._id || "");
 
     const stats = useMemo(() => {
         if (!eventDetails) return null;
@@ -28,8 +28,12 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
         const joinedSlots = eventDetails.joinedSlots || 0;
         const fillPercentage = totalSlots > 0 ? (joinedSlots / totalSlots) * 100 : 0;
 
-        const completedRounds = (rounds as Round[]).filter(r => r.status === 'completed').length;
-        const totalRounds = rounds.length;
+        // Calculate round progress from internal roadmap data
+        const tournamentRoadmap = eventDetails.roadmaps?.find(r => r.type === 'tournament');
+        const roadmapData = Array.isArray(tournamentRoadmap?.data) ? tournamentRoadmap.data : [];
+
+        const completedRounds = roadmapData.filter(item => item.status === 'completed').length;
+        const totalRounds = roadmapData.length;
 
         return {
             totalSlots,
@@ -42,7 +46,7 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
             invitedCount: eventDetails.invitedTeams?.length || 0,
             t1SpecialCount: eventDetails.t1SpecialTeams?.length || 0,
         };
-    }, [eventDetails, rounds]);
+    }, [eventDetails]);
 
     if (!eventDetails || !stats) {
         return (
@@ -145,12 +149,13 @@ export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) =>
                 <PrizeDistribution
                     prizes={eventDetails.prizeDistribution}
                     title="Rewards Distribution"
+                    height={300}
                 />
             )}
 
             {/* Shared Roadmap Tab Component */}
             {eventDetails.eventType !== 'scrims' && (
-                <Roadmaps eventDetails={eventDetails} showCTA={true} />
+                <Roadmaps eventDetails={eventDetails} showCTA={true} useEventDataOnly={true} />
             )}
         </div>
     );

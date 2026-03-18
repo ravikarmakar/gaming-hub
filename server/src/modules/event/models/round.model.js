@@ -60,6 +60,11 @@ const roundSchema = new mongoose.Schema(
       enum: ["standard", "axb-bxc-axc"],
       default: "standard",
     },
+    leagueType: {
+      type: String,
+      enum: ["12-teams", "18-teams"],
+      required: false,
+    },
     eligibleTeams: [
       {
         type: mongoose.Schema.Types.ObjectId,

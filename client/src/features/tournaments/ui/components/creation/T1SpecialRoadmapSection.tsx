@@ -22,35 +22,40 @@ export const T1SpecialRoadmapSection = ({ isEmbedded = false }: { isEmbedded?: b
     const roadmapData = watch("t1SpecialRoadmap") || [];
     const mappingData = watch("t1SpecialRoundMappings") || [];
 
+    const hasT1SpecialRoadmap = watch("hasT1SpecialRoadmap");
+
     // Initialize with at least one round
     useEffect(() => {
-        const isSupportedType = eventType === "t1-special" || eventType === "tournament";
+        const isSupportedType = eventType === "t1-special" || (eventType === "tournament" && hasT1SpecialRoadmap);
         if (fields.length === 0 && isSupportedType) {
-            append({ name: "Round 1", title: "", isLeague: false, leagueType: "18-teams" });
+            append({ name: "Round 1", title: "" });
         }
-    }, [fields.length, append, eventType]);
+    }, [fields.length, append, eventType, hasT1SpecialRoadmap]);
 
     // Keep round names in sync with their index
     useEffect(() => {
-        fields.forEach((_, index) => {
+        roadmapData.forEach((round, index) => {
             const expectedName = `Round ${index + 1}`;
-            if (watch(`t1SpecialRoadmap.${index}.name`) !== expectedName) {
+            // Use specific watch for the field instead of whole roadmap
+            if (round.name !== expectedName) {
                 setValue(`t1SpecialRoadmap.${index}.name`, expectedName);
             }
         });
-    }, [fields.length, setValue, watch]);
+    }, [fields.length, setValue, roadmapData]);
 
     useEffect(() => {
-        if (fields.length > 0 && roadmapData.every(r => r.title?.trim() !== "")) {
-            if (roadmapData.some(r => r.isLeague)) {
-                setIsRoundsConfirmed(true);
-            }
+        if (fields.length > 0 && roadmapData.length > 0 && roadmapData.every(r => r.title?.trim() !== "")) {
+            setIsRoundsConfirmed(true);
+        } else {
+            setIsRoundsConfirmed(false);
         }
     }, [fields.length, roadmapData]);
 
     useEffect(() => {
         if (mappingData.length > 0 && mappingData[0].targetMainRound?.roundNumber !== undefined) {
             setIsMappingSaved(true);
+        } else {
+            setIsMappingSaved(false);
         }
     }, [mappingData]);
 
@@ -64,8 +69,7 @@ export const T1SpecialRoadmapSection = ({ isEmbedded = false }: { isEmbedded?: b
         setIsRoundsConfirmed(!isRoundsConfirmed);
     };
 
-    const hasRoadmapValue = watch("hasT1SpecialRoadmap");
-    const hasRoadmap = hasRoadmapValue ?? (eventType === "tournament" || eventType === "t1-special");
+    const hasRoadmap = !!(hasT1SpecialRoadmap ?? (eventType === "t1-special"));
 
     if (!isEmbedded && eventType !== "tournament" && eventType !== "t1-special") return null;
 
@@ -93,7 +97,7 @@ export const T1SpecialRoadmapSection = ({ isEmbedded = false }: { isEmbedded?: b
                         fields={fields}
                         fieldNamePrefix="t1SpecialRoadmap"
                         register={register}
-                        onAddRound={() => append({ name: `Round ${fields.length + 1}`, title: "", isLeague: false, leagueType: "18-teams" })}
+                        onAddRound={() => append({ name: `Round ${fields.length + 1}`, title: "" })}
                         onRemoveRound={remove}
                         onToggleConfirmed={handleConfirmedToggle}
                         isSavingDisabled={roadmapData.some(r => !r.title?.trim())}

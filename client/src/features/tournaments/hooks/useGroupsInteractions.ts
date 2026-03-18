@@ -53,9 +53,9 @@ export const useGroupsInteractions = ({ rounds, groups, roundId, eventId, isLoad
         const qt = round?.qualifyingTeams || 0;
 
         const isLeague = round?.isLeague || group?.isLeague;
-        const totalMatch = isLeague
-            ? (rm ? rm * 3 : group?.totalMatch || 18)
-            : (rm || group?.totalMatch || 1);
+        const totalMatch = (group?.totalMatch && group.totalMatch > 0)
+            ? group.totalMatch
+            : (isLeague ? (rm ? rm * 3 : 18) : (rm || 1));
 
         // Show merge option if this round is a recipient in cross-track mappings
         const hasIncomingMappings = round?.mergeInfo?.type === 'receives-from';

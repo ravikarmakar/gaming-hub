@@ -17,7 +17,6 @@ export const RoundItem = memo(({
     round,
     isSelected = false,
     isSidebarCollapsed = false,
-    activeRoundTab,
     onSelect,
     onEditClick,
     onDeleteClick,
@@ -26,6 +25,17 @@ export const RoundItem = memo(({
     const handleSelect = () => {
         if (!isReadOnly && onSelect) onSelect(round._id);
     };
+
+    const formatRoundName = (name: string, number: number) => {
+        if (!name) return "";
+        const n = number || 0;
+        // Match "Round X", "Round X - ", "Round X: ", "R X - Round X - ", etc.
+        const roundPrefixRegex = new RegExp(`^(?:R${n}\\s*[:-]?\\s*)?Round\\s*${n}\\s*[:-]?\\s*`, 'i');
+        return name.replace(roundPrefixRegex, '').trim() || name;
+    };
+
+    const isLeague = round.isLeague || round.roadmapData?.isLeague;
+    const leagueType = round.leagueType || round.roadmapData?.leagueType || round.roadmapData?.grandFinaleType;
 
     return (
         <div
@@ -72,13 +82,13 @@ export const RoundItem = memo(({
                                     Round {round.roundNumber || "?"}
                                 </p>
                                 <h4 className={`text-lg font-black tracking-tight ${isSelected ? 'text-purple-300' : 'text-white'}`}>
-                                    {round.roundName}
+                                    {formatRoundName(round.roundName, round.roundNumber)}
                                 </h4>
                             </div>
                         ) : (
                             <div className="flex items-center gap-2 mb-1">
                                 <span className={`font-bold ${isSelected ? 'text-purple-300' : 'text-gray-300'}`}>
-                                    {round.roundNumber ? `R${round.roundNumber} - ` : ""}{round.roundName}
+                                    {round.roundNumber ? `R${round.roundNumber} - ` : ""}{formatRoundName(round.roundName, round.roundNumber)}
                                 </span>
                                 {round.status === 'ongoing' && (
                                     <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
@@ -87,18 +97,20 @@ export const RoundItem = memo(({
                         )}
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2">
-                                {!isReadOnly && (
-                                    <span className={`text-[8px] px-1.5 py-0.5 rounded-sm font-black tracking-widest uppercase border ${round.isLeague
+                                {(isLeague || !isReadOnly) && (
+                                    <span className={`text-[8px] px-1.5 py-0.5 rounded-sm font-black tracking-widest uppercase border ${isLeague
                                         ? "bg-amber-500/10 border-amber-500/20 text-amber-500"
                                         : "bg-blue-500/10 border-blue-500/20 text-blue-400"
                                         }`}>
-                                        {round.isLeague ? "League" : "Standard"}
+                                        {isLeague ? "League" : "Standard"}
                                     </span>
                                 )}
-                                {(round.roadmapData?.isLeague || round.roadmapData?.isFinale) && (round.roadmapData?.leagueType || round.roadmapData?.grandFinaleType) && (
-                                    <span className="text-[10px] text-gray-500 uppercase font-black tracking-tight flex items-center gap-1">
-                                        <span className="w-1 h-1 rounded-full bg-white/20" />
-                                        {(round.roadmapData?.leagueType || round.roadmapData?.grandFinaleType).replace("-", " ").toUpperCase()}
+                                {leagueType && (
+                                    <span className={`text-[8px] px-1.5 py-0.5 rounded-sm font-black tracking-widest uppercase border ${isLeague
+                                        ? "bg-amber-500/20 border-amber-500/30 text-amber-400"
+                                        : "bg-white/5 border-white/10 text-gray-500"
+                                        }`}>
+                                        {leagueType.replace("-", " ").toUpperCase()}
                                     </span>
                                 )}
                             </div>
@@ -129,12 +141,20 @@ export const RoundItem = memo(({
                         </div>
                     </div>
                     <div className="flex flex-col items-end gap-2 text-right">
-                        {!round.isPlaceholder && round.status === 'completed' && (
+                        {round.status === 'completed' ? (
                             <div className="bg-green-500/10 p-1 rounded-full border border-green-500/20">
                                 <CheckCircle2 className="w-4 h-4 text-green-500" />
                             </div>
+                        ) : round.status === 'ongoing' ? (
+                            <span className="text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest uppercase bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                                Ongoing
+                            </span>
+                        ) : (
+                            <span className="text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest uppercase bg-white/5 border border-white/10 text-white/20">
+                                Not Started
+                            </span>
                         )}
-                        {!isReadOnly && !round.isPlaceholder && round.status !== 'completed' && activeRoundTab !== 't1-special' && (
+                        {!isReadOnly && !round.isPlaceholder && round.status !== 'completed' && (
                             <div className="flex items-center gap-1">
                                 <Button
                                     variant="ghost"

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { useGetRoundsQuery, useTournamentRoadmap } from "@/features/tournaments/hooks";
-import { Tournament, RoundTabType } from "@/features/tournaments/types";
+import { Tournament, Round, RoundTabType } from "@/features/tournaments/types";
 
 import { RoadmapEmptyState } from "./RoadmapEmptyState";
 import { RoadmapTrack } from "./RoadmapTrack";
@@ -13,11 +13,21 @@ import { RoadmapTabs } from "./RoadmapTabs";
 interface RoadmapsProps {
     eventDetails: Tournament;
     showCTA?: boolean;
+    rounds?: Round[];
+    useEventDataOnly?: boolean;
 }
 
-export const Roadmaps = ({ eventDetails, showCTA }: RoadmapsProps) => {
+export const Roadmaps = ({ eventDetails, showCTA, rounds: manualRounds, useEventDataOnly }: RoadmapsProps) => {
     const navigate = useNavigate();
-    const { data: rounds = [] } = useGetRoundsQuery(eventDetails?._id || "");
+
+    // Only fetch if manualRounds are not provided AND useEventDataOnly is not true
+    const { data: fetchedRounds = [], isLoading: isRoundsLoading, isFetching: isRoundsFetching } = useGetRoundsQuery(eventDetails?._id || "", {
+        enabled: !manualRounds && !useEventDataOnly && !!eventDetails?._id
+    });
+
+    const isDataLoading = !useEventDataOnly && !manualRounds && (isRoundsLoading || isRoundsFetching);
+
+    const rounds = manualRounds || fetchedRounds;
     const [activeTrack, setActiveTrack] = useState<RoundTabType>("tournament");
 
     const { roadmapItems: mainRoadmap } = useTournamentRoadmap(eventDetails, rounds, 'tournament');
@@ -75,6 +85,7 @@ export const Roadmaps = ({ eventDetails, showCTA }: RoadmapsProps) => {
                     steps={currentSteps as any}
                     colorScheme={colorScheme}
                     trackType={activeTrack === 'invited-tournament' ? 'invited' : activeTrack === 't1-special' ? 't1-special' : 'main'}
+                    isLoading={isDataLoading}
                 />
             </div>
         </div>

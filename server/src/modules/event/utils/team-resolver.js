@@ -70,28 +70,56 @@ export const resolveSourceTeams = async ({ roundId, eventId, session = null }) =
   if (roadmapType === "tournament") {
     const displayRoundNumber = currentRoundIndex + 1;
     const incomingMappings = [
-      ...(event.invitedRoundMappings || []).filter(m => m.targetMainRound?.roundNumber === displayRoundNumber).map(m => ({ ...m, track: 'invitedTeams' })),
-      ...(event.t1SpecialRoundMappings || []).filter(m => m.targetMainRound?.roundNumber === displayRoundNumber).map(m => ({ ...m, track: 't1-special' }))
+      ...(event.invitedRoundMappings || [])
+        .filter(m => m.targetMainRound?.roundNumber === displayRoundNumber)
+        .map(m => {
+          const raw = m.toObject ? m.toObject() : m;
+          return { ...raw, track: 'invitedTeams' };
+        }),
+      ...(event.t1SpecialRoundMappings || [])
+        .filter(m => m.targetMainRound?.roundNumber === displayRoundNumber)
+        .map(m => {
+          const raw = m.toObject ? m.toObject() : m;
+          return { ...raw, track: 't1-special' };
+        })
     ];
+
+    logger.info(`[resolveSourceTeams] Found ${incomingMappings.length} cross-track mappings for Round ${displayRoundNumber}`);
 
     for (const mapping of incomingMappings) {
       const sourceRoundNum = mapping.sourceRound?.roundNumber;
-      if (sourceRoundNum === undefined) continue;
+      if (sourceRoundNum === undefined) {
+        logger.warn(`[resolveSourceTeams] Mapping missing sourceRoundNum:`, mapping);
+        continue;
+      }
 
       const sourceRoadmap = event.roadmaps?.find(r => r.type === mapping.track);
       const sourceItem = sourceRoadmap?.data?.[sourceRoundNum - 1];
       if (sourceItem?.roundId) {
         const sourceRoundDoc = await Round.findById(sourceItem.roundId).session(session);
-        if (sourceRoundDoc && sourceRoundDoc.status === "completed") {
-          const prevGroups = await Group.find({ roundId: sourceRoundDoc._id }).session(session);
-          const groupIds = prevGroups.map(g => g._id);
-          const leaderboards = await Leaderboard.find({ groupId: { $in: groupIds } }).session(session);
-          leaderboards.forEach(lb => {
-            lb.teamScore.forEach(entry => {
-              if (entry.isQualified) teamIds.add(entry.teamId.toString());
-            });
-          });
+        if (!sourceRoundDoc) {
+          logger.warn(`[resolveSourceTeams] Source round document not found for ID: ${sourceItem.roundId}`);
+          continue;
         }
+
+        if (sourceRoundDoc.status !== "completed") {
+          throw new Error(`Cannot proceed. Waiting for ${mapping.track === 'invitedTeams' ? 'Invited' : 'T1 Special'} ${sourceRoundDoc.roundName} to be completed.`);
+        }
+
+        const prevGroups = await Group.find({ roundId: sourceRoundDoc._id }).session(session);
+        const groupIds = prevGroups.map(g => g._id);
+        const leaderboards = await Leaderboard.find({ groupId: { $in: groupIds } }).session(session);
+        
+        let crossTrackCount = 0;
+        leaderboards.forEach(lb => {
+          lb.teamScore.forEach(entry => {
+            if (entry.isQualified) {
+              teamIds.add(entry.teamId.toString());
+              crossTrackCount++;
+            }
+          });
+        });
+        logger.info(`[resolveSourceTeams] Pulled ${crossTrackCount} qualified teams from cross-track source: ${sourceRoundDoc.roundName}`);
       }
     }
   }

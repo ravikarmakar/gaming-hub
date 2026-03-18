@@ -1,4 +1,4 @@
-import { PlayCircle, ArrowLeft } from "lucide-react";
+import { PlayCircle, ChevronLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -20,7 +20,7 @@ export const TournamentDashboardHeader = ({
     onBack,
 }: TournamentDashboardHeaderProps) => {
     return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-900/40 p-3 md:p-4 rounded-xl border border-white/5 backdrop-blur-xl mb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-transparent border-b border-white/5 mb-6 pb-2">
             <div className="flex items-center gap-3">
                 <Button
                     variant="ghost"
@@ -28,12 +28,12 @@ export const TournamentDashboardHeader = ({
                     className="h-8 w-8 text-gray-400 hover:text-white hover:bg-white/5"
                     onClick={onBack}
                 >
-                    <ArrowLeft className="w-4 h-4" />
+                    <ChevronLeft className="w-5 h-5" />
                 </Button>
-                
+
                 <div className="flex flex-col">
                     <div className="flex items-center gap-2">
-                        <h1 className="text-lg md:text-xl font-black text-white tracking-tight">
+                        <h1 className="text-xl md:text-3xl font-black text-white tracking-tight">
                             {title || "Loading..."}
                         </h1>
                         <div className="flex items-center gap-1.5 ml-1">
@@ -45,7 +45,6 @@ export const TournamentDashboardHeader = ({
                             </Badge>
                         </div>
                     </div>
-                    <p className="text-[11px] text-gray-500 font-medium">Managing arena operations and results</p>
                 </div>
             </div>
 

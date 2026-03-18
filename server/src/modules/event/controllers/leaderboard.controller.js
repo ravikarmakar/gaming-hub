@@ -5,6 +5,7 @@ import Round from "../models/round.model.js";
 import pointSystem from "../../../shared/config/pointSystem.js";
 import { logger } from "../../../shared/utils/logger.js";
 import { withOptionalTransaction } from "../../../shared/utils/withOptionalTransaction.js";
+import { syncRoadmapStatus } from "../event.utils.js";
 
 // Create a new leaderboard entry
 export const createLeaderboardEntry = async (req, res) => {
@@ -344,10 +345,14 @@ export const updateGroupResults = async (req, res) => {
       }
 
       // 🏆 Calculate effective match limit
-      const roundMatchesPerGroup = group.roundId?.matchesPerGroup;
-      const effectiveTotalMatch = group.isLeague 
-        ? (roundMatchesPerGroup ? Math.round(roundMatchesPerGroup * 1.5) : (group.totalMatch || 18))
-        : (roundMatchesPerGroup || group.totalMatch || 1);
+      // Fallback priority: 
+      // 1. group.totalMatch (if > 0)
+      // 2. round.matchesPerGroup (with league multiplier if applicable)
+      // 3. Absolute defaults (1 for standard, 18 for league)
+      const roundMatches = group.roundId?.matchesPerGroup;
+      const effectiveTotalMatch = (group.totalMatch && group.totalMatch > 0)
+        ? group.totalMatch
+        : (group.isLeague ? (roundMatches ? roundMatches * 3 : 18) : (roundMatches || 1));
 
       // 🚫 Block if the group is already fully completed
       if (group.status === "completed") {
@@ -446,7 +451,7 @@ export const updateGroupResults = async (req, res) => {
       let shouldComplete = matchesPlayedCount >= effectiveTotalMatch;
       
       // Additional check for League: if all pairings have reached their budget, it's definitely done
-      if (group.isLeague && group.pairingMatches) {
+      if (group.isLeague && group.pairingMatches && effectiveTotalMatch >= 3) {
         const pairingBudget = Math.floor(effectiveTotalMatch / 3);
         const allPairingsDone = (group.pairingMatches.AxB >= pairingBudget) && 
                                 (group.pairingMatches.BxC >= pairingBudget) && 
@@ -467,8 +472,9 @@ export const updateGroupResults = async (req, res) => {
         // Sort descending by totalPoints
         leaderboard.teamScore.sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
 
-        // Mark qualified teams based on limit
+        // Mark qualified teams and assign positions based on limit
         leaderboard.teamScore.forEach((entry, index) => {
+          entry.position = index + 1;
           entry.isQualified = qualifyingLimit > 0 && index < qualifyingLimit;
         });
         leaderboard.markModified('teamScore');
@@ -487,14 +493,37 @@ export const updateGroupResults = async (req, res) => {
         const isRoundComplete = allGroupsInRound.every(g => g.status === 'completed');
 
         if (isRoundComplete) {
-          const updateRoundQuery = Round.findByIdAndUpdate(group.roundId._id, { status: 'completed' });
-          if (session) updateRoundQuery.session(session);
-          await updateRoundQuery;
+          // Update round status to completed
+          await Round.findByIdAndUpdate(
+            group.roundId._id, 
+            { status: 'completed' },
+            { session }
+          );
 
-          if (allGroupsInRound.length === 1 && group.roundId.eventId) {
-            const updateEventQuery = mongoose.model("Event").findByIdAndUpdate(group.roundId.eventId, { eventProgress: 'completed' });
-            if (session) updateEventQuery.session(session);
-            await updateEventQuery;
+          // Sync roadmap status
+          await syncRoadmapStatus(
+            group.roundId.eventId,
+            group.roundId._id,
+            'completed',
+            session
+          );
+
+          // 🏆 Determine if the entire EVENT should be completed
+          // It should complete if:
+          // 1. This was the final round (has the highest roundNumber)
+          // 2. AND all groups in this round are done (isRoundComplete is true)
+          if (group.roundId.eventId) {
+            const allRounds = await Round.find({ eventId: group.roundId.eventId }).session(session);
+            const maxRoundNumber = Math.max(...allRounds.map(r => r.roundNumber || 0));
+            const isLastRound = group.roundId.roundNumber === maxRoundNumber;
+
+            if (isLastRound) {
+              const updateEventQuery = mongoose.model("Event").findByIdAndUpdate(
+                group.roundId.eventId, 
+                { eventProgress: 'completed' }
+              ).session(session);
+              await updateEventQuery;
+            }
           }
         }
       }

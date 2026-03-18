@@ -97,7 +97,7 @@ export default function CreateTournament() {
                   <Button
                     type="submit"
                     form="tournament-form"
-                    disabled={methods.formState.isSubmitting || isLoading || isCreating}
+                    disabled={methods.formState.isSubmitting || isLoading || isCreating || (isEditMode && !methods.formState.isDirty)}
                     className="h-8 px-4 py-0 text-[10px] font-black uppercase bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg flex items-center gap-1.5 shadow-glow-emerald transition-all active:scale-95 whitespace-nowrap"
                   >
                     {(methods.formState.isSubmitting || isLoading || isCreating) ? (

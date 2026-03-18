@@ -47,6 +47,7 @@ export const useGetRoundsQuery = (eventId: string, options: any = {}) => {
 export const useGetGroupsQuery = (roundId: string, page = 1, limit = 20, search = "", status = "", sortBy = "", options: any = {}) => {
     return useQuery<{ groups: Group[]; pagination: any }>({
         ...TOURNAMENT_QUERY_CONFIG,
+        staleTime: 60 * 1000, // 1 minute for groups
         ...options,
         queryKey: tournamentKeys.groups(roundId, page, limit, search, status, sortBy),
         queryFn: () => tournamentApi.getGroups({ roundId, page, limit, search, status, sortBy }),
@@ -57,6 +58,7 @@ export const useGetGroupsQuery = (roundId: string, page = 1, limit = 20, search 
 export const useGetGroupDetailsQuery = (groupId: string, options: any = {}) => {
     return useQuery<Group>({
         ...TOURNAMENT_QUERY_CONFIG,
+        staleTime: 60 * 1000, // 1 minute
         ...options,
         queryKey: tournamentKeys.groupDetails(groupId),
         queryFn: () => tournamentApi.getGroupDetails(groupId),
@@ -67,6 +69,7 @@ export const useGetGroupDetailsQuery = (groupId: string, options: any = {}) => {
 export const useGetLeaderboardQuery = (groupId: string, options: any = {}) => {
     return useQuery<Leaderboard>({
         ...TOURNAMENT_QUERY_CONFIG,
+        staleTime: 60 * 1000, // 1 minute for leaderboard
         ...options,
         queryKey: tournamentKeys.leaderboard(groupId),
         queryFn: () => tournamentApi.getLeaderboard(groupId),
@@ -120,6 +123,7 @@ export const useGetInfiniteInvitedTeamsQuery = (eventId: string, search = "", op
 
 export const useSearchTeamsQuery = (search: string, options: any = {}) => {
     return useQuery<any[]>({
+        ...TOURNAMENT_QUERY_CONFIG,
         ...options,
         queryKey: ['teams', 'search', search],
         queryFn: () => tournamentApi.searchTeams({ search, limit: 10 }),

@@ -1,9 +1,7 @@
 import mongoose from "mongoose";
 import Group from "../models/group.model.js";
 import Round from "../models/round.model.js";
-import Event from "../event.model.js";
 import Leaderboard from "../models/leaderBoard.model.js";
-import EventRegistration from "../models/event-registration.model.js";
 import { logger } from "../../../shared/utils/logger.js";
 import { TryCatchHandler } from "../../../shared/middleware/error.middleware.js";
 import { withOptionalTransaction } from "../../../shared/utils/withOptionalTransaction.js";
@@ -126,7 +124,7 @@ export const createGroups = async (req, res) => {
 
     // 2️⃣ Resolve Sequence Position and Fetch Teams
     let allTeams = [];
-    
+
     if (round.eligibleTeams && round.eligibleTeams.length > 0) {
       allTeams = round.eligibleTeams;
       logger.info(`Using ${allTeams.length} pre-merged/eligible teams for Round ${round.roundNumber}`);
@@ -190,7 +188,7 @@ export const createGroups = async (req, res) => {
       // e.g. if matchesPerGroup is 6, total matches = 18 (6 AxB + 6 BxC + 6 AxC)
       const computedTotalMatch = isLeague
         ? (round.matchesPerGroup ? round.matchesPerGroup * 3 : 18)
-        : (bodyTotalMatch ?? round.matchesPerGroup ?? 1);
+        : (bodyTotalMatch && bodyTotalMatch > 1 ? bodyTotalMatch : (round.matchesPerGroup || bodyTotalMatch || 1));
 
       // 🏆 For league groups: divide teams into 3 equal sub-groups (A, B, C)
       // These define AxB/BxC/AxC pairing. Each sub-group plays against the other two.
@@ -368,10 +366,10 @@ export const createGroups = async (req, res) => {
   }
 };
 
-// ➕ Create a Single Group Manually
+// ➕ Create a Single Group & League Group Manually
 export const createSingleGroup = async (req, res) => {
   try {
-    const { roundId, eventId, groupName, matchTime } = req.body;
+    const { roundId, eventId, groupName, matchTime, groupType, groupSize } = req.body;
 
     if (!roundId || !eventId) {
       return res.status(400).json({ message: "Round ID and Event ID are required!" });
@@ -397,6 +395,9 @@ export const createSingleGroup = async (req, res) => {
       return `Group ${name}`;
     };
 
+    // Detection logic for League Mode
+    const isLeagueCreation = groupType === "league";
+
     const result = await withOptionalTransaction(async (session) => {
       let finalGroupName = groupName;
       if (!finalGroupName) {
@@ -413,34 +414,83 @@ export const createSingleGroup = async (req, res) => {
         }
       }
 
-      const group = await Group.create([{
+      let teams = [];
+      let subGroups = [];
+
+      // Calculate total match based on round config OR body override
+      const bodyTotalMatch = req.body.totalMatch;
+      let totalMatch = bodyTotalMatch ?? (round.isLeague ? (round.matchesPerGroup * 3 || 18) : (round.matchesPerGroup || 1));
+
+      if (isLeagueCreation) {
+        // Resolve teams for league
+        const allTeams = await resolveSourceTeams({ roundId, eventId, session });
+
+        if (allTeams.length < 12) {
+          throw new Error(`Insufficient teams for a league group. Found only ${allTeams.length}. Minimum 12 required.`);
+        }
+
+        // Take up to 18 teams if they exist
+        teams = allTeams.slice(0, 18);
+
+        // Divide into A, B, C for league pairings (Dynamic chunk size)
+        const n = teams.length;
+        const chunk = Math.ceil(n / 3);
+        subGroups = [
+          { name: "Sub-Group A", teams: teams.slice(0, chunk) },
+          { name: "Sub-Group B", teams: teams.slice(chunk, chunk * 2) },
+          { name: "Sub-Group C", teams: teams.slice(chunk * 2) },
+        ];
+
+        // Ensure totalMatch is correctly set for league
+        if (!bodyTotalMatch || bodyTotalMatch === 1) {
+          totalMatch = round.matchesPerGroup ? round.matchesPerGroup * 3 : 18;
+        }
+      } else {
+        // For standard groups, if totalMatch is 1 but round says otherwise, prefer round
+        if ((!bodyTotalMatch || bodyTotalMatch === 1) && round.matchesPerGroup > 1) {
+          totalMatch = round.matchesPerGroup;
+        }
+      }
+
+      const [group] = await Group.create([{
         roundId,
         groupName: finalGroupName,
         matchTime: matchTime || new Date(Date.now() + 24 * 60 * 60 * 1000),
-        totalMatch: round.isLeague ? (round.matchesPerGroup * 3 || 18) : (round.matchesPerGroup || 1),
+        totalMatch: totalMatch,
         totalSelectedTeam: round.qualifyingTeams || 0,
-        teams: [],
+        teams: teams,
+        isLeague: isLeagueCreation || round.isLeague,
+        groupSize: isLeagueCreation ? 18 : (groupSize || round.groupSize || 0),
+        subGroups: subGroups,
+        leaguePairingType: round.leaguePairingType || "standard",
       }], { session });
-
-      const createdGroup = group[0];
 
       // Create a corresponding Leaderboard
+      const teamScore = teams.map(teamId => ({
+        teamId,
+        score: 0,
+        kills: 0,
+        wins: 0,
+        totalPoints: 0,
+        matchesPlayed: 0,
+      }));
+
       await Leaderboard.create([{
-        groupId: createdGroup._id,
-        teamScore: [],
+        groupId: group._id,
+        teamScore: teamScore,
       }], { session });
 
-      return createdGroup;
+      return group;
     });
 
     return res.status(201).json({
       success: true,
-      message: "Group created successfully!",
+      message: isLeagueCreation ? "League Group created successfully!" : "Group created successfully!",
       group: result,
     });
   } catch (error) {
     logger.error("Error in createSingleGroup:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error.message });
+    res.status(500).json({ message: error.message || "Internal Server Error" });
   }
 };
 
@@ -568,6 +618,7 @@ export const deleteGroup = async (req, res) => {
     res.status(status).json({ message: error.message || "Internal Server Error" });
   }
 };
+
 export const injectTeam = async (req, res) => {
   try {
     const { groupId, teamId, eventId } = req.body;
@@ -583,9 +634,9 @@ export const injectTeam = async (req, res) => {
     const result = await withOptionalTransaction(async (session) => {
       // 1. Atomic Team Addition with Event/Group Verification
       const group = await Group.findOneAndUpdate(
-        { 
-          _id: groupId, 
-          teams: { $ne: teamId } 
+        {
+          _id: groupId,
+          teams: { $ne: teamId }
         },
         { $push: { teams: teamId } },
         { session, new: true }
@@ -596,7 +647,7 @@ export const injectTeam = async (req, res) => {
         const existingGroup = await Group.findById(groupId).session(session);
         if (!existingGroup) throw new Error("Group not found");
         if (existingGroup.teams.some(id => id.equals(teamId))) {
-            throw new Error("Team already exists in this group");
+          throw new Error("Team already exists in this group");
         }
         throw new Error("Inject team failed");
       }
@@ -604,7 +655,7 @@ export const injectTeam = async (req, res) => {
       // Verify group belongs to the specified event
       const round = await Round.findById(group.roundId).session(session);
       if (!round || round.eventId.toString() !== eventId) {
-          throw new Error("Group/Event mismatch");
+        throw new Error("Group/Event mismatch");
       }
 
       // 2. Add team to leaderboard atomically
@@ -629,6 +680,13 @@ export const injectTeam = async (req, res) => {
       if (!leaderboard) {
         throw new Error("Leaderboard not found for this group");
       }
+
+      // Synchronize round.eligibleTeams
+      await Round.updateOne(
+        { _id: group.roundId },
+        { $addToSet: { eligibleTeams: teamId } },
+        { session }
+      );
 
       return group;
     });
@@ -660,8 +718,14 @@ export const mergeQualifiedTeamsIntoGroup = TryCatchHandler(async (req, res) => 
     const roundId = group.roundId._id;
     const allResolvedTeams = await resolveSourceTeams({ roundId, eventId, session });
 
-    const groupTeamsSet = new Set(group.teams.map(id => id.toString()));
-    const newTeams = allResolvedTeams.filter(id => !groupTeamsSet.has(id.toString()));
+    // Fetch all current group assignments for this round to prevent cross-group duplication
+    const allGroupsInRound = await Group.find({ roundId }).session(session);
+    const existingRoundTeamIds = new Set();
+    allGroupsInRound.forEach(g => {
+      g.teams.forEach(tid => existingRoundTeamIds.add(tid.toString()));
+    });
+
+    const newTeams = allResolvedTeams.filter(id => !existingRoundTeamIds.has(id.toString()));
 
     if (newTeams.length > 0) {
       // Add teams to group
@@ -686,6 +750,14 @@ export const mergeQualifiedTeamsIntoGroup = TryCatchHandler(async (req, res) => 
         leaderboard.markModified('teamScore');
         await leaderboard.save({ session });
       }
+
+      // Synchronize round.eligibleTeams so the frontend knows these teams are merged
+      const Round = mongoose.model("Round");
+      await Round.updateOne(
+        { _id: roundId },
+        { $addToSet: { eligibleTeams: { $each: newTeams } } },
+        { session }
+      );
     }
 
     return { group, mergedCount: newTeams.length };

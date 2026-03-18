@@ -53,6 +53,11 @@ export const deleteFromImageKit = async (fileId) => {
         const response = await imagekit.files.delete(fileId);
         return response;
     } catch (error) {
+        // Silently handle 404s as the file is already gone (idempotent deletion)
+        if (error.statusCode === 404) {
+            logger.info(`ImageKit: File ${fileId} not found, deletion skipped.`);
+            return { success: true };
+        }
         logger.error("ImageKit Deletion Error:", error);
         return null;
     }

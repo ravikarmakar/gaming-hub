@@ -31,7 +31,7 @@ interface RoundsManagerDialogsProps {
     isCreatingSingleGroup: boolean;
     isMergingTeams: boolean;
     handleCreateGroups: (roundId: string) => Promise<void>;
-    handleManualCreateGroup: (roundId: string) => Promise<void>;
+    handleManualCreateGroup: (roundId: string, groupType?: string, groupSize?: number) => Promise<void>;
     handleMergeTeams: (roundId: string) => Promise<void>;
 }
 
@@ -208,16 +208,35 @@ export const RoundsManagerDialogs: React.FC<RoundsManagerDialogsProps> = ({
             <ConfirmActionDialog
                 open={isConfirmManualGroupOpen}
                 onOpenChange={setIsConfirmManualGroupOpen}
-                title="Create One New Group?"
+                title={selectedRound?.roadmapData?.isLeague ? "Create League Group?" : "Create One New Group?"}
                 description={
                     <div className="space-y-4">
-                        <p>Are you sure you want to create <strong className="text-white">one new group</strong> manually in <strong className="text-white">{selectedRound?.roundName}</strong>?</p>
-                        <p className="text-xs text-gray-500 italic">This will create an empty group with default settings. You can add teams to it later.</p>
+                        <p>Are you sure you want to create <strong className="text-white">{selectedRound?.roadmapData?.isLeague ? "a league group" : "one new group"}</strong> manually in <strong className="text-white">{selectedRound?.roundName}</strong>?</p>
+                        <p className="text-xs text-gray-500 italic">
+                            {selectedRound?.roadmapData?.isLeague && selectedRound?.roadmapData?.leagueType === '18-teams'
+                                ? "This will automatically resolve 18 teams for the league and create the group with pairings."
+                                : "This will create an empty group with default settings. You can add teams to it later."}
+                        </p>
                     </div>
                 }
-                actionLabel="Create Group"
+                actionLabel={selectedRound?.roadmapData?.isLeague ? "Create League" : "Create Group"}
                 onConfirm={async () => {
-                    if (selectedRound) await handleManualCreateGroup(selectedRound._id);
+                    if (selectedRound) {
+                        const isLeague = selectedRound.roadmapData?.isLeague;
+                        const leagueType = selectedRound.roadmapData?.leagueType;
+                        
+                        if (isLeague) {
+                            // Extract team count from leagueType (e.g., "18-teams" -> 18)
+                            const teamCount = parseInt(leagueType?.split("-")[0]);
+                            if (!isNaN(teamCount)) {
+                                await handleManualCreateGroup(selectedRound._id, 'league', teamCount);
+                            } else {
+                                await handleManualCreateGroup(selectedRound._id, 'league');
+                            }
+                        } else {
+                            await handleManualCreateGroup(selectedRound._id);
+                        }
+                    }
                     setIsConfirmManualGroupOpen(false);
                 }}
                 isLoading={isCreatingSingleGroup}

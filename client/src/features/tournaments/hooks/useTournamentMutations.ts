@@ -39,10 +39,16 @@ export const useDeleteTournamentMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: tournamentApi.deleteTournament,
-        onSuccess: () => {
-            // Let component handle navigation/success message
-            // but we might want to invalidate event lists if they are queried via rtk
-            queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
+        onSuccess: (_, eventId) => {
+            // Remove the deleted event details from cache immediately to prevent stay-mounted refetches
+            queryClient.removeQueries({ queryKey: tournamentKeys.details(eventId) });
+            
+            // Invalidate list queries specifically instead of the entire tournament root
+            // This prevents the details query for the deleted event from being refetched 
+            // if the component is still mounted during navigation.
+            queryClient.invalidateQueries({ queryKey: [...tournamentKeys.all, 'list'] });
+            queryClient.invalidateQueries({ queryKey: [...tournamentKeys.all, 'infinite-list'] });
+            queryClient.invalidateQueries({ queryKey: [...tournamentKeys.all, 'org'] });
         },
         onError: (err) => {
             toast.error(handleApiError(err, "Failed to delete tournament"));
@@ -54,13 +60,17 @@ export const useStartTournamentMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: tournamentApi.startTournament,
-        onSuccess: (data, eventId) => {
+        onSuccess: (tournament, eventId) => {
             // Update the specific tournament details query cache immediately
-            queryClient.setQueryData(tournamentKeys.details(eventId), data);
+            if (tournament) {
+                queryClient.setQueryData(tournamentKeys.details(eventId), tournament);
+            }
 
-            // Still invalidate to be safe, but setQueryData provides immediate UI update
+            // Invalidate strictly related queries
             queryClient.invalidateQueries({ queryKey: tournamentKeys.details(eventId) });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(eventId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
+            
             toast.success("Tournament started successfully");
         },
         onError: (err) => {
@@ -77,6 +87,8 @@ export const useCreateRoundMutation = () => {
         mutationFn: tournamentApi.createRound,
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.details(variables.eventId) });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
             toast.success("Round created successfully");
         },
         onError: (err) => {
@@ -91,6 +103,7 @@ export const useUpdateRoundMutation = () => {
         mutationFn: tournamentApi.updateRound,
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.details(variables.eventId) });
             queryClient.invalidateQueries({ queryKey: [...tournamentKeys.all, 'leaderboard'] });
             queryClient.invalidateQueries({ queryKey: [...tournamentKeys.all, 'groups'] });
             toast.success("Round updated successfully");
@@ -122,6 +135,8 @@ export const useDeleteRoundMutation = () => {
         mutationFn: tournamentApi.deleteRound,
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.details(variables.eventId) });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
             // Invalidate groups as well since deleting a round removes its groups context
             queryClient.invalidateQueries({ queryKey: tournamentKeys.groups(variables.roundId, 1, 20) });
             toast.success("Round deleted successfully");
@@ -138,6 +153,7 @@ export const useResetRoundMutation = () => {
         mutationFn: tournamentApi.resetRound,
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.details(variables.eventId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
             toast.success("Round reset successfully");
         },

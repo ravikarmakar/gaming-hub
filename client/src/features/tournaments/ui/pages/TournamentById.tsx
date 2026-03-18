@@ -4,8 +4,8 @@ import { Trophy, Users, MessageSquare, ListOrdered, Gavel, Info, Map } from "luc
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { 
-    TournamentHeader, 
+import {
+    TournamentHeader,
     TournamentQuickStats,
     Roadmaps,
     TournamentDetails
@@ -13,10 +13,7 @@ import {
 import {
     useGetTournamentDetailsQuery,
     useGetRegistrationStatusQuery,
-    useRegisterTournamentMutation,
-    useGetRoundsQuery,
-    useGetGroupsQuery,
-    useGetLeaderboardQuery
+    useRegisterTournamentMutation
 } from "@/features/tournaments/hooks";
 
 // Extracted Tab Components
@@ -47,26 +44,15 @@ const TournamentById = () => {
     const { data: eventDetails, isLoading } = useGetTournamentDetailsQuery(id);
 
     const teamIdStr = typeof user?.teamId === 'string' ? user.teamId : user?.teamId?._id;
-    const { data: regData } = useGetRegistrationStatusQuery(id, teamIdStr || "");
+    const { data: regData } = useGetRegistrationStatusQuery(eventDetails?._id || id, teamIdStr || "", {
+        enabled: !!eventDetails?._id && !!teamIdStr
+    });
     const { mutateAsync: registerTournament } = useRegisterTournamentMutation();
 
     const regStatus = regData?.status || "none";
 
-    // Optimized: Only fetch results/leaderboard data if the results tab is active or tournament is completed
-    const isCompleted = eventDetails?.eventProgress === 'completed';
-    const shouldFetchResults = activeTab === 'results' || isCompleted;
-
-    const { data: rounds = [] } = useGetRoundsQuery(id);
-    const lastRound = rounds[rounds.length - 1];
-
-    const { data: groupsData } = useGetGroupsQuery(lastRound?._id || "", 1, 1, "", "", "", {
-        enabled: !!lastRound?._id && shouldFetchResults
-    });
-    const grandFinaleGroup = groupsData?.groups?.[0];
-
-    const { data: leaderboard } = useGetLeaderboardQuery(grandFinaleGroup?._id || "", {
-        enabled: !!grandFinaleGroup?._id && shouldFetchResults
-    });
+    // Secondary data (rounds, leaderboards) is now fetched lazily inside the respective tab components
+    // to avoid unnecessary backend calls on initial load.
 
     if (isLoading) {
         return (
@@ -138,7 +124,7 @@ const TournamentById = () => {
                                         <TabsTrigger
                                             key={tab.value}
                                             value={tab.value}
-                                            disabled={tab.value === 'results' && eventDetails.eventProgress !== 'completed'}
+                                            disabled={tab.value === 'results' && eventDetails.eventProgress === 'pending'}
                                             className="relative rounded-none px-0 py-4 bg-transparent data-[state=active]:bg-transparent text-gray-500 data-[state=active]:text-white font-bold uppercase tracking-widest text-[10px] sm:text-[11px] whitespace-nowrap flex-shrink-0 transition-all border-b-2 border-transparent data-[state=active]:border-purple-700 disabled:opacity-30"
                                         >
                                             <tab.icon size={14} className="mr-2" />
@@ -154,11 +140,12 @@ const TournamentById = () => {
                                     return true;
                                 }).map((tab) => (
                                     <TabsContent key={tab.value} value={tab.value} className="m-0">
-                                        <tab.Component
-                                            eventDetails={eventDetails}
-                                            eventId={id}
-                                            leaderboard={leaderboard}
-                                        />
+                                        {activeTab === tab.value && (
+                                            <tab.Component
+                                                eventDetails={eventDetails}
+                                                eventId={id}
+                                            />
+                                        )}
                                     </TabsContent>
                                 ))}
                             </div>

@@ -85,7 +85,7 @@ export const RegisteredTeamsList = ({
 
     return (
         <div className="flex flex-col min-h-[700px] w-full">
-            <div className="p-6 border border-white/5 rounded-2xl space-y-6 bg-gray-900/40 backdrop-blur-sm shadow-xl mb-6">
+            <div className="p-2 border-b border-white/5 space-y-6 mb-6">
                 <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
                     <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full md:w-auto">
                         <TabsList className="bg-transparent p-0 border-none">
@@ -111,17 +111,27 @@ export const RegisteredTeamsList = ({
                                 <div className="relative w-full sm:w-80 group">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
                                     <Input
-                                        placeholder="Search recruitment..."
+                                        placeholder="Search Teams..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-10 h-10 bg-white/5 border-white/10 text-white placeholder:text-gray-400 focus:ring-purple-500/20"
+                                        className="pl-8 h-8 bg-white/5 border-white/10 text-white placeholder:text-gray-400 focus:ring-purple-500/20"
                                     />
                                 </div>
                             )}
                             {showStats && (
                                 <div className="flex items-center gap-2 px-0 h-10 bg-transparent text-[10px] font-black text-gray-400 uppercase tracking-widest">
                                     <Users className="w-3.5 h-3.5 text-purple-400" />
-                                    Loaded: {allTeams.length}
+                                    {debouncedSearch ? "Matches: " : "Total Teams: "} 
+                                    {debouncedSearch 
+                                        ? allTeams.length 
+                                        : (
+                                            activeTab === "registered"
+                                                ? (event?.joinedSlots || 0)
+                                                : activeTab === "invited"
+                                                    ? (event?.invitedTeams?.length || 0)
+                                                    : (event?.t1SpecialTeams?.length || 0)
+                                        )
+                                    }
                                 </div>
                             )}
                         </div>

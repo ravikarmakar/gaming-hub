@@ -61,9 +61,9 @@ export const useRoundActions = (eventId: string) => {
         }
     }, [eventId, createGroups]);
 
-    const handleManualCreateGroup = useCallback(async (roundId: string) => {
+    const handleManualCreateGroup = useCallback(async (roundId: string, groupType?: string, groupSize?: number) => {
         try {
-            await createSingleGroup({ roundId, eventId });
+            await createSingleGroup({ roundId, eventId, groupType, groupSize });
         } catch (error) {
             console.error(error);
         }

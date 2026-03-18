@@ -1,4 +1,4 @@
-import { Plus, RefreshCw, Loader2, CheckCircle2, Search, RotateCcw } from "lucide-react";
+import { Plus, RefreshCw, Loader2, Search, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -39,13 +39,11 @@ interface RoundHeaderProps {
 export const RoundHeader = ({
     round,
     activeRoundTab,
-    isSavingStatus,
     isCreatingSingleGroup,
     isCreatingGroups,
     isMergingTeams,
     cooldown,
     isCreateDisabled,
-    onComplete,
     onStart,
     onMergeTeams,
     onCreateGroup,
@@ -62,6 +60,7 @@ export const RoundHeader = ({
     const hasMappings = round.mergeInfo?.hasInvitedMapping || round.mergeInfo?.hasT1Mapping;
     const isMainRoadmap = activeRoundTab === 'tournament';
     const showFilters = !round.isPlaceholder && !!setSearch;
+    const is18TeamLeague = round.roadmapData?.isLeague && round.roadmapData?.leagueType === '18-teams';
 
     const statusOptions = [
         { value: "all", label: "All" },
@@ -84,7 +83,7 @@ export const RoundHeader = ({
             <div className="flex items-center gap-2 shrink-0 min-w-0 max-w-[220px]">
                 <div className="flex items-center gap-1.5 min-w-0">
                     <h2 className="text-sm font-black text-white uppercase tracking-tight leading-none truncate">
-                        {round.roundName}
+                        {round.roundName?.replace(/Round \d+ - /, '')}
                     </h2>
                     {!round.isPlaceholder && <RoundInfoTooltip round={round} />}
                 </div>
@@ -171,7 +170,7 @@ export const RoundHeader = ({
                         )}
                     </div>
                 )}
-                {/* Progress pill — shown while round is active */}
+                {/* Progress pill — hidden if round is completed */}
                 {!round.isPlaceholder && round.status !== 'completed' && (
                     <div className="flex items-center gap-2 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
                         <span className="text-[9px] text-gray-500 uppercase font-black tracking-widest hidden sm:inline">Progress</span>
@@ -181,23 +180,6 @@ export const RoundHeader = ({
                             {(round.groups || []).length}
                         </span>
                         <span className="text-[9px] text-gray-500 uppercase font-bold tracking-tight hidden sm:inline">Groups</span>
-
-                        {(round.groups || []).length > 0 &&
-                            (round.groups || []).every((g: any) => g.status === 'completed') && (
-                                <Button
-                                    size="sm"
-                                    onClick={onComplete}
-                                    disabled={isSavingStatus}
-                                    className={`h-5 text-[9px] px-2 font-black uppercase tracking-wider animate-bounce hover:animate-none ${activeRoundTab === 'invited-tournament' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-green-600 hover:bg-green-700'} text-white`}
-                                >
-                                    {isSavingStatus ? (
-                                        <Loader2 className="w-2.5 h-2.5 mr-1 animate-spin" />
-                                    ) : (
-                                        <CheckCircle2 className="w-2.5 h-2.5 mr-1" />
-                                    )}
-                                    Complete
-                                </Button>
-                            )}
                     </div>
                 )}
 
@@ -244,13 +226,26 @@ export const RoundHeader = ({
 
                                 <Button
                                     size="sm"
-                                    onClick={onCreateGroup}
+                                    onClick={() => {
+                                        if (is18TeamLeague) {
+                                            onCreateGroup(); // This will trigger the dialog which then calls handleManualCreateGroup
+                                        } else {
+                                            onCreateGroup();
+                                        }
+                                    }}
                                     disabled={isCreatingSingleGroup}
-                                    title="Create One Manual Group"
-                                    aria-label="Create Manual Group"
-                                    className="h-7 w-7 p-0 transition-all duration-300 bg-transparent text-gray-400 hover:bg-purple-600/20 hover:text-purple-400 border border-white/5 hover:border-purple-500/30 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                                    title={is18TeamLeague ? "Create League Group" : "Create One Manual Group"}
+                                    aria-label={is18TeamLeague ? "Create League Group" : "Create Manual Group"}
+                                    className={`h-7 transition-all duration-300 ${is18TeamLeague ? 'px-3 w-auto bg-purple-600/20 text-purple-400 border-purple-500/30 font-bold text-[10px] uppercase tracking-wider' : 'w-7 p-0 bg-transparent text-gray-400 hover:bg-purple-600/20 hover:text-purple-400 border border-white/5 hover:border-purple-500/30'} disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400`}
                                 >
-                                    {isCreatingSingleGroup ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                                    {isCreatingSingleGroup ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Plus className="w-3.5 h-3.5 mr-1" />
+                                            {is18TeamLeague && "Create League"}
+                                        </>
+                                    )}
                                 </Button>
 
                                 <Button
@@ -273,7 +268,7 @@ export const RoundHeader = ({
                                     )}
                                 </Button>
 
-                                {(!round.groups || round.groups.length === 0) && (
+                                {!is18TeamLeague && (!round.groups || round.groups.length === 0) && (
                                     <Button
                                         size="sm"
                                         onClick={onCreateGroups}

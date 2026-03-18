@@ -143,6 +143,7 @@ export interface Round {
     isPlaceholder?: boolean;
     roadmapIndex?: number;
     eligibleTeams?: string[];
+    roadmapData?: any;
     mergeInfo?: {
         type?: string;
         targetLabel?: string;

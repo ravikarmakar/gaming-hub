@@ -63,15 +63,17 @@ export const RoadmapDisplaySection: React.FC<RoadmapDisplaySectionProps> = ({
                         {round.title || `Round ${index + 1}`}
                     </span>
                     <div className="flex items-center gap-2 ml-auto">
-                        {round.leagueType === "18-teams" && (
-                            <span className={cn("text-[8px] font-black px-2 py-0.5 rounded-md uppercase tracking-tighter", accentBadgeBg)}>
-                                18 Teams
-                            </span>
-                        )}
                         {round.isLeague && (
-                            <span className={cn("text-[8px] font-black px-2 py-0.5 rounded-md uppercase tracking-tighter", accentBadgeBgLeague)}>
-                                League Mode
-                            </span>
+                            <>
+                                {round.leagueType && (
+                                    <span className={cn("text-[8px] font-black px-2 py-0.5 rounded-md uppercase tracking-tighter", accentBadgeBg)}>
+                                        {round.leagueType.replace(/-/g, " ")}
+                                    </span>
+                                )}
+                                <span className={cn("text-[8px] font-black px-2 py-0.5 rounded-md uppercase tracking-tighter", accentBadgeBgLeague)}>
+                                    League Mode
+                                </span>
+                            </>
                         )}
                     </div>
                 </div>

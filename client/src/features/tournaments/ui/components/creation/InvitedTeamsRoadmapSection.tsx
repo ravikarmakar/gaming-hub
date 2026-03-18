@@ -23,35 +23,39 @@ export const InvitedTeamsRoadmapSection = ({ isEmbedded = false }: { isEmbedded?
     const roadmapData = watch("invitedTeamsRoadmap") || [];
     const mappingData = watch("invitedRoundMappings") || [];
 
+    const hasInvitedTeams = watch("hasInvitedTeams");
+
     // Initialize with at least one round
     useEffect(() => {
-        const isSupportedType = eventType === "invited-tournament" || eventType === "tournament";
+        const isSupportedType = eventType === "invited-tournament" || (eventType === "tournament" && hasInvitedTeams);
         if (fields.length === 0 && isSupportedType) {
-            append({ name: "Round 1", title: "", isLeague: false, leagueType: "18-teams" });
+            append({ name: "Round 1", title: "" });
         }
-    }, [fields.length, append, eventType]);
+    }, [fields.length, append, eventType, hasInvitedTeams]);
 
     // Keep round names in sync with their index
     useEffect(() => {
-        fields.forEach((_, index) => {
+        roadmapData.forEach((round, index) => {
             const expectedName = `Round ${index + 1}`;
-            if (watch(`invitedTeamsRoadmap.${index}.name`) !== expectedName) {
+            if (round.name !== expectedName) {
                 setValue(`invitedTeamsRoadmap.${index}.name`, expectedName);
             }
         });
-    }, [fields.length, setValue, watch]);
+    }, [fields.length, setValue, roadmapData]);
 
     useEffect(() => {
-        if (fields.length > 0 && roadmapData.every(r => r.title?.trim() !== "")) {
-            if (roadmapData.some(r => r.isLeague)) {
-                setIsRoundsConfirmed(true);
-            }
+        if (fields.length > 0 && roadmapData.length > 0 && roadmapData.every(r => r.title?.trim() !== "")) {
+            setIsRoundsConfirmed(true);
+        } else {
+            setIsRoundsConfirmed(false);
         }
     }, [fields.length, roadmapData]);
 
     useEffect(() => {
         if (mappingData.length > 0 && mappingData[0].targetMainRound?.roundNumber !== undefined) {
             setIsMappingSaved(true);
+        } else {
+            setIsMappingSaved(false);
         }
     }, [mappingData]);
 
@@ -66,8 +70,8 @@ export const InvitedTeamsRoadmapSection = ({ isEmbedded = false }: { isEmbedded?
     };
 
     const hasRoadmapValue = watch("hasInvitedTeamsRoadmap");
-    const hasInvitedTeams = watch("hasInvitedTeams");
-    const hasRoadmap = hasRoadmapValue || hasInvitedTeams || (eventType === "invited-tournament");
+    // Only force roadmap true if specifically configured or toggled, not just by eventType
+    const hasRoadmap = !!(hasRoadmapValue || hasInvitedTeams);
 
     if (!isEmbedded && eventType !== "invited-tournament") return null;
 
@@ -95,7 +99,7 @@ export const InvitedTeamsRoadmapSection = ({ isEmbedded = false }: { isEmbedded?
                         fields={fields}
                         fieldNamePrefix="invitedTeamsRoadmap"
                         register={register}
-                        onAddRound={() => append({ name: `Round ${fields.length + 1}`, title: "", isLeague: false, leagueType: "18-teams" })}
+                        onAddRound={() => append({ name: `Round ${fields.length + 1}`, title: "" })}
                         onRemoveRound={remove}
                         onToggleConfirmed={handleConfirmedToggle}
                         isSavingDisabled={roadmapData.some(r => !r.title?.trim())}

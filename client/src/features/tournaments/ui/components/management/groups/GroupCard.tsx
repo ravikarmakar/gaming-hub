@@ -80,7 +80,7 @@ export const GroupCard = memo(({ group, roundMatches, onSelect, onEdit, onDelete
                 </Badge>
 
                 <Badge variant="outline" className="text-[9px] px-1.5 h-4 border-white/5 text-gray-500 font-bold uppercase tracking-tighter">
-                    {group.matchesPlayed || 0}/{roundMatches || group.totalMatch} Matches
+                    {group.matchesPlayed || 0}/{group.totalMatch > 0 ? group.totalMatch : (roundMatches || 1)} Matches
                 </Badge>
 
                 {group.matchTime && (

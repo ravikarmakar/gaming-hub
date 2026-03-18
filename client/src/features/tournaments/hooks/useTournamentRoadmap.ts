@@ -24,28 +24,53 @@ export const useTournamentRoadmap = (
         // Keep all rounds for mapping lookup, but use actualRounds for placeholder association
         const actualRounds = rounds;
 
+        const roadmap = event.roadmaps?.find((r: any) => r.type === trackType);
 
-        if (!event.roadmaps) return [];
+        if (!roadmap || !roadmap.data || roadmap.data.length === 0) {
+            // Fallback: If no roadmap data, use actual rounds of this type
+            return rounds
+                .filter(r => (r.type || 'tournament') === roundTypeFilter)
+                .sort((a, b) => (a.roundNumber || 0) - (b.roundNumber || 0))
+                .map((round, index) => ({
+                    ...round,
+                    roadmapIndex: index,
+                    roadmapData: null,
+                    isDisabled: false,
+                    mergeInfo: round.mergeInfo || null,
+                    isPlaceholder: false
+                }));
+        }
 
-        const roadmap = event.roadmaps.find((r: any) => r.type === trackType);
-        if (!roadmap || !roadmap.data) return [];
+        const getStrId = (id: any) => {
+            if (!id) return "";
+            if (typeof id === 'string') return id;
+            if (id.$oid) return id.$oid;
+            return String(id);
+        };
 
         return (roadmap.data || []).map((item: any, index: number) => {
-            const linkedRound = actualRounds.find(r =>
-                (item.roundId && String(r._id) === String(item.roundId)) ||
-                (!item.roundId && r.roundName === item.title && (r.type || 'tournament') === roundTypeFilter)
-            );
+            const targetId = getStrId(item.roundId);
+            const linkedRound = actualRounds.find(r => {
+                const rId = getStrId(r._id);
+                return (targetId && rId === targetId) ||
+                       (!targetId && r.roundName === item.title && (r.type || 'tournament') === roundTypeFilter);
+            });
 
             const isFirst = index === 0;
             const prevItem = index > 0 ? (roadmap.data[index - 1]) : null;
-            const prevRound = index > 0 ? actualRounds.find(r =>
-                (prevItem?.roundId && String(r._id) === String(prevItem.roundId)) ||
-                (!prevItem?.roundId && r.roundName === prevItem?.title && (r.type || 'tournament') === roundTypeFilter)
-            ) : null;
+            const prevTargetId = getStrId(prevItem?.roundId);
+            const prevRound = index > 0 ? actualRounds.find(r => {
+                const rId = getStrId(r._id);
+                return (prevTargetId && rId === prevTargetId) ||
+                       (!prevTargetId && r.roundName === prevItem?.title && (r.type || 'tournament') === roundTypeFilter);
+            }) : null;
 
 
             const isPlaceholder = !linkedRound;
             const isDisabled = isPlaceholder && (!isFirst && (!prevRound || prevRound.status !== 'completed'));
+            
+            // Reconcile status: favor actual round status, fallback to roadmap status
+            const currentStatus = (linkedRound?.status || item.status || 'pending') as 'pending' | 'ongoing' | 'completed';
 
             // Calculate Merge Info
             let mergeInfo = null;
@@ -85,11 +110,11 @@ export const useTournamentRoadmap = (
                 } else {
                     const invMappings = (event.invitedRoundMappings || []).filter((m: any) => m.targetMainRound?.roundNumber === index + 1);
                     const t1Mappings = (event.t1SpecialRoundMappings || []).filter((m: any) => m.targetMainRound?.roundNumber === index + 1);
-                    
+
                     if (invMappings.length > 0 || t1Mappings.length > 0) {
                         const invitedRoadmap = event.roadmaps?.find((r: any) => r.type === 'invitedTeams');
                         const t1Roadmap = event.roadmaps?.find((r: any) => r.type === 't1-special');
-                        
+
                         const sources = [
                             ...invMappings.map((m: any) => ({
                                 type: 'invited',
@@ -110,22 +135,23 @@ export const useTournamentRoadmap = (
             }
 
             if (linkedRound) {
-                return { 
-                    ...linkedRound, 
+                return {
+                    ...linkedRound,
                     roundName: `Round ${index + 1} - ${linkedRound.roundName.replace(/^Round \d+ - /, '')}`,
                     roundNumber: index + 1,
-                    roadmapIndex: index, 
-                    roadmapData: item, 
-                    isDisabled, 
-                    mergeInfo, 
-                    isPlaceholder: false 
+                    roadmapIndex: index,
+                    roadmapData: item,
+                    status: currentStatus,
+                    isDisabled,
+                    mergeInfo,
+                    isPlaceholder: false
                 };
             }
             return {
                 _id: `placeholder-${index}`,
                 roundName: `Round ${index + 1} - ${item.title.replace(/^Round \d+ - /, '')}`,
                 roundNumber: index + 1,
-                status: 'pending',
+                status: currentStatus,
                 groups: [],
                 isPlaceholder: true,
                 roadmapIndex: index,

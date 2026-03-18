@@ -33,7 +33,9 @@ export default function TournamentDashboard() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [isStartDialogOpen, setIsStartDialogOpen] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
-    const { data: eventDetails } = useGetTournamentDetailsQuery(id || "");
+    const { data: eventDetails } = useGetTournamentDetailsQuery(id || "", {
+        enabled: !!id && !isDeleting
+    });
     const { mutateAsync: startEvent } = useStartTournamentMutation();
     const { mutateAsync: deleteTournament } = useDeleteTournamentMutation();
     const [isFocusMode, setIsFocusMode] = useState(false);
@@ -60,7 +62,6 @@ export default function TournamentDashboard() {
         } catch (error) {
             console.error("Failed to delete tournament:", error);
             toast.error("Failed to delete tournament. Please try again.");
-        } finally {
             setIsDeleting(false);
             setIsDeleteDialogOpen(false);
         }
@@ -86,8 +87,6 @@ export default function TournamentDashboard() {
         }
     };
 
-    console.log("eventDetails", eventDetails);
-
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header Section */}
@@ -106,7 +105,7 @@ export default function TournamentDashboard() {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
                 {!isFocusMode && (
                     <div className="space-y-4">
-                        <TabsList className="bg-transparent p-0 h-auto flex flex-nowrap overflow-x-auto scrollbar-hide justify-start w-full gap-8 border-b border-white/5 px-6">
+                        <TabsList className="bg-transparent p-0 h-auto flex flex-nowrap overflow-x-auto scrollbar-hide justify-start w-full gap-8 border-b border-white/5 px-3">
                             <TabsTrigger value="overview" className="relative rounded-none px-0 py-4 bg-transparent data-[state=active]:bg-transparent text-gray-500 data-[state=active]:text-white font-bold uppercase tracking-widest text-[11px] whitespace-nowrap flex-shrink-0 transition-all border-b-2 border-transparent data-[state=active]:border-purple-700">
                                 <Trophy className="w-4 h-4 mr-2" />
                                 Overview
@@ -141,35 +140,39 @@ export default function TournamentDashboard() {
 
                 <div className="min-h-[500px] mt-0 bg-gray-900/20 border border-white/5 rounded-2xl px-2 backdrop-blur-sm shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-700">
                     <TabsContent value="overview" className="m-0">
-                        <TournamentOverview eventDetails={eventDetails} />
+                        {activeTab === "overview" && <TournamentOverview eventDetails={eventDetails} />}
                     </TabsContent>
 
                     {(eventDetails?.eventProgress !== "pending") && (
                         eventDetails?.eventType === "scrims" ? (
                             <TabsContent value="scrims" className="m-0">
-                                <ScrimsManager eventId={id} />
+                                {activeTab === "scrims" && <ScrimsManager eventId={id} />}
                             </TabsContent>
                         ) : (
                             <TabsContent value="rounds" className="m-0">
-                                <RoundsManager
-                                    eventId={id}
-                                    isFocusMode={isFocusMode}
-                                    onToggleFocus={() => setIsFocusMode(!isFocusMode)}
-                                />
+                                {activeTab === "rounds" && (
+                                    <RoundsManager
+                                        eventId={id}
+                                        isFocusMode={isFocusMode}
+                                        onToggleFocus={() => setIsFocusMode(!isFocusMode)}
+                                    />
+                                )}
                             </TabsContent>
                         )
                     )}
                     <TabsContent value="teams" className="m-0">
-                        <RegisteredTeamsList eventId={id} />
+                        {activeTab === "teams" && <RegisteredTeamsList eventId={id} />}
                     </TabsContent>
                     <TabsContent value="settings" className="m-0">
-                        <TournamentSettings
-                            eventId={id}
-                            eventType={eventDetails?.eventType}
-                            registrationStatus={eventDetails?.registrationStatus}
-                            onEdit={handleEdit}
-                            onDelete={() => setIsDeleteDialogOpen(true)}
-                        />
+                        {activeTab === "settings" && (
+                            <TournamentSettings
+                                eventId={id}
+                                eventType={eventDetails?.eventType}
+                                registrationStatus={eventDetails?.registrationStatus}
+                                onEdit={handleEdit}
+                                onDelete={() => setIsDeleteDialogOpen(true)}
+                            />
+                        )}
                     </TabsContent>
                 </div>
             </Tabs>
@@ -189,9 +192,9 @@ export default function TournamentDashboard() {
             <ConfirmActionDialog
                 open={isStartDialogOpen}
                 onOpenChange={setIsStartDialogOpen}
-                title="Start Event"
-                description="Are you sure you want to start this event? This will close registrations and move the event to the ongoing state. This action cannot be undone."
-                actionLabel="Start Event"
+                title={eventDetails?.eventType === "scrims" ? "Start Scrim" : "Start Tournament"}
+                description={`Are you sure you want to start this ${eventDetails?.eventType === "scrims" ? "scrim" : "tournament"}? This will close registrations and move the event to the ongoing state. This action cannot be undone.`}
+                actionLabel={eventDetails?.eventType === "scrims" ? "Start Scrim" : "Start Tournament"}
                 variant="default"
                 isLoading={isStarting}
                 onConfirm={handleStartTournament}

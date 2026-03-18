@@ -80,11 +80,11 @@ export const tournamentApi = {
         await axiosInstance.post("/groups/create", {
             roundId: data.roundId,
             eventId: data.eventId,
-            totalMatch: data.totalMatch ?? 1,
+            ...(data.totalMatch !== undefined && { totalMatch: data.totalMatch }),
             matchTime: data.matchTime
         });
     },
-    createSingleGroup: async (data: { roundId: string; eventId: string; groupName?: string; matchTime?: string }): Promise<void> => {
+    createSingleGroup: async (data: { roundId: string; eventId: string; groupName?: string; matchTime?: string; groupType?: string; groupSize?: number }): Promise<void> => {
         await axiosInstance.post("/groups/manual-create", data);
     },
     updateGroup: async (data: { groupId: string; eventId: string; payload: any }): Promise<void> => {

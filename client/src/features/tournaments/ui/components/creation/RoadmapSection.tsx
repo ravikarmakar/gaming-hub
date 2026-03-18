@@ -22,25 +22,23 @@ export const RoadmapSection = ({ isEmbedded = false }: { isEmbedded?: boolean })
     // Initialize with at least one round if not scrims
     useEffect(() => {
         if (fields.length === 0 && eventType !== "scrims") {
-            append({ name: "Round 1", title: "", isLeague: false, leagueType: "18-teams" });
+            append({ name: "Round 1", title: "" });
         }
     }, [fields.length, append, eventType]);
 
     // Keep round names in sync with their index
     useEffect(() => {
-        fields.forEach((_, index) => {
+        roadmapData.forEach((round, index) => {
             const expectedName = `Round ${index + 1}`;
-            if (watch(`roadmap.${index}.name`) !== expectedName) {
+            if (round.name !== expectedName) {
                 setValue(`roadmap.${index}.name`, expectedName);
             }
         });
-    }, [fields.length, setValue, watch]);
+    }, [fields.length, setValue, roadmapData]);
 
     useEffect(() => {
         if (fields.length > 0 && roadmapData.every(r => r.title?.trim() !== "")) {
-            if (roadmapData.some(r => r.isLeague)) {
-                setIsRoundsConfirmed(true);
-            }
+            setIsRoundsConfirmed(true);
         }
     }, [fields.length, roadmapData]);
 
@@ -55,7 +53,7 @@ export const RoadmapSection = ({ isEmbedded = false }: { isEmbedded?: boolean })
     };
 
     const hasRoadmapValue = watch("hasRoadmap");
-    const hasRoadmap = hasRoadmapValue ?? (eventType === "tournament");
+    const hasRoadmap = !!(hasRoadmapValue ?? (eventType === "tournament"));
 
     if (eventType === "scrims") return null;
 
@@ -83,7 +81,7 @@ export const RoadmapSection = ({ isEmbedded = false }: { isEmbedded?: boolean })
                         fields={fields}
                         fieldNamePrefix="roadmap"
                         register={register}
-                        onAddRound={() => append({ name: `Round ${fields.length + 1}`, title: "", isLeague: false, leagueType: "18-teams" })}
+                        onAddRound={() => append({ name: `Round ${fields.length + 1}`, title: "" })}
                         onRemoveRound={remove}
                         onToggleConfirmed={handleConfirmedToggle}
                         isSavingDisabled={roadmapData.some(r => !r.title?.trim())}

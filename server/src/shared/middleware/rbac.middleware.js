@@ -133,7 +133,9 @@ export const authorize = (scope, requiredRoles = [], options = {}) => {
             // 4. Resource ID Identification
             let scopeId = req.params[`${scope}Id`] || req.body[`${scope}Id`] || req.query[`${scope}Id`];
             if (!scopeId) {
-                if (scope === Scopes.ORG) scopeId = req.params.orgId || req.body.orgId || req.query.orgId;
+                if (scope === Scopes.ORG) {
+                    scopeId = req.params.orgId || req.body.orgId || req.query.orgId || req.user?.cachedProfile?.orgId;
+                }
                 if (scope === Scopes.TEAM) scopeId = req.params.teamId || req.body.teamId || req.query.teamId;
                 if (scope === Scopes.EVENT) scopeId = req.params.eventId || req.body.eventId || req.query.eventId;
                 if (scope === Scopes.INVITATION) scopeId = req.params.invitationId || req.body.invitationId || req.query.invitationId;
