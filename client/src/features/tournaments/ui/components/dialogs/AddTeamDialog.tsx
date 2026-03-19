@@ -9,8 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Loader2, UserPlus, CheckCircle2 } from "lucide-react";
-import { useSearchTeamsQuery, useGetT1SpecialTeamsQuery } from "../../../hooks/useTournamentQueries";
-import { useInviteToGroupMutation } from "../../../hooks/useTournamentMutations";
+import { useSearchTeamsQuery, useGetT1SpecialTeamsQuery } from "@/features/tournaments/hooks/useTournamentQueries";
+import { useInviteToGroupMutation } from "@/features/tournaments/hooks/useTournamentMutations";
 import { Badge } from "@/components/ui/badge";
 import { toast } from 'react-hot-toast';
 
@@ -52,7 +52,6 @@ export const AddTeamDialog = ({ open, onOpenChange, groupId, groupName, eventId,
                 targetModel: "Group"
             });
             setInvitedTeams(prev => [...prev, team._id]);
-            toast.success(`Successfully invited team ${team.teamName || 'Unknown'}`);
         } catch (error) {
             console.error(error);
             toast.error("Failed to send invitation. Please try again.");

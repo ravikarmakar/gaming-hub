@@ -6,6 +6,7 @@ import {
   updateRound,
   deleteRound,
   resetRound,
+  mergeQualifiedTeams,
 } from "../controllers/round.controller.js";
 import { authorize } from "../../../shared/middleware/rbac.middleware.js";
 import { isAuthenticated } from "../../../shared/middleware/auth.middleware.js";
@@ -39,6 +40,13 @@ router.post(
   isAuthenticated,
   authorize(Scopes.EVENT, [Roles.ORG.OWNER, Roles.ORG.MANAGER], { parentScope: Scopes.ORG }),
   resetRound
+);
+
+router.post(
+  "/:roundId/merge-qualified",
+  isAuthenticated,
+  authorize(Scopes.EVENT, [Roles.ORG.OWNER, Roles.ORG.MANAGER], { parentScope: Scopes.ORG }),
+  mergeQualifiedTeams
 );
 
 router.get("/:roundId", isAuthenticated, authorize(Scopes.PLATFORM, [Roles.PLATFORM.USER]), getRoundDetails);

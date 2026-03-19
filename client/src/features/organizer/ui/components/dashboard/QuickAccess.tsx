@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { GlassCard } from "@/features/events/ui/components/ThemedComponents";
+import { GlassCard } from "@/features/tournaments/ui/components/shared/ThemedComponents";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
 

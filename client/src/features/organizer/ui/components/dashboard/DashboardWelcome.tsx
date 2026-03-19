@@ -1,5 +1,5 @@
 import { Trophy } from "lucide-react";
-import { GlassCard, NeonBadge } from "@/features/events/ui/components/ThemedComponents";
+import { GlassCard, NeonBadge } from "@/features/tournaments/ui/components/shared/ThemedComponents";
 
 interface DashboardWelcomeProps {
     username?: string;

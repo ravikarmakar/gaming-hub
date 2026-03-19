@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import StatsGrid from "@/features/admin/ui/components/StatsGrid";
 import { useAdminStats } from "@/features/admin/hooks/useAdminStats";
-import { GlassCard, SectionHeader, NeonBadge } from "@/features/events/ui/components/ThemedComponents";
+import { GlassCard, SectionHeader, NeonBadge } from "@/features/tournaments/ui/components/shared/ThemedComponents";
 
 const AdminDashboard = () => {
     const { stats, isConnected } = useAdminStats();

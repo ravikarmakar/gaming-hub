@@ -100,3 +100,14 @@ export const cache = (duration) => async (req, res, next) => {
         next(); // Proceed without caching if Redis fails
     }
 };
+// Health check / clear cache functionality
+export const clearL1Cache = (prefix) => {
+    let count = 0;
+    for (const key of l1Cache.keys()) {
+        if (key.startsWith(prefix)) {
+            l1Cache.delete(key);
+            count++;
+        }
+    }
+    return count;
+};

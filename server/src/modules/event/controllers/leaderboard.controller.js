@@ -5,6 +5,7 @@ import Round from "../models/round.model.js";
 import pointSystem from "../../../shared/config/pointSystem.js";
 import { logger } from "../../../shared/utils/logger.js";
 import { withOptionalTransaction } from "../../../shared/utils/withOptionalTransaction.js";
+import { syncRoadmapStatus } from "../event.utils.js";
 
 // Create a new leaderboard entry
 export const createLeaderboardEntry = async (req, res) => {
@@ -76,7 +77,7 @@ export const getLeaderboardEntries = async (req, res) => {
     const { page = 1, limit = 10 } = req.query; // Pagination defaults
 
     const entries = await Leaderboard.find()
-      .populate("teamScore.teamId", "teamName teamLogo") // Valid populate path
+      .populate("teamScore.teamId", "teamName imageUrl") // Valid populate path
       .skip((page - 1) * limit)
       .limit(Number(limit));
 
@@ -178,7 +179,7 @@ export const getLeaderboardByGroup = async (req, res) => {
     const leaderboard = await Leaderboard.findOne({ groupId })
       .populate({
         path: "teamScore.teamId",
-        select: "teamName teamLogo", // ✅ Select only needed fields
+        select: "teamName imageUrl", // ✅ Select only needed fields
       })
       .lean(); // ✅ Convert result to plain JSON for faster response
 
@@ -309,9 +310,10 @@ export const createLeaderboardForRoundsGroups = async (req, res) => {
 };
 
 // ✅ Update Group Results (Batch) with Transaction
+// For league groups: accepts pairingType ("AxB" | "BxC" | "AxC") to filter which 12 teams are updated
 export const updateGroupResults = async (req, res) => {
   const { groupId } = req.params;
-  const { results } = req.body;
+  const { results, pairingType } = req.body;
 
   if (!groupId || !results || !Array.isArray(results)) {
     return res.status(400).json({ message: "Invalid data provided" });
@@ -319,6 +321,11 @@ export const updateGroupResults = async (req, res) => {
 
   if (!mongoose.Types.ObjectId.isValid(groupId)) {
     return res.status(400).json({ message: "Invalid Group ID" });
+  }
+
+  // Validate pairingType for league tournaments
+  if (pairingType && !["AxB", "BxC", "AxC"].includes(pairingType)) {
+    return res.status(400).json({ message: "Invalid pairing type provided" });
   }
 
   try {
@@ -337,44 +344,154 @@ export const updateGroupResults = async (req, res) => {
         return res.status(404).json({ message: "Leaderboard not found" });
       }
 
-      // Update results for each team
+      // 🏆 Calculate effective match limit
+      // Fallback priority: 
+      // 1. group.totalMatch (if > 0)
+      // 2. round.matchesPerGroup (with league multiplier if applicable)
+      // 3. Absolute defaults (1 for standard, 18 for league)
+      const roundMatches = group.roundId?.matchesPerGroup;
+      const effectiveTotalMatch = (group.totalMatch && group.totalMatch > 0)
+        ? group.totalMatch
+        : (group.isLeague ? (roundMatches ? roundMatches * 3 : 18) : (roundMatches || 1));
+
+      // 🚫 Block if the group is already fully completed
+      if (group.status === "completed") {
+        const err = new Error(
+          `All ${effectiveTotalMatch} match${effectiveTotalMatch > 1 ? "es" : ""} have already been submitted for this group. No further result submissions are allowed.`
+        );
+        err.status = 400;
+        err.matchesPlayed = group.matchesPlayed;
+        err.totalMatch = effectiveTotalMatch;
+        throw err;
+      }
+
+      // 🏆 League sub-group pairing filter (AxB / BxC / AxC)
+      // When pairingType is given, restrict result updates to only the 12 teams in those 2 sub-groups.
+      // Teams in the 3rd sub-group are NOT updated — their matchesPlayed stays unchanged.
+      let activeTeamIds = null; // null = update all (standard mode)
+      if (group.isLeague && pairingType) {
+        // Enforce per-pairing match limit tracking (e.g. 6 per pair if total=18)
+        const pairingLimit = Math.floor(effectiveTotalMatch / 3);
+        const currentPairingCount = group.pairingMatches?.[pairingType] || 0;
+
+        if (currentPairingCount >= pairingLimit) {
+          const err = new Error(
+            `Match limit reached: All ${pairingLimit} matches for pairing ${pairingType} (e.g. ${pairingType.split('x').join(' & ')}) have already been submitted.`
+          );
+          err.status = 400;
+          throw err;
+        }
+
+        if (group.subGroups?.length === 3) {
+          // Use stored subGroups if they exist
+          const [sgA, sgB, sgC] = group.subGroups;
+          const toStrSet = (teams) => new Set((teams || []).map(id => id.toString()));
+          const setA = toStrSet(sgA.teams);
+          const setB = toStrSet(sgB.teams);
+          const setC = toStrSet(sgC.teams);
+
+          if (pairingType === "AxB") activeTeamIds = new Set([...setA, ...setB]);
+          else if (pairingType === "BxC") activeTeamIds = new Set([...setB, ...setC]);
+          else if (pairingType === "AxC") activeTeamIds = new Set([...setA, ...setC]);
+        } else {
+          // Fallback: If subGroups are missing, derive from leaderboard position (matching frontend fallback)
+          const allTeams = leaderboard.teamScore.map(t => t.teamId.toString());
+          const chunkSize = Math.ceil(allTeams.length / 3);
+          const setA = new Set(allTeams.slice(0, chunkSize));
+          const setB = new Set(allTeams.slice(chunkSize, chunkSize * 2));
+          const setC = new Set(allTeams.slice(chunkSize * 2));
+
+          if (pairingType === "AxB") activeTeamIds = new Set([...setA, ...setB]);
+          else if (pairingType === "BxC") activeTeamIds = new Set([...setB, ...setC]);
+          else if (pairingType === "AxC") activeTeamIds = new Set([...setA, ...setC]);
+        }
+
+        // Initialize pairingMatches if missing
+        if (!group.pairingMatches) {
+          group.pairingMatches = { AxB: 0, BxC: 0, AxC: 0 };
+        }
+        // Increment the specific pairing counter
+        group.pairingMatches[pairingType] = (group.pairingMatches[pairingType] || 0) + 1;
+        group.markModified('pairingMatches');
+      }
+
+      // Update leaderboard results for each team in this match
       for (const { teamId, rank, kills } of results) {
         if (!teamId) continue;
+        const teamIdStr = teamId.toString();
+
+        // Skip teams not in the active pairing (for league groups)
+        if (activeTeamIds && !activeTeamIds.has(teamIdStr)) continue;
 
         const entry = leaderboard.teamScore.find(
-          (t) => t.teamId.toString() === teamId.toString()
+          (t) => t.teamId.toString() === teamIdStr
         );
 
         if (entry) {
+          const killPointMultiplier = pointSystem.killPoint || 1;
           const placePoints = pointSystem.ranks[rank] || 0;
-          entry.score = (entry.score || 0) + placePoints;
+          const killPts = (kills || 0) * killPointMultiplier;
+
+          entry.score = (entry.score || 0) + placePoints; // Keep score for legacy UI if needed
+          entry.positionPoints = (entry.positionPoints || 0) + placePoints;
           entry.kills = (entry.kills || 0) + (kills || 0);
+          entry.killPoints = (entry.killPoints || 0) + killPts;
+          
           if (rank === 1) entry.wins = (entry.wins || 0) + 1;
           entry.matchesPlayed = (entry.matchesPlayed || 0) + 1;
-          entry.position = rank;
+          
+          // 🚫 Stop overwriting entry.position with match rank
+          // entry.position = rank; 
         } else {
           logger.warn(`Team ${teamId} not found in leaderboard for group ${groupId}`);
         }
       }
 
-      // Increment Group matches played
-      group.matchesPlayed = (group.matchesPlayed || 0) + 1;
+      // Increment Group-level matches played
+      const matchesPlayedCount = (group.matchesPlayed || 0) + 1;
+      group.matchesPlayed = matchesPlayedCount;
 
-      const effectiveTotalMatch = (group.roundId && group.roundId.matchesPerGroup) ? group.roundId.matchesPerGroup : (group.totalMatch || 1);
-      const qualifyingLimit = (group.roundId && group.roundId.qualifyingTeams) || 0;
+      const qualifyingLimit = (group.roundId?.qualifyingTeams) || 0;
 
-      if (group.matchesPlayed >= effectiveTotalMatch) {
+      // 🏆 Determine if the group should be completed
+      // We check both matchesPlayedCount against effectiveTotalMatch AND 
+      // the status of individual pairings for league groups.
+      let shouldComplete = matchesPlayedCount >= effectiveTotalMatch;
+      
+      // Additional check for League: if all pairings have reached their budget, it's definitely done
+      if (group.isLeague && group.pairingMatches && effectiveTotalMatch >= 3) {
+        const pairingBudget = Math.floor(effectiveTotalMatch / 3);
+        const allPairingsDone = (group.pairingMatches.AxB >= pairingBudget) && 
+                                (group.pairingMatches.BxC >= pairingBudget) && 
+                                (group.pairingMatches.AxC >= pairingBudget);
+        if (allPairingsDone) shouldComplete = true;
+      }
+
+      // 🏆 Update Standings (Recalculate points and sort)
+      const killPoint = pointSystem.killPoint || 1;
+      leaderboard.teamScore.forEach(entry => {
+        const effectivePosPoints = (entry.positionPoints ?? entry.score) ?? 0;
+        const effectiveKillPoints = (entry.killPoints ?? (entry.kills * killPoint)) ?? 0;
+        entry.totalPoints = effectivePosPoints + effectiveKillPoints;
+      });
+
+      // Sort descending by totalPoints
+      leaderboard.teamScore.sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
+
+      // Update positions based on overall sorting
+      leaderboard.teamScore.forEach((entry, index) => {
+        entry.position = index + 1;
+      });
+
+      if (shouldComplete) {
         group.status = "completed";
+        group.totalSelectedTeam = qualifyingLimit;
 
-        leaderboard.teamScore.forEach(entry => {
-          entry.totalPoints = (entry.score || 0) + (entry.kills || 0);
-        });
-
-        leaderboard.teamScore.sort((a, b) => b.totalPoints - a.totalPoints);
-
+        // Mark qualified teams based on limit
         leaderboard.teamScore.forEach((entry, index) => {
           entry.isQualified = qualifyingLimit > 0 && index < qualifyingLimit;
         });
+        leaderboard.markModified('teamScore');
       } else {
         group.status = "ongoing";
       }
@@ -390,14 +507,52 @@ export const updateGroupResults = async (req, res) => {
         const isRoundComplete = allGroupsInRound.every(g => g.status === 'completed');
 
         if (isRoundComplete) {
-          const updateRoundQuery = Round.findByIdAndUpdate(group.roundId._id, { status: 'completed' });
-          if (session) updateRoundQuery.session(session);
-          await updateRoundQuery;
+          // Update round status to completed
+          await Round.findByIdAndUpdate(
+            group.roundId._id, 
+            { status: 'completed' },
+            { session }
+          );
 
-          if (allGroupsInRound.length === 1 && group.roundId.eventId) {
-            const updateEventQuery = mongoose.model("Event").findByIdAndUpdate(group.roundId.eventId, { eventProgress: 'completed' });
-            if (session) updateEventQuery.session(session);
-            await updateEventQuery;
+          // Sync roadmap status
+          await syncRoadmapStatus(
+            group.roundId.eventId,
+            group.roundId._id,
+            'completed',
+            session
+          );
+
+          // 🏆 Determine if the entire EVENT should be completed
+          // It should complete only if ALL rounds in ALL roadmaps (e.g. tournament, invited, t1) are 'completed'
+          if (group.roundId.eventId) {
+            const EventDoc = mongoose.model("Event");
+            const event = await EventDoc.findById(group.roundId.eventId).session(session);
+            
+            if (event && event.roadmaps) {
+              let totalRounds = 0;
+              let completedRounds = 0;
+              
+              for (const roadmap of event.roadmaps) {
+                if (roadmap.data && Array.isArray(roadmap.data)) {
+                  for (const roadmapItem of roadmap.data) {
+                    totalRounds++;
+                    if (roadmapItem.status === 'completed') {
+                      completedRounds++;
+                    }
+                  }
+                }
+              }
+              
+              const allRoundsCompleted = totalRounds > 0 && totalRounds === completedRounds;
+
+              if (allRoundsCompleted) {
+                await EventDoc.findByIdAndUpdate(
+                  event._id, 
+                  { eventProgress: 'completed' }
+                ).session(session);
+                logger.info(`Event ${event._id} marked as COMPLETED because all roadmap rounds are done.`);
+              }
+            }
           }
         }
       }
@@ -407,9 +562,14 @@ export const updateGroupResults = async (req, res) => {
 
     if (res.headersSent) return;
 
-    res.status(200).json({ message: "Results updated and group completed", leaderboard, group });
+    res.status(200).json({ message: "Results updated successfully", leaderboard, group });
   } catch (error) {
     logger.error("Error updating group results:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error.message });
+    const statusCode = (error.status && error.status >= 400 && error.status < 500) ? error.status : 500;
+    res.status(statusCode).json({
+      message: error.message || "Internal Server Error",
+      ...(error.matchesPlayed !== undefined && { matchesPlayed: error.matchesPlayed }),
+      ...(error.totalMatch !== undefined && { totalMatch: error.totalMatch }),
+    });
   }
 };

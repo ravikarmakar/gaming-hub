@@ -47,6 +47,30 @@ const roundSchema = new mongoose.Schema(
       type: Number,
       default: 1,
     },
+    groupSize: {
+      type: Number,
+      default: 12,
+    },
+    isLeague: {
+      type: Boolean,
+      default: false,
+    },
+    leaguePairingType: {
+      type: String,
+      enum: ["standard", "axb-bxc-axc"],
+      default: "standard",
+    },
+    leagueType: {
+      type: String,
+      enum: ["12-teams", "18-teams"],
+      required: false,
+    },
+    eligibleTeams: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Team",
+      },
+    ],
   },
   { timestamps: true }
 );

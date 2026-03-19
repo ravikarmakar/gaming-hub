@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { axiosInstance } from "@/lib/axios";
 import { getErrorMessage } from "@/lib/utils";
-import { EVENT_ENDPOINTS } from "@/features/events/lib/endpoints";
+import { TOURNAMENT_ENDPOINTS } from "@/features/tournaments/lib/endpoints";
 
 interface TeamState {
   teamTournaments: any[];
@@ -29,7 +29,7 @@ export const useTeamStore = create<TeamState>((set) => ({
     if (!teamId) return;
     set({ isLoading: true });
     try {
-      const response = await axiosInstance.get(EVENT_ENDPOINTS.TEAM_EVENTS(teamId));
+      const response = await axiosInstance.get(TOURNAMENT_ENDPOINTS.TEAM_TOURNAMENTS(teamId));
       set({ teamTournaments: response.data.data || [], isLoading: false });
     } catch (error) {
       set({ isLoading: false, error: getErrorMessage(error, "Error fetching team tournaments") });

@@ -1,6 +1,11 @@
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import { axiosInstance } from '@/lib/axios';
 import { tournamentApi } from '../api/tournamentApi';
+import { Tournament, Round, Group, Leaderboard } from '../types';
+
+const TOURNAMENT_QUERY_CONFIG = {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000,   // 10 minutes
+} as const;
 
 // Tournament keys factor
 export const tournamentKeys = {
@@ -8,210 +13,169 @@ export const tournamentKeys = {
     orgTournaments: (orgId: string) => [...tournamentKeys.all, 'org', orgId] as const,
     details: (eventId: string) => [...tournamentKeys.all, 'details', eventId] as const,
     rounds: (eventId: string) => [...tournamentKeys.all, 'rounds', eventId] as const,
-    groups: (roundId: string, page: number, limit: number) => [...tournamentKeys.all, 'groups', roundId, page, limit] as const,
+    groups: (roundId: string, page: number, limit: number, search = "", status = "", sortBy = "") => 
+        [...tournamentKeys.all, 'groups', roundId, page, limit, search, status, sortBy] as const,
     groupDetails: (groupId: string) => [...tournamentKeys.all, 'groupDetails', groupId] as const,
     leaderboard: (groupId: string) => [...tournamentKeys.all, 'leaderboard', groupId] as const,
     registeredTeams: (eventId: string, search: string, type: 'infinite' | 'standard' = 'standard') => [...tournamentKeys.all, 'registered-teams', type, eventId, search] as const,
     invitedTeams: (eventId: string, search: string, type: 'infinite' | 'standard' = 'standard') => [...tournamentKeys.all, 'invited-teams', type, eventId, search] as const,
     t1SpecialTeams: (eventId: string, search: string, type: 'infinite' | 'standard' = 'standard') => [...tournamentKeys.all, 't1-special-teams', type, eventId, search] as const,
+    registrationStatus: (eventId: string, teamId: string) => [...tournamentKeys.all, 'registration-status', eventId, teamId] as const,
 };
-
-// Types from the store
-export interface Team {
-    _id: string;
-    teamName: string;
-    teamLogo?: string;
-    isQualified?: boolean;
-}
-
-export interface LeaderboardEntry {
-    _id: string;
-    teamId: Team; // Populated
-    score: number;
-    position: number;
-    kills: number;
-    wins: number;
-    totalPoints: number;
-    matchesPlayed: number;
-    isQualified: boolean;
-}
-
-export interface Leaderboard {
-    _id: string;
-    groupId: string;
-    teamScore: LeaderboardEntry[];
-}
-
-export interface Group {
-    _id: string;
-    groupName: string;
-    totalMatch: number;
-    matchTime: string;
-    teams: Team[];
-    roundId: string;
-    matchesPlayed?: number;
-    totalSelectedTeam?: number;
-    status?: 'pending' | 'ongoing' | 'completed' | 'cancelled';
-    roomId?: number;
-    roomPassword?: number;
-}
-
-export interface Round {
-    _id: string;
-    roundName: string;
-    roundNumber: number;
-    status: "pending" | "ongoing" | "completed";
-    type?: "tournament" | "invited-tournament" | "t1-special";
-    eventId: string;
-    groups?: Group[];
-    startTime?: string;
-    dailyStartTime?: string;
-    dailyEndTime?: string;
-    gapMinutes?: number;
-    matchesPerGroup?: number;
-    qualifyingTeams?: number;
-    isPlaceholder?: boolean;
-    roadmapIndex?: number;
-}
 
 // Queries
-export const useGetRoundsQuery = (eventId: string) => {
-    return useQuery({
+export const useGetRegistrationStatusQuery = (eventId: string, teamId: string, options: any = {}) => {
+    return useQuery<any>({
+        ...TOURNAMENT_QUERY_CONFIG,
+        ...options,
+        queryKey: tournamentKeys.registrationStatus(eventId, teamId),
+        queryFn: () => tournamentApi.getRegistrationStatus(eventId, teamId),
+        enabled: (options.enabled ?? true) && !!eventId && !!teamId,
+    });
+};
+
+export const useGetRoundsQuery = (eventId: string, options: any = {}) => {
+    return useQuery<Round[]>({
+        ...TOURNAMENT_QUERY_CONFIG,
+        ...options,
         queryKey: tournamentKeys.rounds(eventId),
-        queryFn: async () => {
-            const res = await axiosInstance.get(`/rounds?eventId=${eventId}`);
-            return res.data.data as Round[];
-        },
-        enabled: !!eventId,
+        queryFn: () => tournamentApi.getRounds(eventId),
+        enabled: (options.enabled ?? true) && !!eventId,
     });
 };
 
-export const useGetGroupsQuery = (roundId: string, page = 1, limit = 20) => {
-    return useQuery({
-        queryKey: tournamentKeys.groups(roundId, page, limit),
-        queryFn: async () => {
-            const res = await axiosInstance.get("/groups", {
-                params: { roundId, page, limit }
-            });
-            return {
-                groups: res.data.data as Group[],
-                pagination: res.data.pagination as {
-                    totalGroups: number;
-                    totalPages: number;
-                    currentPage: number;
-                }
-            };
-        },
-        enabled: !!roundId,
+export const useGetGroupsQuery = (roundId: string, page = 1, limit = 20, search = "", status = "", sortBy = "", options: any = {}) => {
+    return useQuery<{ groups: Group[]; pagination: any }>({
+        ...TOURNAMENT_QUERY_CONFIG,
+        staleTime: 60 * 1000, // 1 minute for groups
+        ...options,
+        queryKey: tournamentKeys.groups(roundId, page, limit, search, status, sortBy),
+        queryFn: () => tournamentApi.getGroups({ roundId, page, limit, search, status, sortBy }),
+        enabled: (options.enabled ?? true) && !!roundId,
     });
 };
 
-export const useGetGroupDetailsQuery = (groupId: string) => {
-    return useQuery({
+export const useGetGroupDetailsQuery = (groupId: string, options: any = {}) => {
+    return useQuery<Group>({
+        ...TOURNAMENT_QUERY_CONFIG,
+        staleTime: 60 * 1000, // 1 minute
+        ...options,
         queryKey: tournamentKeys.groupDetails(groupId),
-        queryFn: async () => {
-            const res = await axiosInstance.get(`/groups/${groupId}`);
-            return res.data.group as Group;
-        },
-        enabled: !!groupId,
+        queryFn: () => tournamentApi.getGroupDetails(groupId),
+        enabled: (options.enabled ?? true) && !!groupId,
     });
 };
 
-export const useGetLeaderboardQuery = (groupId: string) => {
-    return useQuery({
+export const useGetLeaderboardQuery = (groupId: string, options: any = {}) => {
+    return useQuery<Leaderboard>({
+        ...TOURNAMENT_QUERY_CONFIG,
+        staleTime: 60 * 1000, // 1 minute for leaderboard
+        ...options,
         queryKey: tournamentKeys.leaderboard(groupId),
-        queryFn: async () => {
-            const res = await axiosInstance.get(`/leaderboards/${groupId}`);
-            return res.data as Leaderboard;
-        },
-        enabled: !!groupId,
+        queryFn: () => tournamentApi.getLeaderboard(groupId),
+        enabled: (options.enabled ?? true) && !!groupId,
     });
 };
 
-export const useGetTournamentDetailsQuery = (eventId: string) => {
-    return useQuery({
+export const useGetTournamentDetailsQuery = (eventId: string, options: any = {}) => {
+    return useQuery<Tournament>({
+        ...TOURNAMENT_QUERY_CONFIG,
+        ...options,
         queryKey: tournamentKeys.details(eventId),
         queryFn: () => tournamentApi.getTournamentDetails(eventId),
-        enabled: !!eventId,
+        enabled: (options.enabled ?? true) && !!eventId,
     });
 };
 
-export const useGetOrgTournamentsQuery = (orgId: string) => {
-    return useQuery({
+export const useGetOrgTournamentsQuery = (orgId: string, options: any = {}) => {
+    return useQuery<Tournament[]>({
+        ...TOURNAMENT_QUERY_CONFIG,
+        ...options,
         queryKey: tournamentKeys.orgTournaments(orgId),
         queryFn: () => tournamentApi.getOrgTournaments(orgId),
-        enabled: !!orgId,
+        enabled: (options.enabled ?? true) && !!orgId,
     });
 };
 
-export const useGetInfiniteRegisteredTeamsQuery = (eventId: string, search = "") => {
+export const useGetInfiniteRegisteredTeamsQuery = (eventId: string, search = "", options: any = {}) => {
     return useInfiniteQuery({
+        ...TOURNAMENT_QUERY_CONFIG,
+        ...options,
         queryKey: tournamentKeys.registeredTeams(eventId, search, 'infinite'),
-        queryFn: async ({ pageParam = null }) => {
-            const res = await axiosInstance.get(`/events/registered-teams/${eventId}`, {
-                params: { cursor: pageParam, limit: 20, search, skipCache: true }
-            });
-            return res.data;
-        },
+        queryFn: ({ pageParam = null }) => tournamentApi.getRegisteredTeams(eventId, { cursor: pageParam, limit: 20, search }),
         initialPageParam: null,
         getNextPageParam: (lastPage: any) => lastPage?.nextCursor,
-        enabled: !!eventId,
+        enabled: (options.enabled ?? true) && !!eventId,
     });
 };
 
-export const useGetInfiniteInvitedTeamsQuery = (eventId: string, search = "") => {
+export const useGetInfiniteInvitedTeamsQuery = (eventId: string, search = "", options: any = {}) => {
     return useInfiniteQuery({
+        ...TOURNAMENT_QUERY_CONFIG,
+        ...options,
         queryKey: tournamentKeys.invitedTeams(eventId, search, 'infinite'),
-        queryFn: async ({ pageParam = null }) => {
-            const res = await axiosInstance.get(`/events/invited-teams/${eventId}`, {
-                params: { cursor: pageParam, limit: 20, search, skipCache: true }
-            });
-            return res.data;
-        },
+        queryFn: ({ pageParam = null }) => tournamentApi.getInvitedTeams(eventId, { cursor: pageParam, limit: 20, search }),
         initialPageParam: null,
         getNextPageParam: (lastPage: any) => lastPage?.nextCursor,
-        enabled: !!eventId,
+        enabled: (options.enabled ?? true) && !!eventId,
     });
 };
 
-export const useSearchTeamsQuery = (search: string) => {
-    return useQuery({
+export const useSearchTeamsQuery = (search: string, options: any = {}) => {
+    return useQuery<any[]>({
+        ...TOURNAMENT_QUERY_CONFIG,
+        ...options,
         queryKey: ['teams', 'search', search],
-        queryFn: async () => {
-            const res = await axiosInstance.get('/teams', {
-                params: { search, limit: 10 }
-            });
-            return res.data.data;
-        },
-        enabled: search.length >= 2,
+        queryFn: () => tournamentApi.searchTeams({ search, limit: 10 }),
+        enabled: (options.enabled ?? true) && search.length >= 2,
     });
 };
 
-export const useGetInfiniteT1SpecialTeamsQuery = (eventId: string, search = "") => {
+export const useGetInfiniteT1SpecialTeamsQuery = (eventId: string, search = "", options: any = {}) => {
     return useInfiniteQuery({
+        ...TOURNAMENT_QUERY_CONFIG,
+        ...options,
         queryKey: tournamentKeys.t1SpecialTeams(eventId, search, 'infinite'),
-        queryFn: async ({ pageParam = null }) => {
-            const res = await axiosInstance.get(`/events/t1-special-teams/${eventId}`, {
-                params: { cursor: pageParam, limit: 20, search, skipCache: true }
-            });
-            return res.data;
-        },
+        queryFn: ({ pageParam = null }) => tournamentApi.getT1SpecialTeams(eventId, { cursor: pageParam, limit: 20, search }),
         initialPageParam: null,
-        getNextPageParam: (lastPage) => lastPage?.nextCursor,
-        enabled: !!eventId,
+        getNextPageParam: (lastPage: any) => lastPage?.nextCursor,
+        enabled: (options.enabled ?? true) && !!eventId,
     });
 };
 
-export const useGetT1SpecialTeamsQuery = (eventId: string, search = "") => {
-    return useQuery({
+export const useGetT1SpecialTeamsQuery = (eventId: string, search = "", options: any = {}) => {
+    return useQuery<any[]>({
+        ...TOURNAMENT_QUERY_CONFIG,
+        ...options,
         queryKey: tournamentKeys.t1SpecialTeams(eventId, search),
         queryFn: async () => {
-            const res = await axiosInstance.get(`/events/t1-special-teams/${eventId}`, {
-                params: { search, limit: 100 }
-            });
-            return res.data?.teams || [];
+            const data = await tournamentApi.getT1SpecialTeams(eventId, { search, limit: 100 });
+            return data?.teams || [];
         },
-        enabled: !!eventId,
+        enabled: (options.enabled ?? true) && !!eventId,
+    });
+};
+
+export const useGetTournamentsQuery = (params: { search?: string; game?: string; category?: string; cursor?: string | null; limit?: number }, options: any = {}) => {
+    return useQuery({
+        ...TOURNAMENT_QUERY_CONFIG,
+        ...options,
+        queryKey: [...tournamentKeys.all, 'list', params],
+        queryFn: () => tournamentApi.getTournaments(params),
+        enabled: (options.enabled ?? true),
+    });
+};
+
+export const useGetInfiniteTournamentsQuery = (params: { search?: string; game?: string; category?: string; limit?: number }, options: any = {}) => {
+    return useInfiniteQuery({
+        ...TOURNAMENT_QUERY_CONFIG,
+        ...options,
+        queryKey: [...tournamentKeys.all, 'infinite-list', params],
+        queryFn: ({ pageParam = null }: { pageParam?: any }) => 
+            tournamentApi.getTournaments({ ...params, cursor: pageParam }),
+        initialPageParam: null,
+        getNextPageParam: (lastPage: any) => lastPage?.nextCursor,
+        enabled: (options.enabled ?? true),
     });
 };
 

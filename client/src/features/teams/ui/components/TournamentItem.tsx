@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Trophy, Calendar, Users, Gamepad2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { EVENT_ROUTES } from "@/features/events/lib/routes";
+import { TOURNAMENT_ROUTES } from "@/features/tournaments/lib/routes";
 import { TournamentItemProps } from "@/features/teams/lib/types";
 
 export const TournamentItem = React.memo(({
@@ -28,7 +28,7 @@ export const TournamentItem = React.memo(({
 
     return (
         <Link
-            to={EVENT_ROUTES.TOURNAMENT_DETAILS.replace(":id", id)}
+            to={TOURNAMENT_ROUTES.DETAILS(id)}
             className="group block relative bg-[#0F111A]/60 border border-white/10 rounded-2xl overflow-hidden hover:border-purple-500/50 hover:bg-[#121421]/80 transition-all duration-500 shadow-2xl shadow-purple-500/5 backdrop-blur-xl"
         >
             {/* Aspect ratio container for banner */}

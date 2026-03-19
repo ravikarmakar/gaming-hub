@@ -4,7 +4,7 @@ import { HeroSection } from "../components/HeroSection";
 import { PlatformFeatures } from "../components/PlatformFeatures";
 
 // Lazy-loaded components for below-the-fold content to improve initial load time
-const FeaturedEvents = lazy(() => import("@/features/events/ui/components/FeaturedEvents"));
+const FeaturedTournaments = lazy(() => import("@/features/tournaments/ui/components/shared/FeaturedTournaments"));
 const UniqueFeatures = lazy(() => import("../components/UniqueFeatures").then(module => ({ default: module.UniqueFeatures })));
 const StatsSection = lazy(() => import("../components/StatsSection").then(module => ({ default: module.StatsSection })));
 const WhyChooseUsSection = lazy(() => import("../components/WhyChooseUsSection").then(module => ({ default: module.WhyChooseUsSection })));
@@ -38,7 +38,7 @@ const HomePage = () => {
         <UniqueFeatures />
 
         {/* 8. Live tournaments */}
-        <FeaturedEvents />
+        <FeaturedTournaments />
 
         {/* 9. Player reviews */}
         <TestimonialsSection />

@@ -8,6 +8,17 @@ import {
   eventRoadmapTypeEnum
 } from "./event.constants.js";
 
+
+export const roundRefSchema = {
+  roundNumber: { type: Number, required: true },
+  roundName: { type: String, required: true }
+};
+
+export const roadmapMergeMappingSchema = {
+  sourceRound: roundRefSchema,
+  targetMainRound: roundRefSchema,
+};
+
 const eventSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
@@ -82,7 +93,16 @@ const eventSchema = new mongoose.Schema(
     image: { type: String, default: "" },
     imageFileId: { type: String, default: null, trim: true },
     views: { type: Number, default: 0 },
-    likes: { type: Number, default: 0 },
+    // Likes count is synchronized atomically in the controller using aggregation pipelines ($max) 
+    // to prevent negative values, as Mongoose validators may not run on atomic updates.
+    // Always ensure any manual updates preserve consistency with 'likedBy' array.
+    likes: { type: Number, default: 0, min: [0, "Likes cannot be negative"] },
+    likedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      }
+    ],
     trending: { type: Boolean, default: false },
     eventEndAt: { type: Date },
     prizeDistribution: [
@@ -119,20 +139,8 @@ const eventSchema = new mongoose.Schema(
         ref: "Team",
       }
     ],
-    invitedRoundMappings: [
-      {
-        startRound: { type: Number, required: true },
-        endRound: { type: Number, required: true },
-        targetMainRound: { type: Number, required: true },
-      }
-    ],
-    t1SpecialRoundMappings: [
-      {
-        startRound: { type: Number, required: true },
-        endRound: { type: Number, required: true },
-        targetMainRound: { type: Number, required: true },
-      }
-    ],
+    invitedRoundMappings: [roadmapMergeMappingSchema],
+    t1SpecialRoundMappings: [roadmapMergeMappingSchema]
   },
   { timestamps: true }
 );

@@ -45,10 +45,10 @@ export const pages = {
     TeamChat: lazy(() => import("@/features/teams/ui/pages/TeamChatPage")),
     FindTeams: lazy(() => import("@/features/teams/ui/pages/FindTeams")),
 
-    // Events
+    // Tournaments
     CreateTournament: lazy(() => import("@/features/tournaments/ui/pages/CreateTournament")),
-    TournamentById: lazy(() => import("@/features/events/ui/pages/TournamentById")),
-    AllTournaments: lazy(() => import("@/features/events/ui/pages/AllTournaments")),
+    TournamentById: lazy(() => import("@/features/tournaments/ui/pages/TournamentById")),
+    AllTournaments: lazy(() => import("@/features/tournaments/ui/pages/AllTournaments")),
 
     // Notifications
     Notifications: lazy(() => import("@/features/notifications/ui/pages/NotificationsPage")),

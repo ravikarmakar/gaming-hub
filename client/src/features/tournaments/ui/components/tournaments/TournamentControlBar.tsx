@@ -7,7 +7,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
 
 interface TournamentControlBarProps {
     search: string;
@@ -33,7 +32,7 @@ export const TournamentControlBar = ({
     uniqueGames
 }: TournamentControlBarProps) => {
     return (
-        <Card className="p-4 bg-gray-900/40 border-gray-800 backdrop-blur-xl ring-1 ring-white/5">
+        <div className="p-4 bg-gray-900/40 border border-white/5 backdrop-blur-xl rounded-xl ring-1 ring-white/5 shadow-xl mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="relative group">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 transition-colors group-focus-within:text-purple-400" />
@@ -82,6 +81,6 @@ export const TournamentControlBar = ({
                     </SelectContent>
                 </Select>
             </div>
-        </Card>
+        </div>
     );
 };

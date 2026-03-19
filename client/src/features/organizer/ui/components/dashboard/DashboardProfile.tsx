@@ -1,6 +1,6 @@
 import { Calendar, Tag, Briefcase } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { GlassCard, NeonBadge } from "@/features/events/ui/components/ThemedComponents";
+import { GlassCard, NeonBadge } from "@/features/tournaments/ui/components/shared/ThemedComponents";
 
 interface DashboardProfileProps {
     orgInfo: any;
