@@ -49,7 +49,7 @@ export const getGroups = async (req, res) => {
     const groups = await Group.find(query)
       .populate({
         path: "teams",
-        select: "teamName teamLogo", // Optimize payload
+        select: "teamName imageUrl", // Optimize payload
       })
       .skip(skip)
       .limit(limit)

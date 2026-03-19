@@ -37,21 +37,21 @@ interface EditRoundDialogProps {
 }
 
 
-export const EditRoundDialog = ({ 
-    roundId, 
-    initialName, 
-    initialQualifyingTeams = 2, 
-    initialMatchesPerGroup = 1, 
-    initialStartTime = "", 
-    initialDailyStartTime = "13:00", 
-    initialDailyEndTime = "21:00", 
-    initialGapMinutes = 30, 
-    initialGroupSize = 12, 
-    initialIsLeague = false, 
-    initialLeaguePairingType = "standard", 
-    eventId, 
-    open, 
-    onOpenChange 
+export const EditRoundDialog = ({
+    roundId,
+    initialName,
+    initialQualifyingTeams = 2,
+    initialMatchesPerGroup = 1,
+    initialStartTime = "",
+    initialDailyStartTime = "13:00",
+    initialDailyEndTime = "21:00",
+    initialGapMinutes = 30,
+    initialGroupSize = 12,
+    initialIsLeague = false,
+    initialLeaguePairingType = "standard",
+    eventId,
+    open,
+    onOpenChange
 }: EditRoundDialogProps) => {
     const [editRoundName, setEditRoundName] = useState(initialName);
     const [qualifyingTeams, setQualifyingTeams] = useState<number>(initialQualifyingTeams);
@@ -100,9 +100,9 @@ export const EditRoundDialog = ({
             return;
         }
         try {
-            await updateRound({ 
-                roundId, 
-                eventId, 
+            await updateRound({
+                roundId,
+                eventId,
                 roundName: editRoundName,
                 qualifyingTeams,
                 matchesPerGroup,
@@ -256,15 +256,6 @@ export const EditRoundDialog = ({
                         </div>
                     )}
 
-                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 flex items-start gap-3">
-                        <Trophy className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                        <div className="space-y-1">
-                            <p className="text-[11px] font-bold text-amber-500 uppercase tracking-tight">Sync Notice</p>
-                            <p className="text-[10px] text-amber-200/60 leading-relaxed italic">
-                                Changing "Winners" will immediately update the qualification status for all groups in this round. Scheduling and size changes will apply to new groups or require group-level updates.
-                            </p>
-                        </div>
-                    </div>
                 </div>
                 <DialogFooter className="pt-2">
                     <Button

@@ -107,7 +107,7 @@ export const GroupDetailsView = ({
         currentGroup?.teams?.filter((t: any) => t.isQualified).length || 0;
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-2">
             <GroupDetailsHeader
                 currentGroup={currentGroup}
                 onBack={() => setSelectedGroupId(null)}

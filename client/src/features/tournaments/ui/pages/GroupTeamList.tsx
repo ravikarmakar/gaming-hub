@@ -132,8 +132,8 @@ export default function GroupTeamList() {
                             >
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-xl bg-gray-800 flex items-center justify-center overflow-hidden border border-white/5">
-                                        {team.teamLogo ? (
-                                            <img src={team.teamLogo} alt={team.teamName} className="w-full h-full object-cover" />
+                                        {team.imageUrl ? (
+                                            <img src={team.imageUrl} alt={team.teamName} className="w-full h-full object-cover" />
                                         ) : (
                                             <Users className="w-6 h-6 text-gray-400" />
                                         )}

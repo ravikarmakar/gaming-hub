@@ -29,6 +29,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({ eventDetails
     // Unified Status Helper
     const getStatusLabel = () => {
         if (eventDetails.eventProgress === 'completed') return 'Completed';
+        if (eventDetails.eventProgress === 'ongoing') return 'Ongoing';
         if (eventDetails.registrationStatus === 'registration-closed') return 'Closed';
         return 'Ongoing';
     };

@@ -164,9 +164,13 @@ export const createRoundService = async (userId, rawData) => {
       throw new CustomError(`Cannot create a round. No teams available for this ${type || 'tournament'} round!`, 400);
     }
 
-    const existingOngoingRound = await Round.findOne({ eventId, status: "ongoing" }).session(session);
+    const existingOngoingRound = await Round.findOne({ 
+      eventId, 
+      status: "ongoing",
+      type: type || "tournament" // Check only within the same roadmap track
+    }).session(session);
     if (existingOngoingRound) {
-      throw new CustomError("An ongoing round already exists!", 400);
+      throw new CustomError("An ongoing round already exists for this roadmap!", 400);
     }
 
     // ⛔ GUARDRAIL: Block round creation if merged source rounds are pending
@@ -198,7 +202,7 @@ export const createRoundService = async (userId, rawData) => {
     const [newRound] = await Round.create([{
       eventId,
       roundName: roundName || `Round-${roundNumber}`,
-      status: "pending",
+      status: (roadmapIndex !== undefined) ? "ongoing" : "pending",
       roundNumber,
       startTime,
       dailyStartTime,

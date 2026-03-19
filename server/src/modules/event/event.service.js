@@ -204,23 +204,42 @@ export const updateEventService = async (eventId, eventDoc, rawData) => {
   }
 
   // 2. Handle Roadmap Consolidation
-  if (rawData.roadmap || rawData.invitedTeamsRoadmap || rawData.t1SpecialRoadmap) {
-    const roadmaps = event.roadmaps ? [...event.roadmaps] : [];
-    const types = { roadmap: "tournament", invitedTeamsRoadmap: "invitedTeams", t1SpecialRoadmap: "t1-special" };
+  const roadmaps = event.roadmaps ? JSON.parse(JSON.stringify(event.roadmaps)) : [];
+  const types = { roadmap: "tournament", invitedTeamsRoadmap: "invitedTeams", t1SpecialRoadmap: "t1-special" };
 
-    Object.entries(types).forEach(([key, type]) => {
-      if (rawData[key]) {
-        try {
-          let data = typeof rawData[key] === 'string' ? JSON.parse(rawData[key]) : rawData[key];
-          if (Array.isArray(data)) data = data.map((r, i) => ({ ...r, name: `Round ${i + 1}`, order: i + 1 }));
-          const idx = roadmaps.findIndex(r => r.type === type);
-          if (idx !== -1) roadmaps[idx].data = data;
-          else roadmaps.push({ type, data });
-        } catch (e) { logger.error(`Error parsing ${key} in updateEventService:`, e); }
-      }
-    });
-    updateData.roadmaps = roadmaps;
+  // Explicit Cleanup based on flags
+  if (updateData.hasInvitedTeams === false) {
+    const idx = roadmaps.findIndex(r => r.type === "invitedTeams");
+    if (idx !== -1) roadmaps.splice(idx, 1);
+    updateData.invitedRoundMappings = [];
+    updateData.invitedTeams = [];
   }
+
+  if (updateData.hasT1SpecialTeams === false) {
+    const idx = roadmaps.findIndex(r => r.type === "t1-special");
+    if (idx !== -1) roadmaps.splice(idx, 1);
+    updateData.t1SpecialRoundMappings = [];
+    updateData.t1SpecialTeams = [];
+  }
+
+  if (updateData.hasRoadmap === false) {
+    const idx = roadmaps.findIndex(r => r.type === "tournament");
+    if (idx !== -1) roadmaps.splice(idx, 1);
+  }
+
+  // Handle provided roadmap data
+  Object.entries(types).forEach(([key, type]) => {
+    if (rawData[key]) {
+      try {
+        let data = typeof rawData[key] === 'string' ? JSON.parse(rawData[key]) : rawData[key];
+        if (Array.isArray(data)) data = data.map((r, i) => ({ ...r, name: `Round ${i + 1}`, order: i + 1 }));
+        const idx = roadmaps.findIndex(r => r.type === type);
+        if (idx !== -1) roadmaps[idx].data = data;
+        else roadmaps.push({ type, data });
+      } catch (e) { logger.error(`Error parsing ${key} in updateEventService:`, e); }
+    }
+  });
+  updateData.roadmaps = roadmaps;
 
   // 3. JSON Parsing for specialized fields
   const parseFlexible = (field) => {

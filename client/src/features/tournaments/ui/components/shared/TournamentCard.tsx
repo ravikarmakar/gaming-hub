@@ -159,7 +159,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
                             }
                         >
                             {(event.registrationStatus === "registration-open" ? "Registration Open" :
-                                event.eventProgress === "ongoing" ? "Live" :
+                                event.eventProgress === "ongoing" ? "Ongoing" :
                                     event.eventProgress === "completed" ? "Completed" :
                                         event.registrationStatus || "Unknown"
                             ).toUpperCase()}

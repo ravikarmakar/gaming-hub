@@ -4,6 +4,7 @@ import { GroupActionsMenu } from "./GroupActionsMenu";
 import { GroupStatusIndicator } from "./GroupStatusIndicator";
 import { QualificationMonitor } from "./QualificationMonitor";
 import { Group } from "@/features/tournaments/types";
+import { formatDateTime } from "@/lib/utils";
 
 interface GroupDetailsHeaderProps {
     currentGroup: Group | undefined;
@@ -43,7 +44,6 @@ export const GroupDetailsHeader = ({
     hasNextGroup,
     qualifyingTeams,
     qualifiedCount,
-
     currentGroupIndex,
     totalGroupsCount,
     isResultsMode,
@@ -67,8 +67,8 @@ export const GroupDetailsHeader = ({
     if (!currentGroup) return null;
 
     return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gray-900/40 border border-white/5 rounded-2xl p-4 sm:p-5 backdrop-blur-xl shadow-2xl mb-2">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-white/5 p-2 sm:p-2 mb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <Button
                     variant="ghost"
                     size="sm"
@@ -90,7 +90,7 @@ export const GroupDetailsHeader = ({
                             <>
                                 <div className="flex items-center gap-2 text-gray-500 font-bold uppercase tracking-widest text-[10px]">
                                     <Clock className="w-3.5 h-3.5 text-indigo-400" />
-                                    <span>{new Date(currentGroup.matchTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <span>{formatDateTime(currentGroup.matchTime)}</span>
                                 </div>
                                 <div className="h-3 w-px bg-white/10" />
                             </>
@@ -169,7 +169,7 @@ export const GroupDetailsHeader = ({
                     <Button
                         variant="ghost"
                         onClick={() => onChat?.(currentGroup)}
-                        className="h-8 w-8 rounded-lg bg-transparent hover:bg-white/10 transition-all p-0 text-indigo-400"
+                        className="h-8 w-8 rounded-lg bg-transparent hover:bg-indigo-600 hover:text-white transition-all p-0 text-indigo-400"
                     >
                         <MessageSquare className="w-4 h-4" />
                     </Button>
@@ -204,10 +204,10 @@ export const GroupDetailsHeader = ({
                         </Button>
                     </div>
                     <div className="h-6 w-px bg-white/5 mx-0.5" />
-                    <GroupActionsMenu 
-                        group={currentGroup} 
-                        onEdit={onEditGroup} 
-                        onDelete={onDeleteGroup} 
+                    <GroupActionsMenu
+                        group={currentGroup}
+                        onEdit={onEditGroup}
+                        onDelete={onDeleteGroup}
                         onReset={onResetGroup}
                         showMerge={showMerge}
                         onMerge={onMerge}

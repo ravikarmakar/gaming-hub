@@ -52,7 +52,7 @@ export const TournamentDashboardHeader = ({
                 {eventProgress === "pending" && (
                     <Button
                         size="sm"
-                        className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white font-bold"
+                        className="h-8 text-xs bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-[0_0_15px_rgba(168,85,247,0.2)] transition-all"
                         onClick={onStartEvent}
                     >
                         <PlayCircle className="w-3.5 h-3.5 mr-1.5" />

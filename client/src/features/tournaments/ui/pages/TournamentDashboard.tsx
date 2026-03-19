@@ -24,6 +24,7 @@ import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
 // Extracted sub-components
 import { TournamentDashboardHeader } from "@/features/tournaments/ui/components/tournaments/TournamentDashboardHeader";
 import { TournamentSettings } from "@/features/tournaments/ui/components/tournaments/TournamentSettings";
+import { ResultsTab } from "@/features/tournaments/ui/components/details/ResultsTab";
 
 export default function TournamentDashboard() {
     const { id } = useParams<{ id: string }>();
@@ -134,6 +135,14 @@ export default function TournamentDashboard() {
                                 <Settings className="w-4 h-4 mr-2" />
                                 Settings
                             </TabsTrigger>
+
+                            {/* Results Tab - show when not pending */}
+                            {(eventDetails?.eventProgress !== "pending") && (
+                                <TabsTrigger value="results" className="relative rounded-none px-0 py-4 bg-transparent data-[state=active]:bg-transparent text-gray-500 data-[state=active]:text-white font-bold uppercase tracking-widest text-[11px] whitespace-nowrap flex-shrink-0 transition-all border-b-2 border-transparent data-[state=active]:border-amber-700">
+                                    <Trophy className="w-4 h-4 mr-2" />
+                                    Results
+                                </TabsTrigger>
+                            )}
                         </TabsList>
                     </div>
                 )}
@@ -173,6 +182,9 @@ export default function TournamentDashboard() {
                                 onDelete={() => setIsDeleteDialogOpen(true)}
                             />
                         )}
+                    </TabsContent>
+                    <TabsContent value="results" className="m-0">
+                        {activeTab === "results" && <ResultsTab eventId={id} />}
                     </TabsContent>
                 </div>
             </Tabs>

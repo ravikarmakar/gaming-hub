@@ -106,8 +106,8 @@ export const GroupLeaderboardTable = ({
                             <th className="px-6 py-4 font-black tracking-widest">Team Profile</th>
                             {isLeague && <th className="px-4 py-4 text-center font-black tracking-widest">Grp</th>}
                             <th className="px-6 py-4 text-center font-black tracking-widest">Played</th>
-                            <th className="px-6 py-4 text-center font-black tracking-widest">Match Pos</th>
-                            <th className="px-6 py-4 text-center font-black tracking-widest">Kills</th>
+                            <th className="px-6 py-4 text-center font-black tracking-widest">Pos Pts</th>
+                            <th className="px-6 py-4 text-center font-black tracking-widest">Kill Pts</th>
                             <th className="px-6 py-4 text-center font-black tracking-widest">Total Pts</th>
                             {activeRoundTab === 't1-special' && <th className="px-6 py-4 text-center font-black tracking-widest">Operations</th>}
                         </tr>
@@ -121,14 +121,14 @@ export const GroupLeaderboardTable = ({
                             const teamId = entry.teamId._id;
                             const stats = tempResults[teamId] || { kills: 0, rank: 0 };
                             const inActivePairing = isTeamInActivePairing(
-                                teamId, 
-                                selectedPairing, 
+                                teamId,
+                                selectedPairing,
                                 subGroupTeamSets,
                                 allTeamIds,
                                 isLeague
                             );
                             const subGroupLabel = isLeague ? getSubGroupLabel(
-                                teamId, 
+                                teamId,
                                 subGroupTeamSets,
                                 allTeamIds
                             ) : null;
@@ -136,7 +136,7 @@ export const GroupLeaderboardTable = ({
                             // Row styling — dim teams outside the active pairing
                             let rowBg = "bg-transparent hover:bg-white/5";
                             let rowBorder = "";
-                            
+
                             // 1. Result mode dimming/highlighting takes first precedence
                             if (isResultsMode && selectedPairing) {
                                 if (!inActivePairing) {
@@ -211,13 +211,20 @@ export const GroupLeaderboardTable = ({
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-4">
                                             <div className="relative shrink-0">
-                                                {entry.teamId.teamLogo ? (
-                                                    <img src={entry.teamId.teamLogo} alt={entry.teamId.teamName} className="w-8 h-8 rounded-lg bg-black object-cover border border-white/10 group-hover/row:border-white/20 transition-colors" />
-                                                ) : (
-                                                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[10px] font-black text-gray-500 border border-white/10 group-hover/row:border-white/20 transition-colors">
-                                                        {entry.teamId?.teamName?.substring(0, 2).toUpperCase() || "??"}
-                                                    </div>
-                                                )}
+                                                {entry.teamId.imageUrl ? (
+                                                    <img 
+                                                        src={entry.teamId.imageUrl} 
+                                                        alt={entry.teamId.teamName} 
+                                                        className="w-8 h-8 rounded-lg bg-black object-cover border border-white/10 group-hover/row:border-white/20 transition-colors"
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).style.display = 'none';
+                                                            (e.target as HTMLImageElement).parentElement?.querySelector('.avatar-fallback')?.classList.remove('hidden');
+                                                        }}
+                                                    />
+                                                ) : null}
+                                                <div className={`w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[10px] font-black text-gray-500 border border-white/10 group-hover/row:border-white/20 transition-colors avatar-fallback ${entry.teamId.imageUrl ? 'hidden' : ''}`}>
+                                                    {entry.teamId?.teamName?.substring(0, 2).toUpperCase() || "??"}
+                                                </div>
                                                 {entry.isQualified && (
                                                     <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-black" />
                                                 )}
@@ -258,7 +265,7 @@ export const GroupLeaderboardTable = ({
                                                 className="w-14 h-8 text-center bg-black/60 border-amber-500/20 focus:border-amber-500 focus:bg-amber-500/10 text-white mx-auto font-black text-xs rounded-lg transition-all"
                                             />
                                         ) : (
-                                            <span className="text-gray-400 font-black text-xs tabular-nums">#{entry.position || '-'}</span>
+                                            <span className="text-gray-400 font-black text-xs tabular-nums">{entry.positionPoints ?? entry.score ?? 0}</span>
                                         )}
                                     </td>
                                     <td className="px-6 py-4 text-center">
@@ -301,8 +308,8 @@ export const GroupLeaderboardTable = ({
                             );
                         }).concat(leaderboard.teamScore.length === 0 ? [
                             <tr key="empty">
-                                <td 
-                                    colSpan={6 + (isLeague ? 1 : 0) + (activeRoundTab === 't1-special' ? 1 : 0)} 
+                                <td
+                                    colSpan={6 + (isLeague ? 1 : 0) + (activeRoundTab === 't1-special' ? 1 : 0)}
                                     className="px-6 py-12 text-center text-gray-600 font-black uppercase tracking-[0.2em] text-[10px]"
                                 >
                                     No combatants deployed to this sector

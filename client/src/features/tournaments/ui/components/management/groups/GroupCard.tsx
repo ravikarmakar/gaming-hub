@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { GroupActionsMenu } from "./GroupActionsMenu";
 
 import { Group } from "@/features/tournaments/types";
+import { formatDateTime } from "@/lib/utils";
 
 interface GroupCardProps {
     group: Group;
@@ -85,12 +86,7 @@ export const GroupCard = memo(({ group, roundMatches, onSelect, onEdit, onDelete
 
                 {group.matchTime && (
                     <div className="text-[9px] text-purple-400 font-black bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20 ml-auto uppercase tracking-tighter">
-                        {new Date(group.matchTime).toLocaleString(undefined, {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        })}
+                        {formatDateTime(group.matchTime)}
                     </div>
                 )}
             </div>

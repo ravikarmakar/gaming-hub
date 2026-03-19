@@ -141,8 +141,11 @@ export const MergeConfigSection = ({
                                 <span className="text-[11px] font-bold text-gray-400 flex items-center gap-1.5 flex-wrap">
                                     <span>{sourceLabel}</span>
                                     <span className={styles.text}>
-                                        ({sourceFields.length > 0 ? (watch(`${sourceRoadmapName}.${sourceFields.length - 1}.title`) || `Round ${sourceFields.length}`) : "No Rounds"})
+                                        ({currentMappings[0]?.sourceRound?.roundName || (sourceFields.length > 0 ? (watch(`${sourceRoadmapName}.${sourceFields.length - 1}.title`) || `Round ${sourceFields.length}`) : "No Rounds")})
                                     </span>
+                                    {currentMappings[0]?.sourceRound?.roundNumber !== undefined && currentMappings[0].sourceRound.roundNumber !== sourceFields.length && (
+                                        <span className="text-amber-500 text-[9px] font-black uppercase ring-1 ring-amber-500/20 px-1.5 py-0.5 rounded bg-amber-500/10">Outdated</span>
+                                    )}
                                     <span className="text-gray-600 font-medium">Merges to</span>
                                     <span>Main Roadmap</span>
                                     <span className="text-purple-400">

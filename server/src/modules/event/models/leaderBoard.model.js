@@ -15,9 +15,11 @@ const leaderboardSchema = new mongoose.Schema(
           ref: "Team",
           index: true, // ✅ Index added for faster team queries
         },
-        score: { type: Number, default: 0 },
-        position: { type: Number, index: true }, // ✅ Position index
-        kills: { type: Number, default: 0 },
+        score: { type: Number, default: 0 }, // Deprecated: use positionPoints
+        positionPoints: { type: Number, default: 0 },
+        position: { type: Number, index: true }, // ✅ Standings/Match Rank
+        kills: { type: Number, default: 0 }, // Total kills
+        killPoints: { type: Number, default: 0 }, // Total kill points
         wins: { type: Number, default: 0 },
         totalPoints: { type: Number, default: 0 },
         matchesPlayed: { type: Number, default: 0 },
@@ -34,10 +36,15 @@ import pointSystem from "../../../shared/config/pointSystem.js";
 const calculateAndSortScores = (teamScore) => {
   if (!teamScore || !Array.isArray(teamScore)) return;
 
+  const killPointMultiplier = pointSystem.killPoint || 1;
+
   // 1. Calculate totalPoints for each team
   teamScore.forEach(team => {
-    // Total Points = Place Points (score) + Kills * Kill Point
-    team.totalPoints = (team.score || 0) + (team.kills || 0) * (pointSystem.killPoint || 1);
+    // Legacy support: if positionPoints is 0 but score is not, use score
+    const effectivePosPoints = (team.positionPoints ?? team.score) ?? 0;
+    const effectiveKillPoints = (team.killPoints ?? (team.kills * killPointMultiplier)) ?? 0;
+
+    team.totalPoints = effectivePosPoints + effectiveKillPoints;
   });
 
   // 2. Sort teams by totalPoints descending

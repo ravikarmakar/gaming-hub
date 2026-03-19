@@ -77,7 +77,7 @@ export const getLeaderboardEntries = async (req, res) => {
     const { page = 1, limit = 10 } = req.query; // Pagination defaults
 
     const entries = await Leaderboard.find()
-      .populate("teamScore.teamId", "teamName teamLogo") // Valid populate path
+      .populate("teamScore.teamId", "teamName imageUrl") // Valid populate path
       .skip((page - 1) * limit)
       .limit(Number(limit));
 
@@ -179,7 +179,7 @@ export const getLeaderboardByGroup = async (req, res) => {
     const leaderboard = await Leaderboard.findOne({ groupId })
       .populate({
         path: "teamScore.teamId",
-        select: "teamName teamLogo", // ✅ Select only needed fields
+        select: "teamName imageUrl", // ✅ Select only needed fields
       })
       .lean(); // ✅ Convert result to plain JSON for faster response
 
@@ -428,12 +428,20 @@ export const updateGroupResults = async (req, res) => {
         );
 
         if (entry) {
+          const killPointMultiplier = pointSystem.killPoint || 1;
           const placePoints = pointSystem.ranks[rank] || 0;
-          entry.score = (entry.score || 0) + placePoints;
+          const killPts = (kills || 0) * killPointMultiplier;
+
+          entry.score = (entry.score || 0) + placePoints; // Keep score for legacy UI if needed
+          entry.positionPoints = (entry.positionPoints || 0) + placePoints;
           entry.kills = (entry.kills || 0) + (kills || 0);
+          entry.killPoints = (entry.killPoints || 0) + killPts;
+          
           if (rank === 1) entry.wins = (entry.wins || 0) + 1;
           entry.matchesPlayed = (entry.matchesPlayed || 0) + 1;
-          entry.position = rank;
+          
+          // 🚫 Stop overwriting entry.position with match rank
+          // entry.position = rank; 
         } else {
           logger.warn(`Team ${teamId} not found in leaderboard for group ${groupId}`);
         }
@@ -459,22 +467,28 @@ export const updateGroupResults = async (req, res) => {
         if (allPairingsDone) shouldComplete = true;
       }
 
+      // 🏆 Update Standings (Recalculate points and sort)
+      const killPoint = pointSystem.killPoint || 1;
+      leaderboard.teamScore.forEach(entry => {
+        const effectivePosPoints = (entry.positionPoints ?? entry.score) ?? 0;
+        const effectiveKillPoints = (entry.killPoints ?? (entry.kills * killPoint)) ?? 0;
+        entry.totalPoints = effectivePosPoints + effectiveKillPoints;
+      });
+
+      // Sort descending by totalPoints
+      leaderboard.teamScore.sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
+
+      // Update positions based on overall sorting
+      leaderboard.teamScore.forEach((entry, index) => {
+        entry.position = index + 1;
+      });
+
       if (shouldComplete) {
         group.status = "completed";
         group.totalSelectedTeam = qualifyingLimit;
 
-        // Synchronize points logic with Leaderboard model (score + kills * killPoint)
-        const killPoint = pointSystem.killPoint || 1;
-        leaderboard.teamScore.forEach(entry => {
-          entry.totalPoints = (entry.score || 0) + (entry.kills || 0) * killPoint;
-        });
-
-        // Sort descending by totalPoints
-        leaderboard.teamScore.sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
-
-        // Mark qualified teams and assign positions based on limit
+        // Mark qualified teams based on limit
         leaderboard.teamScore.forEach((entry, index) => {
-          entry.position = index + 1;
           entry.isQualified = qualifyingLimit > 0 && index < qualifyingLimit;
         });
         leaderboard.markModified('teamScore');
@@ -509,20 +523,35 @@ export const updateGroupResults = async (req, res) => {
           );
 
           // 🏆 Determine if the entire EVENT should be completed
-          // It should complete if:
-          // 1. This was the final round (has the highest roundNumber)
-          // 2. AND all groups in this round are done (isRoundComplete is true)
+          // It should complete only if ALL rounds in ALL roadmaps (e.g. tournament, invited, t1) are 'completed'
           if (group.roundId.eventId) {
-            const allRounds = await Round.find({ eventId: group.roundId.eventId }).session(session);
-            const maxRoundNumber = Math.max(...allRounds.map(r => r.roundNumber || 0));
-            const isLastRound = group.roundId.roundNumber === maxRoundNumber;
+            const EventDoc = mongoose.model("Event");
+            const event = await EventDoc.findById(group.roundId.eventId).session(session);
+            
+            if (event && event.roadmaps) {
+              let totalRounds = 0;
+              let completedRounds = 0;
+              
+              for (const roadmap of event.roadmaps) {
+                if (roadmap.data && Array.isArray(roadmap.data)) {
+                  for (const roadmapItem of roadmap.data) {
+                    totalRounds++;
+                    if (roadmapItem.status === 'completed') {
+                      completedRounds++;
+                    }
+                  }
+                }
+              }
+              
+              const allRoundsCompleted = totalRounds > 0 && totalRounds === completedRounds;
 
-            if (isLastRound) {
-              const updateEventQuery = mongoose.model("Event").findByIdAndUpdate(
-                group.roundId.eventId, 
-                { eventProgress: 'completed' }
-              ).session(session);
-              await updateEventQuery;
+              if (allRoundsCompleted) {
+                await EventDoc.findByIdAndUpdate(
+                  event._id, 
+                  { eventProgress: 'completed' }
+                ).session(session);
+                logger.info(`Event ${event._id} marked as COMPLETED because all roadmap rounds are done.`);
+              }
             }
           }
         }

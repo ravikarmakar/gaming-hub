@@ -79,7 +79,7 @@ export function ResultsTab({ eventId }: ResultsTabProps) {
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-            {leaderboard ? (
+            {leaderboard && grandFinaleGroup?.status === 'completed' ? (
                 <GroupLeaderboardTable
                     leaderboard={leaderboard}
                     isResultsMode={false}

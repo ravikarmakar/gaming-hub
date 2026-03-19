@@ -150,7 +150,7 @@ export const GroupGridView = ({
                             size="sm"
                             disabled={currentPage <= 1 || isLoading}
                             onClick={() => handlePageChange(currentPage - 1)}
-                            className="bg-transparent border-white/10 text-gray-400 hover:text-white"
+                            className="bg-transparent border-white/10 text-gray-400 hover:text-white hover:border-purple-500/30 hover:bg-purple-600 transition-all"
                         >
                             <ChevronLeft className="w-4 h-4" />
                         </Button>
@@ -159,7 +159,7 @@ export const GroupGridView = ({
                             size="sm"
                             disabled={currentPage >= totalPages || isLoading}
                             onClick={() => handlePageChange(currentPage + 1)}
-                            className="bg-transparent border-white/10 text-gray-400 hover:text-white"
+                            className="bg-transparent border-white/10 text-gray-400 hover:text-white hover:border-purple-500/30 hover:bg-purple-600 transition-all"
                         >
                             <ChevronRight className="w-4 h-4" />
                         </Button>

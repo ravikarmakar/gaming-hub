@@ -170,8 +170,8 @@ export const RoundHeader = ({
                         )}
                     </div>
                 )}
-                {/* Progress pill — hidden if round is completed */}
-                {!round.isPlaceholder && round.status !== 'completed' && (
+                {/* Progress pill — hidden if round is completed or has no groups */}
+                {!round.isPlaceholder && round.status !== 'completed' && round.groups?.length > 0 && (
                     <div className="flex items-center gap-2 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
                         <span className="text-[9px] text-gray-500 uppercase font-black tracking-widest hidden sm:inline">Progress</span>
                         <span className="text-xs font-black text-white">
@@ -195,7 +195,7 @@ export const RoundHeader = ({
                     </Button>
                 ) : (
                     <div className="flex items-center gap-1">
-                        {round.status === 'completed' ? (
+                        {round.status === 'completed' && round.groups?.length > 0 ? (
                             <div className="flex items-center gap-3 px-3 py-1 bg-white/[0.02] border border-white/5 rounded-xl">
                                 <div className="flex items-center gap-1.5">
                                     <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest">Groups</p>
