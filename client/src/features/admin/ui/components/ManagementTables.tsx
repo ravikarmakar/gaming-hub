@@ -68,14 +68,14 @@ const ManagementTables = () => {
                                                     {item.avatar || item.imageUrl ? (
                                                         <img src={item.avatar || item.imageUrl} alt="" className="w-full h-full object-cover" />
                                                     ) : (
-                                                        <span className="text-gray-500 text-xs font-bold">{(item.username || item.teamName || item.name).substring(0, 2).toUpperCase()}</span>
+                                                        <span className="text-gray-500 text-xs font-bold">{(item.username || item.teamName || item.name || "??").substring(0, 2).toUpperCase()}</span>
                                                     )}
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="text-sm font-bold text-white group-hover:text-purple-400 transition-colors">
                                                         {item.username || item.teamName || item.name}
                                                     </span>
-                                                    <span className="text-[10px] text-gray-500 font-mono">ID: {item._id.substring(0, 8)}...</span>
+                                                    <span className="text-[10px] text-gray-500 font-mono">ID: {item._id?.substring(0, 8) || "UNKNOWN"}...</span>
                                                 </div>
                                             </div>
                                         </td>

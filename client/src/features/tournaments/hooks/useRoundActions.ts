@@ -1,16 +1,19 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { 
-    useUpdateRoundStatusMutation, 
-    useCreateGroupsMutation, 
-    useCreateSingleGroupMutation 
+import {
+    useUpdateRoundStatusMutation,
+    useCreateGroupsMutation,
+    useCreateSingleGroupMutation,
+    useMergeTeamsToRoundMutation
 } from './useTournamentMutations';
+import { tournamentKeys } from './useTournamentQueries';
 import toast from "react-hot-toast";
 
-export const useRoundActions = (eventId: string, rounds: any[], activeRoundTab: string) => {
+export const useRoundActions = (eventId: string) => {
     const { mutateAsync: updateRoundStatus } = useUpdateRoundStatusMutation();
     const { mutateAsync: createGroups, isPending: isCreatingGroups } = useCreateGroupsMutation();
     const { mutateAsync: createSingleGroup, isPending: isCreatingSingleGroup } = useCreateSingleGroupMutation();
+    const { mutateAsync: mergeTeams, isPending: isMergingTeams } = useMergeTeamsToRoundMutation();
     const queryClient = useQueryClient();
 
     const [isCreateRoundOpen, setIsCreateRoundOpen] = useState(false);
@@ -20,6 +23,7 @@ export const useRoundActions = (eventId: string, rounds: any[], activeRoundTab: 
     const [isSavingStatus, setIsSavingStatus] = useState(false);
     const [isConfirmGroupsOpen, setIsConfirmGroupsOpen] = useState(false);
     const [isConfirmManualGroupOpen, setIsConfirmManualGroupOpen] = useState(false);
+    const [isConfirmMergeOpen, setIsConfirmMergeOpen] = useState(false);
     const [cooldown, setCooldown] = useState(0);
 
     // Refresh Cooldown Effect
@@ -34,7 +38,7 @@ export const useRoundActions = (eventId: string, rounds: any[], activeRoundTab: 
 
     const handleRefresh = useCallback((refetchFns: (() => void)[], roundId?: string) => {
         if (cooldown > 0) return;
-        
+
         // 1. Run local refetch functions (usually rounds and event details)
         refetchFns.forEach(fn => fn());
 
@@ -49,28 +53,19 @@ export const useRoundActions = (eventId: string, rounds: any[], activeRoundTab: 
         toast.success("Data refreshed!");
     }, [cooldown, queryClient]);
 
-    const isGrandFinale = useMemo(() => {
-        const latestActual = rounds.filter(r => (r.type || "tournament") === activeRoundTab).pop();
-        return latestActual?.groups && latestActual.groups.length === 1;
-    }, [rounds, activeRoundTab]);
-
     const handleCreateGroups = useCallback(async (roundId: string) => {
         try {
             await createGroups({ roundId, eventId });
-            toast.success("Groups generated successfully!");
         } catch (error) {
             console.error(error);
-            toast.error("Failed to generate groups.");
         }
     }, [eventId, createGroups]);
 
-    const handleManualCreateGroup = useCallback(async (roundId: string) => {
+    const handleManualCreateGroup = useCallback(async (roundId: string, groupType?: string, groupSize?: number) => {
         try {
-            await createSingleGroup({ roundId, eventId });
-            toast.success("Group created successfully!");
+            await createSingleGroup({ roundId, eventId, groupType, groupSize });
         } catch (error) {
             console.error(error);
-            toast.error("Failed to create group.");
         }
     }, [eventId, createSingleGroup]);
 
@@ -80,16 +75,27 @@ export const useRoundActions = (eventId: string, rounds: any[], activeRoundTab: 
         try {
             await updateRoundStatus({ roundId: round._id, eventId, status: 'completed' });
             toast.success(`${round.roundName} marked as completed!`);
-            if (isGrandFinale) {
-                toast.success("Grand Finale completed! You can now finish the tournament.");
-            }
+
         } catch (error) {
             console.error(error);
             toast.error("Failed to complete round.");
         } finally {
             setIsSavingStatus(false);
         }
-    }, [eventId, updateRoundStatus, isGrandFinale]);
+    }, [eventId, updateRoundStatus]);
+
+    const handleMergeTeams = useCallback(async (roundId: string) => {
+        const loadingToast = toast.loading("Merging teams...");
+        try {
+            await mergeTeams({ roundId, eventId });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(eventId) });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.details(eventId) });
+            toast.success("Teams merged successfully!", { id: loadingToast });
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to merge teams.", { id: loadingToast });
+        }
+    }, [eventId, mergeTeams, queryClient]);
 
     return {
         isCreateRoundOpen,
@@ -105,12 +111,16 @@ export const useRoundActions = (eventId: string, rounds: any[], activeRoundTab: 
         setIsConfirmGroupsOpen,
         isConfirmManualGroupOpen,
         setIsConfirmManualGroupOpen,
+        isConfirmMergeOpen,
+        setIsConfirmMergeOpen,
         cooldown,
         handleRefresh,
         handleCreateGroups,
         handleManualCreateGroup,
         handleCompleteRound,
+        handleMergeTeams,
         isCreatingGroups,
-        isCreatingSingleGroup
+        isCreatingSingleGroup,
+        isMergingTeams
     };
 };

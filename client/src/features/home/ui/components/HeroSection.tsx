@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { EVENT_ROUTES } from "@/features/events/lib/routes";
+import { TOURNAMENT_ROUTES } from "@/features/tournaments/lib/routes";
 import { AUTH_ROUTES } from "@/features/auth/lib/routes";
 
 // --- Trust Bar Stat ---
@@ -101,7 +101,7 @@ const HeroSection = () => {
 
   const handleEnterArena = () => {
     if (user) {
-      navigate(EVENT_ROUTES.TOURNAMENTS);
+      navigate(TOURNAMENT_ROUTES.TOURNAMENTS);
     } else {
       navigate(AUTH_ROUTES.REGISTER);
     }
@@ -218,7 +218,7 @@ const HeroSection = () => {
             <Button
               size="lg"
               variant="outline"
-              onClick={() => navigate(EVENT_ROUTES.TOURNAMENTS)}
+              onClick={() => navigate(TOURNAMENT_ROUTES.TOURNAMENTS)}
               className="w-full sm:w-auto h-14 px-10 rounded-full border-2 border-white/10 bg-white/[0.03] text-white font-bold text-base 
                          hover:bg-purple-900/30 hover:border-purple-500/40 hover:text-white backdrop-blur-sm 
                          transition-all duration-300 hover:-translate-y-1"

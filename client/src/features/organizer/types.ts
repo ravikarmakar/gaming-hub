@@ -1,4 +1,4 @@
-import { Event } from "@/features/events/lib/types";
+import { Tournament } from "@/features/tournaments/types";
 
 export interface Member {
     _id: string;
@@ -46,7 +46,7 @@ export interface DashboardStats {
         totalParticipants: number;
         totalPrizeMoney: number;
     };
-    recentEvents: Event[];
+    recentEvents: Tournament[];
     org: Organizer;
 }
 

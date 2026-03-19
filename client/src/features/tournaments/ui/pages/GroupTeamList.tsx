@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import toast from "react-hot-toast";
 import { formatDate } from "@/lib/utils";
-import { useGetGroupDetailsQuery } from "../../hooks";
+import { useGetGroupDetailsQuery } from "@/features/tournaments/hooks";
 
 export default function GroupTeamList() {
     const { groupId } = useParams<{ groupId: string }>();
@@ -99,7 +99,7 @@ export default function GroupTeamList() {
                             <span className="text-xs font-bold uppercase tracking-wider">Matches</span>
                         </div>
                         <p className="text-xl font-bold">
-                            {group.totalMatch} Full Matches
+                            {group.matchesPlayed || 0}/{group.totalMatch} Matches
                         </p>
                     </Card>
                 </div>
@@ -132,8 +132,8 @@ export default function GroupTeamList() {
                             >
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-xl bg-gray-800 flex items-center justify-center overflow-hidden border border-white/5">
-                                        {team.teamLogo ? (
-                                            <img src={team.teamLogo} alt={team.teamName} className="w-full h-full object-cover" />
+                                        {team.imageUrl ? (
+                                            <img src={team.imageUrl} alt={team.teamName} className="w-full h-full object-cover" />
                                         ) : (
                                             <Users className="w-6 h-6 text-gray-400" />
                                         )}

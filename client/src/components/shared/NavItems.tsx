@@ -9,7 +9,7 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/component
 import { ROUTES } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { EVENT_ROUTES } from "@/features/events/lib";
+import { TOURNAMENT_ROUTES } from "@/features/tournaments/lib";
 import { PLAYER_ROUTES } from "@/features/player/lib/routes";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
@@ -19,7 +19,7 @@ const navItems = [
   {
     name: "Tournaments",
     icon: Trophy,
-    href: EVENT_ROUTES.TOURNAMENTS,
+    href: TOURNAMENT_ROUTES.TOURNAMENTS,
   },
   {
     name: "Discover",

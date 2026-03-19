@@ -39,3 +39,13 @@ export const GAMES_MAPS = {
     "bgmi": ["Erangel", "Miramar", "Sanhok", "Vikendi", "Nusa", "Karakin"],
     "valorant": ["Ascent", "Bind", "Haven", "Icebox", "Breeze", "Fracture", "Pearl", "Lotus", "Sunset"]
 };
+
+export const REQUIRED_EVENT_FIELDS = [
+  "title",
+  "game",
+  "startDate",
+  "registrationEndsAt",
+  "slots",
+  "category",
+  "registrationMode",
+];

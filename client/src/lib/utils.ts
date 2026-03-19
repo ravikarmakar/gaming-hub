@@ -44,6 +44,19 @@ export const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('en-GB');
 };
 
+export const formatDateTime = (date: string | Date | undefined) => {
+  if (!date) return "";
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "";
+
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+  return `${day}-${month}-${year} ${time}`;
+};
+
 /**
  * Formats a date or ISO string to the local datetime-local input format (YYYY-MM-DDTHH:mm)
  */
