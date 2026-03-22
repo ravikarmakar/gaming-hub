@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { User, ShieldCheck, Gamepad2, Users, Star, Activity, Sword } from "lucide-react";
+import { User, ShieldCheck, Users, ChevronRight } from "lucide-react";
 import { User as UserType } from "@/features/auth/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -11,114 +10,122 @@ interface PlayerCardProps {
     index: number;
 }
 
-const PlayerCard = React.forwardRef<HTMLDivElement, PlayerCardProps>(({ player, index }, ref) => {
+const PlayerCard = React.forwardRef<HTMLDivElement, PlayerCardProps>(({ player }, ref) => {
     const [isLoaded, setIsLoaded] = useState(false);
     const avatarUrl = player.avatar?.includes("default-avatar-url.com")
         ? `https://ui-avatars.com/api/?name=${player.username}&background=random`
         : (player.avatar || `https://ui-avatars.com/api/?name=${player.username}&background=random`);
 
     return (
-        <motion.div
-            ref={ref}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            whileHover={{ y: -5 }}
-            className="group"
-            layout
-        >
+        <div ref={ref} className="group relative h-full">
             <Link
-                to={`/players/${player._id}`}
-                className="block relative h-full bg-white/[0.03] backdrop-blur-md border border-white/10 rounded-3xl p-6 hover:bg-white/[0.05] hover:border-violet-500/40 transition-all duration-500 overflow-hidden"
+                to={player._id ? `/players/${player._id}` : "#"}
+                aria-disabled={!player._id}
+                tabIndex={!player._id ? -1 : undefined}
+                onClick={!player._id ? (e) => e.preventDefault() : undefined}
+                className={cn(
+                    "relative flex flex-col h-full overflow-hidden rounded-3xl bg-[#030303] border border-white/[0.08] transition-all duration-500 hover:border-white/20 hover:bg-[#0a0a0a] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.8)]",
+                    !player._id && "pointer-events-none opacity-60"
+                )}
             >
-                {/* Glow Effect */}
-                <div className="absolute -inset-0.5 bg-gradient-to-br from-violet-600/30 to-fuchsia-600/30 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition duration-500" />
-
-                {/* Verification Badges */}
-                <div className="absolute top-5 right-5 z-10 flex gap-2">
-                    {player.isAccountVerified && (
-                        <div className="p-1 rounded-full bg-blue-500/10 border border-blue-500/20 shadow-lg shadow-blue-500/10" title="Account Verified">
-                            <ShieldCheck className="w-4 h-4 text-blue-400 fill-blue-400/20" />
-                        </div>
-                    )}
-                    {player.isPlayerVerified && (
-                        <div className="p-1 rounded-full bg-purple-500/10 border border-purple-500/20 shadow-lg shadow-purple-500/10" title="Player Verified">
-                            <Sword className="w-4 h-4 text-purple-400 fill-purple-400/20" />
-                        </div>
-                    )}
-                </div>
-
-                {/* Header: Avatar & Username */}
-                <div className="flex flex-col items-center mb-8 pt-4 relative">
-                    <div className="relative mb-5">
-                        <div className="absolute -inset-2 bg-gradient-to-tr from-violet-600 to-fuchsia-600 rounded-full blur-md opacity-20 group-hover:opacity-60 transition duration-500" />
-                        <div className="relative w-24 h-24 rounded-full bg-[#0d091a] border border-white/10 flex items-center justify-center overflow-hidden transition-transform duration-500 group-hover:scale-105">
-                            {!isLoaded && <Skeleton className="absolute inset-0 z-10 w-full h-full rounded-full bg-white/10 animate-pulse" />}
-                            {avatarUrl ? (
-                                <img
-                                    src={avatarUrl}
-                                    alt={player.username}
-                                    onLoad={() => setIsLoaded(true)}
-                                    loading="lazy"
-                                    className={cn(
-                                        "w-full h-full object-cover transition-all duration-700",
-                                        isLoaded ? "opacity-100 blur-0 scale-100" : "opacity-0 blur-sm scale-110"
+                {/* Subtle Top Shine */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                
+                {/* Card Content Area */}
+                <div className="relative flex flex-col h-full p-6">
+                    {/* Header: Medium Avatar + Identity */}
+                    <div className="flex items-start justify-between mb-6">
+                        <div className="relative group/avatar">
+                            {/* Avatar Container */}
+                            <div className="relative w-20 h-20 rounded-2xl p-[1px] bg-gradient-to-br from-white/20 to-transparent overflow-hidden z-10">
+                                <div className="w-full h-full rounded-[15px] bg-[#0d0d0d] flex items-center justify-center overflow-hidden">
+                                    {!isLoaded && <Skeleton className="absolute inset-0 z-10 w-full h-full rounded-2xl bg-white/5 animate-pulse" />}
+                                    {avatarUrl ? (
+                                        <img
+                                            src={avatarUrl}
+                                            alt={player.username}
+                                            onLoad={() => setIsLoaded(true)}
+                                            onError={() => setIsLoaded(true)}
+                                            loading="lazy"
+                                            className={cn(
+                                                "w-full h-full object-cover transition-all duration-700 grayscale-[0.2] group-hover:grayscale-0",
+                                                isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-105"
+                                            )}
+                                        />
+                                    ) : (
+                                        <User className="w-10 h-10 text-white/20" />
                                     )}
-                                />
-                            ) : (
-                                <User className="w-10 h-10 text-violet-400/40" />
-                            )}
-                        </div>
-                        <div className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 border-2 border-[#0d091a]">
-                            <Gamepad2 className="w-3.5 h-3.5 text-white" />
-                        </div>
-                    </div>
-                    <div className="text-center">
-                        <h3 className="text-xl font-black text-white group-hover:text-violet-300 transition-colors leading-none mb-1">
-                            {player.username}
-                        </h3>
-                        <span className="text-[10px] font-bold text-violet-400/50">
-                            {player.esportsRole || "Warrior"}
-                        </span>
-                    </div>
-                </div>
+                                </div>
+                            </div>
 
-                {/* Team Status */}
-                <div className="flex flex-col items-center gap-2 mb-8 p-3 rounded-2xl bg-white/[0.02] border border-white/5 group-hover:border-violet-500/20 transition-all duration-500">
-                    <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-violet-400/70" />
-                        <span className="text-[10px] text-white/40 font-black">Team</span>
+                            {/* Verification Badges Integrated */}
+                            <div className="absolute -top-2 -left-2 z-20 flex flex-col gap-1">
+                                {player.isPlayerVerified && (
+                                    <div className="p-1 px-2 rounded-md bg-purple-600 text-white text-[8px] font-black uppercase tracking-tighter shadow-lg" title="Elite Warrior">
+                                        PRO
+                                    </div>
+                                )}
+                                {player.isAccountVerified && (
+                                    <div className="p-1 rounded-full bg-blue-600 text-white shadow-lg" title="Verified Account">
+                                        <ShieldCheck className="w-3 h-3" />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Esports Role Pin */}
+                        <div className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                            <span className="text-[10px] font-bold text-white/60 tracking-wider font-mono">
+                                {player.esportsRole?.toUpperCase() || "WARRIOR"}
+                            </span>
+                        </div>
                     </div>
-                    <span className="text-sm text-white font-bold">
-                        {typeof player.teamId !== "string" && player.teamId ? player.teamId.teamName : "Free Agent"}
-                    </span>
-                    {typeof player.teamId !== "string" && player.teamId && (
-                        <span className="text-[10px] font-bold text-violet-400/50">#{player.teamId.tag}</span>
+
+                    {/* Identity & Team Section */}
+                    <div className="space-y-4 mb-6">
+                        <div>
+                            <h3 className="text-2xl font-black text-white tracking-tight leading-none mb-2 group-hover:text-purple-400 transition-colors">
+                                {player.username}
+                            </h3>
+                            <div className="flex items-center gap-2 text-white/40 group-hover:text-white/60 transition-colors">
+                                <Users className="w-3.5 h-3.5" />
+                                <span className="text-sm font-medium">
+                                    {typeof player.teamId !== "string" && player.teamId ? (
+                                        <span className="flex items-center gap-1.5">
+                                            {player.teamId.teamName}
+                                            <span className="text-white/20">#{player.teamId.tag}</span>
+                                        </span>
+                                    ) : "Free Agent"}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Stats Section: Clean Grid */}
+                    {player.playerStats && (
+                        <div className="grid grid-cols-2 gap-px bg-white/5 rounded-2xl overflow-hidden border border-white/5 mb-6 mt-auto">
+                            <div className="p-4 bg-[#080808] group/stat hover:bg-[#0c0c0c] transition-colors">
+                                <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] mb-1">Win Rate</p>
+                                <p className="text-xl font-black text-white">{player.playerStats.winRate != null ? `${player.playerStats.winRate}%` : '—'}</p>
+                            </div>
+                            <div className="p-4 bg-[#080808] group/stat hover:bg-[#0c0c0c] transition-colors">
+                                <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] mb-1">K/D Ratio</p>
+                                <p className="text-xl font-black text-white">{player.playerStats.kdRatio ?? '—'}</p>
+                            </div>
+                        </div>
                     )}
-                </div>
 
-                {/* Stats Summary (Placeholders for now) */}
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                    <div className="flex flex-col items-center gap-1">
-                        <Star className="w-4 h-4 text-yellow-400/70" />
-                        <span className="text-[10px] text-white/40 font-black">Rating</span>
-                        <span className="text-sm text-white font-bold">4.8</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-1">
-                        <Activity className="w-4 h-4 text-cyan-400/70" />
-                        <span className="text-[10px] text-white/40 font-black">MVP</span>
-                        <span className="text-sm text-white font-bold">12</span>
-                    </div>
-                </div>
-
-                {/* Footer */}
-                <div className="flex items-center justify-center pt-5 border-t border-white/5 relative">
-                    <div className="flex items-center gap-1 text-[10px] font-black text-white/40 group-hover:text-violet-400 transition-all duration-500">
-                        View Profile <span className="text-violet-500">→</span>
+                    {/* Integrated CTA Footer */}
+                    <div className="flex items-center justify-between pt-4 border-t border-white/[0.05]">
+                        <span className="text-[10px] font-black text-white/30 uppercase tracking-widest group-hover:text-white transition-colors">
+                            Analyze Performance
+                        </span>
+                        <ChevronRight size={16} className="text-white/20 group-hover:text-purple-500 transform group-hover:translate-x-1 transition-all" />
                     </div>
                 </div>
             </Link>
-        </motion.div>
+        </div>
     );
 });
 

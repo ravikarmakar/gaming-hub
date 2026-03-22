@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import LoadingSpinner from "@/components/LoadingSpinner";
 import { OrganizerProfileHeader } from "../components/profile/OrganizerProfileHeader";
 import { OrganizerEventsTab } from "../components/profile/OrganizerEventsTab";
 import { OrganizerAboutTab } from "../components/profile/OrganizerAboutTab";
@@ -14,6 +13,7 @@ import { skipToken } from "@tanstack/react-query";
 
 // Extracted sub-components
 import { ReviewsTab } from "../components/profile/ReviewsTab";
+import { ArenaLoading } from "@/components/shared/ArenaLoading";
 
 export const OrganizerProfile = () => {
   const { id } = useParams<{ id: string }>();
@@ -59,11 +59,7 @@ export const OrganizerProfile = () => {
   }, [currentOrg, orgEvents, stats]);
 
   if (isOrgLoading || isEventsLoading || !currentOrg) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <LoadingSpinner />
-      </div>
-    );
+    return <ArenaLoading message="Synchronizing Organization Data..." />;
   }
 
   return (

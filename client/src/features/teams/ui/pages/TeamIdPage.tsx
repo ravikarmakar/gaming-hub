@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Loader2, AlertCircle, Info, Trophy, Users, Globe, Target } from "lucide-react";
+import { AlertCircle, Info, Trophy, Users, Globe, Target } from "lucide-react";
+import { ArenaLoading } from "@/components/shared/ArenaLoading";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -25,15 +26,9 @@ export default function TeamIdPage() {
     }
   }, [id, getTeamById]);
 
+
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#0B0C1A] flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 text-purple-500 animate-spin mx-auto" />
-          <p className="text-gray-400 font-medium">Fetching team intelligence...</p>
-        </div>
-      </div>
-    );
+    return <ArenaLoading message="Fetching Team Data..." />;
   }
 
   if (error || !currentTeam) {

@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 import { useDebounce } from "@/hooks/useDebounce";
-import { usePlayerStore } from "../../store/usePlayerStore";
+import { useSearchPlayersQuery } from "../../hooks/usePlayerQueries";
 import { User } from "@/features/auth/lib/types";
 
 interface PlayerSearchCommandProps {
@@ -42,26 +42,9 @@ export const PlayerSearchCommand = ({
   const [localInvitedIds, setLocalInvitedIds] = useState<string[]>([]);
   const [invitingId, setInvitingId] = useState<string | null>(null);
 
-  const { players, searchByUsername, isLoading: pending, error } = usePlayerStore();
   const debouncedSearch = useDebounce(searchTerm, 500);
-
-  // Memoized search function to prevent unnecessary re-renders
-  const handleSearch = useCallback(
-    async (term: string) => {
-      if (term.trim().length === 0) {
-        return;
-      }
-      await searchByUsername(term, 1, 50);
-    },
-    [searchByUsername]
-  );
-
-  // Effect to trigger search when debounced value changes
-  useEffect(() => {
-    if (open) {
-      handleSearch(debouncedSearch);
-    }
-  }, [open, debouncedSearch, handleSearch]);
+  const { data, isLoading: pending, error } = useSearchPlayersQuery(debouncedSearch, 1, 50);
+  const players = data?.players || [];
 
   // Toggle player selection
   const toggleSelection = useCallback((id: string) => {
@@ -77,8 +60,6 @@ export const PlayerSearchCommand = ({
     if (!open) {
       setSearchTerm("");
       setSelectedIds([]);
-      // Clear previous search results for clean UX when reopening
-      usePlayerStore.getState().clearPlayers();
     }
   }, [open]);
 
@@ -163,7 +144,7 @@ export const PlayerSearchCommand = ({
               <div className="p-4 m-2 rounded-lg bg-red-500/10 border border-red-500/20">
                 <div className="flex items-center gap-2 text-red-400">
                   <AlertCircle className="w-4 h-4" />
-                  <p className="text-sm">{error}</p>
+                  <p className="text-sm">{(error as any)?.response?.data?.message || (error as any)?.message}</p>
                 </div>
               </div>
             )}

@@ -1,5 +1,4 @@
 import React from "react";
-import { Search } from "lucide-react";
 
 import {
     Select,
@@ -9,12 +8,10 @@ import {
     SelectValue
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+
 interface TeamFiltersProps {
-    search: string;
-    onSearchChange: (val: string) => void;
     selectedRegion: string | undefined;
     onRegionChange: (val: string | undefined) => void;
     isRecruiting: boolean | undefined;
@@ -24,8 +21,6 @@ interface TeamFiltersProps {
 }
 
 const TeamFilters: React.FC<TeamFiltersProps> = ({
-    search,
-    onSearchChange,
     selectedRegion,
     onRegionChange,
     isRecruiting,
@@ -36,19 +31,7 @@ const TeamFilters: React.FC<TeamFiltersProps> = ({
     const regions = ["NA", "EU", "ASIA", "SEA", "SA", "OCE", "MENA", "INDIA"];
 
     return (
-        <div className="flex flex-col md:flex-row flex-wrap items-center gap-4 p-4 rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-md">
-            {/* Search Input */}
-            <div className="relative w-full md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400/50" />
-                <Input
-                    value={search}
-                    onChange={(e) => onSearchChange(e.target.value)}
-                    placeholder="Search teams..."
-                    className="pl-10 h-10 bg-white/5 border-white/10 text-[10px] font-bold rounded-xl focus-visible:ring-purple-500/50 placeholder:text-white/20"
-                />
-            </div>
-
-            <div className="h-6 w-[1px] bg-white/10 hidden md:block" />
+        <div className="flex flex-col md:flex-row flex-wrap items-center gap-4 py-4 px-2">
 
             {/* Region Select */}
             <div className="flex items-center gap-2 pl-2">

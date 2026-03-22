@@ -61,6 +61,7 @@ export interface Team {
     isDeleted: boolean;
     hasPendingRequest?: boolean;
     pendingRequestsCount?: number;
+    type?: "team" | "org";
     createdAt: string;
     updatedAt: string;
 }

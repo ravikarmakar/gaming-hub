@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Award, BarChart3, Settings, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { usePlayerStore } from "../../store/usePlayerStore";
+import { usePlayerByIdQuery } from "../../hooks/usePlayerQueries";
 import { PlayerHeader } from "../components/PlayerHeader";
 import { PlayerOverview } from "../components/PlayerOverview";
 import { PlayerAchievements } from "../components/PlayerAchievements";
@@ -11,20 +11,17 @@ import { PlayerStats } from "../components/PlayerStats";
 import { PlayerEquipment } from "../components/PlayerEquipment";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import LoadingSpinner from "@/components/LoadingSpinner";
 import { ProfileBannerLayout } from "@/components/shared/ProfileBannerLayout";
+import { ArenaLoading } from "@/components/shared/ArenaLoading";
 
 const PlayerIdPage = () => {
   const { id } = useParams();
-  const { fetchPlayerById, selectedPlayer, isLoading } = usePlayerStore();
+  const { data, isLoading } = usePlayerByIdQuery(id || "");
+  const selectedPlayer = data?.player;
   const [activeTab, setActiveTab] = useState("overview");
 
-  useEffect(() => {
-    if (id) fetchPlayerById(id, true);
-  }, [id, fetchPlayerById]);
-
   if (isLoading && !selectedPlayer) {
-    return <LoadingSpinner />;
+    return <ArenaLoading message="Accessing Player Data..." />;
   }
 
   if (!selectedPlayer) {

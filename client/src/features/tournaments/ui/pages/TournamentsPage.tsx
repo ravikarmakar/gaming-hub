@@ -3,12 +3,13 @@ import { Loader2, Trophy, Plus, LayoutGrid } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { TournamentGrid } from "@/features/tournaments/ui/components/shared/TournamentGrid";
+import { ResourceGrid } from "@/components/shared/ResourceGrid";
+import TournamentCard from "@/features/tournaments/ui/components/shared/TournamentCard";
 import { Button } from "@/components/ui/button";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
-import { useGetOrgTournamentsQuery, useDeleteTournamentMutation } from "@/features/tournaments/hooks";
+import { useGetOrgTournamentsQuery } from "@/features/tournaments/hooks";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { skipToken } from "@tanstack/react-query";
 
@@ -21,7 +22,6 @@ const OrganizerTournaments: React.FC = () => {
   const navigate = useNavigate();
 
   const { data: orgEvents = [], isLoading } = useGetOrgTournamentsQuery(user?.orgId ? user.orgId : (skipToken as unknown as string));
-  const { mutateAsync: deleteTournament } = useDeleteTournamentMutation();
 
   const [search, setSearch] = useState("");
   const [gameFilter, setGameFilter] = useState("all");
@@ -54,16 +54,6 @@ const OrganizerTournaments: React.FC = () => {
 
   const onButtonClick = (eventId: string) => {
     navigate(`${ORGANIZER_ROUTES.TOURNAMENTS}/${eventId}`);
-  };
-
-  const handleDeleteTournament = async (eventId: string) => {
-    if (window.confirm("Confirm deletion of this arena? This operation is irreversible.")) {
-      try {
-        await deleteTournament(eventId);
-      } catch (error) {
-        console.error("Failed to delete tournament:", error);
-      }
-    }
   };
 
   if (isLoading && orgEvents.length === 0) {
@@ -151,13 +141,26 @@ const OrganizerTournaments: React.FC = () => {
               </span>
               <div className="h-px flex-1 bg-white/5 ml-4" />
             </div>
-            <TournamentGrid
-              events={filteredEvents}
-              onButtonClick={onButtonClick}
-              onDeleteClick={handleDeleteTournament}
-              showEditButton={true}
-              hideViewDetails={true}
-              hideActions={true}
+            <ResourceGrid
+              items={filteredEvents}
+              isLoading={isLoading}
+              isEmpty={filteredEvents.length === 0}
+              hasMore={false}
+              onLoadMore={() => { }}
+              itemHeight={400}
+              columns={3}
+              virtualize={true}
+              rowGap={24}
+              columnGap="1.5rem"
+              renderItem={(event, index) => (
+                <TournamentCard
+                  key={event._id}
+                  event={event}
+                  index={index}
+                  onButtonClick={onButtonClick}
+                  hideViewDetails={true}
+                />
+              )}
             />
           </motion.div>
         )}

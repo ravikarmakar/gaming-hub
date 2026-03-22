@@ -54,6 +54,7 @@ const TournamentById = () => {
     // Secondary data (rounds, leaderboards) is now fetched lazily inside the respective tab components
     // to avoid unnecessary backend calls on initial load.
 
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-brand-black">

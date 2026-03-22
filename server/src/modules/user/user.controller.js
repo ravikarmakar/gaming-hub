@@ -34,9 +34,13 @@ export const getPlayers = TryCatchHandler(async (req, res, next) => {
 
     // Build query
     const query = {
-        _id: { $ne: req.user.userId }, // Exclude self
         isDeleted: false
     };
+
+    // Exclude self only if authenticated
+    if (req.user && req.user.userId) {
+        query._id = { $ne: req.user.userId };
+    }
 
     if (username) {
         const trimmedUsername = username.trim();

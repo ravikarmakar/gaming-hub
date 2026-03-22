@@ -1,8 +1,8 @@
-import React from "react";
-import { motion } from "framer-motion";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Users, Trophy, ShieldCheck, Gamepad2, Globe } from "lucide-react";
-
+import { Users, Trophy, ShieldCheck, Gamepad2, Globe, ChevronRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { Team } from "@/features/teams/lib/types";
 
@@ -11,97 +11,114 @@ interface TeamCardProps {
     index: number;
 }
 
-const TeamCard = React.memo(React.forwardRef<HTMLDivElement, TeamCardProps>(({ team, index }, ref) => {
+const TeamCard = React.memo(React.forwardRef<HTMLDivElement, TeamCardProps>(({ team }, ref) => {
+    const [isLoaded, setIsLoaded] = useState(false);
+
     return (
-        <motion.div
-            ref={ref}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            whileHover={{ y: -5 }}
-            className="group"
-            layout // Enable layout animations
-        >
+        <div ref={ref} className="group relative h-full">
             <Link
                 to={TEAM_ROUTES.PROFILE.replace(":id", team._id)}
-                className="block relative h-full bg-[#0F111A]/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 hover:bg-[#121421]/80 hover:border-purple-500/50 transition-all duration-500 overflow-hidden shadow-2xl shadow-purple-500/5"
+                className="relative flex flex-col h-full overflow-hidden rounded-3xl bg-[#030303] border border-white/[0.08] transition-all duration-500 hover:border-white/20 hover:bg-[#0a0a0a] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.8)]"
             >
-                {/* Glow Effect */}
-                <div className="absolute -inset-0.5 bg-gradient-to-br from-purple-600/30 to-indigo-600/30 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition duration-500" />
+                {/* Subtle Top Shine */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-                {/* Status Badges */}
-                <div className="absolute top-5 right-5 flex gap-2 z-10">
-                    {team.isRecruiting && (
-                        <div className="relative">
-                            <div className="absolute -inset-1 bg-emerald-500/20 blur-sm rounded-full animate-pulse" />
-                            <span className="relative flex items-center px-2.5 py-1 rounded-full bg-white/5 text-emerald-400 text-[10px] font-black border border-emerald-500/30">
-                                Recruiting
-                            </span>
+                {/* Header: Logo + Info */}
+                <div className="flex items-center gap-4 p-6 pb-4">
+                    {/* Logo */}
+                    <div className="relative flex-shrink-0">
+                        <div className="w-14 h-14 rounded-full bg-[#0d0d0d] border border-white/10 flex items-center justify-center overflow-hidden transition-transform duration-300 group-hover:scale-105 p-0.5">
+                            <div className="w-full h-full rounded-full bg-[#111] flex items-center justify-center overflow-hidden">
+                                {!isLoaded && team.imageUrl && <Skeleton className="absolute inset-0 z-10 w-full h-full rounded-full bg-white/5 animate-pulse" />}
+                                {team.imageUrl ? (
+                                    <img
+                                        src={team.imageUrl}
+                                        alt={team.teamName}
+                                        onLoad={() => setIsLoaded(true)}
+                                        onError={() => setIsLoaded(true)}
+                                        loading="lazy"
+                                        className={cn(
+                                            "w-full h-full object-cover transition-all duration-500 grayscale-[0.2] group-hover:grayscale-0",
+                                            isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-105"
+                                        )}
+                                    />
+                                ) : (
+                                    <Gamepad2 className="w-6 h-6 text-white/20" />
+                                )}
+                            </div>
                         </div>
-                    )}
-                    {team.isVerified && (
-                        <div className="p-1 rounded-full bg-blue-500/10 border border-blue-500/20 shadow-lg shadow-blue-500/10">
-                            <ShieldCheck className="w-4 h-4 text-blue-400 fill-blue-400/20" />
+                        <div className="absolute -bottom-1 -right-1 p-1 rounded-full bg-purple-600 border border-white/10 shadow-lg">
+                            <Globe className="w-3 h-3 text-white" />
                         </div>
-                    )}
-                </div>
+                    </div>
 
-                {/* Header */}
-                <div className="flex flex-col items-center mb-8 pt-4 relative">
-                    <div className="relative mb-5">
-                        <div className="absolute -inset-2 bg-gradient-to-tr from-purple-600 to-indigo-600 rounded-full blur-md opacity-20 group-hover:opacity-60 transition duration-500" />
-                        <div className="relative w-24 h-24 rounded-3xl bg-[#0d091a] border border-white/10 flex items-center justify-center overflow-hidden rotate-3 group-hover:rotate-0 transition-transform duration-500">
-                            {team.imageUrl ? (
-                                <img src={team.imageUrl} alt={team.teamName} className="w-full h-full object-cover" />
-                            ) : (
-                                <Gamepad2 className="w-10 h-10 text-purple-400/40" />
+                    {/* Name & Tag */}
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-lg font-black text-white group-hover:text-purple-400 transition-colors truncate leading-tight">
+                                {team.teamName}
+                            </h3>
+                            {(team.type === "org" || team.type === "team") && (
+                                <span className="px-1.5 py-0.5 rounded bg-white/10 border border-white/10 text-[8px] font-black text-white/60 uppercase tracking-widest leading-none">
+                                    {team.type}
+                                </span>
                             )}
                         </div>
+                        <span className="text-xs text-white/30 font-medium tracking-wider">
+                            #{team.tag}
+                        </span>
                     </div>
-                    <div className="text-center">
-                        <h3 className="text-xl font-black text-white group-hover:text-purple-300 transition-colors leading-none mb-1">
-                            {team.teamName}
-                        </h3>
-                        <span className="text-[10px] font-bold text-purple-400/50">#{team.tag}</span>
+
+                    {/* Status Badges */}
+                    <div className="flex flex-col gap-1.5 flex-shrink-0">
+                        {team.isVerified && (
+                            <div className="p-1.5 rounded-full bg-blue-600 text-white shadow-lg" title="Verified Team">
+                                <ShieldCheck className="w-3 h-3" />
+                            </div>
+                        )}
+                        {team.isRecruiting && (
+                            <div className="p-1.5 rounded-full bg-emerald-600 text-white shadow-lg" title="Recruiting">
+                                <Users className="w-3 h-3" />
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Info Grid */}
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                    <div className="flex flex-col items-center gap-1 p-3 rounded-2xl bg-white/[0.02] border border-white/5 group-hover:border-purple-500/20 transition-all duration-500">
-                        <Users className="w-4 h-4 text-purple-400/70" />
-                        <span className="text-[10px] text-white/40 font-black">Members</span>
-                        <span className="text-sm text-white font-bold">{team.teamMembers?.length || 0}</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-1 p-3 rounded-2xl bg-white/[0.02] border border-white/5 group-hover:border-purple-500/20 transition-all duration-500">
-                        <Trophy className="w-4 h-4 text-indigo-400/70" />
-                        <span className="text-[10px] text-white/40 font-black">Tourneys</span>
-                        <span className="text-sm text-white font-bold">{team.playedTournaments?.length || 0}</span>
-                    </div>
-                </div>
-
-                {/* Bio */}
-                <div className="relative mb-8">
-                    <p className="text-sm text-purple-200/40 line-clamp-2 text-center h-10 leading-relaxed px-2">
-                        "{team.bio || "Crafting a legacy in the digital arena..."}"
+                {/* Team Bio */}
+                <div className="mx-6 px-4 py-3 rounded-xl bg-white/5 mb-4 border border-white/5">
+                    <p className="text-xs text-white/40 line-clamp-2 leading-relaxed italic">
+                        "{team.bio || "Building a legacy in the arena..."}"
                     </p>
                 </div>
 
-                {/* Region Footer */}
-                <div className="flex items-center justify-between pt-5 border-t border-white/5 relative">
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5">
-                        <Globe className="w-3.5 h-3.5 text-purple-500/70" />
-                        <span className="text-[10px] font-black text-purple-200/60">
-                            {team.region || "Global"}
-                        </span>
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-px bg-white/5 rounded-2xl overflow-hidden border border-white/5 mx-6 mb-6 mt-auto">
+                    <div className="bg-[#080808] p-4 group/metric hover:bg-[#0c0c0c] transition-colors">
+                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] mb-1 flex items-center gap-1.5">
+                            <Users size={10} className="text-white/20" /> Members
+                        </p>
+                        <p className="text-xl font-black text-white tracking-tight">{team.teamMembers?.length || 0}</p>
                     </div>
-                    <div className="flex items-center gap-1 text-[10px] font-black text-white/40 group-hover:text-purple-400 transition-all duration-500">
-                        Nexus Profile <span className="text-purple-500">→</span>
+                    <div className="bg-[#080808] p-4 group/metric hover:bg-[#0c0c0c] transition-colors">
+                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] mb-1 flex items-center gap-1.5">
+                            <Trophy size={10} className="text-white/20" /> Tourneys
+                        </p>
+                        <p className="text-xl font-black text-white tracking-tight">{team.playedTournaments?.length || 0}</p>
                     </div>
                 </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between pt-4 border-t border-white/[0.05] mx-6 mb-6">
+                    <span className="text-[10px] font-black text-white/30 uppercase tracking-widest group-hover:text-white transition-colors">
+                        Team Profile
+                    </span>
+                    <ChevronRight size={16} className="text-white/20 group-hover:text-purple-500 transform group-hover:translate-x-1 transition-all" />
+                </div>
             </Link>
-        </motion.div>
+        </div>
     );
 }));
+
+TeamCard.displayName = "TeamCard";
 
 export default TeamCard;

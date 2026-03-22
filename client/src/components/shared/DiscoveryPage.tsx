@@ -1,5 +1,4 @@
 import { ReactNode } from "react";
-import { AnimatePresence } from "framer-motion";
 import { ResourceGridWrapper } from "@/components/shared/ResourceGridWrapper";
 
 export interface DiscoveryPageProps<T> {
@@ -17,6 +16,10 @@ export interface DiscoveryPageProps<T> {
     filters: ReactNode;
     items: T[];
     renderItem: (item: T, index: number) => ReactNode;
+    isFetchingMore?: boolean;
+    virtualize?: boolean;
+    itemHeight?: number;
+    columns?: number;
 }
 
 export const DiscoveryPage = <T,>({
@@ -31,6 +34,10 @@ export const DiscoveryPage = <T,>({
     filters,
     items,
     renderItem,
+    isFetchingMore = false,
+    virtualize = false,
+    itemHeight,
+    columns,
 }: DiscoveryPageProps<T>) => {
     return (
         <ResourceGridWrapper
@@ -43,10 +50,14 @@ export const DiscoveryPage = <T,>({
             onLoadMore={onLoadMore}
             emptyMessage={emptyMessage}
             filters={filters}
+            isFetchingMore={isFetchingMore}
+            items={items}
+            renderItem={renderItem}
+            virtualize={virtualize}
+            itemHeight={itemHeight}
+            columns={columns}
         >
-            <AnimatePresence mode="popLayout">
-                {items.map((item, index) => renderItem(item, index))}
-            </AnimatePresence>
+            {!virtualize && items.map((item, index) => renderItem(item, index))}
         </ResourceGridWrapper>
     );
 };
