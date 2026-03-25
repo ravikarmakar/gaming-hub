@@ -1,5 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { Trophy, Users, MessageSquare, ListOrdered, Gavel, Info, Map } from "lucide-react";
+import { ErrorBoundary } from "react-error-boundary";
+import { ErrorFallback } from "@/components/ErrorFallback";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -142,10 +144,12 @@ const TournamentById = () => {
                                 }).map((tab) => (
                                     <TabsContent key={tab.value} value={tab.value} className="m-0">
                                         {activeTab === tab.value && (
-                                            <tab.Component
-                                                eventDetails={eventDetails}
-                                                eventId={id}
-                                            />
+                                            <ErrorBoundary FallbackComponent={ErrorFallback}>
+                                                <tab.Component
+                                                    eventDetails={eventDetails}
+                                                    eventId={id}
+                                                />
+                                            </ErrorBoundary>
                                         )}
                                     </TabsContent>
                                 ))}

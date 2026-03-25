@@ -4,7 +4,7 @@ import { organizerApi } from "../api/organizerApi";
 import { organizerKeys } from "./organizerKeys";
 import { Organizer, DashboardStats, Invite, Pagination, JoinRequest } from "../types";
 import { User } from "@/features/auth/lib/types";
-import { Notification } from "@/features/notifications/store/useNotificationStore";
+import { Notification } from "@/features/notifications/types";
 
 
 // --- GET ORG DETAILS BY ID ---
@@ -48,7 +48,7 @@ export const useInfiniteOrganizersQuery = (
         queryFn: ({ pageParam = 1 }) => organizerApi.fetchOrganizers(pageParam as number, limit, search),
         getNextPageParam: (lastPage) => {
             const { pagination } = lastPage;
-            if (pagination.page < pagination.pages) {
+            if (pagination.page && pagination.pages && pagination.page < pagination.pages) {
                 return pagination.page + 1;
             }
             return undefined;

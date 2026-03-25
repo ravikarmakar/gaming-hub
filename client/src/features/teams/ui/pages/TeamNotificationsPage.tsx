@@ -1,37 +1,19 @@
-import React, { useEffect, useMemo } from "react";
+import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Loader2, Inbox } from "lucide-react";
+import { Bell, Loader2, Inbox, AlertTriangle } from "lucide-react";
 
-import { useNotificationStore } from "@/features/notifications/store/useNotificationStore";
+import { useTeamNotificationsQuery } from "@/features/notifications/hooks/useNotificationQueries";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import NotificationItem from "@/features/notifications/ui/components/NotificationItem";
 import { TeamPageHeader } from "../components/TeamPageHeader";
 
 
 const TeamNotificationsPage: React.FC = () => {
-    const { notifications, isLoading, fetchTeamNotifications } = useNotificationStore();
     const { user } = useAuthStore();
+    const teamId = user?.teamId?.toString() || "";
+    const { data: notificationsData, isLoading, isError } = useTeamNotificationsQuery(teamId);
 
-    useEffect(() => {
-        if (user?.teamId) {
-            fetchTeamNotifications(user.teamId.toString());
-        }
-    }, [fetchTeamNotifications, user?.teamId]);
-
-    // Strict filter for current team notifications
-    const teamNotifications = useMemo(() => {
-        if (!user?.teamId) return [];
-        const currentTeamId = user.teamId.toString();
-
-        return notifications.filter(n => {
-            // Get teamId from relatedData (handle object or string)
-            const notificationTeamId = n.relatedData?.teamId?._id
-                ? n.relatedData.teamId._id.toString()
-                : n.relatedData?.teamId?.toString();
-
-            return notificationTeamId === currentTeamId;
-        });
-    }, [notifications, user?.teamId]);
+    const teamNotifications = notificationsData?.notifications || [];
 
     return (
         <div className="h-full">
@@ -44,7 +26,27 @@ const TeamNotificationsPage: React.FC = () => {
 
                 {/* Notifications List */}
                 <div className="space-y-4 w-full">
-                    {isLoading && teamNotifications.length === 0 ? (
+                    {!teamId ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-center">
+                            <div className="w-24 h-24 rounded-full bg-white/[0.02] flex items-center justify-center mb-6">
+                                <Inbox className="w-12 h-12 text-gray-700" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-white mb-2">No Team Detected</h3>
+                            <p className="text-gray-500 max-w-xs mx-auto">
+                                You need to join or create a team to receive team notifications.
+                            </p>
+                        </div>
+                    ) : isError ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-center">
+                            <div className="w-24 h-24 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
+                                <AlertTriangle className="w-12 h-12 text-red-500" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-red-500 mb-2">Signal Lost</h3>
+                            <p className="text-red-400/80 max-w-xs mx-auto">
+                                Failed to retrieve team notifications. Please try again.
+                            </p>
+                        </div>
+                    ) : isLoading && teamNotifications.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20">
                             <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-4" />
                             <p className="text-purple-200/60 font-medium">Scanning team frequencies...</p>

@@ -67,6 +67,17 @@ export interface Tournament {
     attendees?: number; // UI compatibility
 }
 
+export interface TournamentListResponse {
+    data: Tournament[];
+    pagination?: {
+        total: number;
+        limit: number;
+        nextCursor?: string | null;
+        hasMore: boolean;
+    };
+    success: boolean;
+}
+
 export interface Team {
     _id: string;
     teamName: string;

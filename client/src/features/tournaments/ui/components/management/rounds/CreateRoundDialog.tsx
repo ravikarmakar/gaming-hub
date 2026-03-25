@@ -113,7 +113,7 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
             });
 
             if (result?._id && onSuccess) {
-                onSuccess(result._id);
+                onSuccess(result._id as string);
             }
 
             onOpenChange(false);

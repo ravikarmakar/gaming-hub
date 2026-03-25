@@ -15,11 +15,11 @@ interface ProfileBannerLayoutProps {
 export const ProfileBannerLayout = ({
     bannerImage,
     children,
-    bannerHeight = "h-64 md:h-80 lg:h-96",
+    bannerHeight = "h-[35vh] md:h-[40vh] lg:h-[50vh] min-h-[280px]",
     className = ""
 }: ProfileBannerLayoutProps) => {
     return (
-        <div className={`min-h-screen bg-[#050505] text-white overflow-x-hidden relative ${className}`}>
+        <div className={`min-h-screen bg-[#050505] text-white relative ${className}`}>
             {/* Background Decorative Orbs (Shared across all profile types) */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
                 <div
@@ -53,12 +53,13 @@ export const ProfileBannerLayout = ({
                     /* Fallback tactical gradient if no image is provided */
                     <div className="w-full h-full bg-gradient-to-br from-violet-900/20 via-[#050505] to-fuchsia-900/20 opacity-60" />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/60 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#050505] to-transparent" />
+                {/* Symmetric tactical overlays (Top for nav visibility, Bottom for content blending) */}
+                <div className="absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-[#050505]/95 via-[#050505]/60 to-transparent z-10" />
+                <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-[#050505]/95 via-[#050505]/60 to-transparent z-10" />
             </div>
 
             {/* Profile Content Container (With standard overlap) */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 md:-mt-32 relative z-10 space-y-12 pb-20">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 md:-mt-32 relative z-10 space-y-10 pb-20">
                 {children}
             </div>
         </div>

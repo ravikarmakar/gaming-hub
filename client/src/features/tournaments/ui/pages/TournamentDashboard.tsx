@@ -8,6 +8,8 @@ import {
     Settings,
     Zap
 } from "lucide-react";
+import { ErrorBoundary } from "react-error-boundary";
+import { ErrorFallback } from "@/components/ErrorFallback";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -149,42 +151,46 @@ export default function TournamentDashboard() {
 
                 <div className="min-h-[500px] mt-0 bg-gray-900/20 border border-white/5 rounded-2xl px-2 backdrop-blur-sm shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-700">
                     <TabsContent value="overview" className="m-0">
-                        {activeTab === "overview" && <TournamentOverview eventDetails={eventDetails} />}
+                        {activeTab === "overview" && <ErrorBoundary FallbackComponent={ErrorFallback}><TournamentOverview eventDetails={eventDetails} /></ErrorBoundary>}
                     </TabsContent>
 
                     {(eventDetails?.eventProgress !== "pending") && (
                         eventDetails?.eventType === "scrims" ? (
                             <TabsContent value="scrims" className="m-0">
-                                {activeTab === "scrims" && <ScrimsManager eventId={id} />}
+                                {activeTab === "scrims" && <ErrorBoundary FallbackComponent={ErrorFallback}><ScrimsManager eventId={id} /></ErrorBoundary>}
                             </TabsContent>
                         ) : (
                             <TabsContent value="rounds" className="m-0">
                                 {activeTab === "rounds" && (
-                                    <RoundsManager
-                                        eventId={id}
-                                        isFocusMode={isFocusMode}
-                                        onToggleFocus={() => setIsFocusMode(!isFocusMode)}
-                                    />
+                                    <ErrorBoundary FallbackComponent={ErrorFallback}>
+                                        <RoundsManager
+                                            eventId={id}
+                                            isFocusMode={isFocusMode}
+                                            onToggleFocus={() => setIsFocusMode(!isFocusMode)}
+                                        />
+                                    </ErrorBoundary>
                                 )}
                             </TabsContent>
                         )
                     )}
                     <TabsContent value="teams" className="m-0">
-                        {activeTab === "teams" && <RegisteredTeamsList eventId={id} />}
+                        {activeTab === "teams" && <ErrorBoundary FallbackComponent={ErrorFallback}><RegisteredTeamsList eventId={id} /></ErrorBoundary>}
                     </TabsContent>
                     <TabsContent value="settings" className="m-0">
                         {activeTab === "settings" && (
-                            <TournamentSettings
-                                eventId={id}
-                                eventType={eventDetails?.eventType}
-                                registrationStatus={eventDetails?.registrationStatus}
-                                onEdit={handleEdit}
-                                onDelete={() => setIsDeleteDialogOpen(true)}
-                            />
+                            <ErrorBoundary FallbackComponent={ErrorFallback}>
+                                <TournamentSettings
+                                    eventId={id}
+                                    eventType={eventDetails?.eventType}
+                                    registrationStatus={eventDetails?.registrationStatus}
+                                    onEdit={handleEdit}
+                                    onDelete={() => setIsDeleteDialogOpen(true)}
+                                />
+                            </ErrorBoundary>
                         )}
                     </TabsContent>
                     <TabsContent value="results" className="m-0">
-                        {activeTab === "results" && <ResultsTab eventId={id} />}
+                        {activeTab === "results" && <ErrorBoundary FallbackComponent={ErrorFallback}><ResultsTab eventId={id} /></ErrorBoundary>}
                     </TabsContent>
                 </div>
             </Tabs>

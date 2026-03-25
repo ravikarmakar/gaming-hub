@@ -6,7 +6,7 @@ import { playerKeys } from "./playerKeys";
 // --- LIST PLAYERS ---
 export const usePlayersQuery = (
     filters: PlayerFilters = {},
-    options?: Omit<UseQueryOptions<any, AxiosError>, "queryKey" | "queryFn">
+    options?: Omit<UseQueryOptions<Awaited<ReturnType<typeof playerApi.fetchPlayers>>, AxiosError>, "queryKey" | "queryFn">
 ) => {
     return useQuery({
         queryKey: playerKeys.list(filters),
@@ -18,16 +18,17 @@ export const usePlayersQuery = (
 // --- INFINITE LIST PLAYERS ---
 export const useInfinitePlayersQuery = (
     filters: Omit<PlayerFilters, 'page'> = {},
-    options?: Omit<UseInfiniteQueryOptions<any, AxiosError, InfiniteData<any, number>, any, number>, "queryKey" | "queryFn" | "getNextPageParam" | "initialPageParam">
+    options?: Omit<UseInfiniteQueryOptions<Awaited<ReturnType<typeof playerApi.fetchPlayers>>, AxiosError, InfiniteData<Awaited<ReturnType<typeof playerApi.fetchPlayers>>, number>, readonly unknown[], number>, "queryKey" | "queryFn" | "getNextPageParam" | "initialPageParam">
 ) => {
     const { limit = 20, ...restFilters } = filters;
     return useInfiniteQuery({
         queryKey: [...playerKeys.lists(), 'infinite', { ...restFilters, limit }],
         queryFn: ({ pageParam }) => playerApi.fetchPlayers({ ...restFilters, page: pageParam as number, limit }),
         initialPageParam: 1,
-        getNextPageParam: (lastPage: any) => {
+        getNextPageParam: (lastPage) => {
             const { pagination } = lastPage;
-            if (pagination && pagination.hasMore) {
+            // Server returns currentPage and hasMore
+            if (pagination && pagination.hasMore && pagination.currentPage !== undefined) {
                 return pagination.currentPage + 1;
             }
             return undefined;
@@ -48,7 +49,7 @@ export const useInfinitePlayersQuery = (
 // --- PLAYER BY ID ---
 export const usePlayerByIdQuery = (
     id: string,
-    options?: Omit<UseQueryOptions<any, AxiosError>, "queryKey" | "queryFn">
+    options?: Omit<UseQueryOptions<Awaited<ReturnType<typeof playerApi.fetchPlayerById>>, AxiosError>, "queryKey" | "queryFn">
 ) => {
     return useQuery({
         ...options,
@@ -63,7 +64,7 @@ export const useSearchPlayersQuery = (
     query: string,
     page: number = 1,
     limit: number = 20,
-    options?: Omit<UseQueryOptions<any, AxiosError>, "queryKey" | "queryFn">
+    options?: Omit<UseQueryOptions<Awaited<ReturnType<typeof playerApi.searchPlayers>>, AxiosError>, "queryKey" | "queryFn">
 ) => {
     return useQuery({
         ...options,

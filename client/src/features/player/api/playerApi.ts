@@ -1,7 +1,8 @@
 import { axiosInstance } from "@/lib/axios";
 import { PLAYER_ROUTES } from "../lib/routes";
 import { User } from "@/features/auth/lib/types";
-import { ApiListResponse, ApiSingleResponse } from "@/lib/api-types";
+
+import { Pagination } from "@/features/organizer/types";
 
 export interface PlayerFilters {
     username?: string;
@@ -11,20 +12,21 @@ export interface PlayerFilters {
     hasTeam?: boolean;
     page?: number;
     limit?: number;
+    [key: string]: any;
 }
 
 export const playerApi = {
-    fetchPlayers: async (params: PlayerFilters = {}): Promise<ApiListResponse<User>> => {
+    fetchPlayers: async (params: PlayerFilters = {}): Promise<{ players: User[]; pagination: Pagination }> => {
         const response = await axiosInstance.get(PLAYER_ROUTES.ALL_PLAYERS, { params });
         return response.data;
     },
 
-    fetchPlayerById: async (id: string): Promise<ApiSingleResponse<User>> => {
-        const response = await axiosInstance.get(`/players/${id}`);
+    fetchPlayerById: async (id: string): Promise<{ player: User }> => {
+        const response = await axiosInstance.get(`/players/${encodeURIComponent(id)}`);
         return response.data;
     },
 
-    searchPlayers: async (query: string, page = 1, limit = 20): Promise<{ players: User[]; pagination: any }> => {
+    searchPlayers: async (query: string, page = 1, limit = 20): Promise<{ players: User[]; pagination: Pagination }> => {
         const response = await axiosInstance.get(PLAYER_ROUTES.ALL_PLAYERS, {
             params: { username: query, page, limit },
         });

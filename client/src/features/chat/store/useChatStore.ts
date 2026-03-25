@@ -21,11 +21,12 @@ interface ChatState {
     messages: ChatMessage[];
     isLoading: boolean;
     error: string | null;
+    currentFetchId: number;
 
     editingMessage: ChatMessage | null;
     setEditingMessage: (message: ChatMessage | null) => void;
 
-    fetchHistory: (targetId: string, scope: "team" | "organizer" | "group") => Promise<void>;
+    fetchHistory: (targetId: string, scope: "team" | "organizer" | "group" | "user") => Promise<void>;
     addMessage: (message: ChatMessage) => void;
     updateMessage: (messageId: string, content: string) => Promise<void>;
     deleteMessage: (messageId: string) => Promise<void>;
@@ -41,12 +42,24 @@ export const useChatStore = create<ChatState>((set) => ({
     messages: [],
     isLoading: false,
     error: null,
+    currentFetchId: 0,
     editingMessage: null,
 
     setEditingMessage: (message) => set({ editingMessage: message }),
 
     fetchHistory: async (targetId, scope) => {
-        set({ isLoading: true, error: null });
+        const fetchId = Math.random();
+        set({ isLoading: true, error: null, currentFetchId: fetchId });
+
+        // Bypass backend fetch for user-to-user chat until API is ready
+        if (scope === "user") {
+            const { currentFetchId } = useChatStore.getState();
+            if (currentFetchId === fetchId) {
+                set({ messages: [], isLoading: false });
+            }
+            return;
+        }
+
         try {
             let baseUrl = "/teams";
             if (scope === "organizer") baseUrl = "/organizers";
@@ -71,7 +84,9 @@ export const useChatStore = create<ChatState>((set) => ({
     updateMessage: async (messageId, content) => {
         const { messages } = useChatStore.getState();
         const message = messages.find(m => m._id === messageId);
-        if (!message) return;
+        if (!message) throw new Error("Message not found");
+
+        if (message.scope === "user") throw new Error("User chat editing is not supported yet"); // Bypass until API is ready
 
         let baseUrl = "/teams";
         if (message.scope === "organizer") baseUrl = "/organizers";
@@ -89,7 +104,9 @@ export const useChatStore = create<ChatState>((set) => ({
     deleteMessage: async (messageId) => {
         const { messages } = useChatStore.getState();
         const message = messages.find(m => m._id === messageId);
-        if (!message) return;
+        if (!message) throw new Error("Message not found");
+
+        if (message.scope === "user") throw new Error("User chat deletion is not supported yet"); // Bypass until API is ready
 
         let baseUrl = "/teams";
         if (message.scope === "organizer") baseUrl = "/organizers";

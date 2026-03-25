@@ -1,6 +1,6 @@
 import { axiosInstance } from "@/lib/axios";
 import { TOURNAMENT_ENDPOINTS } from "@/features/tournaments/lib";
-import { Tournament } from "@/features/tournaments/types";
+import { Tournament, TournamentListResponse } from "@/features/tournaments/types";
 
 export const tournamentApi = {
     createTournament: async (data: FormData): Promise<Tournament> => {
@@ -35,18 +35,18 @@ export const tournamentApi = {
     },
 
     // Round operations
-    getRounds: async (eventId: string): Promise<any[]> => {
+    getRounds: async (eventId: string): Promise<Record<string, unknown>[]> => {
         const res = await axiosInstance.get(`/rounds?eventId=${eventId}`);
         return res.data.data;
     },
-    createRound: async (data: { eventId: string; params: any }): Promise<any> => {
+    createRound: async (data: { eventId: string; params: Record<string, unknown> }): Promise<Record<string, unknown>> => {
         const res = await axiosInstance.post("/rounds/create", {
             eventId: data.eventId,
             ...data.params
         });
         return res.data.rounds;
     },
-    updateRound: async (data: any): Promise<void> => {
+    updateRound: async (data: { roundId: string; eventId: string; [key: string]: unknown }): Promise<void> => {
         const { roundId, ...payload } = data;
         await axiosInstance.put(`/rounds/${roundId}`, payload);
     },
@@ -59,20 +59,20 @@ export const tournamentApi = {
     resetRound: async (data: { roundId: string; eventId: string }): Promise<void> => {
         await axiosInstance.post(`/rounds/${data.roundId}/reset`, { eventId: data.eventId });
     },
-    mergeTeamsToRound: async (data: { roundId: string; eventId: string }): Promise<any> => {
+    mergeTeamsToRound: async (data: { roundId: string; eventId: string }): Promise<Record<string, unknown>> => {
         const res = await axiosInstance.post(`/rounds/${data.roundId}/merge-qualified`, { eventId: data.eventId });
         return res.data;
     },
 
     // Group operations
-    getGroups: async (params: { roundId: string; page: number; limit: number; search?: string; status?: string; sortBy?: string }): Promise<any> => {
+    getGroups: async (params: { roundId: string; page: number; limit: number; search?: string; status?: string; sortBy?: string }): Promise<{ groups: Record<string, unknown>[]; pagination: Record<string, unknown> }> => {
         const res = await axiosInstance.get("/groups", { params });
         return {
             groups: res.data.data,
             pagination: res.data.pagination
         };
     },
-    getGroupDetails: async (groupId: string): Promise<any> => {
+    getGroupDetails: async (groupId: string): Promise<Record<string, unknown>> => {
         const res = await axiosInstance.get(`/groups/${groupId}`);
         return res.data.group;
     },
@@ -87,32 +87,32 @@ export const tournamentApi = {
     createSingleGroup: async (data: { roundId: string; eventId: string; groupName?: string; matchTime?: string; groupType?: string; groupSize?: number }): Promise<void> => {
         await axiosInstance.post("/groups/manual-create", data);
     },
-    updateGroup: async (data: { groupId: string; eventId: string; payload: any }): Promise<void> => {
+    updateGroup: async (data: { groupId: string; eventId: string; payload: Record<string, unknown> }): Promise<void> => {
         await axiosInstance.put(`/groups/${data.groupId}`, { ...data.payload, eventId: data.eventId });
     },
-    resetGroup: async (data: { groupId: string; eventId: string }): Promise<any> => {
+    resetGroup: async (data: { groupId: string; eventId: string }): Promise<{ message?: string; [key: string]: unknown }> => {
         const { data: resData } = await axiosInstance.post(`/groups/${data.groupId}/reset`, { eventId: data.eventId });
         return resData;
     },
-    deleteGroup: async (data: { groupId: string; eventId: string }): Promise<any> => {
+    deleteGroup: async (data: { groupId: string; eventId: string }): Promise<{ message?: string; [key: string]: unknown }> => {
         const { data: resData } = await axiosInstance.delete(`/groups/${data.groupId}`, { params: { eventId: data.eventId } });
         return resData;
     },
-    mergeTeamsToGroup: async (data: { groupId: string; eventId: string }): Promise<any> => {
+    mergeTeamsToGroup: async (data: { groupId: string; eventId: string }): Promise<{ message?: string; [key: string]: unknown }> => {
         const res = await axiosInstance.post(`/groups/${data.groupId}/merge-qualified`, { eventId: data.eventId });
         return res.data;
     },
-    injectTeam: async (data: { groupId: string; teamId: string; eventId: string }): Promise<any> => {
+    injectTeam: async (data: { groupId: string; teamId: string; eventId: string }): Promise<Record<string, unknown>> => {
         const res = await axiosInstance.post("/groups/inject-team", data);
         return res.data;
     },
 
     // Leaderboard operations
-    getLeaderboard: async (groupId: string): Promise<any> => {
+    getLeaderboard: async (groupId: string): Promise<Record<string, unknown>> => {
         const res = await axiosInstance.get(`/leaderboards/${groupId}`);
         return res.data;
     },
-    updateTeamScore: async (data: { groupId: string; eventId: string; teamId: string; stats: any }): Promise<any> => {
+    updateTeamScore: async (data: { groupId: string; eventId: string; teamId: string; stats: Record<string, unknown> }): Promise<Record<string, unknown>> => {
         const res = await axiosInstance.put(`/leaderboards/${data.groupId}/score`, {
             teamId: data.teamId,
             eventId: data.eventId,
@@ -120,7 +120,7 @@ export const tournamentApi = {
         });
         return res.data;
     },
-    updateGroupResults: async (data: { groupId: string; eventId: string; results: any[]; pairingType?: string }): Promise<any> => {
+    updateGroupResults: async (data: { groupId: string; eventId: string; results: Record<string, unknown>[]; pairingType?: string }): Promise<Record<string, unknown>> => {
         const res = await axiosInstance.put(`/leaderboards/${data.groupId}/results`, {
             results: data.results,
             eventId: data.eventId,
@@ -130,19 +130,19 @@ export const tournamentApi = {
     },
 
     // Team operations
-    getRegisteredTeams: async (eventId: string, params: any): Promise<any> => {
+    getRegisteredTeams: async (eventId: string, params: Record<string, unknown>): Promise<Record<string, unknown>> => {
         const res = await axiosInstance.get(`/events/registered-teams/${eventId}`, { params });
         return res.data;
     },
-    getInvitedTeams: async (eventId: string, params: any): Promise<any> => {
+    getInvitedTeams: async (eventId: string, params: Record<string, unknown>): Promise<Record<string, unknown>> => {
         const res = await axiosInstance.get(`/events/invited-teams/${eventId}`, { params });
         return res.data;
     },
-    getT1SpecialTeams: async (eventId: string, params: any): Promise<any> => {
+    getT1SpecialTeams: async (eventId: string, params: Record<string, unknown>): Promise<Record<string, unknown>> => {
         const res = await axiosInstance.get(`/events/t1-special-teams/${eventId}`, { params });
         return res.data;
     },
-    searchTeams: async (params: { search: string; limit: number }): Promise<any> => {
+    searchTeams: async (params: { search: string; limit: number }): Promise<Record<string, unknown>[]> => {
         const res = await axiosInstance.get('/teams', { params });
         return res.data.data;
     },
@@ -155,7 +155,7 @@ export const tournamentApi = {
         const res = await axiosInstance.post(`/events/${eventId}/like`);
         return res.data.data;
     },
-    registerTournament: async (eventId: string): Promise<any> => {
+    registerTournament: async (eventId: string): Promise<{ message?: string; [key: string]: unknown }> => {
         const response = await axiosInstance.post(TOURNAMENT_ENDPOINTS.REGISTER(eventId), {});
         return response.data;
     },
@@ -166,7 +166,7 @@ export const tournamentApi = {
             status: response.data.status || (response.data.registered ? "approved" : "none")
         };
     },
-    getTournaments: async (params: { search?: string; game?: string; category?: string; cursor?: string | null; limit?: number }): Promise<any> => {
+    getTournaments: async (params: { search?: string; game?: string; category?: string; cursor?: string | null; limit?: number }): Promise<TournamentListResponse> => {
         const response = await axiosInstance.get(TOURNAMENT_ENDPOINTS.ALL, { params });
         return response.data;
     },

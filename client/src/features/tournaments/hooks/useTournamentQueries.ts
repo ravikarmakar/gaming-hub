@@ -1,6 +1,6 @@
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { tournamentApi } from '../api/tournamentApi';
-import { Tournament, Round, Group, Leaderboard } from '../types';
+import { Tournament, Round, Group, Leaderboard, TournamentListResponse } from '../types';
 
 const TOURNAMENT_QUERY_CONFIG = {
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -157,7 +157,7 @@ export const useGetT1SpecialTeamsQuery = (eventId: string, search = "", options:
 };
 
 export const useGetTournamentsQuery = (params: { search?: string; game?: string; category?: string; cursor?: string | null; limit?: number }, options: any = {}) => {
-    return useQuery({
+    return useQuery<TournamentListResponse>({
         ...TOURNAMENT_QUERY_CONFIG,
         ...options,
         queryKey: [...tournamentKeys.all, 'list', params],
@@ -167,14 +167,14 @@ export const useGetTournamentsQuery = (params: { search?: string; game?: string;
 };
 
 export const useGetInfiniteTournamentsQuery = (params: { search?: string; game?: string; category?: string; limit?: number }, options: any = {}) => {
-    return useInfiniteQuery({
+    return useInfiniteQuery<TournamentListResponse>({
         ...TOURNAMENT_QUERY_CONFIG,
         ...options,
         queryKey: [...tournamentKeys.all, 'infinite-list', params],
         queryFn: ({ pageParam = null }: { pageParam?: any }) => 
             tournamentApi.getTournaments({ ...params, cursor: pageParam }),
         initialPageParam: null,
-        getNextPageParam: (lastPage: any) => lastPage?.nextCursor,
+        getNextPageParam: (lastPage: any) => lastPage?.pagination?.nextCursor,
         enabled: (options.enabled ?? true),
     });
 };

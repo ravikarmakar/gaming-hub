@@ -35,6 +35,16 @@ export interface ResourceGridProps<T = any> {
      * Default: 50 items
      */
     autoVirtualizeThreshold?: number;
+    /**
+     * Delay in ms to wait before triggering the next fetch (cooldown).
+     * Default: 200ms
+     */
+    scrollThrottlingDelay?: number;
+    /**
+     * How close to the bottom to trigger the next fetch.
+     * Default: "100px"
+     */
+    scrollThreshold?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -60,7 +70,11 @@ function useWindowVirtualizer({
 }) {
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const [range, setRange] = useState({ start: 0, end: Math.min(overscan * 4, rowCount) });
+    const [range, setRange] = useState(() => ({ 
+        start: 0, 
+        end: Math.min(overscan * 4, rowCount),
+        visibleEnd: rowCount > 0 ? Math.min(10, rowCount) : 0
+    }));
 
     const computeRange = useCallback(() => {
         if (!containerRef.current || rowCount === 0) return;
@@ -73,14 +87,21 @@ function useWindowVirtualizer({
 
         const relScroll = Math.max(0, scrollTop - containerTop);
 
+        const visibleEnd = Math.min(
+            rowCount,
+            Math.ceil((relScroll + viewHeight) / rowHeight)
+        );
+
         const start = Math.max(0, Math.floor(relScroll / rowHeight) - overscan);
         const end = Math.min(
             rowCount,
-            Math.ceil((relScroll + viewHeight) / rowHeight) + overscan
+            visibleEnd + overscan
         );
 
         setRange((prev) =>
-            prev.start === start && prev.end === end ? prev : { start, end }
+            prev.start === start && prev.end === end && prev.visibleEnd === visibleEnd 
+                ? prev 
+                : { start, end, visibleEnd }
         );
     }, [rowCount, rowHeight, overscan]);
 
@@ -112,7 +133,7 @@ function useWindowVirtualizer({
             rows.push({ index: i, top: i * rowHeight, height: rowHeight });
         }
         return rows;
-    }, [range, rowHeight]);
+    }, [range.start, range.end, rowHeight]);
 
     return {
         containerRef,
@@ -120,6 +141,7 @@ function useWindowVirtualizer({
         totalHeight: rowCount * rowHeight + extraHeight,
         startIndex: range.start,
         endIndex: range.end,
+        visibleEndIndex: range.visibleEnd
     };
 }
 
@@ -223,24 +245,34 @@ export const ResourceGrid = <T,>({
     rowGap = 16,
     columnGap = "1rem",
     autoVirtualizeThreshold = 50,
+    scrollThrottlingDelay = 200,
+    scrollThreshold = "100px",
 }: ResourceGridProps<T>) => {
+    const sanitizedColumnGap = typeof columnGap === 'number' ? `${columnGap}px` : columnGap;
 
     const shouldVirtualize = virtualize || items.length > autoVirtualizeThreshold;
 
 
     const { ref: sentinelRef, inView } = useInView({
         threshold: 0,
-        rootMargin: "600px",
+        rootMargin: scrollThreshold,
     });
+
+    const loadMoreRef = useRef(onLoadMore);
+    useEffect(() => {
+        loadMoreRef.current = onLoadMore;
+    }, [onLoadMore]);
 
     useEffect(() => {
         if (shouldVirtualize) return;
         let id: ReturnType<typeof setTimeout>;
         if (inView && hasMore && !isLoading && !isFetchingMore) {
-            id = setTimeout(onLoadMore, 300);
+            // Add a substantial delay (cooldown) if we already have items to avoid thundering herd
+            const delay = items.length === 0 ? 0 : scrollThrottlingDelay;
+            id = setTimeout(() => loadMoreRef.current(), delay);
         }
         return () => clearTimeout(id);
-    }, [inView, hasMore, isLoading, isFetchingMore, onLoadMore, shouldVirtualize]);
+    }, [inView, hasMore, isLoading, isFetchingMore, scrollThrottlingDelay, shouldVirtualize, items.length]);
 
 
     const widthContainerRef = useRef<HTMLDivElement>(null);
@@ -267,7 +299,7 @@ export const ResourceGrid = <T,>({
     const totalRowCount = dataRowCount + (hasMore || isFetchingMore ? 1 : 0);
 
 
-    const { containerRef: virtContainerRef, virtualRows, totalHeight, endIndex } =
+    const { containerRef: virtContainerRef, virtualRows, totalHeight, visibleEndIndex } =
         useWindowVirtualizer({
             rowCount: shouldVirtualize ? totalRowCount : 0,
             rowHeight,
@@ -279,46 +311,20 @@ export const ResourceGrid = <T,>({
 
     useEffect(() => {
         if (!shouldVirtualize || !hasMore || isLoading || isFetchingMore) return;
-        const nearEnd = endIndex >= Math.max(0, dataRowCount - 5);
+        const nearEnd = visibleEndIndex >= dataRowCount;
         const newBatch = items.length !== lastLoadedCountRef.current;
         if (nearEnd && newBatch) {
-            lastLoadedCountRef.current = items.length;
-            onLoadMore();
+            const delay = items.length === 0 ? 0 : scrollThrottlingDelay;
+            const id = setTimeout(() => {
+                lastLoadedCountRef.current = items.length;
+                loadMoreRef.current();
+            }, delay);
+            return () => clearTimeout(id);
         }
-    }, [endIndex, dataRowCount, hasMore, isLoading, isFetchingMore, items.length, onLoadMore, shouldVirtualize]);
+    }, [visibleEndIndex, dataRowCount, hasMore, isLoading, isFetchingMore, items.length, shouldVirtualize, scrollThrottlingDelay]);
 
 
-    useEffect(() => {
-        if (!shouldVirtualize || !hasMore) return;
-
-        let clamping = false;
-        let rafId: number;
-
-        const clamp = () => {
-            cancelAnimationFrame(rafId);
-            rafId = requestAnimationFrame(() => {
-                if (clamping || !virtContainerRef.current) return;
-
-                const containerBottom =
-                    virtContainerRef.current.getBoundingClientRect().bottom;
-
-                if (containerBottom < window.innerHeight) {
-                    const overshoot = window.innerHeight - containerBottom;
-                    clamping = true;
-                    window.scrollBy({ top: -Math.ceil(overshoot), behavior: "instant" as ScrollBehavior });
-                    requestAnimationFrame(() => { clamping = false; });
-                }
-            });
-        };
-
-        window.addEventListener("scroll", clamp, { passive: true });
-        return () => {
-            cancelAnimationFrame(rafId);
-            window.removeEventListener("scroll", clamp);
-        };
-    }, [hasMore, shouldVirtualize]);
-
-
+    // Clamping logic removed as it interfered with infinite scroll when bottom padding was present
     const renderRow = useCallback(
         (rowIndex: number) => {
 
@@ -328,7 +334,7 @@ export const ResourceGrid = <T,>({
                         style={{
                             display: "grid",
                             gridTemplateColumns: `repeat(${columns}, 1fr)`,
-                            gap: columnGap,
+                            gap: sanitizedColumnGap,
                             height: itemHeight,
                             alignItems: "center",
                         }}
@@ -373,16 +379,15 @@ export const ResourceGrid = <T,>({
                 <div style={{
                     display: "grid",
                     gridTemplateColumns: `repeat(${columns}, 1fr)`,
-                    gap: columnGap,
+                    gap: sanitizedColumnGap,
                     height: itemHeight,
                 }}>
                     {cells}
                 </div>
             );
         },
-        [columns, columnGap, dataRowCount, isFetchingMore, items, itemHeight, renderItem]
+        [columns, sanitizedColumnGap, dataRowCount, isFetchingMore, items, itemHeight, renderItem]
     );
-
 
     return (
         <div className="w-full relative z-10">
@@ -390,7 +395,13 @@ export const ResourceGrid = <T,>({
             {!shouldVirtualize ? (
                 <div className="w-full">
                     {isLoading && !items.length ? (
-                        <div className="grid grid-cols-1 min-[600px]:grid-cols-2 min-[900px]:grid-cols-3 min-[1200px]:grid-cols-4 gap-6">
+                        <div
+                            className="grid"
+                            style={{
+                                gridTemplateColumns: `repeat(${columns}, 1fr)`,
+                                gap: sanitizedColumnGap
+                            }}
+                        >
                             {[...Array(loadingItemCount)].map((_, i) => (
                                 <PremiumSkeleton key={`skel-${i}`} style={{ height: itemHeight }} className="w-full" />
                             ))}
@@ -398,8 +409,18 @@ export const ResourceGrid = <T,>({
                     ) : isEmpty ? (
                         <EmptyState message={emptyMessage} subMessage={emptySubMessage} />
                     ) : (
-                        <div className="grid grid-cols-1 min-[600px]:grid-cols-2 min-[900px]:grid-cols-3 min-[1200px]:grid-cols-4 gap-6">
-                            {children}
+                        <div
+                            className="grid"
+                            style={{
+                                gridTemplateColumns: `repeat(${columns}, 1fr)`,
+                                gap: sanitizedColumnGap
+                            }}
+                        >
+                            {items.length > 0 ? (
+                                items.map((item, index) => renderItem?.(item, index))
+                            ) : (
+                                children
+                            )}
                             {isFetchingMore && (
                                 <>
                                     {[...Array(4)].map((_, i) => (
@@ -433,7 +454,7 @@ export const ResourceGrid = <T,>({
                                 style={{
                                     display: "grid",
                                     gridTemplateColumns: `repeat(${columns}, 1fr)`,
-                                    gap: columnGap,
+                                    gap: sanitizedColumnGap,
                                 }}
                             >
                                 {[...Array(loadingItemCount)].map((_, i) => (

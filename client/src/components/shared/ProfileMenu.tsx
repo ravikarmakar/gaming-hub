@@ -57,39 +57,45 @@ const ProfileMenu = () => {
   const canViewOrgDashboard = user?.orgId && can(ORG_ACTIONS_ACCESS[ORG_ACTIONS.viewDashboardButton]);
   const canViewTeamDashboard = user?.teamId && can(TEAM_ACCESS.dashboard);
 
-  const userOptions: MenuOption[] = [
-    {
-      name: "My Profile",
-      icon: User,
-      href: PLAYER_ROUTES.PLAYER_DETAILS.replace(":id", user?._id ?? ""),
-      color: "text-blue-400",
-    },
-    ...(isSuperAdmin ? [{
-      name: "Admin Dashboard",
-      icon: ShieldCheck,
-      href: ADMIN_ROUTES.DASHBOARD,
-      color: "text-red-400",
-    }] : []),
-    {
-      name: "Notifications",
-      icon: Bell,
-      href: ROUTES.NOTIFICATIONS,
-      color: "text-amber-400",
-    },
-    {
-      name: "Settings",
-      icon: UserCog,
-      href: PLAYER_ROUTES.PLAYER_SETTINGS.replace(":id", user?._id ?? ""),
-      color: "text-blue-400",
-    },
-  ];
+    const userProfileUrl = user?._id ? PLAYER_ROUTES.PLAYER_DETAILS.replace(":id", user._id.toString()) : undefined;
+    const userSettingsUrl = user?._id ? PLAYER_ROUTES.PLAYER_SETTINGS.replace(":id", user._id.toString()) : undefined;
+
+    const userOptions: MenuOption[] = [
+      {
+        name: "My Profile",
+        icon: User,
+        href: userProfileUrl,
+        color: "text-blue-400",
+      },
+      ...(isSuperAdmin ? [{
+        name: "Admin Dashboard",
+        icon: ShieldCheck,
+        href: ADMIN_ROUTES.DASHBOARD,
+        color: "text-red-400",
+      }] : []),
+      {
+        name: "Notifications",
+        icon: Bell,
+        href: ROUTES.NOTIFICATIONS,
+        color: "text-amber-400",
+      },
+      {
+        name: "Settings",
+        icon: UserCog,
+        href: userSettingsUrl,
+        color: "text-blue-400",
+      },
+    ];
+
+    const teamId = user?.teamId?.toString();
+    const orgId = user?.orgId?.toString();
 
   const teamOptions: MenuOption[] = user?.teamId
     ? [
       {
         name: "Team Profile",
         icon: UserCog,
-        href: TEAM_ROUTES.PROFILE.replace(":id", user.teamId),
+        href: teamId ? TEAM_ROUTES.PROFILE.replace(":id", teamId) : undefined,
         color: "text-purple-400",
       },
       ...(canViewTeamDashboard ? [{
@@ -113,13 +119,13 @@ const ProfileMenu = () => {
       {
         name: "Organization Profile",
         icon: Building,
-        href: ORGANIZER_ROUTES.PROFILE.replace(":id", user.orgId),
+        href: orgId ? ORGANIZER_ROUTES.PROFILE.replace(":id", orgId) : undefined,
         color: "text-purple-400",
       },
       ...(canViewOrgDashboard ? [{
         name: "Organization Dashboard",
         icon: LayoutDashboard,
-        href: ORGANIZER_ROUTES.DASHBOARD.replace(":id", user.orgId),
+        href: orgId ? ORGANIZER_ROUTES.DASHBOARD.replace(":id", orgId) : undefined,
         color: "text-indigo-400",
       }] : []),
     ]

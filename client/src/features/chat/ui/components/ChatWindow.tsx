@@ -15,7 +15,7 @@ import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 interface ChatWindowProps {
     targetId: string;
     targetName: string;
-    scope: "team" | "organizer" | "group";
+    scope: "team" | "organizer" | "group" | "user";
     canDeleteParent?: boolean;
     variant?: "window" | "page";
 }
@@ -85,7 +85,7 @@ export const ChatWindow = ({
         }
     };
 
-    const chatUrl = scope === "group" ? null : (scope === "team" ? TEAM_ROUTES.CHAT : ORGANIZER_ROUTES.CHAT);
+    const chatUrl = (scope === "group" || scope === "user") ? null : (scope === "team" ? TEAM_ROUTES.CHAT : ORGANIZER_ROUTES.CHAT);
 
     if (isLoading && messages.length === 0) {
         return (
@@ -118,7 +118,7 @@ export const ChatWindow = ({
                     </div>
                     <div className="min-w-0">
                         <h3 className="text-lg md:text-xl font-bold text-white tracking-tight truncate">
-                            {targetName} {scope === "organizer" ? "Org Chat" : (scope === "group" ? "Group Chat" : "Team Chat")}
+                            {targetName} {scope === "organizer" ? "Org Chat" : (scope === "group" ? "Group Chat" : (scope === "user" ? "Chat" : "Team Chat"))}
                         </h3>
                         <div className="flex items-center gap-1.5 mt-0.5">
                             <div className={cn(

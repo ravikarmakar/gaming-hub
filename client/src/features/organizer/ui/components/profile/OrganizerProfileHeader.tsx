@@ -1,13 +1,14 @@
-import { Award, MapPin, Calendar, Star, Share2, MessageCircle, Loader2, CheckCircle } from "lucide-react";
+import { Award, Loader2, CheckCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useState } from "react";
 
 import { Organizer } from "@/features/organizer/types";
 import { UnifiedProfileHeader } from "@/components/shared/UnifiedProfileHeader";
+import { ProfileBadge } from "@/components/shared/profile/ProfileBadge";
+import { ProfileActionButton } from "@/components/shared/profile/ProfileActionButton";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useJoinOrgMutation } from "../../../hooks/useOrganizerMutations";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
 interface OrganizerProfileHeaderProps {
@@ -21,112 +22,51 @@ interface OrganizerProfileHeaderProps {
     };
 }
 
-const mockStats = {
-    totalEvents: 142,
-    totalParticipants: 8420,
-    rating: 4.9,
-    reviewsCount: 234,
-    followers: 12500,
-};
+export const OrganizerProfileHeader = ({ organizer }: OrganizerProfileHeaderProps) => {
+    const { user } = useAuthStore();
+    const currentUserId = user?._id?.toString();
+    const isMemberOfOrg = !!(currentUserId && (
+        organizer.ownerId?.toString() === currentUserId ||
+        organizer.members?.some(m => m._id?.toString() === currentUserId)
+    ));
 
-export const OrganizerProfileHeader = ({ organizer, stats = mockStats }: OrganizerProfileHeaderProps) => {
+    const badgesData = [
+        {
+            icon: <Award className="w-3.5 h-3.5" />,
+            label: "Organizer",
+            colorVariant: "blue" as const,
+        },
+    ];
+
     return (
         <UnifiedProfileHeader
             avatarImage={organizer.imageUrl}
             name={organizer.name}
             tag={organizer.tag || organizer.name.replace(/\s+/g, "").toLowerCase()}
             isVerified={organizer.isVerified}
+            showUserChat={!isMemberOfOrg}
+            entityId={organizer._id?.toString()}
             description={organizer.description || "No biography provided."}
             badges={
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
-                    <Award className="w-3.5 h-3.5" />
-                    Organizer
-                </div>
-            }
-            metaInfo={
                 <>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                        <MapPin className="w-4 h-4 text-purple-400" />
-                        <span className="text-gray-300">Earth</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
-                        <Calendar className="w-4 h-4 text-blue-400" />
-                        <span className="text-gray-300">Joined {new Date(organizer.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    <div className="px-3 py-1 bg-white/5 rounded-lg border border-white/10 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                        SINCE {new Date(organizer.createdAt).getFullYear()}
-                    </div>
+                    {badgesData.map((badge, idx) => (
+                        <ProfileBadge key={idx} {...badge} />
+                    ))}
                 </>
             }
-            stats={
-                <div className="flex flex-wrap justify-center gap-3 md:justify-start sm:gap-4 md:gap-6">
-                    {[
-                        {
-                            label: "Events",
-                            value: stats.totalEvents,
-                            color: "text-blue-400",
-                        },
-                        {
-                            label: "Followers",
-                            value: stats.followers.toLocaleString(),
-                            color: "text-purple-400",
-                        },
-                        {
-                            label: "Participants",
-                            value: stats.totalParticipants.toLocaleString(),
-                            color: "text-emerald-400",
-                        },
-                        {
-                            label: "Rating",
-                            value: stats.rating,
-                            icon: <Star className="w-4 h-4 fill-current" />,
-                            color: "text-yellow-400",
-                        },
-                    ].map((stat) => (
-                        <div key={stat.label} className="text-center">
-                            <div className={`flex items-center justify-center gap-1 text-xl sm:text-2xl font-bold ${stat.color}`}>
-                                {stat.icon}
-                                {stat.value}
-                            </div>
-                            <div className="text-xs text-gray-500 font-bold uppercase tracking-widest">
-                                {stat.label}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            }
             actions={
-                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-4 w-full">
                     {organizer.isHiring && (
                         <JoinOrgButton organizer={organizer} />
                     )}
-                    <button className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm sm:text-base font-bold transition-all duration-200 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg active:scale-95">
-                        Follow
-                    </button>
-                    <div className="flex gap-2">
-                        <button
-                            className="p-3 transition-colors bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl active:scale-95"
-                            onClick={() => {
-                                navigator.clipboard.writeText(window.location.href);
-                                toast.success("Organizer link copied!");
-                            }}
-                        >
-                            <Share2 className="w-5 h-5" />
-                        </button>
-                        <button className="p-3 transition-colors bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl active:scale-95">
-                            <MessageCircle className="w-5 h-5" />
-                        </button>
-                    </div>
                 </div>
             }
         />
     );
 };
 
-
-
 const JoinOrgButton = ({ organizer }: { organizer: Organizer }) => {
-    const orgId = organizer._id!;
+    const orgId = organizer._id?.toString();
     const orgName = organizer.name;
     const { user } = useAuthStore();
     const joinMutation = useJoinOrgMutation();
@@ -135,7 +75,7 @@ const JoinOrgButton = ({ organizer }: { organizer: Organizer }) => {
 
     // If no user, maybe redirect to login or hide? Sticking to hide or disable for now if logic needed.
     // If user is already in an org, they can't join.
-    if (!user || user.orgId) return null;
+    if (!user || user.orgId || !orgId) return null;
 
     const handleJoin = () => {
         if (!message.trim()) {
@@ -160,25 +100,21 @@ const JoinOrgButton = ({ organizer }: { organizer: Organizer }) => {
 
     return (
         <>
-            <Button
+            <ProfileActionButton
                 onClick={() => !organizer.hasPendingRequest && setIsOpen(true)}
                 disabled={organizer.hasPendingRequest || joinMutation.isPending}
-                className={`w-full sm:w-auto h-12 px-6 rounded-xl font-bold text-base transition-all duration-200 shadow-lg flex items-center justify-center gap-2 ${organizer.hasPendingRequest
-                        ? "bg-emerald-500/20 text-emerald-400 cursor-default hover:translate-y-0 shadow-none border-emerald-500/20"
-                        : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.2)] active:scale-95 border-0 hover:-translate-y-0.5"
-                    }`}
+                variant="success"
+                className={organizer.hasPendingRequest ? "cursor-default opacity-80" : ""}
+                icon={joinMutation.isPending ? <Loader2 className="animate-spin" /> : organizer.hasPendingRequest ? <CheckCircle /> : undefined}
             >
                 {joinMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    "Joining..."
                 ) : organizer.hasPendingRequest ? (
-                    <>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Request Sent
-                    </>
+                    "Request Sent"
                 ) : (
                     "Join Organization"
                 )}
-            </Button>
+            </ProfileActionButton>
 
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
                 <DialogContent className="bg-[#1a1b2e] border-white/10 text-white sm:max-w-md">
@@ -197,16 +133,17 @@ const JoinOrgButton = ({ organizer }: { organizer: Organizer }) => {
                         />
                     </div>
                     <DialogFooter>
-                        <Button variant="ghost" onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white hover:bg-white/10">
+                        <ProfileActionButton variant="outline" onClick={() => setIsOpen(false)} className="h-10 px-4">
                             Cancel
-                        </Button>
-                        <Button
+                        </ProfileActionButton>
+                        <ProfileActionButton
                             onClick={handleJoin}
                             disabled={joinMutation.isPending}
+                            className="h-10 px-4"
+                            icon={joinMutation.isPending ? <Loader2 className="animate-spin" /> : undefined}
                         >
-                            {joinMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                             Send Request
-                        </Button>
+                        </ProfileActionButton>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

@@ -7,7 +7,6 @@ export * from "./tournaments/TournamentDashboardHeader";
 export * from "./tournaments/TournamentControlBar";
 export * from "./details/TournamentHeader";
 export * from "./shared/TournamentCard";
-export * from "./shared/TournamentGrid";
 export * from "./shared/ThemedComponents";
 export * from "./details/Roadmaps";
 export * from "./details/RoadmapTabs";

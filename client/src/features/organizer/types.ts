@@ -33,10 +33,16 @@ export interface Organizer {
 }
 
 export interface Pagination {
-    total: number;
-    page: number;
     limit: number;
-    pages: number;
+    totalCount: number;
+    currentPage: number;
+    totalPages: number;
+    hasMore: boolean;
+
+    // Legacy mapping (deprecated, mapped to standards above)
+    total?: number;
+    page?: number;
+    pages?: number;
 }
 
 export interface DashboardStats {

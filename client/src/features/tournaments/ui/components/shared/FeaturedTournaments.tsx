@@ -5,9 +5,9 @@ import { ArrowRight, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import TournamentGrid from "./TournamentGrid";
 import { TOURNAMENT_ROUTES } from "@/features/tournaments/lib/routes";
 import { useGetTournamentsQuery } from "@/features/tournaments/hooks/useTournamentQueries";
+import TournamentCard from "./TournamentCard";
 
 const FeaturedTournaments = () => {
     const navigate = useNavigate();
@@ -82,7 +82,11 @@ const FeaturedTournaments = () => {
                     </div>
                 ) : (
                     events && events.length > 0 ? (
-                        <TournamentGrid events={events.slice(0, 6)} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {events.slice(0, 6).map((event) => (
+                                <TournamentCard key={event._id} event={event} />
+                            ))}
+                        </div>
                     ) : (
                         <div className="text-center py-20 border border-white/10 rounded-3xl bg-white/5 bg-opacity-50">
                             <Trophy className="w-12 h-12 text-zinc-600 mx-auto mb-4" />

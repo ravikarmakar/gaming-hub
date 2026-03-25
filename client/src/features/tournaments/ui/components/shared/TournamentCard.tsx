@@ -22,6 +22,7 @@ interface TournamentCardProps {
     event: Tournament;
     onButtonClick?: (eventId: string) => void;
     hideViewDetails?: boolean;
+    hideActions?: boolean;
     index?: number;
 }
 
@@ -29,6 +30,7 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
     event,
     onButtonClick,
     hideViewDetails = false,
+    hideActions = false,
     index = 0
 }) => {
     const navigate = useNavigate();
@@ -137,26 +139,28 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
                         </div>
                     </div>
 
-                    <div className={`mt-auto pt-3 xl:pt-4 border-t border-white/5 flex items-center ${hideViewDetails ? 'justify-start' : 'justify-between'} min-w-0`}>
-                        <div className="flex flex-col gap-1 min-w-0 pr-2">
-                            <div className="flex items-center gap-1 xl:gap-2 text-[10px] xl:text-xs text-gray-400 truncate">
-                                <Clock size={12} className="shrink-0" />
-                                <span className="truncate">{formatDate(event.startDate)}</span>
+                    {!hideActions && (
+                        <div className={`mt-auto pt-3 xl:pt-4 border-t border-white/5 flex items-center ${hideViewDetails ? 'justify-start' : 'justify-between'} min-w-0`}>
+                            <div className="flex flex-col gap-1 min-w-0 pr-2">
+                                <div className="flex items-center gap-1 xl:gap-2 text-[10px] xl:text-xs text-gray-400 truncate">
+                                    <Clock size={12} className="shrink-0" />
+                                    <span className="truncate">{formatDate(event.startDate)}</span>
+                                </div>
                             </div>
+                            {!hideViewDetails && (
+                                <Button
+                                    variant="link"
+                                    className="flex items-center gap-2 text-sm font-bold text-purple-400 hover:text-purple-300 group/btn p-0 h-auto"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCardClick(e);
+                                    }}
+                                >
+                                    View Details <ChevronRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
+                                </Button>
+                            )}
                         </div>
-                        {!hideViewDetails && (
-                            <Button
-                                variant="link"
-                                className="flex items-center gap-2 text-sm font-bold text-purple-400 hover:text-purple-300 group/btn p-0 h-auto"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCardClick(e);
-                                }}
-                            >
-                                View Details <ChevronRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
-                            </Button>
-                        )}
-                    </div>
+                    )}
                 </div>
             </GlassCard>
         </motion.div>
