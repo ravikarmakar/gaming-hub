@@ -1,4 +1,4 @@
-import { Save, Loader2, RotateCcw } from "lucide-react";
+import { Save, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +24,7 @@ export const SettingsFormActions = ({
     return (
         <div
             className={cn(
-                "flex items-center gap-2 sm:gap-3 duration-300 animate-in fade-in slide-in-from-right-4",
+                "flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300",
                 className
             )}
         >
@@ -32,34 +32,32 @@ export const SettingsFormActions = ({
                 <Button
                     type="button"
                     variant="ghost"
-                    size="sm"
-                    disabled={isLoading}
-                    className="text-gray-400 h-9 transition-all border border-transparent hover:text-white hover:bg-white/5 hover:border-white/10"
                     onClick={onReset}
+                    disabled={isLoading}
+                    className="h-12 px-6 text-zinc-400 hover:text-white hover:bg-white/5 text-sm font-semibold rounded-xl transition-all"
                 >
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Reset
+                    <X className="w-4 h-4 mr-2 opacity-50" />
+                    Cancel
                 </Button>
             )}
             <Button
                 type="submit"
-                size="sm"
                 disabled={isLoading}
-                className="bg-purple-600 hover:bg-purple-700 text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] border border-purple-500/50 h-9 px-4 transition-all font-bold"
+                className="group relative overflow-hidden px-10 h-12 bg-purple-600 hover:bg-purple-500 text-white transition-all font-semibold text-sm rounded-xl active:scale-[0.98] shadow-xl shadow-purple-500/10"
             >
-                {isLoading ? (
-                    <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        <span className="hidden sm:inline">Saving...</span>
-                        <span className="sm:hidden">...</span>
-                    </>
-                ) : (
-                    <>
-                        <Save className="w-4 h-4 sm:mr-2" />
-                        <span className="hidden sm:inline">{saveLabel}</span>
-                        <span className="sm:hidden">Save</span>
-                    </>
-                )}
+                <span className="relative z-10 flex items-center gap-2">
+                    {isLoading ? (
+                        <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Saving...
+                        </>
+                    ) : (
+                        <>
+                            <Save className="w-4 h-4 transition-transform group-hover:scale-110" />
+                            {saveLabel}
+                        </>
+                    )}
+                </span>
             </Button>
         </div>
     );

@@ -5,6 +5,8 @@ import { Suspense } from "react";
 import LoadingSpinner from "../LoadingSpinner";
 import { ROUTES } from "@/lib/routes";
 
+import { useUIStore } from "@/store/useUIStore";
+
 const HIDE_FOOTER_ROUTES = [
   ROUTES.NOTIFICATIONS,
   // Add other routes here as needed
@@ -12,7 +14,8 @@ const HIDE_FOOTER_ROUTES = [
 
 const MainLayout = () => {
   const location = useLocation();
-  const shouldHideFooter = HIDE_FOOTER_ROUTES.includes(location.pathname);
+  const { isFooterSuppressed } = useUIStore();
+  const shouldHideFooter = HIDE_FOOTER_ROUTES.includes(location.pathname) || isFooterSuppressed;
 
   return (
     <div

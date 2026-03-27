@@ -12,7 +12,7 @@ export interface DiscoveryPageProps<T> {
     isEmpty: boolean;
     hasMore: boolean;
     onLoadMore: () => void;
-    emptyMessage: string;
+    emptyStateComponent?: ReactNode;
     filters: ReactNode;
     items: T[];
     renderItem: (item: T, index: number) => ReactNode;
@@ -30,7 +30,7 @@ export const DiscoveryPage = <T,>({
     isEmpty,
     hasMore,
     onLoadMore,
-    emptyMessage,
+    emptyStateComponent,
     filters,
     items,
     renderItem,
@@ -48,7 +48,7 @@ export const DiscoveryPage = <T,>({
             isEmpty={isEmpty}
             hasMore={hasMore}
             onLoadMore={onLoadMore}
-            emptyMessage={emptyMessage}
+            emptyStateComponent={emptyStateComponent}
             filters={filters}
             isFetchingMore={isFetchingMore}
             items={items}

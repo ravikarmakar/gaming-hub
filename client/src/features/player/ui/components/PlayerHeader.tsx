@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import { Sword, Heart, Users, User as UserIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,9 @@ import { useTeamManagementStore } from "@/features/teams/store/useTeamManagement
 import { User } from "@/features/auth/lib/types";
 import { Team } from "@/features/teams/lib/types";
 import { TeamInviteDialog } from "./TeamInviteDialog";
-import { toast } from "react-hot-toast";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useAccess } from "@/features/auth/hooks/useAccess";
+import { TEAM_ACTIONS, TEAM_ACTIONS_ACCESS } from "@/features/teams/lib/access";
 
 // --- Type Helpers ---
 /** Extract a string team ID from the user's teamId field, which may be a string or populated object. */
@@ -31,12 +34,18 @@ function extractTeamTag(player: User): string | undefined {
 
 interface Props {
   player: User;
-  actions?: React.ReactNode;
-  isInviteOpen: boolean;
-  setIsInviteOpen: (open: boolean) => void;
 }
 
-export const PlayerHeader: React.FC<Props> = ({ player, actions, isInviteOpen, setIsInviteOpen }) => {
+export const PlayerHeader: React.FC<Props> = ({ player }) => {
+  const { user: currentUser } = useAuthStore();
+  const { can } = useAccess();
+
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+
+  const isOwnProfile = currentUser?._id === player?._id;
+  const canInvite = can(TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.inviteMember]) && !isOwnProfile;
+
+
   return (
     <>
       <UnifiedProfileHeader
@@ -48,7 +57,7 @@ export const PlayerHeader: React.FC<Props> = ({ player, actions, isInviteOpen, s
         entityId={player._id}
         description={player.bio || "No tactical briefing available for this operative."}
         infoBlocks={<PlayerInfoBlocks player={player} />}
-        actions={actions}
+        actions={<PlayerActionButtons player={player} isOwnProfile={isOwnProfile} canInvite={canInvite} setIsInviteOpen={setIsInviteOpen} />}
       />
 
       {player._id && (
@@ -146,8 +155,12 @@ export const PlayerActionButtons: React.FC<PlayerActionButtonsProps> = ({
   canInvite,
   setIsInviteOpen,
 }) => {
+  const showChallenges = player.settings?.allowChallenges ?? true;
+
+  if (!canInvite && !showChallenges) return null;
+
   return (
-    <div className="flex flex-wrap items-center justify-center gap-4 w-full">
+    <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto [&>*]:flex-1 md:[&>*]:flex-none">
       {canInvite && (
         <Button
           onClick={() => setIsInviteOpen(true)}
@@ -158,7 +171,7 @@ export const PlayerActionButtons: React.FC<PlayerActionButtonsProps> = ({
         </Button>
       )}
 
-      {(player.settings?.allowChallenges ?? true) && (
+      {showChallenges && (
         isOwnProfile ? (
           <div className="flex items-center gap-2 px-6 h-12 rounded-2xl border border-rose-500/20 bg-rose-500/10 text-rose-500 text-[10px] font-black uppercase tracking-widest">
             <Sword className="w-4 h-4 mr-2" />

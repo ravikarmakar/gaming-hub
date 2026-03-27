@@ -1,19 +1,21 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
 
 interface GlassCardProps extends React.HTMLAttributes<HTMLDivElement> {
     children: React.ReactNode;
     gradient?: boolean;
 }
 
-export const GlassCard: React.FC<GlassCardProps> = ({
+export const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(({
     children,
     className,
     gradient = false,
     ...props
-}) => {
+}, ref) => {
     return (
-        <div
+        <Card
+            ref={ref}
             className={cn(
                 "relative overflow-hidden rounded-2xl bg-gray-900/40 border border-white/5 backdrop-blur-xl transition-all duration-300 shadow-xl",
                 gradient && "after:absolute after:inset-0 after:bg-gradient-to-br after:from-purple-500/5 after:to-transparent after:pointer-events-none",
@@ -22,9 +24,10 @@ export const GlassCard: React.FC<GlassCardProps> = ({
             {...props}
         >
             {children}
-        </div>
+        </Card>
     );
-};
+});
+GlassCard.displayName = "GlassCard";
 
 interface MetricCardProps {
     icon: React.ElementType;

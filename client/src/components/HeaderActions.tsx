@@ -10,9 +10,17 @@ interface HeaderActionsProps {
     showFilters: boolean;
     setShowFilters: (value: boolean) => void;
     onClearFilters?: () => void;
+    placeholder?: string;
 }
 
-export const HeaderActions: React.FC<HeaderActionsProps> = ({ search, setSearch, showFilters, setShowFilters, onClearFilters }) => {
+export const HeaderActions: React.FC<HeaderActionsProps> = ({ 
+    search, 
+    setSearch, 
+    showFilters, 
+    setShowFilters, 
+    onClearFilters,
+    placeholder = "Search..."
+}) => {
     return (
         <div className="flex items-center gap-3 w-full sm:w-auto">
             <div className="relative group/search flex-1 sm:flex-initial">
@@ -21,7 +29,7 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({ search, setSearch,
                 </div>
                 <Input
                     type="text"
-                    placeholder="Search teams..."
+                    placeholder={placeholder}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full sm:w-64 bg-white/[0.04] border border-white/[0.08] rounded-xl py-2.5 pl-11 pr-10 text-sm text-white placeholder:text-white/25 focus:outline-none focus:ring-1 focus:ring-purple-500/40 focus:border-purple-500/30 focus:bg-white/[0.06] transition-all duration-300 hover:border-white/[0.12] h-[42px]"

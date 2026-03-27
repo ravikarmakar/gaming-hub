@@ -77,14 +77,14 @@ export const TeamHero: React.FC<TeamHeroProps> = ({ team }) => {
                 </>
             }
             actions={
-                <div className="flex flex-wrap items-center justify-between gap-4 w-full">
-                    {showJoinButton && (
+                showJoinButton ? (
+                    <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto [&>*]:flex-1 md:[&>*]:flex-none">
                         <ProfileActionButton
                             onClick={handleJoinRequest}
                             disabled={isRequestingJoin || requestStatus}
                             variant={requestStatus ? 'success' : 'primary'}
                             icon={isRequestingJoin ? <Loader2 className="animate-spin" /> : requestStatus ? <CheckCircle /> : undefined}
-                            className="flex-1 md:flex-none min-w-[140px] md:min-w-[160px]"
+                            className="min-w-[140px] md:min-w-[160px]"
                         >
                             {isRequestingJoin ? (
                                 'Sending Request...'
@@ -94,8 +94,8 @@ export const TeamHero: React.FC<TeamHeroProps> = ({ team }) => {
                                 'Join Team'
                             )}
                         </ProfileActionButton>
-                    )}
-                </div>
+                    </div>
+                ) : null
             }
         />
     );

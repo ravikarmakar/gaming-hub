@@ -6,6 +6,7 @@ import { useMarkAllAsReadMutation } from "../../hooks/useNotificationMutations";
 import NotificationItem from "../components/NotificationItem";
 import { Button } from "@/components/ui/button";
 import { ResourceGrid } from "@/components/shared/ResourceGrid";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 const NotificationsPage: React.FC = () => {
     const {
@@ -89,8 +90,7 @@ const NotificationsPage: React.FC = () => {
                     columns={1}
                     itemHeight={120} // Increased height for better content fit
                     rowGap={10} // Increased gap for visual clarity
-                    emptyMessage="Clean Slate"
-                    emptySubMessage="Your nexus is quiet for now. New invitations and alerts will appear here."
+                    emptyStateComponent={<EmptyState message="Clean Slate" subMessage="Your nexus is quiet for now. New invitations and alerts will appear here." />}
                     renderItem={(notification) => (
                         <NotificationItem key={notification._id} notification={notification} />
                     )}

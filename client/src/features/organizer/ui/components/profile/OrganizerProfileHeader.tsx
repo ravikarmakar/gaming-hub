@@ -55,11 +55,13 @@ export const OrganizerProfileHeader = ({ organizer }: OrganizerProfileHeaderProp
                 </>
             }
             actions={
-                <div className="flex flex-wrap items-center justify-between gap-4 w-full">
-                    {organizer.isHiring && (
-                        <JoinOrgButton organizer={organizer} />
-                    )}
-                </div>
+                organizer.isHiring ? (
+                    organizer.isHiring && user && !user.orgId && organizer._id ? (
+                        <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto [&>*]:flex-1 md:[&>*]:flex-none">
+                            <JoinOrgButton organizer={organizer} />
+                        </div>
+                    ) : null
+                ) : null
             }
         />
     );

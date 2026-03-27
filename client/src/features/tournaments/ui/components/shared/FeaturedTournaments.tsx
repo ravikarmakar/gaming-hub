@@ -62,17 +62,17 @@ const FeaturedTournaments = () => {
 
                 {/* Content Grid */}
                 {isLoading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                         {[...Array(6)].map((_, i) => (
-                            <div key={i} className="h-[400px] rounded-3xl bg-white/5 border border-white/5 overflow-hidden flex flex-col">
-                                <Skeleton className="h-48 w-full bg-white/10 rounded-none" />
-                                <div className="p-6 space-y-4 flex-1">
+                            <div key={i} className="h-[160px] sm:h-[400px] rounded-3xl bg-white/5 border border-white/5 overflow-hidden flex flex-row sm:flex-col">
+                                <Skeleton className="w-32 sm:w-full h-full sm:h-48 bg-white/10 rounded-none shrink-0" />
+                                <div className="p-4 sm:p-6 space-y-4 flex-1">
                                     <div className="flex justify-between">
-                                        <Skeleton className="h-4 w-20 bg-white/10" />
-                                        <Skeleton className="h-4 w-20 bg-white/10" />
+                                        <Skeleton className="h-3 w-16 bg-white/10" />
+                                        <Skeleton className="h-3 w-16 bg-white/10" />
                                     </div>
-                                    <Skeleton className="h-8 w-3/4 bg-white/10" />
-                                    <div className="grid grid-cols-2 gap-4 mt-auto">
+                                    <Skeleton className="h-6 w-3/4 bg-white/10" />
+                                    <div className="hidden sm:grid grid-cols-2 gap-4 mt-auto">
                                         <Skeleton className="h-20 w-full bg-white/10 rounded-xl" />
                                         <Skeleton className="h-20 w-full bg-white/10 rounded-xl" />
                                     </div>
@@ -82,7 +82,7 @@ const FeaturedTournaments = () => {
                     </div>
                 ) : (
                     events && events.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                             {events.slice(0, 6).map((event) => (
                                 <TournamentCard key={event._id} event={event} />
                             ))}

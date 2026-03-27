@@ -1,9 +1,11 @@
 import { useState, useMemo } from "react";
-import { Loader2, Trophy, Plus, LayoutGrid } from "lucide-react";
+import { Loader2, Plus, LayoutGrid } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { ResourceGrid } from "@/components/shared/ResourceGrid";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { useWindowSize } from "@/hooks/useWindowSize";
 import TournamentCard from "@/features/tournaments/ui/components/shared/TournamentCard";
 import { Button } from "@/components/ui/button";
 
@@ -28,6 +30,7 @@ const OrganizerTournaments: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const { can } = useAccess();
+  const { width } = useWindowSize();
 
   const canCreate = can(ORG_ACCESS.createTournament);
 
@@ -102,68 +105,57 @@ const OrganizerTournaments: React.FC = () => {
 
       {/* Results Section */}
       <AnimatePresence mode="wait">
-        {filteredEvents.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="flex flex-col items-center justify-center py-24 px-4 text-center rounded-3xl bg-gray-900/20 border-2 border-dashed border-white/5 mt-8"
-          >
-            <div className="p-6 rounded-full bg-gray-800/50 mb-6">
-              <Trophy className="w-16 h-16 text-gray-700" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-300 mb-2">No Tournaments Found</h3>
-            <p className="text-gray-500 max-w-sm mx-auto">
-              {orgEvents.length === 0
-                ? "Experience has no limits. Start your legacy by creating your first tournament today!"
-                : "No tournaments match your current tactical filters. Try adjusting your search."}
-            </p>
-            {orgEvents.length === 0 && canCreate && (
-              <Button
-                onClick={() => navigate(ORGANIZER_ROUTES.ADD_TOURNAMENTS)}
-                variant="outline"
-                className="mt-6 border-purple-500/20 text-purple-400 hover:bg-purple-500/10"
-              >
-                Launch First Tournament
-              </Button>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-8"
+        >
+          <div className="flex items-center gap-2 mb-6">
+            <LayoutGrid className="w-4 h-4 text-purple-500" />
+            <span className="text-sm font-bold tracking-widest text-gray-500 uppercase">
+              Active Operations ({filteredEvents.length})
+            </span>
+            <div className="h-px flex-1 bg-white/5 ml-4" />
+          </div>
+          <ResourceGrid
+            items={filteredEvents}
+            isLoading={isLoading}
+            isEmpty={!isLoading && filteredEvents.length === 0}
+            hasMore={false}
+            onLoadMore={() => { }}
+            emptyStateComponent={
+              <EmptyState
+                message="No Tournaments Found"
+                subMessage={orgEvents.length === 0
+                  ? "Experience has no limits. Start your legacy by creating your first tournament today!"
+                  : "No tournaments match your current tactical filters. Try adjusting your search."}
+                action={orgEvents.length === 0 && canCreate ? (
+                  <Button
+                    onClick={() => navigate(ORGANIZER_ROUTES.ADD_TOURNAMENTS)}
+                    variant="outline"
+                    className="mt-6 border-purple-500/20 text-purple-400 hover:bg-purple-500/10"
+                  >
+                    Launch First Tournament
+                  </Button>
+                ) : undefined}
+              />
+            }
+            loadingItemCount={12}
+            itemHeight={(width ?? 1200) < 640 ? 140 : 400} 
+            virtualize={true}
+            rowGap={24}
+            columnGap="1.5rem"
+            renderItem={(event, index) => (
+              <TournamentCard
+                key={event._id}
+                event={event}
+                index={index}
+                onButtonClick={onButtonClick}
+                hideViewDetails={true}
+              />
             )}
-          </motion.div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mt-8"
-          >
-            <div className="flex items-center gap-2 mb-6">
-              <LayoutGrid className="w-4 h-4 text-purple-500" />
-              <span className="text-sm font-bold tracking-widest text-gray-500 uppercase">
-                Active Operations ({filteredEvents.length})
-              </span>
-              <div className="h-px flex-1 bg-white/5 ml-4" />
-            </div>
-            <ResourceGrid
-              items={filteredEvents}
-              isLoading={isLoading}
-              isEmpty={filteredEvents.length === 0}
-              hasMore={false}
-              onLoadMore={() => { }}
-              itemHeight={400}
-              columns={3}
-              virtualize={true}
-              rowGap={24}
-              columnGap="1.5rem"
-              renderItem={(event, index) => (
-                <TournamentCard
-                  key={event._id}
-                  event={event}
-                  index={index}
-                  onButtonClick={onButtonClick}
-                  hideViewDetails={true}
-                />
-              )}
-            />
-          </motion.div>
-        )}
+          />
+        </motion.div>
       </AnimatePresence>
     </div>
   );

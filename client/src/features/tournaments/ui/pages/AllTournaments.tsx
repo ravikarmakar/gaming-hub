@@ -7,9 +7,12 @@ import { TournamentFilters } from "@/features/tournaments/ui/components/Tourname
 import { ResourceGridWrapper } from "@/components/shared/ResourceGridWrapper";
 import { HeaderActions } from "@/components/HeaderActions";
 import { useDebounce } from "@/hooks/useDebounce";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { useWindowSize } from "@/hooks/useWindowSize";
 
 
 const AllTournaments = () => {
+    const { width } = useWindowSize();
     const [gameFilter, setGameFilter] = useState("all");
     const [categoryFilter, setCategoryFilter] = useState("all");
     const [searchTerm, setSearchTerm] = useState("");
@@ -76,7 +79,7 @@ const AllTournaments = () => {
             isEmpty={!isLoading && events.length === 0}
             hasMore={!!hasNextPage}
             onLoadMore={fetchNextPage}
-            emptyMessage="No Tournaments found"
+            emptyStateComponent={<EmptyState message="No Tournaments found" />}
             isFetchingMore={isFetchingNextPage}
             showFilters={showFilters}
             headerAction={
@@ -86,6 +89,7 @@ const AllTournaments = () => {
                     showFilters={showFilters}
                     setShowFilters={setShowFilters}
                     onClearFilters={handleClearFilters}
+                    placeholder="Search tournaments..."
                 />
             }
             filters={
@@ -100,8 +104,7 @@ const AllTournaments = () => {
                 />
             }
             items={events}
-            itemHeight={400}
-            columns={3}
+            itemHeight={(width ?? 1200) < 640 ? 140 : 400}
             virtualize={true}
             rowGap={32}
             columnGap="2rem"

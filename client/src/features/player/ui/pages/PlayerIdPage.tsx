@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { usePlayerByIdQuery } from "../../hooks/usePlayerQueries";
-import { PlayerActionButtons, PlayerHeader } from "../components/PlayerHeader";
 import { PlayerOverview } from "../components/PlayerOverview";
 import { PlayerAchievements } from "../components/PlayerAchievements";
 import { PlayerStats } from "../components/PlayerStats";
@@ -14,9 +13,7 @@ import { PlayerEquipment } from "../components/PlayerEquipment";
 import { User } from "@/features/auth/lib/types";
 import { ProfileBannerLayout } from "@/components/shared/ProfileBannerLayout";
 import { ArenaLoading } from "@/components/shared/ArenaLoading";
-import { useAccess } from "@/features/auth/hooks/useAccess";
-import { TEAM_ACTIONS, TEAM_ACTIONS_ACCESS } from "@/features/teams/lib/access";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { PlayerHeader } from "../components/PlayerHeader";
 
 interface PlayerTab {
   value: string;
@@ -57,13 +54,6 @@ const PlayerIdPage = () => {
   const { data, isLoading } = usePlayerByIdQuery(id || "");
   const selectedPlayer = data?.player;
   const [activeTab, setActiveTab] = useState(PLAYER_TABS[0].value);
-  const { can } = useAccess();
-  const { user: currentUser } = useAuthStore();
-  const [isInviteOpen, setIsInviteOpen] = useState(false);
-
-  const isOwnProfile = currentUser?._id === selectedPlayer?._id;
-  const canInvite = can(TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.inviteMember]) && !isOwnProfile;
-
 
   if (isLoading && !selectedPlayer) {
     return <ArenaLoading message="Accessing Player Data..." />;
@@ -82,16 +72,7 @@ const PlayerIdPage = () => {
   return (
     <ProfileBannerLayout bannerImage={selectedPlayer.coverImage}>
       {/* Header Component */}
-      <PlayerHeader actions={<PlayerActionButtons player={selectedPlayer} isOwnProfile={isOwnProfile} canInvite={canInvite} setIsInviteOpen={setIsInviteOpen} />} player={selectedPlayer} type="player" isInviteOpen={isInviteOpen} setIsInviteOpen={setIsInviteOpen} />
-
-      <div className="w-full lg:hidden">
-        <PlayerActionButtons
-          player={selectedPlayer}
-          isOwnProfile={isOwnProfile}
-          canInvite={canInvite}
-          setIsInviteOpen={setIsInviteOpen}
-        />
-      </div>
+      <PlayerHeader player={selectedPlayer} />
 
       {/* Tactical Interface (Tabs) */}
       <div className="pb-24">

@@ -6,8 +6,11 @@ import PlayerFilters from "../components/PlayerFilters";
 import { useInfinitePlayersQuery } from "../../hooks/usePlayerQueries";
 import { ResourceGridWrapper } from "@/components/shared/ResourceGridWrapper";
 import { HeaderActions } from "@/components/HeaderActions";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { useWindowSize } from "@/hooks/useWindowSize";
 
 const FindPlayers: React.FC = () => {
+    const { width } = useWindowSize();
     const [searchTerm, setSearchTerm] = useState("");
     const debouncedSearchTerm = useDebounce(searchTerm, 500);
     const [selectedRole, setSelectedRole] = useState<string | undefined>(undefined);
@@ -60,7 +63,8 @@ const FindPlayers: React.FC = () => {
             isEmpty={!isLoading && players.length === 0}
             hasMore={hasNextPage}
             onLoadMore={handleLoadMore}
-            emptyMessage="No Warriors Detected"
+            emptyStateComponent={<EmptyState message="No Warriors Detected" />}
+            loadingItemCount={20}
             items={players}
             renderItem={(player: any, index: number) => (
                 <PlayerCard key={player._id} player={player} index={index} />
@@ -74,10 +78,10 @@ const FindPlayers: React.FC = () => {
                     showFilters={showFilters}
                     setShowFilters={setShowFilters}
                     onClearFilters={handleClearFilters}
+                    placeholder="Search players..."
                 />
             }
-            itemHeight={380}
-            columns={3}
+            itemHeight={(width ?? 1200) < 640 ? 80 : 380}
             filters={
                 <PlayerFilters
                     selectedRole={selectedRole}

@@ -6,10 +6,11 @@ import { useTeamListStore } from "../../store/useTeamListStore";
 import TeamCard from "../components/TeamCard";
 import TeamFilters from "../components/TeamFilters";
 import { ResourceGridWrapper } from "@/components/shared/ResourceGridWrapper";
-
-
+import { EmptyState } from "@/components/shared/EmptyState";
+import { useWindowSize } from "@/hooks/useWindowSize";
 
 const FindTeams: React.FC = () => {
+    const { width } = useWindowSize();
     const { paginatedTeamIds, teamsById, pagination, isLoading, fetchTeams } = useTeamListStore();
     const [search, setSearch] = useState("");
     const [region, setRegion] = useState<string | undefined>();
@@ -79,7 +80,8 @@ const FindTeams: React.FC = () => {
             isEmpty={!isLoading && paginatedTeams.length === 0}
             hasMore={pagination.hasMore}
             onLoadMore={handleLoadMore}
-            emptyMessage="No teams found"
+            emptyStateComponent={<EmptyState message="No teams found" />}
+            loadingItemCount={20}
             showFilters={showFilters}
             headerAction={
                 <HeaderActions
@@ -88,6 +90,7 @@ const FindTeams: React.FC = () => {
                     showFilters={showFilters}
                     setShowFilters={setShowFilters}
                     onClearFilters={handleClearFilters}
+                    placeholder="Search teams..."
                 />
             }
             filters={
@@ -101,8 +104,7 @@ const FindTeams: React.FC = () => {
                 />
             }
             items={paginatedTeams}
-            itemHeight={380}
-            columns={3}
+            itemHeight={(width ?? 1200) < 640 ? 80 : 380}
             virtualize={true}
             renderItem={(team, index) => <TeamCard key={team._id} team={team} index={index} />}
         />

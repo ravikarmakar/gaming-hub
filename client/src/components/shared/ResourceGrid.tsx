@@ -1,15 +1,10 @@
-import {
-    useEffect,
-    useRef,
-    useCallback,
-    useState,
-    useMemo,
-    memo,
-} from "react";
-import { motion } from "framer-motion";
-import { Loader2, SearchX } from "lucide-react";
+import React, { useEffect, useRef, useCallback, useState, useId } from "react";
+import { Loader2 } from "lucide-react";
 import { useInView } from "react-intersection-observer";
 
+import { useUIStore } from "@/store/useUIStore";
+import { useWindowVirtualizer } from "@/hooks/useWindowVirtualizer";
+import { MemoizedVirtualRow } from "./MemoizedVirtualRow";
 import { PremiumSkeleton } from "./PremiumSkeleton";
 
 export interface ResourceGridProps<T = any> {
@@ -19,8 +14,7 @@ export interface ResourceGridProps<T = any> {
     hasMore: boolean;
     onLoadMore: () => void;
     loadingItemCount?: number;
-    emptyMessage?: string;
-    emptySubMessage?: string;
+    emptyStateComponent?: React.ReactNode;
     isFetchingMore?: boolean;
     virtualize?: boolean;
     items?: T[];
@@ -29,125 +23,10 @@ export interface ResourceGridProps<T = any> {
     columns?: number;
     rowGap?: number;
     columnGap?: string | number;
-    /**
-     * When `virtualize` is false, the grid will auto-switch to virtual mode
-     * once the item count exceeds this threshold to protect the DOM.
-     * Default: 50 items
-     */
     autoVirtualizeThreshold?: number;
-    /**
-     * Delay in ms to wait before triggering the next fetch (cooldown).
-     * Default: 200ms
-     */
     scrollThrottlingDelay?: number;
-    /**
-     * How close to the bottom to trigger the next fetch.
-     * Default: "100px"
-     */
     scrollThreshold?: string;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// useWindowVirtualizer
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface VirtualRow {
-    index: number;
-    top: number;
-    height: number;
-}
-
-function useWindowVirtualizer({
-    rowCount,
-    rowHeight,
-    overscan = 3,
-    extraHeight = 0,
-}: {
-    rowCount: number;
-    rowHeight: number;
-    overscan?: number;
-    extraHeight?: number;
-}) {
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    const [range, setRange] = useState(() => ({ 
-        start: 0, 
-        end: Math.min(overscan * 4, rowCount),
-        visibleEnd: rowCount > 0 ? Math.min(10, rowCount) : 0
-    }));
-
-    const computeRange = useCallback(() => {
-        if (!containerRef.current || rowCount === 0) return;
-
-        const containerTop =
-            containerRef.current.getBoundingClientRect().top + window.scrollY;
-
-        const scrollTop = window.scrollY;
-        const viewHeight = window.innerHeight;
-
-        const relScroll = Math.max(0, scrollTop - containerTop);
-
-        const visibleEnd = Math.min(
-            rowCount,
-            Math.ceil((relScroll + viewHeight) / rowHeight)
-        );
-
-        const start = Math.max(0, Math.floor(relScroll / rowHeight) - overscan);
-        const end = Math.min(
-            rowCount,
-            visibleEnd + overscan
-        );
-
-        setRange((prev) =>
-            prev.start === start && prev.end === end && prev.visibleEnd === visibleEnd 
-                ? prev 
-                : { start, end, visibleEnd }
-        );
-    }, [rowCount, rowHeight, overscan]);
-
-    useEffect(() => {
-        let rafId: number;
-        const onScroll = () => {
-            cancelAnimationFrame(rafId);
-            rafId = requestAnimationFrame(computeRange);
-        };
-
-        computeRange();
-        window.addEventListener("scroll", onScroll, { passive: true });
-        window.addEventListener("resize", computeRange, { passive: true });
-
-        return () => {
-            cancelAnimationFrame(rafId);
-            window.removeEventListener("scroll", onScroll);
-            window.removeEventListener("resize", computeRange);
-        };
-    }, [computeRange]);
-
-    useEffect(() => {
-        computeRange();
-    }, [rowCount, rowHeight, computeRange]);
-
-    const virtualRows: VirtualRow[] = useMemo(() => {
-        const rows: VirtualRow[] = [];
-        for (let i = range.start; i < range.end; i++) {
-            rows.push({ index: i, top: i * rowHeight, height: rowHeight });
-        }
-        return rows;
-    }, [range.start, range.end, rowHeight]);
-
-    return {
-        containerRef,
-        virtualRows,
-        totalHeight: rowCount * rowHeight + extraHeight,
-        startIndex: range.start,
-        endIndex: range.end,
-        visibleEndIndex: range.visibleEnd
-    };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
 
 function getColumns(width: number): number {
     if (width > 1200) return 4;
@@ -156,77 +35,6 @@ function getColumns(width: number): number {
     return 1;
 }
 
-const EmptyState = ({
-    message,
-    subMessage,
-}: {
-    message: string;
-    subMessage: string;
-}) => (
-    <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="flex flex-col items-center justify-center min-h-[400px] py-24 px-6 text-center bg-white/[0.02] border border-white/5 rounded-[2.5rem] backdrop-blur-md relative overflow-hidden group"
-    >
-        <div className="absolute inset-0 bg-gradient-to-b from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-        <div className="relative">
-            <div className="w-24 h-24 mx-auto rounded-3xl bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 flex items-center justify-center mb-8 border border-white/10 group-hover:border-violet-500/30 transition-colors duration-500 rotate-12 group-hover:rotate-0">
-                <SearchX className="w-10 h-10 text-violet-400/60 group-hover:text-violet-400 transition-colors duration-500" />
-            </div>
-            <div className="space-y-3">
-                <h3 className="text-2xl font-black italic tracking-tighter text-white/90 group-hover:text-white transition-colors">
-                    {message}
-                </h3>
-                <p className="text-white/40 font-medium max-w-xs mx-auto text-sm leading-relaxed">
-                    {subMessage}
-                </p>
-            </div>
-        </div>
-    </motion.div>
-);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MemoizedVirtualRow
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface MemoizedVirtualRowProps {
-    rowIndex: number;
-    top: number;
-    height: number;
-    rowGap: number;
-    renderRow: (rowIndex: number) => React.ReactNode;
-}
-
-const MemoizedVirtualRow = memo(
-    ({ rowIndex, top, height, rowGap, renderRow }: MemoizedVirtualRowProps) => (
-        <div
-            style={{
-                position: "absolute",
-                top,
-                left: 0,
-                right: 0,
-                height,
-                paddingBottom: rowGap,
-                boxSizing: "border-box",
-            }}
-        >
-            {renderRow(rowIndex)}
-        </div>
-    ),
-    (prev, next) =>
-        prev.rowIndex === next.rowIndex &&
-        prev.top === next.top &&
-        prev.height === next.height &&
-        prev.rowGap === next.rowGap &&
-        prev.renderRow === next.renderRow
-);
-
-MemoizedVirtualRow.displayName = "MemoizedVirtualRow";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ResourceGrid Component
-// ─────────────────────────────────────────────────────────────────────────────
-
 export const ResourceGrid = <T,>({
     children,
     isLoading,
@@ -234,8 +42,7 @@ export const ResourceGrid = <T,>({
     hasMore,
     onLoadMore,
     loadingItemCount = 8,
-    emptyMessage = "No Results Found",
-    emptySubMessage = "Try adjusting your filters or search terms.",
+    emptyStateComponent,
     isFetchingMore = false,
     virtualize = false,
     items = [],
@@ -249,10 +56,22 @@ export const ResourceGrid = <T,>({
     scrollThreshold = "100px",
 }: ResourceGridProps<T>) => {
     const sanitizedColumnGap = typeof columnGap === 'number' ? `${columnGap}px` : columnGap;
+    const gridId = useId();
+    const { suppressFooter } = useUIStore();
+
+    useEffect(() => {
+        // Suppress footer if we are loading or there is more data to come (infinite scroll)
+        if (hasMore || isLoading || isFetchingMore) {
+            suppressFooter(gridId, true);
+        } else {
+            suppressFooter(gridId, false);
+        }
+
+        // Cleanup: always show footer when the grid unmounts
+        return () => suppressFooter(gridId, false);
+    }, [hasMore, isLoading, isFetchingMore, suppressFooter, gridId]);
 
     const shouldVirtualize = virtualize || items.length > autoVirtualizeThreshold;
-
-
     const { ref: sentinelRef, inView } = useInView({
         threshold: 0,
         rootMargin: scrollThreshold,
@@ -267,14 +86,11 @@ export const ResourceGrid = <T,>({
         if (shouldVirtualize) return;
         let id: ReturnType<typeof setTimeout>;
         if (inView && hasMore && !isLoading && !isFetchingMore) {
-            // Add a substantial delay (cooldown) if we already have items to avoid thundering herd
             const delay = items.length === 0 ? 0 : scrollThrottlingDelay;
             id = setTimeout(() => loadMoreRef.current(), delay);
         }
         return () => clearTimeout(id);
     }, [inView, hasMore, isLoading, isFetchingMore, scrollThrottlingDelay, shouldVirtualize, items.length]);
-
-
     const widthContainerRef = useRef<HTMLDivElement>(null);
     const [containerWidth, setContainerWidth] = useState(960);
 
@@ -290,22 +106,17 @@ export const ResourceGrid = <T,>({
         if (widthContainerRef.current) ro.observe(widthContainerRef.current);
         return () => ro.disconnect();
     }, [shouldVirtualize]);
-
-
     const columns = fixedColumns || getColumns(containerWidth);
     const rowHeight = itemHeight + rowGap;
 
     const dataRowCount = Math.ceil(items.length / columns);
     const totalRowCount = dataRowCount + (hasMore || isFetchingMore ? 1 : 0);
-
-
     const { containerRef: virtContainerRef, virtualRows, totalHeight, visibleEndIndex } =
         useWindowVirtualizer({
             rowCount: shouldVirtualize ? totalRowCount : 0,
             rowHeight,
             overscan: 3,
         });
-
 
     const lastLoadedCountRef = useRef(-1);
 
@@ -323,8 +134,6 @@ export const ResourceGrid = <T,>({
         }
     }, [visibleEndIndex, dataRowCount, hasMore, isLoading, isFetchingMore, items.length, shouldVirtualize, scrollThrottlingDelay]);
 
-
-    // Clamping logic removed as it interfered with infinite scroll when bottom padding was present
     const renderRow = useCallback(
         (rowIndex: number) => {
 
@@ -340,7 +149,7 @@ export const ResourceGrid = <T,>({
                         }}
                     >
                         {isFetchingMore ? (
-                            [...Array(columns)].map((_, i) => (
+                            [...Array(loadingItemCount)].map((_, i) => (
                                 <div key={i} className="min-w-0" style={{ height: itemHeight, overflow: "hidden" }}>
                                     <PremiumSkeleton style={{ height: itemHeight }} className="w-full" />
                                 </div>
@@ -358,7 +167,6 @@ export const ResourceGrid = <T,>({
                     </div>
                 );
             }
-
 
             const cells: React.ReactNode[] = [];
             for (let col = 0; col < columns; col++) {
@@ -391,7 +199,6 @@ export const ResourceGrid = <T,>({
 
     return (
         <div className="w-full relative z-10">
-
             {!shouldVirtualize ? (
                 <div className="w-full">
                     {isLoading && !items.length ? (
@@ -407,7 +214,7 @@ export const ResourceGrid = <T,>({
                             ))}
                         </div>
                     ) : isEmpty ? (
-                        <EmptyState message={emptyMessage} subMessage={emptySubMessage} />
+                        emptyStateComponent || null
                     ) : (
                         <div
                             className="grid"
@@ -423,7 +230,7 @@ export const ResourceGrid = <T,>({
                             )}
                             {isFetchingMore && (
                                 <>
-                                    {[...Array(4)].map((_, i) => (
+                                    {[...Array(loadingItemCount)].map((_, i) => (
                                         <PremiumSkeleton key={`more-${i}`} style={{ height: itemHeight }} className="w-full" />
                                     ))}
                                 </>
@@ -437,57 +244,54 @@ export const ResourceGrid = <T,>({
                         </div>
                     )}
                 </div>
-
             ) : (
-
-                isEmpty ? (
-                    <div className="w-full">
-                        <EmptyState message={emptyMessage} subMessage={emptySubMessage} />
-                    </div>
-                ) : (
-                    <div
-                        ref={widthContainerRef}
-                        className="w-full"
-                    >
-                        {isLoading && items.length === 0 ? (
-                            <div
-                                style={{
-                                    display: "grid",
-                                    gridTemplateColumns: `repeat(${columns}, 1fr)`,
-                                    gap: sanitizedColumnGap,
-                                }}
-                            >
-                                {[...Array(loadingItemCount)].map((_, i) => (
-                                    <PremiumSkeleton
-                                        key={`init-skel-${i}`}
-                                        style={{ height: itemHeight }}
-                                        className="w-full"
-                                    />
-                                ))}
-                            </div>
-                        ) : (
-                            <div
-                                ref={virtContainerRef}
-                                style={{
-                                    position: "relative",
-                                    height: totalHeight,
-                                    overflow: "visible",
-                                }}
-                            >
-                                {virtualRows.map((row) => (
-                                    <MemoizedVirtualRow
-                                        key={row.index}
-                                        rowIndex={row.index}
-                                        top={row.top}
-                                        height={row.height}
-                                        rowGap={rowGap}
-                                        renderRow={renderRow}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )
+                <div ref={widthContainerRef} className="w-full">
+                    {isEmpty ? (
+                        <div className="w-full">
+                            {emptyStateComponent || null}
+                        </div>
+                    ) : (
+                        <div className="w-full">
+                            {isLoading && items.length === 0 ? (
+                                <div
+                                    style={{
+                                        display: "grid",
+                                        gridTemplateColumns: `repeat(${columns}, 1fr)`,
+                                        gap: sanitizedColumnGap,
+                                    }}
+                                >
+                                    {[...Array(loadingItemCount)].map((_, i) => (
+                                        <PremiumSkeleton
+                                            key={`init-skel-${i}`}
+                                            style={{ height: itemHeight }}
+                                            className="w-full"
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div
+                                    ref={virtContainerRef}
+                                    style={{
+                                        position: "relative",
+                                        height: totalHeight,
+                                        overflow: "visible",
+                                    }}
+                                >
+                                    {virtualRows.map((row) => (
+                                        <MemoizedVirtualRow
+                                            key={row.index}
+                                            rowIndex={row.index}
+                                            top={row.top}
+                                            height={row.height}
+                                            rowGap={rowGap}
+                                            renderRow={renderRow}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             )}
         </div>
     );

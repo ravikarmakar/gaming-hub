@@ -5,8 +5,11 @@ import { useInfiniteOrganizersQuery } from "../../hooks/useOrganizerQueries";
 import OrganizerCard from "../components/OrganizerCard";
 import { ResourceGridWrapper } from "@/components/shared/ResourceGridWrapper";
 import { HeaderActions } from "@/components/HeaderActions";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { useWindowSize } from "@/hooks/useWindowSize";
 
 export const FindOrganizers = () => {
+    const { width } = useWindowSize();
     const [searchQuery, setSearchQuery] = useState("");
     const debouncedSearchQuery = useDebounce(searchQuery, 500);
     const [showFilters, setShowFilters] = useState(false);
@@ -42,7 +45,8 @@ export const FindOrganizers = () => {
             isEmpty={!isLoading && organizers.length === 0}
             hasMore={!!hasNextPage}
             onLoadMore={handleLoadMore}
-            emptyMessage="No Organizers Found"
+            emptyStateComponent={<EmptyState message="No Organizers Found" />}
+            loadingItemCount={20}
             items={organizers}
             renderItem={(organizer, index) => <OrganizerCard key={organizer._id} organizer={organizer} index={index} />}
             virtualize={true}
@@ -54,10 +58,10 @@ export const FindOrganizers = () => {
                     showFilters={showFilters}
                     setShowFilters={setShowFilters}
                     onClearFilters={() => setSearchQuery("")}
+                    placeholder="Search organizers..."
                 />
             }
-            itemHeight={380}
-            columns={3}
+            itemHeight={(width ?? 1200) < 640 ? 80 : 380}
             filters={
                 <div className="text-white/50 text-sm py-4 bg-white/[0.02] rounded-xl border border-white/[0.05] p-6 text-center w-full">
                     Additional organization filters coming soon.
