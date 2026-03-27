@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
-import { Building2, Globe, Tag, FileText, CheckCircle2, ArrowRight, Loader2, Shield } from "lucide-react";
+import { Building2, Globe, Tag, FileText, CircleCheckBig as CircleCheck2, ArrowRight, LoaderCircle as Loader2, Shield } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { REGIONS } from "@/constants/regions";
 
@@ -123,7 +123,7 @@ const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({
                                 className="flex flex-col items-center justify-center py-12 px-4 space-y-4 text-center"
                             >
                                 <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center border border-green-500/20 mb-2">
-                                    <CheckCircle2 className="w-8 h-8 text-green-500" />
+                                    <CircleCheck2 className="w-8 h-8 text-green-500" />
                                 </div>
                                 <h3 className="text-xl font-black italic font-orbitron text-white uppercase tracking-wider">
                                     {isOrg ? "Organization Created!" : "Team Created!"}

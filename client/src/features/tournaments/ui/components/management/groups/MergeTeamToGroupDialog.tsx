@@ -7,7 +7,7 @@ import {
     DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { GitMerge, Loader2 } from "lucide-react";
+import { GitMerge, LoaderCircle as Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useGetRoundsQuery, useGetGroupsQuery, useInjectTeamMutation } from "@/features/tournaments/hooks";
 import { Round } from "@/features/tournaments/types";
@@ -68,7 +68,7 @@ export const MergeTeamToGroupDialog = ({ open, onOpenChange, eventId, team, sour
                     {/* Round Selection */}
                     <div className="space-y-3">
                         <Label className="text-sm font-black text-gray-500 uppercase tracking-widest">Select Target Round</Label>
-                        <div className="grid grid-cols-2 gap-2 max-h-[150px] overflow-y-auto custom-scrollbar p-1">
+                        <div className="grid grid-cols-2 gap-2 max-h-[150px] overflow-y-auto scrollbar-hide p-1">
                             {isLoadingRounds ? (
                                 <Loader2 className="w-5 h-5 animate-spin mx-auto col-span-2" />
                             ) : availableRounds.length > 0 ? (
@@ -103,7 +103,7 @@ export const MergeTeamToGroupDialog = ({ open, onOpenChange, eventId, team, sour
                     {selectedRoundId && (
                         <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                             <Label className="text-sm font-black text-gray-500 uppercase tracking-widest">Select Target Group</Label>
-                            <div className="grid grid-cols-3 gap-2 max-h-[200px] overflow-y-auto custom-scrollbar p-1">
+                            <div className="grid grid-cols-3 gap-2 max-h-[200px] overflow-y-auto scrollbar-hide p-1">
                                 {isLoadingGroups ? (
                                     <Loader2 className="w-5 h-5 animate-spin mx-auto col-span-3" />
                                 ) : groups.length > 0 ? (

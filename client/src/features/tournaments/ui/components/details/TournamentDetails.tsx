@@ -4,7 +4,7 @@ import {
     Sword, 
     Link as LinkIcon, 
     Users, 
-    CheckCircle2, 
+    CircleCheckBig as CircleCheck2, 
     Terminal,
     Trophy,
     Activity
@@ -137,7 +137,7 @@ const TournamentDetails: React.FC<TournamentDetailsProps> = ({ eventDetails }) =
                                         </div>
                                         {organizer?.isVerified && (
                                             <div className="absolute -bottom-1 -right-1 p-1 bg-brand-black rounded-lg border border-white/10">
-                                                <CheckCircle2 size={12} className="text-blue-400" />
+                                                <CircleCheck2 size={12} className="text-blue-400" />
                                             </div>
                                         )}
                                     </div>

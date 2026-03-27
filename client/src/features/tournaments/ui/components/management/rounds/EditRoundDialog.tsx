@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, Layers, Trophy, Clock, Calendar } from "lucide-react";
+import { LoaderCircle as Loader2, Layers, Trophy, Clock, Calendar } from "lucide-react";
 import {
     Dialog,
     DialogContent,

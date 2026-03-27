@@ -1,4 +1,4 @@
-import { ArrowLeft, Clock, Users, Swords, ChevronLeft, ChevronRight, MessageSquare, CheckCircle2, UserPlus, Activity, Loader2 } from "lucide-react";
+import { ArrowLeft, Clock, Users, Swords, ChevronLeft, ChevronRight, MessageSquare, CircleCheckBig as CircleCheck2, UserPlus, Activity, LoaderCircle as Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GroupActionsMenu } from "./GroupActionsMenu";
 import { GroupStatusIndicator } from "./GroupStatusIndicator";
@@ -7,7 +7,7 @@ import { Group } from "@/features/tournaments/types";
 import { formatDateTime } from "@/lib/utils";
 
 interface GroupDetailsHeaderProps {
-    currentGroup: Group | undefined;
+    currentGroup: Group | null | undefined;
     onBack: () => void;
     onPrevGroup: () => void;
     onNextGroup: () => void;
@@ -62,7 +62,6 @@ export const GroupDetailsHeader = ({
     showMerge,
     onMerge
 }: GroupDetailsHeaderProps) => {
-
 
     if (!currentGroup) return null;
 
@@ -158,7 +157,7 @@ export const GroupDetailsHeader = ({
                                 disabled={isSubmitting || isSubmitDisabled}
                                 className="h-9 px-6 bg-green-600 hover:bg-green-700 text-white font-bold uppercase tracking-wider text-[10px] rounded-lg transition-all flex items-center gap-1.5"
                             >
-                                {isSubmitting ? <Activity className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                                {isSubmitting ? <Activity className="w-3.5 h-3.5 animate-spin" /> : <CircleCheck2 className="w-3.5 h-3.5" />}
                                 Submit
                             </Button>
                         </>

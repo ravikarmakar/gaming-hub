@@ -8,7 +8,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import { ConfirmActionDialog } from "@/components/shared/dialogs/ConfirmActionDialog";
 
 export interface DangerZoneProps {
     title: React.ReactNode;

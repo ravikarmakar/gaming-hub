@@ -17,15 +17,15 @@ import {
 
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/routes";
-import NavItems from "./shared/NavItems";
-import ProfileMenu from "./shared/ProfileMenu";
-import { DashboardButton } from "./shared/DashboardButton";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useNotificationManager } from "@/features/notifications/hooks/useNotificationManager";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { ORG_ACTIONS_ACCESS, ORG_ACTIONS } from "@/features/organizer/lib/access";
 import { AUTH_ROUTES } from "@/features/auth/lib/routes";
 import { ADMIN_ACCESS } from "@/features/admin/lib/access";
+import NavItems from "./NavItems";
+import ProfileMenu from "./ProfileMenu";
+import { DashboardButton } from "./DashboardButton";
 
 const Navbar = () => {
   const navigate = useNavigate();

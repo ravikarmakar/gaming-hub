@@ -5,7 +5,7 @@ import {
     User,
     Target,
     Shield,
-    XCircle,
+    CircleX as XCircle,
     User2,
     Edit,
     Trash,

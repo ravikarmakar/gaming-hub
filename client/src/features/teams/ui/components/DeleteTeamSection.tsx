@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 
 import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
-import { DangerZone } from "@/components/shared/DangerZone";
+import { DangerZone } from "@/components/shared/common/DangerZone";
 
 export const DeleteTeamSection = () => {
     const navigate = useNavigate();

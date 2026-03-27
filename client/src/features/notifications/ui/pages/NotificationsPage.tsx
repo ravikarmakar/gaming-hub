@@ -5,8 +5,8 @@ import { useInfiniteNotificationsQuery, useUnreadCountQuery } from "../../hooks/
 import { useMarkAllAsReadMutation } from "../../hooks/useNotificationMutations";
 import NotificationItem from "../components/NotificationItem";
 import { Button } from "@/components/ui/button";
-import { ResourceGrid } from "@/components/shared/ResourceGrid";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { ResourceGrid } from "@/components/shared/list/ResourceGrid";
+import { EmptyState } from "@/components/shared/feedback/EmptyState";
 
 const NotificationsPage: React.FC = () => {
     const {

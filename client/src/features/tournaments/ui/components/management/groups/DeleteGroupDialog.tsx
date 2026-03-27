@@ -1,4 +1,4 @@
-import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import { ConfirmActionDialog } from "@/components/shared/dialogs/ConfirmActionDialog";
 import { useDeleteGroupMutation } from "@/features/tournaments/hooks";
 import { Group } from "@/features/tournaments/types";
 import toast from "react-hot-toast";

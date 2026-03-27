@@ -1,9 +1,9 @@
-import { Award, Loader2, CheckCircle } from "lucide-react";
+import { Award, LoaderCircle as Loader2, CircleCheck as CircleCheck } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useState } from "react";
 
 import { Organizer } from "@/features/organizer/types";
-import { UnifiedProfileHeader } from "@/components/shared/UnifiedProfileHeader";
+import { UnifiedProfileHeader } from "@/components/shared/profile/UnifiedProfileHeader";
 import { ProfileBadge } from "@/components/shared/profile/ProfileBadge";
 import { ProfileActionButton } from "@/components/shared/profile/ProfileActionButton";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
@@ -107,7 +107,7 @@ const JoinOrgButton = ({ organizer }: { organizer: Organizer }) => {
                 disabled={organizer.hasPendingRequest || joinMutation.isPending}
                 variant="success"
                 className={organizer.hasPendingRequest ? "cursor-default opacity-80" : ""}
-                icon={joinMutation.isPending ? <Loader2 className="animate-spin" /> : organizer.hasPendingRequest ? <CheckCircle /> : undefined}
+                icon={joinMutation.isPending ? <Loader2 className="animate-spin" /> : organizer.hasPendingRequest ? <CircleCheck /> : undefined}
             >
                 {joinMutation.isPending ? (
                     "Joining..."

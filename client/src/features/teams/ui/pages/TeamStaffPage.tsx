@@ -22,7 +22,7 @@ import { TEAM_ACTIONS, TEAM_ACTIONS_ACCESS, TEAM_ACCESS } from "@/features/teams
 import { TEAM_ROUTES } from "../../lib/routes";
 import { TeamMembersTypes } from "@/features/teams/lib/types";
 import { TeamPageHeader } from "../components/TeamPageHeader";
-import { ConfirmActionDialog, DialogVariant } from "@/components/shared/ConfirmActionDialog";
+import { ConfirmActionDialog, DialogVariant } from "@/components/shared/dialogs/ConfirmActionDialog";
 
 export function formatTeamRole(systemRole?: string) {
     if (!systemRole) return "";

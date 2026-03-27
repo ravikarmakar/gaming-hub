@@ -1,4 +1,4 @@
-import { FeatureError } from "@/components/shared/FeatureError";
+import { FeatureError } from "@/components/shared/feedback/FeatureError";
 
 interface TeamErrorProps {
     message?: string;

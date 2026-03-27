@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { LoaderCircle as Loader2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import {
     Dialog,

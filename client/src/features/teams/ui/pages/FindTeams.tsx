@@ -5,8 +5,8 @@ import { HeaderActions } from "@/components/HeaderActions";
 import { useTeamListStore } from "../../store/useTeamListStore";
 import TeamCard from "../components/TeamCard";
 import TeamFilters from "../components/TeamFilters";
-import { ResourceGridWrapper } from "@/components/shared/ResourceGridWrapper";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { ResourceGridWrapper } from "@/components/shared/list/ResourceGridWrapper";
+import { EmptyState } from "@/components/shared/feedback/EmptyState";
 import { useWindowSize } from "@/hooks/useWindowSize";
 
 const FindTeams: React.FC = () => {

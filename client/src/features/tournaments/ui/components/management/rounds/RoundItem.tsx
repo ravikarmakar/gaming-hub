@@ -1,6 +1,7 @@
 import { memo } from 'react';
-import { Edit, Trash2, CheckCircle2, GitMerge, Clock } from "lucide-react";
+import { Edit, Trash2, CircleCheckBig as CircleCheck2, Clock, GitMerge } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTournamentDialogs } from '@/features/tournaments/context/TournamentDialogContext';
 
 interface RoundItemProps {
     round: any;
@@ -8,8 +9,6 @@ interface RoundItemProps {
     isSidebarCollapsed?: boolean;
     activeRoundTab?: string;
     onSelect?: (id: string) => void;
-    onEditClick?: (round: any) => void;
-    onDeleteClick?: (round: any) => void;
     isReadOnly?: boolean;
 }
 
@@ -18,10 +17,10 @@ export const RoundItem = memo(({
     isSelected = false,
     isSidebarCollapsed = false,
     onSelect,
-    onEditClick,
-    onDeleteClick,
     isReadOnly = false
 }: RoundItemProps) => {
+    const { openDialog } = useTournamentDialogs();
+
     const handleSelect = () => {
         if (!isReadOnly && onSelect) onSelect(round._id);
     };
@@ -29,7 +28,6 @@ export const RoundItem = memo(({
     const formatRoundName = (name: string, number: number) => {
         if (!name) return "";
         const n = number || 0;
-        // Match "Round X", "Round X - ", "Round X: ", "R X - Round X - ", etc.
         const roundPrefixRegex = new RegExp(`^(?:R${n}\\s*[:-]?\\s*)?Round\\s*${n}\\s*[:-]?\\s*`, 'i');
         return name.replace(roundPrefixRegex, '').trim() || name;
     };
@@ -69,7 +67,7 @@ export const RoundItem = memo(({
                             <span className="absolute -top-1 -right-1 flex h-2 w-2 rounded-full bg-green-500 animate-pulse border border-black" />
                         )}
                         {round.status === 'completed' && (
-                            <CheckCircle2 className="absolute -top-1 -right-1.5 w-3 h-3 text-green-500 bg-black rounded-full" />
+                            <CircleCheck2 className="absolute -top-1 -right-1.5 w-3 h-3 text-green-500 bg-black rounded-full" />
                         )}
                     </div>
                 </div>
@@ -114,36 +112,43 @@ export const RoundItem = memo(({
                                     </span>
                                 )}
                             </div>
-                            <div className="flex flex-wrap gap-2 mt-0.5">
-                                {round.mergeInfo && (
-                                    <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400 uppercase tracking-wider">
-                                        <GitMerge className="w-3 h-3" />
-                                        {round.mergeInfo.type === 'merges-into' ? (
-                                            <span>
-                                                Merges into {round.mergeInfo.targetLabel}
-                                                {round.mergeInfo.targetTitle && <span className="text-amber-400 ml-1">({round.mergeInfo.targetTitle})</span>}
-                                            </span>
-                                        ) : (
-                                            <div className="flex flex-col gap-0.5">
-                                                {round.mergeInfo.sources.map((s: any) => (
-                                                    <span key={s.name || s.roundId} className="flex items-center gap-1">
-                                                        <span className={s.type === 't1-special' ? 'text-blue-400' : 'text-purple-400'}>
-                                                            {s.type === 't1-special' ? 'T1:' : 'Invited:'}
-                                                        </span>
+
+                            {/* Merge Configuration Info */}
+                            {round.mergeInfo && (
+                                <div className="mt-1 flex flex-col gap-1">
+                                    {round.mergeInfo.type === 'merges-into' && (
+                                        <div className="flex items-center gap-1.5">
+                                            <GitMerge className="w-3 h-3 text-indigo-500" />
+                                            <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest whitespace-nowrap">
+                                                Merges into {round.mergeInfo.targetLabel}{round.mergeInfo.targetTitle ? ` - ${round.mergeInfo.targetTitle}` : ""}
+                                            </p>
+                                        </div>
+                                    )}
+                                    {round.mergeInfo.type === 'receives-from' && (round.mergeInfo.sources?.length || 0) > 0 && (
+                                        <div className="flex flex-col gap-1 mt-0.5">
+                                            <div className="flex items-center gap-1.5">
+                                                <GitMerge className="w-3 h-3 text-sky-500" />
+                                                <p className="text-[9px] font-black text-sky-400 uppercase tracking-widest">
+                                                    Receives Teams From
+                                                </p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-1">
+                                                {round.mergeInfo.sources.map((s: any, i: number) => (
+                                                    <span key={i} className="text-[8px] px-1.5 py-0.5 rounded-[4px] bg-sky-500/10 border border-sky-500/20 text-sky-400 font-bold whitespace-nowrap">
                                                         {s.name}
                                                     </span>
                                                 ))}
                                             </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                     <div className="flex flex-col items-end gap-2 text-right">
                         {round.status === 'completed' ? (
                             <div className="bg-green-500/10 p-1 rounded-full border border-green-500/20">
-                                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                <CircleCheck2 className="w-4 h-4 text-green-500" />
                             </div>
                         ) : round.status === 'ongoing' ? (
                             <span className="text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest uppercase bg-blue-500/10 border border-blue-500/20 text-blue-400">
@@ -160,7 +165,7 @@ export const RoundItem = memo(({
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-gray-400/50 hover:text-purple-400 hover:bg-purple-500/10"
-                                    onClick={(e) => { e.stopPropagation(); onEditClick?.(round); }}
+                                    onClick={(e) => { e.stopPropagation(); openDialog('editRound', round); }}
                                     aria-label="Edit timing and scheduling"
                                 >
                                     <Clock className="w-3.5 h-3.5" />
@@ -169,7 +174,7 @@ export const RoundItem = memo(({
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-gray-400 hover:text-white hover:bg-white/10"
-                                    onClick={(e) => { e.stopPropagation(); onEditClick?.(round); }}
+                                    onClick={(e) => { e.stopPropagation(); openDialog('editRound', round); }}
                                     aria-label={`Edit ${round.roundName} name and settings`}
                                 >
                                     <Edit className="w-3.5 h-3.5" />
@@ -179,7 +184,7 @@ export const RoundItem = memo(({
                                         variant="ghost"
                                         size="icon"
                                         className="h-7 w-7 text-red-500/50 hover:text-red-400 hover:bg-red-500/10"
-                                        onClick={(e) => { e.stopPropagation(); onDeleteClick?.(round); }}
+                                        onClick={(e) => { e.stopPropagation(); openDialog('resetRound', round); }}
                                         aria-label={`Delete ${round.roundName}`}
                                     >
                                         <Trash2 className="w-3.5 h-3.5" />

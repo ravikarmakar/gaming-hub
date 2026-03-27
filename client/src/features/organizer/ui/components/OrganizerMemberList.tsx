@@ -1,5 +1,5 @@
 import { OrganizerMemberCard } from "./OrganizerMemberCard";
-import { MemberList } from "@/components/shared/MemberList";
+import { MemberList } from "@/components/shared/list/MemberList";
 
 interface Member {
     _id: string;

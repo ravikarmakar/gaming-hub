@@ -1,6 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Loader2, Inbox, AlertTriangle } from "lucide-react";
+import { Bell, LoaderCircle as Loader2, Inbox, AlertTriangle } from "lucide-react";
 
 import { useTeamNotificationsQuery } from "@/features/notifications/hooks/useNotificationQueries";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";

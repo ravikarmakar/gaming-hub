@@ -6,7 +6,7 @@ import {
   TrendingUp,
   Clock,
   ListOrdered,
-  BarChart,
+  ChartBar as BarChart,
   Settings,
   PlusCircle,
 } from "lucide-react";

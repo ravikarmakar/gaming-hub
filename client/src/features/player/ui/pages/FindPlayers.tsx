@@ -4,9 +4,9 @@ import { useDebounce } from "@/hooks/useDebounce";
 import PlayerCard from "../components/PlayerCard";
 import PlayerFilters from "../components/PlayerFilters";
 import { useInfinitePlayersQuery } from "../../hooks/usePlayerQueries";
-import { ResourceGridWrapper } from "@/components/shared/ResourceGridWrapper";
+import { ResourceGridWrapper } from "@/components/shared/list/ResourceGridWrapper";
 import { HeaderActions } from "@/components/HeaderActions";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { EmptyState } from "@/components/shared/feedback/EmptyState";
 import { useWindowSize } from "@/hooks/useWindowSize";
 
 const FindPlayers: React.FC = () => {

@@ -2,12 +2,11 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { AlertCircle, Info, Trophy, Users, Globe, Target, LucideIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArenaLoading } from "@/components/shared/ArenaLoading";
+import { ArenaLoading } from "@/components/shared/feedback/ArenaLoading";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ProfileBannerLayout } from "@/components/shared/ProfileBannerLayout";
 
 import { TeamHero } from "../components/TeamHero";
 import { TeamStatsGrid } from "../components/TeamStatsGrid";
@@ -16,6 +15,7 @@ import { useTeamManagementStore } from "@/features/teams/store/useTeamManagement
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { TEAM_ACCESS as ACCESS } from "@/features/teams/lib/access";
 import { Team } from "@/features/teams/lib/types";
+import { ProfileBannerLayout } from "@/components/shared/profile/ProfileBannerLayout";
 
 // --- Tab Configuration ---
 interface TeamTab {

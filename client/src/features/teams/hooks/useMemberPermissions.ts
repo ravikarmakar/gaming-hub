@@ -2,7 +2,7 @@ import { useMemo } from "react";
 
 import { TeamMembersTypes } from "@/features/teams/lib/types";
 import { TEAM_ROLES } from "@/features/teams/lib/access";
-import { roleIcons } from "@/components/shared/MemberCard";
+import { roleIcons } from "@/components/shared/list/MemberCard";
 
 interface UseMemberPermissionsProps {
     member: TeamMembersTypes;

@@ -4,51 +4,31 @@ import { FixedSizeGrid, GridChildComponentProps } from "react-window";
 import { AutoSizer } from "react-virtualized-auto-sizer";
 import { Button } from "@/components/ui/button";
 import { GroupCard } from "./GroupCard";
-import { Group } from "@/features/tournaments/types";
+import { useTournamentDialogs } from "@/features/tournaments/context/TournamentDialogContext";
 
-interface GroupGridViewProps {
-    groups: Group[];
-    roundMatches: number | undefined;
-    setSelectedGroupId: (id: string | null) => void;
-    openEditModal: (group: Group) => void;
-    openDeleteModal: (group: Group) => void;
-    openChatModal: (group: Group) => void;
-    openInviteModal: (group: Group) => void;
-    totalGroups: number;
-    currentPage: number;
-    totalPages: number;
-    isLoading: boolean;
-    handlePageChange: (page: number) => void;
-    onResetGroup?: (group: Group) => void;
-    onMergeToGroup: (id: string) => void;
-    activeRoundTab: string;
-    round: any;
-
-}
+import { useGroupsContext } from "@/features/tournaments/context/TournamentGroupsContext";
 
 const MemoizedGroupCard = React.memo(GroupCard);
 
-const GridCell = ({ 
-    columnIndex, 
-    rowIndex, 
-    style, 
-    data 
+const GridCell = ({
+    columnIndex,
+    rowIndex,
+    style,
+    data
 }: GridChildComponentProps) => {
-    const { 
-        groups, 
-        columnCount, 
-        roundMatches, 
-        setSelectedGroupId, 
-        openEditModal, 
-        openDeleteModal, 
-        openChatModal, 
-        openInviteModal, 
+    const {
+        groups,
+        columnCount,
+        roundMatches,
+        setSelectedGroupId,
         onResetGroup,
-        onMergeToGroup, 
-        activeRoundTab, 
+        onMergeToGroup,
+        activeRoundTab,
         round
     } = data;
-    
+
+    const { openDialog } = useTournamentDialogs();
+
     const index = rowIndex * columnCount + columnIndex;
     const group = groups[index];
 
@@ -61,39 +41,39 @@ const GridCell = ({
                     group={group}
                     roundMatches={roundMatches}
                     onSelect={setSelectedGroupId}
-                    onEdit={openEditModal}
-                    onDelete={openDeleteModal}
-                    onChat={openChatModal}
-                    onInvite={openInviteModal}
+                    onEdit={() => openDialog('editGroup', group)}
+                    onDelete={() => openDialog('deleteGroup', group)}
+                    onChat={() => openDialog('groupChat', group)}
+                    onInvite={() => openDialog('addTeam', group)}
                     onReset={onResetGroup}
                     onMerge={() => onMergeToGroup(group._id)}
                     activeRoundTab={activeRoundTab}
                     round={round}
-
                 />
             </div>
         </div>
     );
 };
 
-export const GroupGridView = ({
-    groups,
-    roundMatches,
-    setSelectedGroupId,
-    openEditModal,
-    openDeleteModal,
-    openChatModal,
-    openInviteModal,
-    totalGroups,
-    currentPage,
-    totalPages,
-    isLoading,
-    handlePageChange,
-    onResetGroup,
-    onMergeToGroup,
-    activeRoundTab,
-    round
-}: GroupGridViewProps) => {
+export const GroupGridView = () => {
+    const {
+        groups,
+        roundMatches,
+        setSelectedGroupId,
+        totalGroups,
+        currentPage,
+        totalPages,
+        isLoading,
+        handlePageChange,
+        handleResetGroup: onResetGroup,
+        handleMergeToGroup: onMergeToGroup,
+        activeRoundTab,
+        roundId,
+        rounds
+    } = useGroupsContext();
+
+    const round = rounds.find(r => r._id === roundId) || null;
+
     return (
         <div className="space-y-4">
             <div className="bg-transparent overflow-hidden h-[600px]">
@@ -106,20 +86,16 @@ export const GroupGridView = ({
                     const rowCount = Math.ceil(groups.length / columnCount);
                     const columnWidth = width ? width / columnCount : 0;
 
-                    const itemData = React.useMemo(() => ({
+                    const itemData = {
                         groups,
                         columnCount,
                         roundMatches,
                         setSelectedGroupId,
-                        openEditModal,
-                        openDeleteModal,
-                        openChatModal,
-                        openInviteModal,
                         onResetGroup,
                         onMergeToGroup,
                         activeRoundTab,
                         round
-                    }), [groups, columnCount, roundMatches, setSelectedGroupId, openEditModal, openDeleteModal, openChatModal, openInviteModal, onMergeToGroup, activeRoundTab, round]);
+                    };
 
                     return (
                         <FixedSizeGrid

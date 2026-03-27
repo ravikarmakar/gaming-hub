@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { ResourceGridWrapper } from "@/components/shared/ResourceGridWrapper";
+import { ResourceGridWrapper } from "@/components/shared/list/ResourceGridWrapper";
 
 export interface DiscoveryPageProps<T> {
     title: ReactNode;

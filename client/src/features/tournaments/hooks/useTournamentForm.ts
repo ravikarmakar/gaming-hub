@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { formatDateToLocalHTML } from "@/lib/utils";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
+import { prepareTournamentFormData } from "@/features/tournaments/lib/tournamentUtils";
 import {
   TournamentFormValues,
   tournamentSchema,
@@ -114,60 +115,7 @@ export function useTournamentForm() {
     }
 
     try {
-      const fd = new FormData();
-      const backendEventType = data.eventType;
-
-      // Use a local object for logic that might require value adjustments (like Scrims)
-      const submissionData = { ...data };
-      if (backendEventType === "scrims") {
-        submissionData.registrationEndsAt = submissionData.startDate;
-      }
-
-      Object.entries(submissionData).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          if (backendEventType === "scrims") {
-            const irrelevantFields = [
-              "roadmap",
-              "hasRoadmap",
-              "hasInvitedTeams",
-              "invitedTeams",
-              "invitedTeamsRoadmap"
-            ];
-            if (irrelevantFields.includes(key)) return;
-          }
-
-          if (key === "slots") {
-            fd.append("maxSlots", String(value));
-            fd.append("slots", String(value));
-          } else if (key === "prizeDistribution" || key === "roadmap" || key === "invitedTeams" || key === "invitedTeamsRoadmap" || key === "invitedRoundMappings" || key === "t1SpecialRoadmap" || key === "t1SpecialRoundMappings") {
-            if (key === "invitedTeams" && !submissionData.hasInvitedTeams) return;
-            if (key === "invitedTeams" && Array.isArray(value)) {
-              const teamIds = value.map(t => (t.teamId || t._id || t));
-              fd.append(key, JSON.stringify(teamIds));
-              return;
-            }
-            if (key === "roadmap" && !submissionData.hasRoadmap) return;
-            if (key === "invitedTeamsRoadmap" && !submissionData.hasInvitedTeams) return;
-            if (key === "invitedRoundMappings" && !submissionData.hasInvitedTeams) return;
-            if (key === "t1SpecialRoadmap" && !submissionData.hasT1SpecialRoadmap) return;
-            if (key === "t1SpecialRoundMappings" && !submissionData.hasT1SpecialRoadmap) return;
-            fd.append(key, JSON.stringify(value));
-          } else if (key === "maxInvitedSlots") {
-            if (!submissionData.hasInvitedTeams) return;
-            fd.append("maxInvitedSlots", String(value || 0));
-          } else if (key === "image" && value instanceof File) {
-            fd.append("image", value);
-          } else if (key === "eventType") {
-            fd.append(key, backendEventType.toLowerCase());
-          } else if (key === "isPaid") {
-            fd.append("isPaid", String(value));
-          } else if (key === "category" || key === "status") {
-            fd.append(key, String(value).toLowerCase());
-          } else if (key !== "image") {
-            fd.append(key, String(value));
-          }
-        }
-      });
+      const fd = prepareTournamentFormData(data);
 
       if (isEditMode && eventId) {
         updateTournamentMutation.mutate({ eventId, payload: fd }, {

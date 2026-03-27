@@ -16,7 +16,7 @@ import { SocialConnectionsSection } from "@/components/shared/profile/SocialConn
 import { GeneralInfoSection, FieldConfig } from "@/components/shared/profile/GeneralInfoSection";
 import { BioSection } from "@/components/shared/profile/BioSection";
 import { PersonalDetailsSection } from "@/components/shared/profile/PersonalDetailsSection";
-import { SettingsFormActions } from "@/components/shared/SettingsFormActions";
+import { SettingsFormActions } from "@/components/shared/forms/SettingsFormActions";
 
 const profileFields: FieldConfig<PlayerSettingsValues>[] = [
     {

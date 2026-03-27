@@ -1,4 +1,4 @@
-import { Loader2, Search, Users, ChevronLeft, ChevronRight } from "lucide-react";
+import { LoaderCircle as Loader2, Search, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 

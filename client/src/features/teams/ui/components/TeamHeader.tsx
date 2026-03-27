@@ -1,5 +1,5 @@
 import {
-    CheckCircle,
+    CircleCheck as CircleCheck,
     Users,
     MapPin,
     Shield,
@@ -30,7 +30,7 @@ export const TeamHeader = ({ team, isDashboard }: Props) => {
                     {team.isVerified && (
                         <div className="absolute -bottom-1 -right-1">
                             <div className="p-1.5 rounded-full bg-purple-500 border-2 border-[#0B0C1A]">
-                                <CheckCircle className="w-4 h-4 text-white" />
+                                <CircleCheck className="w-4 h-4 text-white" />
                             </div>
                         </div>
                     )}

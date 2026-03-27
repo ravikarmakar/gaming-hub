@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { AlertTriangle, ShieldCheck, Sword, MessageSquare, Target, Bell, Mail, Smartphone, Loader2 } from "lucide-react";
+import { AlertTriangle, ShieldCheck, Sword, MessageSquare, Target, Bell, Mail, Smartphone, LoaderCircle as Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";

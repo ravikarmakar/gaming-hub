@@ -2,18 +2,26 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Trophy, Users, MessageSquare, ListOrdered, Gavel, Info, Map } from "lucide-react";
 import { ErrorBoundary } from "react-error-boundary";
 import { ErrorFallback } from "@/components/ErrorFallback";
+import { useState } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
+
+// Context Providers
+import { TournamentDialogProvider } from "@/features/tournaments/context/TournamentDialogContext";
+import { TournamentDashboardProvider, useTournamentDashboard } from "@/features/tournaments/context/TournamentDashboardContext";
+import { TournamentRoundsProvider } from "@/features/tournaments/context/TournamentRoundsContext";
+import { TournamentGroupsProvider } from "@/features/tournaments/context/TournamentGroupsContext";
+import { TournamentLoading } from "@/features/tournaments/ui/components";
+
 import {
     TournamentHeader,
     TournamentQuickStats,
     Roadmaps,
     TournamentDetails
 } from "@/features/tournaments/ui/components";
+
 import {
-    useGetTournamentDetailsQuery,
     useGetRegistrationStatusQuery,
     useRegisterTournamentMutation
 } from "@/features/tournaments/hooks";
@@ -24,8 +32,6 @@ import { ResultsTab } from "@/features/tournaments/ui/components/details/Results
 import { RulesTab } from "@/features/tournaments/ui/components/details/RulesTab";
 import { PointsTab } from "@/features/tournaments/ui/components/details/PointsTab";
 import { ChatTab } from "@/features/tournaments/ui/components/details/ChatTab";
-import { useState } from "react";
-
 
 const TABS_CONFIG = [
     { value: 'details', label: 'Details', icon: Info, color: 'purple', Component: TournamentDetails },
@@ -37,13 +43,19 @@ const TABS_CONFIG = [
     { value: 'results', label: 'Results', icon: Trophy, color: 'amber', Component: ResultsTab },
 ];
 
-const TournamentById = () => {
+/**
+ * TournamentByIdContent is the presentational layer for the public tournament view.
+ * It consumes TournamentDashboardContext for event data, ensuring consistency
+ * across all tabs and sub-components.
+ */
+const TournamentByIdContent = () => {
     const { id = "" } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { user } = useAuthStore();
     const [activeTab, setActiveTab] = useState("details");
 
-    const { data: eventDetails, isLoading } = useGetTournamentDetailsQuery(id);
+    // Consume centralized tournament data from context
+    const { eventDetails, isLoading } = useTournamentDashboard();
 
     const teamIdStr = typeof user?.teamId === 'string' ? user.teamId : user?.teamId?._id;
     const { data: regData } = useGetRegistrationStatusQuery(eventDetails?._id || id, teamIdStr || "", {
@@ -53,19 +65,8 @@ const TournamentById = () => {
 
     const regStatus = regData?.status || "none";
 
-    // Secondary data (rounds, leaderboards) is now fetched lazily inside the respective tab components
-    // to avoid unnecessary backend calls on initial load.
-
-
     if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-brand-black">
-                <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin mb-4" />
-                    <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Accessing Arena Protocol...</p>
-                </div>
-            </div>
-        );
+        return <TournamentLoading variant="fullscreen" />;
     }
 
     if (!eventDetails) return (
@@ -161,5 +162,26 @@ const TournamentById = () => {
         </div>
     );
 };
+
+/**
+ * TournamentById is the entry point for the public tournament page.
+ * It initializes all necessary providers to ensure context-driven components
+ * (Roadmaps, Results, Teams) function correctly in both public and management views.
+ */
+const TournamentById = () => {
+    const { id = "" } = useParams<{ id: string }>();
+
+    return (
+        <TournamentDialogProvider>
+            <TournamentDashboardProvider eventId={id}>
+                <TournamentRoundsProvider>
+                    <TournamentGroupsProvider>
+                        <TournamentByIdContent />
+                    </TournamentGroupsProvider>
+                </TournamentRoundsProvider>
+            </TournamentDashboardProvider>
+        </TournamentDialogProvider>
+    );
+}
 
 export default TournamentById;

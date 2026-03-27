@@ -8,6 +8,7 @@ import {
 } from './useTournamentMutations';
 import { tournamentKeys } from './useTournamentQueries';
 import toast from "react-hot-toast";
+import { Round } from '../types';
 
 export const useRoundActions = (eventId: string) => {
     const { mutateAsync: updateRoundStatus } = useUpdateRoundStatusMutation();
@@ -16,14 +17,7 @@ export const useRoundActions = (eventId: string) => {
     const { mutateAsync: mergeTeams, isPending: isMergingTeams } = useMergeTeamsToRoundMutation();
     const queryClient = useQueryClient();
 
-    const [isCreateRoundOpen, setIsCreateRoundOpen] = useState(false);
-    const [isEditRoundOpen, setIsEditRoundOpen] = useState(false);
-    const [isResetRoundOpen, setIsResetRoundOpen] = useState(false);
-    const [actionRound, setActionRound] = useState<any>(null);
     const [isSavingStatus, setIsSavingStatus] = useState(false);
-    const [isConfirmGroupsOpen, setIsConfirmGroupsOpen] = useState(false);
-    const [isConfirmManualGroupOpen, setIsConfirmManualGroupOpen] = useState(false);
-    const [isConfirmMergeOpen, setIsConfirmMergeOpen] = useState(false);
     const [cooldown, setCooldown] = useState(0);
 
     // Refresh Cooldown Effect
@@ -39,10 +33,8 @@ export const useRoundActions = (eventId: string) => {
     const handleRefresh = useCallback((refetchFns: (() => void)[], roundId?: string) => {
         if (cooldown > 0) return;
 
-        // 1. Run local refetch functions (usually rounds and event details)
         refetchFns.forEach(fn => fn());
 
-        // 2. Invalidate groups for the current round to force a refresh in GroupsGrid
         if (roundId) {
             queryClient.invalidateQueries({
                 queryKey: ['tournaments', 'groups', roundId]
@@ -69,7 +61,7 @@ export const useRoundActions = (eventId: string) => {
         }
     }, [eventId, createSingleGroup]);
 
-    const handleCompleteRound = useCallback(async (round: any) => {
+    const handleCompleteRound = useCallback(async (round: Round) => {
         if (!round) return;
         setIsSavingStatus(true);
         try {
@@ -98,21 +90,8 @@ export const useRoundActions = (eventId: string) => {
     }, [eventId, mergeTeams, queryClient]);
 
     return {
-        isCreateRoundOpen,
-        setIsCreateRoundOpen,
-        isEditRoundOpen,
-        setIsEditRoundOpen,
-        isResetRoundOpen,
-        setIsResetRoundOpen,
-        actionRound,
-        setActionRound,
+        // Only logic actions remaining here (Dialogs moved to Context)
         isSavingStatus,
-        isConfirmGroupsOpen,
-        setIsConfirmGroupsOpen,
-        isConfirmManualGroupOpen,
-        setIsConfirmManualGroupOpen,
-        isConfirmMergeOpen,
-        setIsConfirmMergeOpen,
         cooldown,
         handleRefresh,
         handleCreateGroups,

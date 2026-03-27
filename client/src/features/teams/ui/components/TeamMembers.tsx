@@ -7,7 +7,7 @@ import { AutoSizer } from "react-virtualized-auto-sizer";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
-import { MemberCard, roleIcons, formatJoinedDate } from "@/components/shared/MemberCard";
+import { MemberCard, roleIcons, formatJoinedDate } from "@/components/shared/list/MemberCard";
 import { TeamMembersTypes } from "@/features/teams/lib/types";
 import { roleColors, roles } from "@/features/teams/lib/constants";
 import { useMemberPermissions } from "../../hooks/useMemberPermissions";

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { useChatStore, ChatMessage } from "../../store/useChatStore";
-import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import { ConfirmActionDialog } from "@/components/shared/dialogs/ConfirmActionDialog";
 import { cn } from "@/lib/utils";
 
 interface MessageItemProps {

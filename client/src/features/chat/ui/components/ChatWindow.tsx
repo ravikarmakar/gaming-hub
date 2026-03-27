@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Loader2, Maximize2 } from "lucide-react";
+import { MessageSquare, LoaderCircle as Loader2, Maximize2 } from "lucide-react";
 
 import { useSocket } from "@/contexts/SocketContext";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";

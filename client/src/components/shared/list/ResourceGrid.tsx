@@ -1,11 +1,13 @@
-import React, { useEffect, useRef, useCallback, useState, useId } from "react";
-import { Loader2 } from "lucide-react";
+import React, { useEffect, useCallback, useId } from "react";
+import { LoaderCircle as Loader2 } from "lucide-react";
 import { useInView } from "react-intersection-observer";
 
 import { useUIStore } from "@/store/useUIStore";
 import { useWindowVirtualizer } from "@/hooks/useWindowVirtualizer";
 import { MemoizedVirtualRow } from "./MemoizedVirtualRow";
-import { PremiumSkeleton } from "./PremiumSkeleton";
+import { PremiumSkeleton } from "../feedback/PremiumSkeleton";
+import { useGridMeasures } from "./hooks/useGridMeasures";
+import { useInfiniteScroll } from "./hooks/useInfiniteScroll";
 
 export interface ResourceGridProps<T = any> {
     children?: React.ReactNode;
@@ -28,12 +30,30 @@ export interface ResourceGridProps<T = any> {
     scrollThreshold?: string;
 }
 
-function getColumns(width: number): number {
-    if (width > 1200) return 4;
-    if (width > 900) return 3;
-    if (width > 600) return 2;
-    return 1;
-}
+const GridLoadingIndicator = ({ columns }: { columns: number }) => (
+    <div className="flex items-center justify-center" style={{ gridColumn: `span ${columns}` }}>
+        <div className="flex items-center gap-3 px-5 py-2.5 rounded-full border border-violet-500/10 bg-[#050505]">
+            <Loader2 className="w-4 h-4 text-violet-500 animate-spin" />
+            <span className="text-[10px] font-bold text-white/40 tracking-widest uppercase">
+                Loading more...
+            </span>
+        </div>
+    </div>
+);
+
+const SkeletonGrid = ({ columns, gap, count, itemHeight }: { columns: number; gap: string; count: number; itemHeight: number }) => (
+    <div
+        className="grid"
+        style={{
+            gridTemplateColumns: `repeat(${columns}, 1fr)`,
+            gap
+        }}
+    >
+        {[...Array(count)].map((_, i) => (
+            <PremiumSkeleton key={`skel-${i}`} style={{ height: itemHeight }} className="w-full" />
+        ))}
+    </div>
+);
 
 export const ResourceGrid = <T,>({
     children,
@@ -60,14 +80,11 @@ export const ResourceGrid = <T,>({
     const { suppressFooter } = useUIStore();
 
     useEffect(() => {
-        // Suppress footer if we are loading or there is more data to come (infinite scroll)
         if (hasMore || isLoading || isFetchingMore) {
             suppressFooter(gridId, true);
         } else {
             suppressFooter(gridId, false);
         }
-
-        // Cleanup: always show footer when the grid unmounts
         return () => suppressFooter(gridId, false);
     }, [hasMore, isLoading, isFetchingMore, suppressFooter, gridId]);
 
@@ -77,40 +94,11 @@ export const ResourceGrid = <T,>({
         rootMargin: scrollThreshold,
     });
 
-    const loadMoreRef = useRef(onLoadMore);
-    useEffect(() => {
-        loadMoreRef.current = onLoadMore;
-    }, [onLoadMore]);
+    const { widthContainerRef, columns, rowHeight } = useGridMeasures(fixedColumns, itemHeight, rowGap, shouldVirtualize);
 
-    useEffect(() => {
-        if (shouldVirtualize) return;
-        let id: ReturnType<typeof setTimeout>;
-        if (inView && hasMore && !isLoading && !isFetchingMore) {
-            const delay = items.length === 0 ? 0 : scrollThrottlingDelay;
-            id = setTimeout(() => loadMoreRef.current(), delay);
-        }
-        return () => clearTimeout(id);
-    }, [inView, hasMore, isLoading, isFetchingMore, scrollThrottlingDelay, shouldVirtualize, items.length]);
-    const widthContainerRef = useRef<HTMLDivElement>(null);
-    const [containerWidth, setContainerWidth] = useState(960);
-
-    useEffect(() => {
-        if (!shouldVirtualize) return;
-        const measure = () => {
-            if (widthContainerRef.current) {
-                setContainerWidth(widthContainerRef.current.offsetWidth);
-            }
-        };
-        measure();
-        const ro = new ResizeObserver(measure);
-        if (widthContainerRef.current) ro.observe(widthContainerRef.current);
-        return () => ro.disconnect();
-    }, [shouldVirtualize]);
-    const columns = fixedColumns || getColumns(containerWidth);
-    const rowHeight = itemHeight + rowGap;
-
-    const dataRowCount = Math.ceil(items.length / columns);
+    const dataRowCount = Math.ceil(items.length / (columns || 1));
     const totalRowCount = dataRowCount + (hasMore || isFetchingMore ? 1 : 0);
+
     const { containerRef: virtContainerRef, virtualRows, totalHeight, visibleEndIndex } =
         useWindowVirtualizer({
             rowCount: shouldVirtualize ? totalRowCount : 0,
@@ -118,25 +106,21 @@ export const ResourceGrid = <T,>({
             overscan: 3,
         });
 
-    const lastLoadedCountRef = useRef(-1);
-
-    useEffect(() => {
-        if (!shouldVirtualize || !hasMore || isLoading || isFetchingMore) return;
-        const nearEnd = visibleEndIndex >= dataRowCount;
-        const newBatch = items.length !== lastLoadedCountRef.current;
-        if (nearEnd && newBatch) {
-            const delay = items.length === 0 ? 0 : scrollThrottlingDelay;
-            const id = setTimeout(() => {
-                lastLoadedCountRef.current = items.length;
-                loadMoreRef.current();
-            }, delay);
-            return () => clearTimeout(id);
-        }
-    }, [visibleEndIndex, dataRowCount, hasMore, isLoading, isFetchingMore, items.length, shouldVirtualize, scrollThrottlingDelay]);
+    useInfiniteScroll({
+        onLoadMore,
+        inView,
+        hasMore,
+        isLoading,
+        isFetchingMore,
+        itemsLength: items.length,
+        scrollThrottlingDelay,
+        shouldVirtualize,
+        visibleEndIndex,
+        dataRowCount
+    });
 
     const renderRow = useCallback(
         (rowIndex: number) => {
-
             if (rowIndex >= dataRowCount) {
                 return (
                     <div
@@ -155,14 +139,7 @@ export const ResourceGrid = <T,>({
                                 </div>
                             ))
                         ) : (
-                            <div className="flex items-center justify-center" style={{ gridColumn: `span ${columns}` }}>
-                                <div className="flex items-center gap-3 px-5 py-2.5 rounded-full border border-violet-500/10 bg-[#050505]">
-                                    <Loader2 className="w-4 h-4 text-violet-500 animate-spin" />
-                                    <span className="text-[10px] font-bold text-white/40 tracking-widest uppercase">
-                                        Loading more...
-                                    </span>
-                                </div>
-                            </div>
+                            <GridLoadingIndicator columns={columns} />
                         )}
                     </div>
                 );
@@ -194,7 +171,7 @@ export const ResourceGrid = <T,>({
                 </div>
             );
         },
-        [columns, sanitizedColumnGap, dataRowCount, isFetchingMore, items, itemHeight, renderItem]
+        [columns, sanitizedColumnGap, dataRowCount, isFetchingMore, items, itemHeight, renderItem, loadingItemCount]
     );
 
     return (
@@ -202,17 +179,12 @@ export const ResourceGrid = <T,>({
             {!shouldVirtualize ? (
                 <div className="w-full">
                     {isLoading && !items.length ? (
-                        <div
-                            className="grid"
-                            style={{
-                                gridTemplateColumns: `repeat(${columns}, 1fr)`,
-                                gap: sanitizedColumnGap
-                            }}
-                        >
-                            {[...Array(loadingItemCount)].map((_, i) => (
-                                <PremiumSkeleton key={`skel-${i}`} style={{ height: itemHeight }} className="w-full" />
-                            ))}
-                        </div>
+                        <SkeletonGrid 
+                            columns={columns} 
+                            gap={sanitizedColumnGap} 
+                            count={loadingItemCount} 
+                            itemHeight={itemHeight} 
+                        />
                     ) : isEmpty ? (
                         emptyStateComponent || null
                     ) : (
@@ -224,7 +196,11 @@ export const ResourceGrid = <T,>({
                             }}
                         >
                             {items.length > 0 ? (
-                                items.map((item, index) => renderItem?.(item, index))
+                                items.map((item, index) => (
+                                    <div key={(item as any)?._id || (item as any)?.id || index}>
+                                        {renderItem?.(item, index)}
+                                    </div>
+                                ))
                             ) : (
                                 children
                             )}
@@ -253,21 +229,12 @@ export const ResourceGrid = <T,>({
                     ) : (
                         <div className="w-full">
                             {isLoading && items.length === 0 ? (
-                                <div
-                                    style={{
-                                        display: "grid",
-                                        gridTemplateColumns: `repeat(${columns}, 1fr)`,
-                                        gap: sanitizedColumnGap,
-                                    }}
-                                >
-                                    {[...Array(loadingItemCount)].map((_, i) => (
-                                        <PremiumSkeleton
-                                            key={`init-skel-${i}`}
-                                            style={{ height: itemHeight }}
-                                            className="w-full"
-                                        />
-                                    ))}
-                                </div>
+                                <SkeletonGrid 
+                                    columns={columns} 
+                                    gap={sanitizedColumnGap} 
+                                    count={loadingItemCount} 
+                                    itemHeight={itemHeight} 
+                                />
                             ) : (
                                 <div
                                     ref={virtContainerRef}

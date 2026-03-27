@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Loader2, Search, UserPlus, Check } from "lucide-react";
+import { LoaderCircle as Loader2, Search, UserPlus, Check } from "lucide-react";
+import { showErrorToast } from "@/lib/toast";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,8 +65,9 @@ export const InviteDialog = ({
             onSearchChange("");
             setMessage("");
             setRole(defaultRole);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to send invitation:", error);
+            showErrorToast(error?.message || "Failed to send invitation");
             // We don't reset the state here so the user can try again or fix issues
         }
     };
@@ -122,12 +124,12 @@ export const InviteDialog = ({
                                     className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/50"
                                 >
                                     <Avatar className="w-8 h-8">
-                                        <AvatarImage src={user.avatar} alt={user.username} />
-                                        <AvatarFallback>{user.username[0]}</AvatarFallback>
+                                        <AvatarImage src={user?.avatar} alt={user?.username} />
+                                        <AvatarFallback>{user?.username?.[0] || '?'}</AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <p className="text-sm font-medium text-white">{user.username}</p>
-                                        <p className="text-xs text-gray-400">{user.email}</p>
+                                        <p className="text-sm font-medium text-white">{user?.username}</p>
+                                        <p className="text-xs text-gray-400">{user?.email}</p>
                                     </div>
                                     <UserPlus className="ml-auto w-4 h-4 text-purple-400" />
                                 </div>

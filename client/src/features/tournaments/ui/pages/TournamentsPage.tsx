@@ -1,13 +1,13 @@
 import { useState, useMemo } from "react";
-import { Loader2, Plus, LayoutGrid } from "lucide-react";
+import { Plus, LayoutGrid } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { ResourceGrid } from "@/components/shared/ResourceGrid";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { ResourceGrid } from "@/components/shared/list/ResourceGrid";
 import { useWindowSize } from "@/hooks/useWindowSize";
 import TournamentCard from "@/features/tournaments/ui/components/shared/TournamentCard";
 import { Button } from "@/components/ui/button";
+import { TournamentLoading, TournamentEmpty } from "@/features/tournaments/ui/components";
 
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
@@ -60,14 +60,7 @@ const OrganizerTournaments: React.FC = () => {
   };
 
   if (isLoading && orgEvents.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 mx-auto text-purple-500 animate-spin" />
-          <p className="text-gray-400 font-medium animate-pulse">Synchronizing Tournament Data...</p>
-        </div>
-      </div>
-    );
+    return <TournamentLoading variant="fullscreen" text="Synchronizing Tournament Data..." />;
   }
 
   return (
@@ -124,7 +117,7 @@ const OrganizerTournaments: React.FC = () => {
             hasMore={false}
             onLoadMore={() => { }}
             emptyStateComponent={
-              <EmptyState
+              <TournamentEmpty
                 message="No Tournaments Found"
                 subMessage={orgEvents.length === 0
                   ? "Experience has no limits. Start your legacy by creating your first tournament today!"

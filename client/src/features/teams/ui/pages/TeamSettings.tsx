@@ -17,7 +17,7 @@ import { useAccess } from "@/features/auth/hooks/useAccess";
 import { DeleteTeamSection } from "../components/DeleteTeamSection";
 import { TeamPageHeader } from "../components/TeamPageHeader";
 import { teamSchema, TeamForm } from "@/features/teams/lib/teamSchema";
-import { SettingsFormActions } from "@/components/shared/SettingsFormActions";
+import { SettingsFormActions } from "@/components/shared/forms/SettingsFormActions";
 import { SocialConnectionsSection } from "@/components/shared/profile/SocialConnectionsSection";
 import { GeneralInfoSection, FieldConfig } from "@/components/shared/profile/GeneralInfoSection";
 import { BioSection } from "@/components/shared/profile/BioSection";

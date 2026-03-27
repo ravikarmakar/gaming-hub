@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TOURNAMENT_ROUTES } from "@/features/tournaments/lib/routes";
 import { useGetTournamentsQuery } from "@/features/tournaments/hooks/useTournamentQueries";
 import TournamentCard from "./TournamentCard";
+import { TournamentEmpty } from "./TournamentFeedback";
 
 const FeaturedTournaments = () => {
     const navigate = useNavigate();
@@ -88,11 +89,12 @@ const FeaturedTournaments = () => {
                             ))}
                         </div>
                     ) : (
-                        <div className="text-center py-20 border border-white/10 rounded-3xl bg-white/5 bg-opacity-50">
-                            <Trophy className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
-                            <h3 className="text-xl font-bold text-white mb-2">No Tournaments Found</h3>
-                            <p className="text-zinc-400">Be the first to create a tournament!</p>
-                        </div>
+                        <TournamentEmpty
+                            message="No Tournaments Found"
+                            subMessage="Be the first to create a tournament and start the competition!"
+                            icon={Trophy}
+                            fullHeight={false}
+                        />
                     )
                 )}
 

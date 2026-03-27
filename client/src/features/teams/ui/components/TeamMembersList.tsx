@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 import { TeamMembersTypes } from '@/features/teams/lib/types';
-import { MemberList } from '@/components/shared/MemberList';
+import { MemberList } from '@/components/shared/list/MemberList';
 
 interface TeamMembersListProps {
     members: TeamMembersTypes[];

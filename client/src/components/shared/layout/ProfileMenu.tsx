@@ -1,5 +1,5 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Loader2, LogOut, PlusCircle, User, Settings, Bell, UserCog, Building, LayoutDashboard, ShieldCheck } from "lucide-react";
+import { LoaderCircle as Loader2, LogOut, PlusCircle, User, Settings, Bell, UserCog, Building, LayoutDashboard, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";

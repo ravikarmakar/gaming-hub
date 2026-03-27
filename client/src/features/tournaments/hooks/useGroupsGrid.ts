@@ -4,13 +4,10 @@ import { useGroupsInteractions } from './useGroupsInteractions';
 interface UseGroupsGridProps {
     roundId: string;
     eventId: string;
-    externalSearch?: string;
-    externalStatusFilter?: string;
-    externalSortBy?: string;
 }
 
-export const useGroupsGrid = ({ roundId, eventId, externalSearch, externalStatusFilter, externalSortBy }: UseGroupsGridProps) => {
-    const data = useGroupsData({ roundId, eventId, externalSearch, externalStatusFilter, externalSortBy });
+export const useGroupsGrid = ({ roundId, eventId }: UseGroupsGridProps) => {
+    const data = useGroupsData({ roundId });
     const interactions = useGroupsInteractions({
         rounds: data.rounds,
         groups: data.groups,

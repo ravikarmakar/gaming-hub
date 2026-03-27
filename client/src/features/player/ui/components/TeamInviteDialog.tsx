@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useJoinRequestStore } from "@/features/teams/store/useJoinRequestStore";
 import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import toast from "react-hot-toast";
-import { Loader2, Send } from "lucide-react";
+import { LoaderCircle as Loader2, Send } from "lucide-react";
 
 interface TeamInviteDialogProps {
     open: boolean;

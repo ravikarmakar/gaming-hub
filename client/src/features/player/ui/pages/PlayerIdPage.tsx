@@ -11,8 +11,8 @@ import { PlayerAchievements } from "../components/PlayerAchievements";
 import { PlayerStats } from "../components/PlayerStats";
 import { PlayerEquipment } from "../components/PlayerEquipment";
 import { User } from "@/features/auth/lib/types";
-import { ProfileBannerLayout } from "@/components/shared/ProfileBannerLayout";
-import { ArenaLoading } from "@/components/shared/ArenaLoading";
+import { ArenaLoading } from "@/components/shared/feedback/ArenaLoading";
+import { ProfileBannerLayout } from "@/components/shared/profile/ProfileBannerLayout";
 import { PlayerHeader } from "../components/PlayerHeader";
 
 interface PlayerTab {

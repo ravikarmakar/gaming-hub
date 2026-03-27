@@ -3,9 +3,9 @@ import { useDebounce } from "@/hooks/useDebounce";
 
 import { useInfiniteOrganizersQuery } from "../../hooks/useOrganizerQueries";
 import OrganizerCard from "../components/OrganizerCard";
-import { ResourceGridWrapper } from "@/components/shared/ResourceGridWrapper";
+import { ResourceGridWrapper } from "@/components/shared/list/ResourceGridWrapper";
 import { HeaderActions } from "@/components/HeaderActions";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { EmptyState } from "@/components/shared/feedback/EmptyState";
 import { useWindowSize } from "@/hooks/useWindowSize";
 
 export const FindOrganizers = () => {

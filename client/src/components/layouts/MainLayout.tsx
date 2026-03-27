@@ -1,11 +1,11 @@
 import { Outlet, useLocation } from "react-router-dom";
-import Navbar from "@/components/Navbar";
-import Footer from "../Footer";
+import Navbar from "@/components/shared/layout/Navbar";
 import { Suspense } from "react";
 import LoadingSpinner from "../LoadingSpinner";
 import { ROUTES } from "@/lib/routes";
 
 import { useUIStore } from "@/store/useUIStore";
+import Footer from "../shared/layout/Footer";
 
 const HIDE_FOOTER_ROUTES = [
   ROUTES.NOTIFICATIONS,

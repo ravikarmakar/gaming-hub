@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Bell, Check, Calendar, Users, Info, XCircle, AlertCircle } from "lucide-react";
+import { Bell, Check, Calendar, Users, Info, CircleX as XCircle, AlertCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 import { Button } from "@/components/ui/button";

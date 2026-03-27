@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { LoaderCircle as Loader2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import {
     Dialog,
@@ -114,7 +114,7 @@ export const EditGroupDialog = ({ open, onOpenChange, eventId, group }: EditGrou
                 <DialogHeader>
                     <DialogTitle>Edit Group Details</DialogTitle>
                 </DialogHeader>
-                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 py-4">
+                <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide space-y-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label className="text-right text-gray-300">Name</Label>
                         <Input

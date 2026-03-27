@@ -1,4 +1,4 @@
-import { Loader2, AlertTriangle } from "lucide-react";
+import { LoaderCircle as Loader2, AlertTriangle } from "lucide-react";
 import {
     Dialog,
     DialogContent,

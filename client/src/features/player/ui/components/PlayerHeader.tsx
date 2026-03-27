@@ -5,7 +5,7 @@ import { Sword, Heart, Users, User as UserIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
-import { UnifiedProfileHeader } from "@/components/shared/UnifiedProfileHeader";
+import { UnifiedProfileHeader } from "@/components/shared/profile/UnifiedProfileHeader";
 import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { User } from "@/features/auth/lib/types";
 import { Team } from "@/features/teams/lib/types";

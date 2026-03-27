@@ -8,14 +8,14 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrganizerProfileHeader } from "../components/profile/OrganizerProfileHeader";
 import { OrganizerEventsTab } from "../components/profile/OrganizerEventsTab";
 import { OrganizerAboutTab } from "../components/profile/OrganizerAboutTab";
-import { ProfileBannerLayout } from "@/components/shared/ProfileBannerLayout";
+import { ProfileBannerLayout } from "@/components/shared/profile/ProfileBannerLayout";
 import { useGetOrgByIdQuery } from "@/features/organizer/hooks/useOrganizerQueries";
 import { useGetOrgTournamentsQuery } from "@/features/tournaments/hooks/useTournamentQueries";
 import { skipToken } from "@tanstack/react-query";
 
 // Extracted sub-components
 import { ReviewsTab } from "../components/profile/ReviewsTab";
-import { ArenaLoading } from "@/components/shared/ArenaLoading";
+import { ArenaLoading } from "@/components/shared/feedback/ArenaLoading";
 
 export const OrganizerProfile = () => {
   const { id } = useParams<{ id: string }>();

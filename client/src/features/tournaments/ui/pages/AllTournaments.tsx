@@ -4,10 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { useGetInfiniteTournamentsQuery } from "@/features/tournaments/hooks/useTournamentQueries";
 import TournamentCard from "@/features/tournaments/ui/components/shared/TournamentCard";
 import { TournamentFilters } from "@/features/tournaments/ui/components/TournamentFilters";
-import { ResourceGridWrapper } from "@/components/shared/ResourceGridWrapper";
+import { ResourceGridWrapper } from "@/components/shared/list/ResourceGridWrapper";
 import { HeaderActions } from "@/components/HeaderActions";
 import { useDebounce } from "@/hooks/useDebounce";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { EmptyState } from "@/components/shared/feedback/EmptyState";
 import { useWindowSize } from "@/hooks/useWindowSize";
 
 

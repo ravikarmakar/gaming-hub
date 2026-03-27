@@ -1,8 +1,8 @@
 import React from 'react';
 import toast from 'react-hot-toast';
-import { Users, Loader2, Shield, CheckCircle } from 'lucide-react';
+import { Users, LoaderCircle as Loader2, Shield, CircleCheck as CircleCheck } from 'lucide-react';
 
-import { UnifiedProfileHeader } from '@/components/shared/UnifiedProfileHeader';
+import { UnifiedProfileHeader } from '@/components/shared/profile/UnifiedProfileHeader';
 import { ProfileBadge } from '@/components/shared/profile/ProfileBadge';
 import { ProfileActionButton } from '@/components/shared/profile/ProfileActionButton';
 
@@ -83,7 +83,7 @@ export const TeamHero: React.FC<TeamHeroProps> = ({ team }) => {
                             onClick={handleJoinRequest}
                             disabled={isRequestingJoin || requestStatus}
                             variant={requestStatus ? 'success' : 'primary'}
-                            icon={isRequestingJoin ? <Loader2 className="animate-spin" /> : requestStatus ? <CheckCircle /> : undefined}
+                            icon={isRequestingJoin ? <Loader2 className="animate-spin" /> : requestStatus ? <CircleCheck /> : undefined}
                             className="min-w-[140px] md:min-w-[160px]"
                         >
                             {isRequestingJoin ? (

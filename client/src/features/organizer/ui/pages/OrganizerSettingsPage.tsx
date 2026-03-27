@@ -25,7 +25,7 @@ import { prepareOrgUpdateFormData } from "../../lib/orgUtils";
 import { GeneralInfoSection, FieldConfig } from "@/components/shared/profile/GeneralInfoSection";
 import { BioSection } from "@/components/shared/profile/BioSection";
 import { DangerZone } from "../components/DangerZone";
-import { SettingsFormActions } from "@/components/shared/SettingsFormActions";
+import { SettingsFormActions } from "@/components/shared/forms/SettingsFormActions";
 import { SocialConnectionsSection } from "@/components/shared/profile/SocialConnectionsSection";
 import { RecruitmentStatusSection } from "@/components/shared/profile/RecruitmentStatusSection";
 

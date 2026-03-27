@@ -1,6 +1,6 @@
 import { axiosInstance } from "@/lib/axios";
 import { TOURNAMENT_ENDPOINTS } from "@/features/tournaments/lib";
-import { Tournament, TournamentListResponse } from "@/features/tournaments/types";
+import { Tournament, TournamentListResponse, LeaguePairingType } from "@/features/tournaments/types";
 
 export const tournamentApi = {
     createTournament: async (data: FormData): Promise<Tournament> => {
@@ -120,7 +120,7 @@ export const tournamentApi = {
         });
         return res.data;
     },
-    updateGroupResults: async (data: { groupId: string; eventId: string; results: Record<string, unknown>[]; pairingType?: string }): Promise<Record<string, unknown>> => {
+    updateGroupResults: async (data: { groupId: string; eventId: string; results: Record<string, unknown>[]; pairingType?: LeaguePairingType }): Promise<Record<string, unknown>> => {
         const res = await axiosInstance.put(`/leaderboards/${data.groupId}/results`, {
             results: data.results,
             eventId: data.eventId,

@@ -1,4 +1,4 @@
-import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import { ConfirmActionDialog } from "@/components/shared/dialogs/ConfirmActionDialog";
 import { useResetRoundMutation } from "@/features/tournaments/hooks";
 
 interface ResetRoundDialogProps {

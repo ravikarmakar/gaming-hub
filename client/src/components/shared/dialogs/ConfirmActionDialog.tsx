@@ -1,5 +1,5 @@
 import React from "react";
-import { Loader2, AlertTriangle, Info, CheckCircle2, AlertCircle } from "lucide-react";
+import { LoaderCircle as Loader2, AlertTriangle, Info, CircleCheckBig as CircleCheck2, AlertCircle } from "lucide-react";
 
 import {
     AlertDialog,
@@ -44,7 +44,7 @@ const variantStyles = {
     success: {
         title: "text-green-500",
         action: "bg-green-600 hover:bg-green-500 text-white border-0 shadow-[0_0_20px_rgba(22,163,74,0.3)]",
-        icon: <CheckCircle2 className="text-green-500 w-5 h-5" />,
+        icon: <CircleCheck2 className="text-green-500 w-5 h-5" />,
     },
     info: {
         title: "text-blue-500",

@@ -2,8 +2,8 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
-import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
-import { MemberListHeader } from "@/components/shared/MemberListHeader";
+import { ConfirmActionDialog } from "@/components/shared/dialogs/ConfirmActionDialog";
+import { MemberListHeader } from "@/components/shared/list/MemberListHeader";
 import { PlayerSearchCommand } from "@/features/player/ui/components/PlayerSearchCommand";
 import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { useJoinRequestStore } from "@/features/teams/store/useJoinRequestStore";
