@@ -2,10 +2,11 @@ import { useEffect } from "react";
 import { Zap, LayoutGrid, Users, CircleCheckBig as CircleCheck2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-import { useRoundsSidebar, useRoundActions } from "@/features/tournaments/hooks";
+import { useRoundActions } from "@/features/tournaments/hooks";
 import { GroupsGrid } from "./groups/GroupsGrid";
 import { useTournamentDashboard } from "@/features/tournaments/context/TournamentDashboardContext";
 import { useTournamentDialogs } from "@/features/tournaments/context/TournamentDialogContext";
+import { useRoundsState } from "@/features/tournaments/context/TournamentRoundsContext";
 import { TournamentLoading, TournamentEmpty } from "../shared/TournamentFeedback";
 
 /**
@@ -20,14 +21,14 @@ export const ScrimsManager = () => {
         rounds = [],
         isLoading = false,
         teamPreview = null
-    } = useRoundsSidebar(eventId);
+    } = useRoundsState();
 
     const {
         isCreatingGroups = false,
     } = useRoundActions(eventId);
 
     // The first round is our scrim round (usually standard 'tournament' type for the initial round)
-    const scrimRound = rounds.find(r => (r.type || "tournament") === "tournament") || null;
+    const scrimRound = rounds.find((r: any) => (r.type || "tournament") === "tournament") || null;
 
     // Sync the selectedRoundId with the scrim round so the GroupsGrid (via context) knows which data to show
     useEffect(() => {
@@ -81,7 +82,7 @@ export const ScrimsManager = () => {
                         <div className="h-2.5 w-px bg-white/10" />
                         <p className="text-gray-500 font-medium text-[11px] flex items-center gap-1.5 uppercase tracking-wider">
                             <CircleCheck2 className="w-3 h-3 text-green-500" />
-                            {scrimRound.groups?.filter(g => g.status === 'completed').length || 0} / {scrimRound.groups?.length || 0} Matches
+                            {scrimRound.groups?.filter((g: any) => g.status === 'completed').length || 0} / {scrimRound.groups?.length || 0} Matches
                         </p>
                     </div>
                 </div>

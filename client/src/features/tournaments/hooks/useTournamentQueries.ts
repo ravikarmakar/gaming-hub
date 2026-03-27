@@ -23,6 +23,12 @@ export const tournamentKeys = {
     registrationStatus: (eventId: string, teamId: string) => [...tournamentKeys.all, 'registration-status', eventId, teamId] as const,
 };
 
+// Helper to check if an ID is a valid backend ID (not a roadmap placeholder)
+const isValidId = (id: string | null | undefined): boolean => {
+    if (!id) return false;
+    return !id.startsWith('placeholder-');
+};
+
 // Queries
 export const useGetRegistrationStatusQuery = (eventId: string, teamId: string, options: any = {}) => {
     return useQuery<any>({
@@ -51,7 +57,7 @@ export const useGetGroupsQuery = (roundId: string, page = 1, limit = 20, search 
         ...options,
         queryKey: tournamentKeys.groups(roundId, page, limit, search, status, sortBy),
         queryFn: () => tournamentApi.getGroups({ roundId, page, limit, search, status, sortBy }),
-        enabled: (options.enabled ?? true) && !!roundId,
+        enabled: (options.enabled ?? true) && isValidId(roundId),
     });
 };
 
@@ -62,7 +68,7 @@ export const useGetGroupDetailsQuery = (groupId: string, options: any = {}) => {
         ...options,
         queryKey: tournamentKeys.groupDetails(groupId),
         queryFn: () => tournamentApi.getGroupDetails(groupId),
-        enabled: (options.enabled ?? true) && !!groupId,
+        enabled: (options.enabled ?? true) && isValidId(groupId),
     });
 };
 
@@ -73,7 +79,7 @@ export const useGetLeaderboardQuery = (groupId: string, options: any = {}) => {
         ...options,
         queryKey: tournamentKeys.leaderboard(groupId),
         queryFn: () => tournamentApi.getLeaderboard(groupId),
-        enabled: (options.enabled ?? true) && !!groupId,
+        enabled: (options.enabled ?? true) && isValidId(groupId),
     });
 };
 

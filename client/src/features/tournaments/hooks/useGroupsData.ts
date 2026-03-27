@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useGetGroupsQuery, useRoundsSidebar } from './';
+import { useGetGroupsQuery } from './';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useTournamentDashboard } from '../context/TournamentDashboardContext';
+import { useRoundsState } from '../context/TournamentRoundsContext';
 
 interface UseGroupsDataProps {
     roundId: string;
@@ -9,7 +10,6 @@ interface UseGroupsDataProps {
 
 export const useGroupsData = ({ roundId }: UseGroupsDataProps) => {
     const { 
-        eventId, 
         search, 
         setSearch,
         statusFilter, 
@@ -29,7 +29,7 @@ export const useGroupsData = ({ roundId }: UseGroupsDataProps) => {
         setCurrentPage(1);
     }, [debouncedSearch, statusFilter]);
 
-    const { filteredSidebarItems: enrichedRounds } = useRoundsSidebar(eventId);
+    const { rounds: enrichedRounds } = useRoundsState();
     const { data: groupsData, isLoading, isFetching } = useGetGroupsQuery(
         roundId,
         currentPage,

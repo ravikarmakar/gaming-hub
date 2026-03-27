@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, ReactNode } from 'react';
+import { useEffect, useMemo, ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Trophy, Users, Swords, Settings, Zap, LucideIcon } from "lucide-react";
 import { ErrorBoundary } from "react-error-boundary";
@@ -35,10 +35,13 @@ interface TabConfig {
 export function TournamentDashboardContent() {
     const { id = "" } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { eventDetails, isFocusMode } = useTournamentDashboard();
+    const { 
+        eventDetails, 
+        activeTab, 
+        setActiveTab,
+        isFocusMode
+    } = useTournamentDashboard();
     const { openDialog } = useTournamentDialogs();
-
-    const [activeTab, setActiveTab] = useState("overview");
 
     const handleEdit = () => {
         if (!id) return;

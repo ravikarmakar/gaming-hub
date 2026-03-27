@@ -9,8 +9,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { GitMerge, LoaderCircle as Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
-import { useGetRoundsQuery, useGetGroupsQuery, useInjectTeamMutation } from "@/features/tournaments/hooks";
+import { useGetGroupsQuery, useInjectTeamMutation } from "@/features/tournaments/hooks";
 import { Round } from "@/features/tournaments/types";
+import { useRoundsState } from "@/features/tournaments/context/TournamentRoundsContext";
 
 interface MergeTeamToGroupDialogProps {
     open: boolean;
@@ -24,7 +25,7 @@ export const MergeTeamToGroupDialog = ({ open, onOpenChange, eventId, team, sour
     const [selectedRoundId, setSelectedRoundId] = useState<string | null>(null);
     const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
-    const { data: rounds = [], isLoading: isLoadingRounds } = useGetRoundsQuery(eventId);
+    const { rounds = [], isLoading: isLoadingRounds } = useRoundsState();
     
     // Filter out source round and t1-special rounds to only merge into actual tournament rounds
     const availableRounds = useMemo(() => {

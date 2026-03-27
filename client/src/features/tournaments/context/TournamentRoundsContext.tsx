@@ -20,6 +20,8 @@ interface RoundsStateContextType {
     isSavingStatus: boolean;
     cooldown: number;
     eventId: string;
+    teamPreview: any;
+    activeRoundTab: string;
 }
 
 interface RoundsActionsContextType {
@@ -49,7 +51,9 @@ export const TournamentRoundsProvider: React.FC<{ children: React.ReactNode }> =
         refetchEvent,
         selectedRound,
         filteredSidebarItems,
-        isCreateDisabled
+        isCreateDisabled,
+        teamPreview,
+        activeRoundTab
     } = useRoundsSidebar(eventId);
 
     // 2. Manage Actions
@@ -76,7 +80,9 @@ export const TournamentRoundsProvider: React.FC<{ children: React.ReactNode }> =
         isCreateDisabled,
         isSavingStatus,
         cooldown,
-        eventId
+        eventId,
+        teamPreview,
+        activeRoundTab
     }), [
         rounds,
         event,
@@ -86,7 +92,9 @@ export const TournamentRoundsProvider: React.FC<{ children: React.ReactNode }> =
         isCreateDisabled,
         isSavingStatus,
         cooldown,
-        eventId
+        eventId,
+        teamPreview,
+        activeRoundTab
     ]);
 
     const actionsValue = useMemo(() => ({

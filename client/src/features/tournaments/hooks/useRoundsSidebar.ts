@@ -1,5 +1,5 @@
 import { useMemo, useEffect } from 'react';
-import { useGetRoundsQuery, useGetTournamentDetailsQuery } from './useTournamentQueries';
+import { useGetRoundsQuery } from './useTournamentQueries';
 import { useTournamentRoadmap } from './useTournamentRoadmap';
 import { useTournamentDashboard } from '../context/TournamentDashboardContext';
 
@@ -8,12 +8,18 @@ export const useRoundsSidebar = (eventId: string) => {
         selectedRoundId, 
         setSelectedRoundId, 
         activeRoundTab,
+        activeTab,
+        eventDetails: event,
+        refetch: refetchEvent,
         isSidebarCollapsed,
         setIsSidebarCollapsed
     } = useTournamentDashboard();
 
-    const { data: rounds = [], isLoading, refetch: refetchRounds } = useGetRoundsQuery(eventId);
-    const { data: event, refetch: refetchEvent } = useGetTournamentDetailsQuery(eventId);
+    const isRoundsNeeded = activeTab !== 'overview' && activeTab !== 'overview-v2' && activeTab !== 'settings' && activeTab !== 'teams';
+
+    const { data: rounds = [], isLoading, refetch: refetchRounds } = useGetRoundsQuery(eventId, {
+        enabled: isRoundsNeeded
+    });
 
     // Unified list of rounds and roadmap placeholders using shared hook
     const { roadmapItems } = useTournamentRoadmap(

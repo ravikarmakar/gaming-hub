@@ -25,6 +25,11 @@ interface TournamentDashboardContextType {
 
     isSidebarCollapsed: boolean;
     setIsSidebarCollapsed: (collapsed: boolean) => void;
+
+    // Global navigation tab
+    activeTab: string;
+    setActiveTab: (tab: string) => void;
+    refetch: () => void;
 }
 
 const TournamentDashboardContext = createContext<TournamentDashboardContextType | undefined>(undefined);
@@ -45,7 +50,7 @@ export const TournamentDashboardProvider: React.FC<TournamentDashboardProviderPr
     children,
     initialFocusMode = false 
 }) => {
-    const { data: eventDetails, isLoading } = useGetTournamentDetailsQuery(eventId, {
+    const { data: eventDetails, isLoading, refetch } = useGetTournamentDetailsQuery(eventId, {
         enabled: !!eventId
     });
 
@@ -59,6 +64,7 @@ export const TournamentDashboardProvider: React.FC<TournamentDashboardProviderPr
     const [sortBy, setSortBy] = useState("matchTime-asc");
 
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [activeTab, setActiveTab] = useState("overview");
 
     const onResetFilters = () => {
         setSearch("");
@@ -84,7 +90,10 @@ export const TournamentDashboardProvider: React.FC<TournamentDashboardProviderPr
         setSortBy,
         onResetFilters,
         isSidebarCollapsed,
-        setIsSidebarCollapsed
+        setIsSidebarCollapsed,
+        activeTab,
+        setActiveTab,
+        refetch
     }), [
         eventId, 
         eventDetails, 
@@ -95,7 +104,9 @@ export const TournamentDashboardProvider: React.FC<TournamentDashboardProviderPr
         search, 
         statusFilter, 
         sortBy, 
-        isSidebarCollapsed
+        isSidebarCollapsed,
+        activeTab,
+        refetch
     ]);
 
     return (
