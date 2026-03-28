@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, CheckCircle, Ban } from "lucide-react";
+import { Search, CircleCheck, Ban } from "lucide-react";
 
 const ManagementTables = () => {
     const [activeTab, setActiveTab] = useState<"User" | "Team" | "Organizer">("User");
@@ -105,7 +105,7 @@ const ManagementTables = () => {
                                                         [activeTab === "User" ? "isAccountVerified" : "isVerified"]: !(item.isVerified || item.isAccountVerified)
                                                     })}
                                                 >
-                                                    <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                                                    <CircleCheck className="w-3.5 h-3.5 mr-1" />
                                                     {item.isVerified || item.isAccountVerified ? "Revoke" : "Verify"}
                                                 </Button>
                                                 <Button

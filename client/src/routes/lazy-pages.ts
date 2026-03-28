@@ -34,8 +34,8 @@ export const pages = {
     PlayerSettings: lazy(() => import("@/features/player/ui/pages/PlayerSettings")),
 
     // Team
-    TeamId: lazy(() => import("@/features/teams/ui/pages/TeamIdPage")),
-    TeamDashboard: lazy(() => import("@/features/teams/ui/pages/TeamDashboard")),
+    TeamId: lazy(() => import("@/features/teams/ui/pages/TeamProfilePage")),
+    TeamDashboard: lazy(() => import("@/features/teams/ui/pages/TeamDashboardPage")),
     TeamLayout: lazy(() => import("@/features/teams/ui/layouts/TeamLayout")),
     TeamMembers: lazy(() => import("@/features/teams/ui/pages/TeamMembersPage")),
     TeamStaff: lazy(() => import("@/features/teams/ui/pages/TeamStaffPage")),
@@ -43,7 +43,7 @@ export const pages = {
     TeamSettings: lazy(() => import("@/features/teams/ui/pages/TeamSettings")),
     TeamTournaments: lazy(() => import("@/features/teams/ui/pages/TeamTournamentsPage")),
     TeamChat: lazy(() => import("@/features/teams/ui/pages/TeamChatPage")),
-    FindTeams: lazy(() => import("@/features/teams/ui/pages/FindTeams")),
+    FindTeams: lazy(() => import("@/features/teams/ui/pages/FindTeamsPage")),
 
     // Tournaments
     CreateTournament: lazy(() => import("@/features/tournaments/ui/pages/CreateTournament")),

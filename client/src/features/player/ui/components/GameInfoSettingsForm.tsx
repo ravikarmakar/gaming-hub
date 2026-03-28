@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Save, Gamepad2, Hash, Trophy } from "lucide-react";
+import { LoaderCircle as Loader2, Save, Gamepad2, Hash, Trophy } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";

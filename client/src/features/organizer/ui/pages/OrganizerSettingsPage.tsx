@@ -1,27 +1,14 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Tag, Briefcase } from "lucide-react";
+import { Briefcase, Building2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
 import {
     Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormDescription
 } from "@/components/ui/form";
-import { Badge } from "@/components/ui/badge";
-import FileUpload from "@/components/FileUpload";
+import { ProfileSettingsPreview } from "@/components/shared/profile/ProfileSettingsPreview";
 
 import { useGetOrgByIdQuery } from "@/features/organizer/hooks/useOrganizerQueries";
 import {
@@ -35,10 +22,46 @@ import { OrgSettingsFormSchema, orgSettingsSchema } from "../../lib/orgSchemas";
 import { prepareOrgUpdateFormData } from "../../lib/orgUtils";
 
 // New sub-components
-import { ProfileInfoForm } from "../components/ProfileInfoForm";
+import { GeneralInfoSection, FieldConfig } from "@/components/shared/profile/GeneralInfoSection";
+import { BioSection } from "@/components/shared/profile/BioSection";
 import { DangerZone } from "../components/DangerZone";
-import { SettingsFormActions } from "@/components/shared/SettingsFormActions";
-import { SocialLinksSection } from "@/components/shared/SocialLinksSection";
+import { SettingsFormActions } from "@/components/shared/forms/SettingsFormActions";
+import { SocialConnectionsSection } from "@/components/shared/profile/SocialConnectionsSection";
+import { RecruitmentStatusSection } from "@/components/shared/profile/RecruitmentStatusSection";
+
+const orgFields = (canUpdate: boolean): FieldConfig<OrgSettingsFormSchema>[] => [
+    {
+        name: "name",
+        label: "Brand Name",
+        placeholder: "e.g. Pro Gaming League",
+        disabled: !canUpdate,
+    },
+    {
+        name: "tag",
+        label: "Public Tag",
+        placeholder: "e.g. PGL",
+        disabled: !canUpdate,
+        maxLength: 5,
+    },
+    {
+        name: "region",
+        label: "Region",
+        type: "select" as const,
+        placeholder: "Select a region",
+        options: [
+            { label: "NA - North America", value: "NA" },
+            { label: "EU - Europe", value: "EU" },
+            { label: "ASIA - Asia", value: "ASIA" },
+            { label: "SEA - SE Asia", value: "SEA" },
+            { label: "SA - South America", value: "SA" },
+            { label: "OCE - Oceania", value: "OCE" },
+            { label: "MENA - Middle East & North Africa", value: "MENA" },
+            { label: "INDIA - India", value: "INDIA" },
+            { label: "Global Node", value: "GLOBAL" }
+        ],
+        disabled: !canUpdate,
+    }
+];
 
 export const OrganizerSettingsPage = () => {
     const navigate = useNavigate();
@@ -152,111 +175,60 @@ export const OrganizerSettingsPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {/* Profile Overview (Left Column) */}
                         <div className="space-y-6">
-                            <Card className="bg-transparent border-white/5 h-fit overflow-hidden">
-                                <div className="space-y-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="banner"
-                                        render={({ field }) => (
-                                            <FileUpload
-                                                variant="banner"
-                                                value={field.value || currentOrg?.bannerUrl}
-                                                onChange={field.onChange}
-                                                disabled={!canUpdate}
-                                                label="Change Banner"
-                                            />
-                                        )}
-                                    />
-                                </div>
-                                <CardHeader className="text-center -mt-16 overflow-visible">
-                                    <div className="relative mx-auto mb-4">
-                                        <FormField
-                                            control={form.control}
-                                            name="image"
-                                            render={({ field }) => (
-                                                <FileUpload
-                                                    variant="avatar"
-                                                    value={field.value || currentOrg?.imageUrl}
-                                                    onChange={field.onChange}
-                                                    disabled={!canUpdate}
-                                                    fallbackText={currentOrg?.name?.[0]}
-                                                />
-                                            )}
-                                        />
-                                    </div>
-                                    <CardTitle className="text-white text-xl">{currentOrg?.name}</CardTitle>
-                                    <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
-                                        <Badge variant="outline" className="bg-purple-500/10 border-purple-500/20 text-purple-400">
-                                            <Tag className="size-3 mr-1" /> {currentOrg?.tag}
-                                        </Badge>
-                                        {watch("isHiring") && (
-                                            <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-                                                <Briefcase className="size-3 mr-1" /> Is Hiring
-                                            </Badge>
-                                        )}
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="space-y-4 pt-4 border-t border-white/5">
-                                    <div className="space-y-2 text-sm">
-                                        <p className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Ownership</p>
-                                        <p className="text-gray-300 flex items-center gap-2">
-                                            <span className="size-2 rounded-full bg-purple-500" /> Owner Account
-                                        </p>
-                                    </div>
-                                    <div className="space-y-2 text-sm pt-2">
-                                        <p className="text-[10px] uppercase font-black text-gray-500 tracking-widest">Verification</p>
-                                        {currentOrg?.isVerified ? (
-                                            <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">Verified Partner</Badge>
-                                        ) : (
-                                            <p className="text-gray-500">Not verified</p>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <ProfileSettingsPreview
+                                control={form.control}
+                                bannerName="banner"
+                                imageName="image"
+                                currentBannerUrl={currentOrg?.bannerUrl}
+                                currentImageUrl={currentOrg?.imageUrl}
+                                name={currentOrg?.name}
+                                tag={currentOrg?.tag}
+                                isHiring={watch("isHiring")}
+                                isVerified={currentOrg?.isVerified}
+                                canUpdate={canUpdate}
+                                fallbackText={currentOrg?.name?.[0]}
+                            />
 
                             {/* Recruitment Status */}
-                            <Card className="bg-[#0B0C1A] border-white/5">
-                                <CardHeader className="pb-3">
-                                    <CardTitle className="text-white text-sm flex items-center gap-2 uppercase tracking-widest text-gray-400">
-                                        <Briefcase className="size-4 text-emerald-400" /> Recruitment
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <FormField
-                                        control={form.control}
-                                        name="isHiring"
-                                        render={({ field }) => (
-                                            <FormItem className="flex items-center space-x-3 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 transition-colors hover:bg-emerald-500/10 space-y-0">
-                                                <FormControl>
-                                                    <Checkbox
-                                                        checked={field.value}
-                                                        onCheckedChange={field.onChange}
-                                                        disabled={!canUpdate}
-                                                        className="border-emerald-500/30 data-[state=checked]:bg-emerald-500 data-[state=checked]:text-white"
-                                                    />
-                                                </FormControl>
-                                                <div className="grid gap-1.5 leading-none cursor-pointer" onClick={() => canUpdate && field.onChange(!field.value)}>
-                                                    <FormLabel className="text-sm font-bold text-emerald-400 leading-none cursor-pointer">
-                                                        Open for Hiring
-                                                    </FormLabel>
-                                                    <FormDescription className="text-xs text-gray-500">
-                                                        Let players know you're looking for new staff.
-                                                    </FormDescription>
-                                                </div>
-                                            </FormItem>
-                                        )}
-                                    />
-                                </CardContent>
-                            </Card>
+                            <RecruitmentStatusSection
+                                control={form.control}
+                                name="isHiring"
+                                title="Recruitment"
+                                label="Open for Hiring"
+                                description="Let players know you're looking for new staff."
+                                icon={Briefcase}
+                                iconColor="text-emerald-400"
+                                accentColor="emerald"
+                                disabled={!canUpdate}
+                            />
                         </div>
 
                         {/* Forms (Right 2 Columns) */}
                         <div className="md:col-span-2 space-y-6">
                             {/* Information Form */}
-                            <ProfileInfoForm disabled={!canUpdate} />
+                            <GeneralInfoSection
+                                control={form.control}
+                                title="Organization Profile"
+                                description="Update your public identity and contact information."
+                                icon={Building2}
+                                iconColor="text-purple-500"
+                                gridClassName="grid-cols-1 md:grid-cols-2"
+                                fields={orgFields(canUpdate)}
+                            />
+
+                            <BioSection
+                                control={form.control}
+                                name="description"
+                                title="Biography"
+                                description="Tell participants about your mission, history, and goals."
+                                label="Description"
+                                placeholder="Tell us about yourself..."
+                                disabled={!canUpdate}
+                                maxLength={1000}
+                            />
 
                             {/* Social Links Form */}
-                            <SocialLinksSection
+                            <SocialConnectionsSection
                                 control={form.control}
                                 disabled={!canUpdate}
                                 fields={{

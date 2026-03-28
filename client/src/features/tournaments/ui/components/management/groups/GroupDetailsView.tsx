@@ -1,77 +1,44 @@
 import { useState, useEffect } from "react";
 
-import { Group } from "@/features/tournaments/types";
 import { GroupDetailsHeader } from "./GroupDetailsHeader";
 import { LeaguePairingSelector } from "./LeaguePairingSelector";
 import { GroupLeaderboardTable } from "./GroupLeaderboardTable";
-
-interface GroupDetailsViewProps {
-    currentGroup: Group | undefined;
-    leaderboard: any;
-    setSelectedGroupId: (id: string | null) => void;
-    effectiveTotalMatch: number;
-    isGroupCompleted: boolean;
-    qualifyingTeams: number;
-    isResultsMode: boolean;
-    setIsResultsMode: (mode: boolean) => void;
-    handleSubmitResults: () => void;
-    isSaving: boolean;
-    openInviteModal: (group: Group) => void;
-    tempResults: Record<string, { kills: number, rank: number }>;
-    handleResultChange: (teamId: string, field: 'kills' | 'rank', value: number) => void;
-    activeRoundTab: string;
-    openMergeModal: (team: any) => void;
-    selectedPairing: 'AxB' | 'BxC' | 'AxC' | null;
-    setSelectedPairing: (pairing: 'AxB' | 'BxC' | 'AxC' | null) => void;
-    onNextGroup?: () => void;
-    onPreviousGroup?: () => void;
-    hasNextGroup?: boolean;
-    hasPreviousGroup?: boolean;
-    openEditModal: (group: Group) => void;
-    openDeleteModal: (group: Group) => void;
-    onResetGroup?: () => void;
-    openChatModal: (group: Group) => void;
-    currentGroupIndex?: number;
-    totalGroupsCount?: number;
-    isLoading?: boolean;
-
-    showMerge?: boolean;
-}
+import { useTournamentDialogs } from "@/features/tournaments/context/TournamentDialogContext";
+import { useGroupsContext } from "@/features/tournaments/context/TournamentGroupsContext";
 
 
-export const GroupDetailsView = ({
-    currentGroup,
-    leaderboard,
-    setSelectedGroupId,
-    effectiveTotalMatch,
-    qualifyingTeams,
-    isResultsMode,
-    setIsResultsMode,
-    handleSubmitResults,
-    isSaving,
-    openInviteModal,
-    tempResults,
-    handleResultChange,
-    activeRoundTab,
-    openMergeModal,
-    selectedPairing,
-    setSelectedPairing,
-    onNextGroup,
-    onPreviousGroup,
-    hasNextGroup,
-    hasPreviousGroup,
-    openEditModal,
-    openDeleteModal,
-    onResetGroup,
-    openChatModal,
-    currentGroupIndex,
-    totalGroupsCount,
-    isLoading,
+export const GroupDetailsView = () => {
+    const {
+        currentGroup,
+        leaderboard,
+        setSelectedGroupId,
+        effectiveTotalMatch,
+        qualifyingTeams,
+        isResultsMode,
+        setIsResultsMode,
+        handleSubmitResults,
+        isSaving,
+        tempResults,
+        handleResultChange,
+        activeRoundTab,
+        selectedPairing,
+        setSelectedPairing,
+        handleNextGroup: onNextGroup,
+        handlePreviousGroup: onPreviousGroup,
+        hasNextGroup,
+        hasPreviousGroup,
+        handleResetGroup: onResetGroup,
+        currentGroupIndex,
+        totalGroupsCount,
+        isLeaderboardLoading: isLoading,
+        showMerge,
+    } = useGroupsContext();
 
-    showMerge,
-}: GroupDetailsViewProps) => {
+    const { openDialog } = useTournamentDialogs();
     // Stash the last valid leaderboard to prevent "blinking" empty state during navigation
     const [stashedLeaderboard, setStashedLeaderboard] = useState<any>(null);
+
+    const openMergeModal = (team?: any) => openDialog('mergeTeamToGroup', team || currentGroup);
 
 
     useEffect(() => {
@@ -126,17 +93,17 @@ export const GroupDetailsView = ({
                     setSelectedPairing(null);
                 }}
                 onSubmitResults={handleSubmitResults}
-                onInviteTeam={() => openInviteModal(currentGroup)}
-                onEditGroup={openEditModal}
-                onDeleteGroup={openDeleteModal}
+                onInviteTeam={() => openDialog('addTeam', currentGroup)}
+                onEditGroup={() => openDialog('editGroup', currentGroup)}
+                onDeleteGroup={() => openDialog('deleteGroup', currentGroup)}
                 onResetGroup={onResetGroup}
                 isSubmitting={isSaving}
                 isSubmitDisabled={currentGroup.isLeague && !selectedPairing}
                 isLoading={isLoading}
-                onChat={openChatModal}
+                onChat={() => openDialog('groupChat', currentGroup)}
                 totalMatch={effectiveTotalMatch}
                 showMerge={showMerge}
-                onMerge={() => openMergeModal(currentGroup)}
+                onMerge={openMergeModal}
             />
 
 

@@ -19,3 +19,17 @@ export const roles = [
     { label: "Analyst", value: "analyst" },
     { label: "Substitute", value: "substitute" },
 ];
+
+export const TEAM_REGIONS = [
+    "NA",
+    "EU",
+    "ASIA",
+    "SEA",
+    "SA",
+    "OCE",
+    "MENA",
+    "INDIA",
+    "GLOBAL"
+] as const;
+
+export type TeamRegion = typeof TEAM_REGIONS[number];

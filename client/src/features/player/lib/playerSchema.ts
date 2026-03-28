@@ -30,6 +30,8 @@ export const playerSettingsSchema = z.object({
         youtube: z.string().optional().or(z.literal("")),
         website: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
     }).optional(),
+    avatar: z.any().optional(),
+    coverImage: z.any().optional(),
 });
 
 export type PlayerSettingsValues = z.infer<typeof playerSettingsSchema>;

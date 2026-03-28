@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, UserPlus, CheckCircle2 } from "lucide-react";
+import { Search, LoaderCircle as Loader2, UserPlus, CircleCheckBig as CircleCheck2 } from "lucide-react";
 import { useSearchTeamsQuery, useGetT1SpecialTeamsQuery } from "@/features/tournaments/hooks/useTournamentQueries";
 import { useInviteToGroupMutation } from "@/features/tournaments/hooks/useTournamentMutations";
 import { Badge } from "@/components/ui/badge";
@@ -82,7 +82,7 @@ export const AddTeamDialog = ({ open, onOpenChange, groupId, groupName, eventId,
                         />
                     </div>
 
-                    <div className="h-[300px] pr-4 overflow-y-auto custom-scrollbar">
+                    <div className="h-[300px] pr-4 overflow-y-auto scrollbar-hide">
                         <div className="space-y-2">
                             {isLoading ? (
                                 <div className="flex items-center justify-center py-10">
@@ -105,7 +105,7 @@ export const AddTeamDialog = ({ open, onOpenChange, groupId, groupName, eventId,
                                             <div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-bold text-sm">{team.teamName}</span>
-                                                    {team.isVerified && <CheckCircle2 className="w-3 h-3 text-blue-400" />}
+                                                    {team.isVerified && <CircleCheck2 className="w-3 h-3 text-blue-400" />}
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <Badge variant="outline" className="text-[10px] h-4 border-white/10 text-gray-500">

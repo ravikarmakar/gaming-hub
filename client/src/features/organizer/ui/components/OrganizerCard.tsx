@@ -1,85 +1,122 @@
-import { motion } from "framer-motion";
-import { Trophy, Users, ArrowRight, Briefcase } from "lucide-react";
+import React, { useState } from "react";
+import { Trophy, Users, ChevronRight, Building, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ORGANIZER_ROUTES } from "../../lib/routes";
-import { Organizer } from "../../lib/types";
+import { Organizer } from "../../types";
+
+import { GlassCard } from "@/features/tournaments/ui/components/shared/ThemedComponents";
 
 interface OrganizerCardProps {
-    org: Organizer;
+    organizer: Organizer;
     index: number;
 }
 
-import React from "react";
-// ... (imports remain)
+const OrganizerCard = React.memo(React.forwardRef<HTMLDivElement, OrganizerCardProps>(({ organizer }, ref) => {
+    const [isLoaded, setIsLoaded] = useState(false);
 
-const OrganizerCard = React.memo(React.forwardRef<HTMLDivElement, OrganizerCardProps>(({ org, index }, ref) => {
     return (
-        <motion.div
-            ref={ref}
-            layout
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.05 }}
-            className="group relative"
-        >
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-[28px] opacity-0 group-hover:opacity-30 blur transition duration-500" />
-            <div className="relative h-full bg-brand-dark/80 border border-white/10 rounded-[28px] overflow-hidden backdrop-blur-sm flex flex-col p-6 transition-all duration-300 group-hover:border-purple-500/30 group-hover:-translate-y-1">
-
-                {/* Card Header */}
-                <div className="flex items-start justify-between mb-6">
-                    <Avatar className="w-20 h-20 border-2 border-purple-500/20 group-hover:border-purple-500/50 transition-colors duration-500">
-                        <AvatarImage src={org.imageUrl} alt={org.name} className="object-cover" />
-                        <AvatarFallback className="bg-purple-900/50 text-2xl font-black text-purple-200">
-                            {org.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col items-end gap-2">
-                        <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20 rounded-full py-1">
-                            Active
-                        </Badge>
-                        {org.isHiring && (
-                            <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 rounded-full py-1 animate-pulse">
-                                <Briefcase className="w-3 h-3 mr-1" /> Hiring
-                            </Badge>
-                        )}
-                    </div>
-                </div>
-
-                {/* Info */}
-                <div className="flex-grow">
-                    <h3 className="text-2xl font-bold mb-2 group-hover:text-purple-400 transition-colors">
-                        {org.name}
-                    </h3>
-                    <p className="text-gray-400 text-sm line-clamp-2 mb-6 h-10">
-                        {org.description || "Crafting elite esports experiences and fostering professional competitive gaming."}
-                    </p>
-
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 gap-4 py-4 border-t border-white/5">
-                        <div className="flex items-center gap-2 text-gray-300">
-                            <Trophy className="w-4 h-4 text-purple-500" />
-                            <span className="text-xs font-mono">12+ Events</span>
+        <div ref={ref} className="group h-full">
+            <Link
+                to={organizer._id ? ORGANIZER_ROUTES.PROFILE.replace(":id", organizer._id) : "#"}
+                onClick={(e) => !organizer._id && e.preventDefault()}
+                className="block h-full transition-all duration-500"
+            >
+                <GlassCard className="flex flex-row sm:flex-col h-full overflow-hidden p-0 border-white/5 backdrop-blur-xl transition-all duration-500 hover:shadow-[0_0_30px_6px_rgba(147,51,234,0.12)] hover:border-purple-500/30 shadow-xl">
+                    {/* Header: Logo + Status */}
+                    <div className="flex items-center gap-2 sm:gap-4 p-2 sm:p-5 sm:pb-4 flex-1 min-w-0">
+                        {/* Logo/Avatar */}
+                        <div className="relative flex-shrink-0">
+                            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-[#0d091a] border border-white/10 flex items-center justify-center overflow-hidden transition-transform duration-300 group-hover:scale-105">
+                                <Avatar className="w-full h-full border-none">
+                                    <AvatarImage 
+                                        src={organizer.imageUrl} 
+                                        alt={organizer.name} 
+                                        onLoadingStatusChange={(status) => setIsLoaded(status === 'loaded' || status === 'error')}
+                                        className="object-cover" 
+                                    />
+                                    <AvatarFallback className="bg-purple-900/50 text-xs sm:text-sm font-black text-purple-200">
+                                        {organizer.name.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+                                {!isLoaded && organizer.imageUrl && <Skeleton className="absolute inset-0 z-10 w-full h-full rounded-full bg-white/10 animate-pulse" />}
+                            </div>
+                            <div className="absolute -bottom-0.5 -right-0.5 p-0.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 border-2 border-gray-900">
+                                <Building className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-white" />
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2 text-gray-300">
-                            <Users className="w-4 h-4 text-purple-500" />
-                            <span className="text-xs font-mono">2.4k Follow</span>
+
+                        {/* Name & Type */}
+                        <div className="flex-1 min-w-0">
+                            <h3 className="text-sm sm:text-base font-bold text-white group-hover:text-purple-400 transition-colors truncate leading-tight">
+                                {organizer.name}
+                            </h3>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] sm:text-xs text-gray-500 font-medium uppercase tracking-wider">
+                                    Organizer
+                                </span>
+                                {/* Mobile Stats Summary */}
+                                <div className="flex items-center gap-1.5 sm:hidden">
+                                    <div className="flex items-center gap-1 text-[9px] text-white/40">
+                                        <Users size={8} className="text-purple-500" />
+                                        <span>{organizer.members?.length || 0}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Status Badges */}
+                        <div className="flex gap-1 sm:gap-1.5 flex-shrink-0">
+                            <div className="p-1 rounded-full bg-blue-500/10 border border-blue-500/20" title="Active Organization">
+                                <ShieldCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-400" />
+                            </div>
+                            {organizer.isHiring && (
+                                <div className="relative">
+                                    <div className="absolute -inset-1 bg-emerald-500/20 blur-sm rounded-full animate-pulse" />
+                                    <div className="relative p-1 rounded-full bg-emerald-500/10 border border-emerald-500/20" title="Hiring">
+                                        <Building className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400" />
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
-                </div>
 
-                {/* Action */}
-                <Link
-                    to={ORGANIZER_ROUTES.PROFILE.replace(":id", org._id || "")}
-                    className="mt-6 flex items-center justify-between w-full h-12 px-6 rounded-xl bg-white/5 border border-white/10 text-sm font-bold group-hover:bg-purple-500 group-hover:text-white group-hover:border-transparent transition-all duration-300"
-                >
-                    View Organization
-                    <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
-                </Link>
-            </div>
-        </motion.div>
+                    {/* Description (Desktop only) */}
+                    <div className="hidden sm:block mx-5 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/5">
+                        <p className="text-xs text-white/40 line-clamp-2 leading-relaxed italic">
+                            "{organizer.description || "Crafting elite esports experiences and fostering professional competitive gaming."}"
+                        </p>
+                    </div>
+
+                    {/* Stats (Desktop only) */}
+                    <div className="hidden sm:grid grid-cols-2 gap-3 mx-5 mt-4 mb-4">
+                        <div className="bg-white/[0.03] p-3 rounded-xl border border-white/5 group/metric hover:bg-white/[0.06] transition-all">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                                <Trophy size={10} className="text-violet-400" /> Events
+                            </p>
+                            <p className="text-lg font-black text-white tracking-tight">--</p>
+                        </div>
+                        <div className="bg-white/[0.03] p-3 rounded-xl border border-white/5 group/metric hover:bg-white/[0.06] transition-all">
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                                <Users size={10} className="text-yellow-400" /> Members
+                            </p>
+                            <p className="text-lg font-black text-white tracking-tight">{organizer.members?.length || 0}</p>
+                        </div>
+                    </div>
+
+                    {/* Footer (Desktop only) */}
+                    <div className="hidden sm:flex mx-5 mb-5 pt-3 border-t border-white/5 items-center justify-end">
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-purple-400 group-hover:text-purple-300 transition-colors">
+                            View Organization <ChevronRight size={14} className="transition-transform group-hover:translate-x-1" />
+                        </span>
+                    </div>
+                </GlassCard>
+            </Link>
+        </div>
     );
 }));
+
+OrganizerCard.displayName = "OrganizerCard";
 
 export default OrganizerCard;

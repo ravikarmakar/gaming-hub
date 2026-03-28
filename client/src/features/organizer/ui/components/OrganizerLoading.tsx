@@ -1,4 +1,4 @@
-import { FeatureSkeleton } from "@/components/shared/FeatureSkeleton";
+import { FeatureSkeleton } from "@/components/shared/feedback/FeatureSkeleton";
 
 interface OrganizerLoadingProps {
     message?: string;

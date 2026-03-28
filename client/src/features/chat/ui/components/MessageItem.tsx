@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { useChatStore, ChatMessage } from "../../store/useChatStore";
-import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import { ConfirmActionDialog } from "@/components/shared/dialogs/ConfirmActionDialog";
 import { cn } from "@/lib/utils";
 
 interface MessageItemProps {
@@ -66,7 +66,7 @@ export const MessageItem = ({ message, isOwnMessage, canDeleteParent }: MessageI
         <>
             <div
                 className={cn(
-                    "group flex items-start gap-2 mb-3",
+                    "group flex items-start gap-3 mb-2",
                     isOwnMessage ? "flex-row-reverse" : "flex-row"
                 )}
             >
@@ -78,7 +78,7 @@ export const MessageItem = ({ message, isOwnMessage, canDeleteParent }: MessageI
                 </Avatar>
 
                 <div className={cn(
-                    "flex flex-col min-w-0 max-w-[85%] md:max-w-[70%] w-fit",
+                    "flex flex-col min-w-0 max-w-[90%] md:max-w-[85%] w-fit",
                     isOwnMessage ? "ml-auto items-end" : "mr-auto items-start"
                 )}>
                     {isOwnMessage ? (

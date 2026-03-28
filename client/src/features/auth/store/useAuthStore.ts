@@ -49,6 +49,18 @@ interface AuthStateTypes {
   ) => Promise<{ success: boolean; message: string }>;
 }
 
+const updateUnreadCountCache = async (unreadCount?: number) => {
+  if (typeof unreadCount === "number") {
+    try {
+      const { queryClient } = await import("../../../lib/query-client");
+      const { NOTIFICATIONS_KEYS } = await import("../../notifications/hooks/notificationKeys");
+      queryClient.setQueryData(NOTIFICATIONS_KEYS.unreadCount(), unreadCount);
+    } catch (error) {
+      console.error("Failed to update unread count cache:", error);
+    }
+  }
+};
+
 export const useAuthStore = create<AuthStateTypes>((set, get) => ({
   user: null,
   error: null,
@@ -65,6 +77,9 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
         password,
       });
       set({ user: response.data.user });
+      if (response.data.user) {
+        updateUnreadCountCache(response.data.unreadCount);
+      }
       return response.data.user || null;
     }, "Registration failed. Please try again.");
     return data || null;
@@ -77,6 +92,9 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
         password,
       });
       set({ user: response.data.user });
+      if (response.data.user) {
+        updateUnreadCountCache(response.data.unreadCount);
+      }
       return true;
     }, "Failed to login! Please try again.");
     return success;
@@ -101,7 +119,6 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
 
     // Deduplicate calls to avoid thundering herd problem during rapid state updates
     if (isRefreshing) {
-      console.log("⏭️ checkAuth already in progress, skipping...");
       return;
     }
 
@@ -120,10 +137,7 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
       set({ user: response.data.user });
 
       // Update unread count if available
-      if (typeof response.data.unreadCount === "number") {
-        const { useNotificationStore } = await import("@/features/notifications/store/useNotificationStore");
-        useNotificationStore.getState().setUnreadCount(response.data.unreadCount);
-      }
+      updateUnreadCountCache(response.data.unreadCount);
     } catch {
       // 401 = guest user (normal)
       set({ user: null });
@@ -147,8 +161,11 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
     // Background process - no UI loading state
     try {
       const response = await axiosInstance.post<AuthResponse>(AUTH_ENDPOINTS.REFRESH_TOKEN);
-      const { user } = response.data;
-      if (user) set({ user });
+      const { user, unreadCount } = response.data;
+      if (user) {
+        set({ user });
+        updateUnreadCountCache(unreadCount);
+      }
     } catch (error) {
       // fail silently in UI but throw for interceptor
       set({ user: null });
@@ -160,6 +177,7 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
     const { data } = await runAsync(set, async () => {
       const response = await axiosInstance.get<AuthResponse>(`${AUTH_ENDPOINTS.GOOGLE}?code=${encodeURIComponent(code)}`);
       set({ user: response.data.user, checkingAuth: false });
+      updateUnreadCountCache(response.data.unreadCount);
       return response.data.user || null;
     }, "Error while Google Register!", "isLoading", "error");
     return data || null;
@@ -169,6 +187,7 @@ export const useAuthStore = create<AuthStateTypes>((set, get) => ({
     const { data } = await runAsync(set, async () => {
       const response = await axiosInstance.post<AuthResponse>(`${AUTH_ENDPOINTS.DISCORD}?code=${encodeURIComponent(code)}`);
       set({ user: response.data.user, checkingAuth: false });
+      updateUnreadCountCache(response.data.unreadCount);
       // Return explicit null if user is undefined to match interface
       return response.data.user || null;
     }, "Error while Discord Register & login!");

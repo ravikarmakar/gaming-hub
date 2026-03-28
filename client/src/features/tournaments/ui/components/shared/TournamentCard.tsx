@@ -7,31 +7,20 @@ import {
     Gamepad2,
     TrendingUp,
     ChevronRight,
-    Edit2,
-    Trash2
 } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 import { TOURNAMENT_ROUTES } from "@/features/tournaments/lib/routes";
 import { Tournament } from "@/features/tournaments/types";
-import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { cn, formatDate, formatCurrency } from "@/lib/utils";
 import { GlassCard, NeonBadge } from "./ThemedComponents";
 
 interface TournamentCardProps {
     event: Tournament;
     onButtonClick?: (eventId: string) => void;
-    onDeleteClick?: (eventId: string) => void;
-    showEditButton?: boolean;
     hideViewDetails?: boolean;
     hideActions?: boolean;
     index?: number;
@@ -40,8 +29,6 @@ interface TournamentCardProps {
 const TournamentCard: React.FC<TournamentCardProps> = ({
     event,
     onButtonClick,
-    onDeleteClick,
-    showEditButton = false,
     hideViewDetails = false,
     hideActions = false,
     index = 0
@@ -64,32 +51,19 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
         }
     };
 
-    const handleEditClick = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        navigate(ORGANIZER_ROUTES.EDIT_TOURNAMENT.replace(":eventId", event._id));
-    };
-
-    const handleDeleteClick = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (onDeleteClick) {
-            onDeleteClick(event._id);
-        }
-    };
-
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
+            className="h-full"
         >
             <GlassCard
-                className="group h-full flex flex-col cursor-pointer transition-all duration-500 hover:shadow-[0_0_40px_8px_rgba(147,51,234,0.15)] hover:border-purple-500/30 overflow-hidden"
+                className="group h-full flex flex-row sm:flex-col cursor-pointer transition-all duration-500 hover:shadow-[0_0_40px_8px_rgba(147,51,234,0.15)] hover:border-purple-500/30 overflow-hidden"
                 onClick={(e) => handleCardClick(e)}
             >
                 {/* Event Hero */}
-                <div className="relative h-48 overflow-hidden bg-white/5">
+                <div className="relative w-24 sm:w-full h-full sm:h-48 overflow-hidden bg-white/5 shrink-0">
                     {!isLoaded && <Skeleton className="absolute inset-0 z-10 w-full h-full rounded-none bg-white/10 animate-pulse" />}
                     <img
                         src={event.image?.includes("default-avatar-url.com")
@@ -109,123 +83,93 @@ const TournamentCard: React.FC<TournamentCardProps> = ({
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0B0C1A] via-[#0B0C1A]/20 to-transparent" />
 
                     {/* Status Overlay */}
-                    <div className="absolute top-4 right-4 flex gap-2">
-                        {showEditButton && !hideActions && (
-                            <TooltipProvider>
-                                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                aria-label="Edit Tournament"
-                                                type="button"
-                                                onClick={handleEditClick}
-                                                className="h-8 w-8 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-white hover:bg-purple-600/80 hover:text-white transition-all p-0"
-                                            >
-                                                <Edit2 size={14} />
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent className="bg-[#0B0C1A] border-white/10 text-white">
-                                            <p>Edit Tournament</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                aria-label="Delete Tournament"
-                                                type="button"
-                                                onClick={handleDeleteClick}
-                                                className="h-8 w-8 bg-black/40 backdrop-blur-md rounded-full border border-white/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all p-0"
-                                            >
-                                                <Trash2 size={14} />
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent className="bg-[#0B0C1A] border-white/10 text-white">
-                                            <p>Delete Tournament</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </div>
-                            </TooltipProvider>
-                        )}
+                    <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex gap-2">
                         <NeonBadge
+                            className="text-[8px] sm:text-[10px] px-1.5 py-0.5 sm:px-2 sm:py-1"
                             variant={
                                 event.registrationStatus === "registration-open" ? "green" :
                                     event.eventProgress === "ongoing" ? "orange" :
                                         event.eventProgress === "completed" ? "blue" : "red"
                             }
                         >
-                            {(event.registrationStatus === "registration-open" ? "Registration Open" :
+                            {(event.registrationStatus === "registration-open" ? "Reg. Open" :
                                 event.eventProgress === "ongoing" ? "Ongoing" :
-                                    event.eventProgress === "completed" ? "Completed" :
+                                    event.eventProgress === "completed" ? "Done" :
                                         event.registrationStatus || "Unknown"
                             ).toUpperCase()}
                         </NeonBadge>
                     </div>
 
                     {/* Category Badge */}
-                    <div className="absolute top-4 left-4">
-                        <span className="px-2 py-1 bg-purple-600/80 backdrop-blur-md rounded text-[10px] font-bold text-white uppercase tracking-wider">
+                    <div className="absolute top-2 left-2 sm:top-4 sm:left-4">
+                        <span className="px-1.5 py-0.5 sm:px-2 sm:py-1 bg-purple-600/80 backdrop-blur-md rounded text-[8px] sm:text-[10px] font-bold text-white uppercase tracking-wider">
                             {event.category}
                         </span>
                     </div>
                 </div>
 
-                <div className="p-6 flex-1 flex flex-col">
-                    <div className="flex items-center gap-2 mb-3">
-                        <Gamepad2 size={14} className="text-purple-400" />
-                        <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{event.game}</span>
+                <div className="p-2 sm:p-4 xl:p-6 flex-1 flex flex-col min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5 sm:mb-3 min-w-0">
+                        <Gamepad2 size={12} className="text-purple-400 shrink-0 sm:w-3.5 sm:h-3.5" />
+                        <span className="text-[8px] sm:text-[10px] xl:text-xs font-bold text-gray-500 uppercase tracking-widest truncate">{event.game}</span>
                     </div>
 
-                    <h3 className="text-xl font-bold text-white mb-4 group-hover:text-purple-400 transition-colors line-clamp-1">
+                    <h3 className="text-xs sm:text-lg xl:text-xl font-bold text-white mb-1 sm:mb-4 group-hover:text-purple-400 transition-colors line-clamp-1 sm:line-clamp-2">
                         {event.title}
                     </h3>
 
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div className="bg-white/5 p-3 rounded-xl border border-white/5 group/metric hover:bg-white/10 transition-all">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">
-                                <TrendingUp size={10} className="text-emerald-400" /> Prize Pool
+                    <div className="flex sm:grid sm:grid-cols-2 gap-2 sm:gap-2 xl:gap-4 mb-2 sm:mb-5 xl:mb-6">
+                        <div className="flex sm:flex-col sm:bg-white/5 p-0 sm:p-2 xl:p-3 rounded-xl border-none sm:border sm:border-white/5 group/metric hover:bg-white/10 transition-all min-w-0">
+                            <p className="hidden sm:flex text-[8px] xl:text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 items-center gap-1 xl:gap-1.5 truncate">
+                                <TrendingUp size={10} className="text-emerald-400 shrink-0" /> <span className="truncate">Prize</span>
                             </p>
-                            <p className="text-lg font-black text-white tracking-tight">₹{formatCurrency(event.prizePool)}</p>
+                            <div className="flex items-center gap-1 sm:block">
+                                <TrendingUp size={10} className="text-emerald-400 shrink-0 sm:hidden" />
+                                <p className="text-sm sm:text-base xl:text-lg font-black text-white tracking-tight truncate">₹{formatCurrency(event.prizePool)}</p>
+                            </div>
                         </div>
-                        <div className="bg-white/5 p-3 rounded-xl border border-white/5 group/metric hover:bg-white/10 transition-all">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">
-                                <Users size={10} className="text-blue-400" /> Enrolled
+                        <div className="flex sm:flex-col sm:bg-white/5 p-0 sm:p-2 xl:p-3 rounded-xl border-none sm:border sm:border-white/5 group/metric hover:bg-white/10 transition-all min-w-0">
+                            <p className="hidden sm:flex text-[8px] xl:text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 items-center gap-1 xl:gap-1.5 truncate">
+                                <Users size={10} className="text-blue-400 shrink-0" /> <span className="truncate">Enrolled</span>
                             </p>
-                            <div className="flex flex-col gap-1.5">
-                                <p className="text-lg font-black text-white tracking-tight">{event.joinedSlots || 0}/{event.maxSlots}</p>
-                                <Progress
+                            <div className="flex flex-col gap-1.5 min-w-0">
+                                <div className="flex items-center gap-1 sm:block">
+                                    <Users size={10} className="text-blue-400 shrink-0 sm:hidden" />
+                                    <p className="text-sm sm:text-base xl:text-lg font-black text-white tracking-tight truncate">{event.joinedSlots || 0}/{event.maxSlots}</p>
+                                </div>
+                                <div className="hidden sm:block">
+                                    <Progress
                                     value={event.maxSlots > 0 ? Math.min(((event.joinedSlots || 0) / event.maxSlots) * 100, 100) : 0}
-                                    className="h-1 bg-white/10"
+                                    className="hidden sm:block h-1 bg-white/10"
                                     indicatorClassName="bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"
                                 />
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div className={`mt-auto pt-4 border-t border-white/5 flex items-center ${hideViewDetails ? 'justify-start' : 'justify-between'}`}>
-                        <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2 text-xs text-gray-400">
-                                <Clock size={12} />
-                                <span>{formatDate(event.startDate)}</span>
+                    {!hideActions && (
+                        <div className={`mt-auto pt-2 sm:pt-4 border-t border-white/5 flex items-center ${hideViewDetails ? 'justify-start' : 'justify-between'} min-w-0`}>
+                            <div className="flex flex-col gap-1 min-w-0 pr-2">
+                                <div className="flex items-center gap-1 xl:gap-2 text-[9px] sm:text-xs text-gray-400 truncate">
+                                    <Clock size={10} className="shrink-0 sm:w-3 sm:h-3" />
+                                    <span className="truncate">{formatDate(event.startDate)}</span>
+                                </div>
                             </div>
+                            {!hideViewDetails && (
+                                <Button
+                                    variant="link"
+                                    className="hidden sm:flex items-center gap-2 text-sm font-bold text-purple-400 hover:text-purple-300 group/btn p-0 h-auto"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCardClick(e);
+                                    }}
+                                >
+                                    View Details <ChevronRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
+                                </Button>
+                            )}
                         </div>
-                        {!hideViewDetails && (
-                            <Button
-                                variant="link"
-                                className="flex items-center gap-2 text-sm font-bold text-purple-400 hover:text-purple-300 group/btn p-0 h-auto"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCardClick(e);
-                                }}
-                            >
-                                View Details <ChevronRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
-                            </Button>
-                        )}
-                    </div>
+                    )}
                 </div>
             </GlassCard>
         </motion.div>

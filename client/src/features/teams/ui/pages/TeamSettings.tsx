@@ -1,150 +1,55 @@
-import { useEffect } from "react";
 import { Navigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import toast from "react-hot-toast";
-import {
-    Settings,
-    LayoutDashboard,
-} from "lucide-react";
+import { Settings, LayoutDashboard, Briefcase } from "lucide-react";
 
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
+import { Form } from "@/components/ui/form";
 
-import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { TEAM_ACCESS } from "@/features/teams/lib/access";
+import { ProfileSettingsPreview } from "@/components/shared/profile/ProfileSettingsPreview";
+import { RecruitmentStatusSection } from "@/components/shared/profile/RecruitmentStatusSection";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
-import { useAccess } from "@/features/auth/hooks/useAccess";
-import { DeleteTeamSection } from "../components/DeleteTeamSection";
-import { TeamPageHeader } from "../components/TeamPageHeader";
-import { teamSchema, TeamForm } from "@/features/teams/lib/teamSchema";
-import { BrandingForm } from "../components/settings/BrandingForm";
-import { SettingsFormActions } from "@/components/shared/SettingsFormActions";
-import { FormSection } from "@/components/shared/FormSection";
-import { SocialLinksSection } from "@/components/shared/SocialLinksSection";
+import { DeleteTeamSection } from "../components/dialogs/DeleteTeamSection";
+import { TeamPageHeader } from "../components/common/TeamPageHeader";
+import { TeamForm } from "@/features/teams/lib/validation";
+import { SettingsFormActions } from "@/components/shared/forms/SettingsFormActions";
+import { SocialConnectionsSection } from "@/components/shared/profile/SocialConnectionsSection";
+import { GeneralInfoSection, FieldConfig } from "@/components/shared/profile/GeneralInfoSection";
+import { BioSection } from "@/components/shared/profile/BioSection";
+import { useTeamSettings } from "../../hooks/useTeamSettings";
+import { TEAM_REGIONS } from "../../lib/constants";
+
+const teamFields: FieldConfig<TeamForm>[] = [
+    {
+        name: "teamName",
+        label: "Team Name",
+        placeholder: "Team Name",
+    },
+    {
+        name: "tag",
+        label: "Team Tag",
+        placeholder: "TAG",
+        maxLength: 5,
+    },
+    {
+        name: "region",
+        label: "Region",
+        type: "select" as const,
+        placeholder: "Select region",
+        options: TEAM_REGIONS.map(reg => ({ label: reg, value: reg })),
+    },
+];
 
 const TeamSettings = () => {
-    const { updateTeam, isLoading, currentTeam, getTeamById } = useTeamManagementStore();
-    const { user } = useAuthStore();
-    const { can } = useAccess();
+    const {
+        form,
+        currentTeam,
+        permissions,
+        isLoading,
+        canManageSettings,
+        onSubmit,
+        handleReset,
+        isDirty,
+    } = useTeamSettings();
 
-    const form = useForm<TeamForm>({
-        resolver: zodResolver(teamSchema),
-        defaultValues: {
-            teamName: "",
-            tag: "",
-            bio: "",
-            region: "INDIA",
-            isRecruiting: false,
-            twitter: "",
-            discord: "",
-            youtube: "",
-            instagram: "",
-            image: null,
-            banner: null,
-        },
-    });
-    const { isDirty, isSubmitting } = form.formState;
-
-    // Sync form with currentTeam data
-    // Only reset if form is not dirty to prevent "blinking" while editing
-    // due to background refreshes or socket/revalidation events
-    useEffect(() => {
-        if (currentTeam && !isDirty && !isSubmitting) {
-            form.reset({
-                teamName: currentTeam.teamName || "",
-                tag: currentTeam.tag || "",
-                bio: currentTeam.bio || "",
-                region: currentTeam.region || "INDIA",
-                isRecruiting: currentTeam.isRecruiting || false,
-                twitter: currentTeam.socialLinks?.twitter || "",
-                discord: currentTeam.socialLinks?.discord || "",
-                youtube: currentTeam.socialLinks?.youtube || "",
-                instagram: currentTeam.socialLinks?.instagram || "",
-                image: null,
-                banner: null,
-            });
-        }
-    }, [currentTeam, form, isDirty, isSubmitting]);
-
-    const onSubmit = async (data: TeamForm) => {
-        const formData = new FormData();
-
-        formData.append("teamName", data.teamName);
-        formData.append("tag", data.tag);
-        if (data.bio) formData.append("bio", data.bio);
-        formData.append("region", data.region);
-        formData.append("isRecruiting", String(data.isRecruiting));
-
-        if (data.twitter) formData.append("twitter", data.twitter);
-        if (data.discord) formData.append("discord", data.discord);
-        if (data.youtube) formData.append("youtube", data.youtube);
-        if (data.instagram) formData.append("instagram", data.instagram);
-
-        if (data.image instanceof File) formData.append("image", data.image);
-        if (data.banner instanceof File) formData.append("banner", data.banner);
-
-        if (!currentTeam) return;
-        const result = await updateTeam(currentTeam._id, formData);
-        if (result) {
-            toast.success("Team settings updated successfully!");
-            // Mark current values as clean baseline
-            form.reset({
-                teamName: result.teamName || "",
-                tag: result.tag || "",
-                bio: result.bio || "",
-                region: result.region || "INDIA",
-                isRecruiting: result.isRecruiting || false,
-                twitter: result.socialLinks?.twitter || "",
-                discord: result.socialLinks?.discord || "",
-                youtube: result.socialLinks?.youtube || "",
-                instagram: result.socialLinks?.instagram || "",
-                image: null,
-                banner: null,
-            });
-            // Force refresh team data to ensure other components are in sync
-            await getTeamById(currentTeam._id, true);
-        } else {
-            toast.error("Failed to update team settings");
-        }
-    };
-
-    const handleReset = () => {
-        if (currentTeam) {
-            form.reset({
-                teamName: currentTeam.teamName || "",
-                tag: currentTeam.tag || "",
-                bio: currentTeam.bio || "",
-                region: currentTeam.region || "INDIA",
-                isRecruiting: currentTeam.isRecruiting || false,
-                twitter: currentTeam.socialLinks?.twitter || "",
-                discord: currentTeam.socialLinks?.discord || "",
-                youtube: currentTeam.socialLinks?.youtube || "",
-                instagram: currentTeam.socialLinks?.instagram || "",
-                image: null,
-                banner: null,
-            });
-        }
-    };
-
-    const canManageSettings = can(TEAM_ACCESS.settings);
+    const { watch } = form;
 
     if (!currentTeam) return null;
 
@@ -152,16 +57,17 @@ const TeamSettings = () => {
         return <Navigate to={TEAM_ROUTES.DASHBOARD} replace />;
     }
 
-    const isOwner = currentTeam?.captain?.toString() === user?._id?.toString();
+    const { isOwner } = permissions;
 
     return (
-        <div className="w-full">
+        <div className="h-full flex flex-col overflow-hidden">
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <form onSubmit={onSubmit} className="flex-1 flex flex-col min-h-0">
                     <TeamPageHeader
                         icon={Settings}
                         title="Team Settings"
                         subtitle="Manage your team's identity and professional presence"
+                        noMargin={true}
                         actions={
                             <SettingsFormActions
                                 isDirty={isDirty}
@@ -171,130 +77,80 @@ const TeamSettings = () => {
                         }
                     />
 
-                    <BrandingForm control={form.control} currentTeam={currentTeam} />
+                    <main className="flex-1 overflow-y-auto w-full px-4 md:px-6 pt-2 md:pt-4 pb-4 md:pb-8 space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            {/* Profile Overview (Left Column) */}
+                            <div className="space-y-6">
+                                <ProfileSettingsPreview
+                                    control={form.control}
+                                    bannerName="banner"
+                                    imageName="image"
+                                    currentBannerUrl={currentTeam?.bannerUrl}
+                                    currentImageUrl={currentTeam?.imageUrl}
+                                    name={currentTeam?.teamName}
+                                    tag={currentTeam?.tag}
+                                    isHiring={watch("isRecruiting")}
+                                    isVerified={currentTeam?.isVerified}
+                                    canUpdate={canManageSettings}
+                                    fallbackText={currentTeam?.teamName?.[0]}
+                                    ownershipLabel="Team Account"
+                                />
 
-                    <FormSection
-                        title="General Information"
-                        icon={LayoutDashboard}
-                    >
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                            <FormField
-                                control={form.control}
-                                name="teamName"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-gray-300">Team Name</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                {...field}
-                                                className="text-white bg-black/20 border-purple-500/20 placeholder:text-gray-400 focus:border-purple-500/50"
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                <RecruitmentStatusSection
+                                    control={form.control}
+                                    name="isRecruiting"
+                                    title="Recruitment"
+                                    label="Open for Recruitment"
+                                    description="Allow other players to see you're looking for members."
+                                    icon={Briefcase}
+                                    iconColor="text-purple-400"
+                                    accentColor="purple"
+                                    disabled={!canManageSettings}
+                                />
+                            </div>
 
-                            <FormField
-                                control={form.control}
-                                name="tag"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-gray-300">Team Tag (Max 5 chars)</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                {...field}
-                                                maxLength={5}
-                                                className="uppercase text-white bg-black/20 border-purple-500/20 placeholder:text-gray-400 focus:border-purple-500/50"
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                            {/* Forms (Right 2 Columns) */}
+                            <div className="md:col-span-2 space-y-6">
+                                <GeneralInfoSection
+                                    control={form.control}
+                                    title="General Information"
+                                    description="Update your team's public identity and headquarters."
+                                    icon={LayoutDashboard}
+                                    iconColor="text-blue-500"
+                                    gridClassName="grid-cols-1 md:grid-cols-2"
+                                    fields={teamFields}
+                                />
+
+                                <BioSection
+                                    control={form.control}
+                                    name="bio"
+                                    title="Team Bio"
+                                    description="Tell the community about your team's history and goals."
+                                    label="Description"
+                                    placeholder="Tell the world about your team..."
+                                    maxLength={500}
+                                />
+
+                                <SocialConnectionsSection
+                                    control={form.control}
+                                    fields={{
+                                        twitter: "twitter",
+                                        discord: "discord",
+                                        youtube: "youtube",
+                                        instagram: "instagram"
+                                    }}
+                                />
+                            </div>
                         </div>
 
-                        <FormField
-                            control={form.control}
-                            name="bio"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-gray-300">Team Bio</FormLabel>
-                                    <FormControl>
-                                        <Textarea
-                                            {...field}
-                                            rows={4}
-                                            className="text-white bg-black/20 border-purple-500/20 placeholder:text-gray-400 focus:border-purple-500/50"
-                                            placeholder="Tell the world about your team..."
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                            <FormField
-                                control={form.control}
-                                name="region"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-gray-300">Region</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger className="text-white bg-black/20 border-purple-500/20">
-                                                    <SelectValue placeholder="Select region" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent className="bg-[#0F111A] border-white/10 text-white">
-                                                {["NA", "EU", "ASIA", "SEA", "SA", "OCE", "MENA", "INDIA"].map((reg) => (
-                                                    <SelectItem key={reg} value={reg} className="focus:bg-purple-500/10 cursor-pointer">{reg}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={form.control}
-                                name="isRecruiting"
-                                render={({ field }) => (
-                                    <FormItem className="flex items-center justify-between p-4 border rounded-lg bg-black/20 border-purple-500/10">
-                                        <div className="space-y-0.5">
-                                            <FormLabel className="text-gray-300">Recruitment Status</FormLabel>
-                                            <p className="text-xs text-gray-500">Allow other players to see you're looking for members</p>
-                                        </div>
-                                        <FormControl>
-                                            <Switch
-                                                checked={field.value || false}
-                                                onCheckedChange={field.onChange}
-                                            />
-                                        </FormControl>
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-                    </FormSection>
-
-                    <SocialLinksSection
-                        control={form.control}
-                        fields={{
-                            twitter: "twitter",
-                            discord: "discord",
-                            youtube: "youtube",
-                            instagram: "instagram"
-                        }}
-                    />
+                        {isOwner && (
+                            <div className="pt-4 mt-8 border-t border-red-500/10">
+                                <DeleteTeamSection teamId={currentTeam._id} />
+                            </div>
+                        )}
+                    </main>
                 </form>
             </Form>
-
-            {isOwner && (
-                <div className="pt-4 mt-8 border-t border-red-500/10">
-                    <DeleteTeamSection />
-                </div>
-            )}
         </div>
     );
 };

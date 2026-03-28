@@ -1,0 +1,57 @@
+import { cn } from "@/lib/utils";
+
+interface TeamRecentMatchProps {
+    opponent: string;
+    result: "win" | "loss" | "draw";
+    score: string;
+    date: string;
+    map: string;
+}
+
+export const TeamRecentMatch = ({ opponent, result, score, date, map }: TeamRecentMatchProps) => {
+    const resultColors = {
+        win: "text-emerald-400",
+        loss: "text-red-400",
+        draw: "text-amber-400",
+    };
+
+    const resultBgs = {
+        win: "bg-emerald-500/10",
+        loss: "bg-red-500/10",
+        draw: "bg-amber-500/10",
+    };
+
+    return (
+        <div 
+            role="listitem" 
+            aria-label={`Match against ${opponent} on ${map} (${date}): ${result} with score ${score}`}
+            className="flex items-center justify-between p-4 border bg-[#0F111A]/60 border-white/10 rounded-xl hover:border-purple-500/50 hover:bg-[#121421]/80 transition-all duration-500 backdrop-blur-xl shadow-2xl shadow-purple-500/5"
+        >
+            <div className="flex items-center space-x-4">
+                <div className={cn(
+                    "w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold uppercase",
+                    resultBgs[result],
+                    resultColors[result]
+                )}>
+                    {result[0]}
+                </div>
+                <div>
+                    <p className="font-semibold text-white">
+                        {opponent}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                        {map} • {date}
+                    </p>
+                </div>
+            </div>
+            <div className="text-right">
+                <p className="text-base font-bold text-white">
+                    {score}
+                </p>
+                <p className={cn("text-xs font-medium uppercase", resultColors[result])}>
+                    {result}
+                </p>
+            </div>
+        </div>
+    );
+};

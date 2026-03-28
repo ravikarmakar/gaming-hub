@@ -138,8 +138,8 @@ export const fetchAllTeams = TryCatchHandler(async (req, res) => {
   } = req.query;
 
   // Parse to integers early to prevent type coercion issues
-  const parsedPage = parseInt(page, 10) || 1;
-  const parsedLimit = parseInt(limit, 10) || 10;
+  const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+  const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 10));
   const skip = (parsedPage - 1) * parsedLimit;
 
   // Helper to escape regex special characters

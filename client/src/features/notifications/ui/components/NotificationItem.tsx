@@ -1,12 +1,13 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Bell, Check, Calendar, Users, Info, XCircle, AlertCircle } from "lucide-react";
+import { Bell, Check, Calendar, Users, Info, CircleX as XCircle, AlertCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 
-import { Notification, useNotificationStore } from "../../store/useNotificationStore";
+import { Notification } from "../../types";
+import { useMarkAsReadMutation, usePerformActionMutation } from "../../hooks/useNotificationMutations";
 import { TOURNAMENT_ROUTES } from "@/features/tournaments/lib/routes";
 
 interface NotificationItemProps {
@@ -14,8 +15,11 @@ interface NotificationItemProps {
 }
 
 const NotificationItem = React.forwardRef<HTMLDivElement, NotificationItemProps>(({ notification }, ref) => {
-    const { markAsRead, performAction, isLoading } = useNotificationStore();
+    const markAsReadMutation = useMarkAsReadMutation();
+    const performActionMutation = usePerformActionMutation();
     const navigate = useNavigate();
+
+    const isLoading = markAsReadMutation.isPending || performActionMutation.isPending;
 
     const getTypeConfig = () => {
         switch (notification.type) {
@@ -80,21 +84,25 @@ const NotificationItem = React.forwardRef<HTMLDivElement, NotificationItemProps>
             const viewAction = notification.actions.find(a => a.actionType === "VIEW");
             if (viewAction?.payload?.path) {
                 navigate(viewAction.payload.path);
-                markAsRead(notification._id);
+                if (notification.status === "unread") {
+                    markAsReadMutation.mutate(notification._id);
+                }
                 return;
             }
         }
-        await performAction(notification._id, actionType);
+        performActionMutation.mutate({ id: notification._id, actionType });
     };
 
     const handleClick = () => {
         if (notification.status === "unread") {
-            markAsRead(notification._id);
+            markAsReadMutation.mutate(notification._id);
         }
 
         // relatedData IDs may be populated objects {_id, ...} or raw strings
-        const groupId = notification.relatedData?.groupId?._id || notification.relatedData?.groupId;
-        const eventId = notification.relatedData?.eventId?._id || notification.relatedData?.eventId;
+        const groupIdData = notification.relatedData?.groupId as any;
+        const groupId = groupIdData?._id || groupIdData;
+        const eventIdData = notification.relatedData?.eventId as any;
+        const eventId = eventIdData?._id || eventIdData;
 
         if (notification.type === "GROUP_CREATED" && groupId) {
             navigate(`/groups/${String(groupId)}/teams`);

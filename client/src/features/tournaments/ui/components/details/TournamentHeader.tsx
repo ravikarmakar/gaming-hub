@@ -65,7 +65,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({ eventDetails
     };
 
     return (
-        <div className="relative group mb-2 w-full h-[40vh] sm:h-[45vh] lg:h-[40vh]">
+        <div className="relative group mb-2 w-full h-[30vh] sm:h-[45vh] lg:h-[40vh]">
             {/* Immersive Full-Width Hero Banner */}
             <div className="absolute inset-0 overflow-hidden shadow-2xl">
                 <img
@@ -95,7 +95,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({ eventDetails
                                     className="group h-auto flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 text-[8px] sm:text-[10px] font-black text-white transition-all uppercase tracking-widest hover:text-white"
                                 >
                                     <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-0.5" />
-                                    Back
+                                    <span className="hidden sm:inline">Back</span>
                                 </Button>
 
                                 <div className="flex gap-2 sm:gap-3">

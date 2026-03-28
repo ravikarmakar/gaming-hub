@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Loader2, Check, Search, AlertCircle, Plus } from "lucide-react";
+import { LoaderCircle as Loader2, Check, Search, AlertCircle, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {

@@ -1,5 +1,5 @@
 import React from "react";
-import CreateGroupDialog from "@/components/shared/CreateGroupDialog";
+import CreateGroupDialog from "@/components/shared/dialogs/CreateGroupDialog";
 import { useCreateGroup } from "@/hooks/useCreateGroup";
 import { orgSchema, OrgFormSchema } from "../../lib/orgSchemas";
 

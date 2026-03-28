@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { MemberCard } from "@/components/shared/MemberCard";
+import { MemberCard } from "@/components/shared/list/MemberCard";
 import { ORG_ROLE } from "../../lib/access";
 
 interface Member {

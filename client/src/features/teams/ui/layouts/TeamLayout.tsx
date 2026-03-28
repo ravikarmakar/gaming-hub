@@ -1,26 +1,23 @@
-import { useEffect, useCallback } from "react";
-import { Outlet } from "react-router-dom";
-import {
-  Users,
-  UserPlus,
-  Trophy,
-  Settings,
-  Bell,
-  MessageSquare,
-} from "lucide-react";
+import { useEffect } from "react";
+import { Outlet, useNavigate } from "react-router-dom";
+import { Users, UserPlus, Trophy, Settings, Bell, MessageSquare, } from "lucide-react";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 
 import { DashboardNavbar } from "@/features/dashboard/ui/components/DashboardNavbar";
 import { DashboardSidebar } from "@/features/dashboard/ui/components/DashboardSidebar";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
-import { TEAM_ACCESS } from "@/features/teams/lib/access";
 import { useFilteredNavigation } from "@/hooks/useFilteredNavigation";
-import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { TeamLoading } from "../components/TeamLoading";
-import { TeamError } from "../components/TeamError";
-import { useTeamRoom, useSocketEvent } from "@/hooks/useSocket";
+import { TeamDialogProvider } from "@/features/teams/context/TeamDialogContext";
+import { TeamDialogOrchestrator } from "@/features/teams/ui/components/dialogs/TeamDialogOrchestrator";
+import { TeamDashboardProvider } from "@/features/teams/context/TeamDashboardContext";
+import { useGetTeamByIdQuery } from "@/features/teams/hooks/useTeamQueries";
+import { useTeamSocket } from "@/features/teams/hooks/useTeamSocket";
+import { TEAM_ACCESS } from "@/features/teams/lib/access";
+import { TeamLoading } from "@/features/teams/ui/components/common/TeamLoading";
+import { TeamError } from "@/features/teams/ui/components/common/TeamError";
+// Removed unused cn import
 
 const teamSidebarLinks = [
   {
@@ -65,65 +62,34 @@ const teamSidebarLinks = [
 ];
 
 const TeamLayout = () => {
+  const navigate = useNavigate();
   const filteredLinks = useFilteredNavigation(teamSidebarLinks);
   const user = useAuthStore((state) => state.user);
   const teamId = typeof user?.teamId === 'string' ? user.teamId : user?.teamId?._id;
 
-  const getTeamById = useTeamManagementStore((state) => state.getTeamById);
-  const isLoading = useTeamManagementStore((state) => state.isLoading);
-  const error = useTeamManagementStore((state) => state.error);
-  const currentTeam = useTeamManagementStore((state) => state.currentTeam);
-  const clearError = useTeamManagementStore((state) => state.clearError);
+  const {
+    data,
+    isLoading,
+    refetch
+  } = useGetTeamByIdQuery(teamId || "", false, {
+    enabled: !!teamId,
+  });
 
-  // Join team room via WebSocket
-  useTeamRoom(teamId);
-
-  // Stable socket handlers to prevent listener churn
-  const refreshTeamData = useCallback(async () => {
-    if (teamId) {
-      await getTeamById(teamId, true, true);
-    }
-  }, [teamId, getTeamById]);
-
-  const handleMemberLeft = useCallback(async () => {
-    const currentTeamState = useTeamManagementStore.getState().currentTeam;
-    if (teamId && currentTeamState) {
-      await getTeamById(teamId, true, true);
-    }
-  }, [teamId, getTeamById]);
-
-  const handleTeamUpdated = useCallback(() => {
-    if (teamId) {
-      getTeamById(teamId, true, true);
-    }
-  }, [teamId, getTeamById]);
-
-  // Listen for real-time team updates
-  useSocketEvent("team:member:joined", refreshTeamData);
-  useSocketEvent("team:member:left", handleMemberLeft);
-  useSocketEvent("team:role:updated", refreshTeamData);
-  useSocketEvent("team:owner:transferred", handleMemberLeft);
-  useSocketEvent("team:deleted", refreshTeamData);
-  useSocketEvent("team:updated", handleTeamUpdated);
+  // Centralized Team Socket Management (Room + Events)
+  useTeamSocket(teamId);
 
   useEffect(() => {
-    // String comparison for IDs to avoid reference issues
-    const isDifferentTeam = currentTeam?._id?.toString() !== teamId?.toString();
-
-    if (teamId && (!currentTeam || isDifferentTeam)) {
-      getTeamById(teamId, true);
-    }
+    if (!teamId) return;
 
     const handleFocus = () => {
-      if (teamId) getTeamById(teamId, true);
+      refetch();
     };
     window.addEventListener("focus", handleFocus);
 
     return () => {
       window.removeEventListener("focus", handleFocus);
-      clearError();
     };
-  }, [teamId, currentTeam?._id, getTeamById, clearError]);
+  }, [teamId, refetch]);
 
   return (
     <SidebarProvider>
@@ -135,18 +101,24 @@ const TeamLayout = () => {
 
         <div className="relative z-10 flex flex-col h-full">
           <DashboardNavbar />
-          <div className="flex-1 overflow-y-auto p-6 md:p-8">
-            {isLoading && !currentTeam ? (
-              <TeamLoading />
-            ) : error && !currentTeam ? (
-              <TeamError
-                message={error}
-                onRetry={() => teamId && getTeamById(teamId)}
-              />
-            ) : (
-              <Outlet />
-            )}
-          </div>
+          <TeamDashboardProvider teamId={teamId || ""} userId={user?._id}>
+            <TeamDialogProvider>
+              <div className="flex-1 overflow-hidden min-h-0 p-0">
+                {isLoading ? (
+                  <TeamLoading />
+                ) : (!teamId || !data) ? (
+                  <TeamError
+                    title="No Team Found"
+                    message="You are not currently a member of a team. Join or create one to access the dashboard."
+                    onRetry={() => navigate("/teams/discovery")}
+                  />
+                ) : (
+                  <Outlet />
+                )}
+              </div>
+              <TeamDialogOrchestrator />
+            </TeamDialogProvider>
+          </TeamDashboardProvider>
         </div>
       </main>
     </SidebarProvider>

@@ -8,16 +8,11 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 
 interface PlayerFiltersProps {
-    searchTerm: string;
-    onSearchChange: (val: string) => void;
     selectedRole: string | undefined;
     onRoleChange: (val: string | undefined) => void;
-    isVerified: boolean | undefined;
-    onVerifiedChange: (val: boolean | undefined) => void;
+
     isPlayerVerified: boolean | undefined;
     onPlayerVerifiedChange: (val: boolean | undefined) => void;
     hasTeam: boolean | undefined;
@@ -25,12 +20,9 @@ interface PlayerFiltersProps {
 }
 
 const PlayerFilters: React.FC<PlayerFiltersProps> = ({
-    searchTerm,
-    onSearchChange,
     selectedRole,
     onRoleChange,
-    isVerified,
-    onVerifiedChange,
+
     isPlayerVerified,
     onPlayerVerifiedChange,
     hasTeam,
@@ -39,20 +31,7 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
     const roles = ["rusher", "sniper", "support", "igl", "coach", "player"];
 
     return (
-        <div className="flex flex-col md:flex-row flex-wrap items-center gap-4 p-4 rounded-3xl bg-white/[0.03] border border-white/10 backdrop-blur-md">
-            {/* Search Input */}
-            <div className="relative w-full md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400/50" />
-                <Input
-                    value={searchTerm}
-                    onChange={(e) => onSearchChange(e.target.value)}
-                    placeholder="Search players..."
-                    className="pl-10 h-10 bg-white/5 border-white/10 text-[10px] font-bold rounded-xl focus-visible:ring-violet-500/50 placeholder:text-white/20"
-                />
-            </div>
-
-            <div className="h-6 w-[1px] bg-white/10 hidden md:block" />
-
+        <div className="flex flex-row flex-wrap items-center justify-start gap-6 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
             {/* Role Select */}
             <div className="flex items-center gap-2">
                 <Label className="text-[10px] font-black text-violet-400/50 whitespace-nowrap">Role</Label>
@@ -76,15 +55,6 @@ const PlayerFilters: React.FC<PlayerFiltersProps> = ({
 
             {/* Checkbox Filters */}
             <div className="flex flex-wrap items-center gap-4">
-                <label className="flex items-center gap-2 cursor-pointer group px-3 py-2 rounded-xl hover:bg-white/5 transition-colors">
-                    <Checkbox
-                        checked={isVerified === true}
-                        onCheckedChange={(checked) => onVerifiedChange(checked ? true : undefined)}
-                        className="border-blue-500/30 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 rounded-sm w-4 h-4"
-                    />
-                    <span className={`text-[10px] font-black transition-colors ${isVerified ? 'text-blue-400' : 'text-white/40 group-hover:text-white/60'}`}>Account Verified</span>
-                </label>
-
                 <label className="flex items-center gap-2 cursor-pointer group px-3 py-2 rounded-xl hover:bg-white/5 transition-colors">
                     <Checkbox
                         checked={isPlayerVerified === true}

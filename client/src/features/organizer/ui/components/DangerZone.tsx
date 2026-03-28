@@ -1,4 +1,4 @@
-import { DangerZone as SharedDangerZone } from "@/components/shared/DangerZone";
+import { DangerZone as SharedDangerZone } from "@/components/shared/common/DangerZone";
 import { Trash2, AlertTriangle } from "lucide-react";
 
 interface DangerZoneProps {

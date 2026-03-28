@@ -42,12 +42,10 @@ export const useTeamRoom = (teamId: string | null | undefined) => {
 
         // Join team room
         socket.emit("join:team", teamId);
-        console.log(`📡 Joined team room: ${teamId}`);
 
         // Leave room on unmount
         return () => {
             socket.emit("leave:team", teamId);
-            console.log(`📤 Left team room: ${teamId}`);
         };
     }, [socket, teamId, isConnected]);
 };
@@ -63,12 +61,10 @@ export const useOrgRoom = (orgId: string | null | undefined) => {
 
         // Join org room
         socket.emit("join:org", orgId);
-        console.log(`📡 Joined org room: ${orgId}`);
 
         // Leave room on unmount
         return () => {
             socket.emit("leave:org", orgId);
-            console.log(`📤 Left org room: ${orgId}`);
         };
     }, [socket, orgId, isConnected]);
 };

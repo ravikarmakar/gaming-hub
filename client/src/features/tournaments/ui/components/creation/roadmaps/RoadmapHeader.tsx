@@ -1,5 +1,5 @@
 import React from "react";
-import { CheckCircle2, ListTodo, Plus } from "lucide-react";
+import { CircleCheckBig as CircleCheck2, ListTodo, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -86,7 +86,7 @@ export const RoadmapHeader: React.FC<RoadmapHeaderProps> = ({
                     )}
                 >
                     {isRoundsConfirmed ? (
-                        <span className="flex items-center gap-2"><CheckCircle2 size={12} /> Roadmap Edit</span>
+                        <span className="flex items-center gap-2"><CircleCheck2 size={12} /> Roadmap Edit</span>
                     ) : (
                         "Save Roadmap"
                     )}

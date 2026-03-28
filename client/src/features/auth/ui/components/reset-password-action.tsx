@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Lock, CheckCircle } from "lucide-react";
+import { Lock, CircleCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { Input } from "@/components/ui/input";
@@ -234,7 +234,7 @@ export const ResetPasswordAction = ({ email, onRestart }: ResetPasswordActionPro
                                     animate={{ opacity: 1, y: 0 }}
                                     className="flex items-center justify-center gap-1.5 text-[11px] text-emerald-400"
                                 >
-                                    <CheckCircle className="w-3 h-3" />
+                                    <CircleCheck className="w-3 h-3" />
                                     <span>Passwords match securely</span>
                                 </motion.div>
                             )}
