@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 
 import { UnifiedProfileHeader } from "@/components/shared/profile/UnifiedProfileHeader";
 import { useGetTeamByIdQuery } from "@/features/teams/hooks/useTeamQueries";
-import { User } from "@/features/auth/lib/types";
+import { User } from "@/features/auth";
 import { TeamInviteDialog } from "./TeamInviteDialog";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { useAccess } from "@/features/auth/hooks/useAccess";
+import { useCurrentUser } from "@/features/auth";
+import { useAccess } from "@/features/auth/hooks/use-access";
 import { TEAM_ACTIONS, TEAM_ACTIONS_ACCESS } from "@/features/teams/lib/access";
 
 // --- Type Helpers ---
@@ -36,7 +36,7 @@ interface Props {
 }
 
 export const PlayerHeader: React.FC<Props> = ({ player }) => {
-  const { user: currentUser } = useAuthStore();
+  const { user: currentUser } = useCurrentUser();
   const { can } = useAccess();
 
   const [isInviteOpen, setIsInviteOpen] = useState(false);

@@ -3,7 +3,7 @@ import { Gamepad2, Trophy, Clock, Target, Swords } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import { User } from "@/features/auth/lib/types";
+import { User } from "@/features/auth";
 
 interface PlayerStatsProps {
   player: User;

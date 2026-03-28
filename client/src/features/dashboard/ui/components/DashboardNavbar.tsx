@@ -1,5 +1,5 @@
 import { useLocation, Link } from "react-router-dom";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/routes";
 import ProfileMenu from "@/components/shared/layout/ProfileMenu";
@@ -31,7 +31,7 @@ const ROUTE_NAME_MAP: Record<string, string> = {
 
 export const DashboardNavbar = () => {
   const { pathname } = useLocation();
-  const { user } = useAuthStore();
+  const { user } = useCurrentUser();
 
   // Generate breadcrumbs from path
   const pathSegments = pathname.split('/').filter(Boolean);

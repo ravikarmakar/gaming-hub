@@ -141,7 +141,16 @@ export const refreshToken = TryCatchHandler(async (req, res, next) => {
     return next(new CustomError("Invalid refresh token", 401, AUTH_ERRORS.AUTH_INVALID_TOKEN));
   }
 
-  const storedToken = await redis.get(`refresh_token:${decoded.userId}`);
+  let storedToken;
+  try {
+    storedToken = await Promise.race([
+      redis.get(`refresh_token:${decoded.userId}`),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 500))
+    ]);
+  } catch (error) {
+    logger.error("Refresh token lookup failed:", error.message);
+    return next(new CustomError("Authentication service busy. Please try again.", 503, AUTH_ERRORS.AUTH_SERVICE_UNAVAILABLE));
+  }
 
   // Use timing-safe comparison to prevent timing attacks
   if (!storedToken || !safeCompare(storedToken, refreshTokenCookie)) {

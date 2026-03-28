@@ -15,9 +15,9 @@ import {
     useUpdateOrgMutation,
     useDeleteOrgMutation
 } from "@/features/organizer/hooks/useOrganizerMutations";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
 import { ORG_ACTIONS, ORG_ACTIONS_ACCESS } from "../../lib/access";
-import { useAccess } from "@/features/auth/hooks/useAccess";
+import { useAccess } from "@/features/auth/hooks/use-access";
 import { OrgSettingsFormSchema, orgSettingsSchema } from "../../lib/orgSchemas";
 import { prepareOrgUpdateFormData } from "../../lib/orgUtils";
 
@@ -65,7 +65,7 @@ const orgFields = (canUpdate: boolean): FieldConfig<OrgSettingsFormSchema>[] => 
 
 export const OrganizerSettingsPage = () => {
     const navigate = useNavigate();
-    const { user } = useAuthStore();
+    const { user } = useCurrentUser();
     const { can } = useAccess();
 
     const updateMutation = useUpdateOrgMutation();

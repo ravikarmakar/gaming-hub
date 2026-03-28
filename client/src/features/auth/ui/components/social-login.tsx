@@ -1,17 +1,25 @@
 import { FcGoogle } from "react-icons/fc";
 import { BsDiscord } from "react-icons/bs";
+import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface SocialLoginProps {
   onGoogleLogin: () => void;
+  isGoogleLoading?: boolean;
   onDiscordLogin?: () => void;
+  isDiscordLoading?: boolean;
 }
 
 export const SocialLogin = ({
   onGoogleLogin,
+  isGoogleLoading = false,
   onDiscordLogin,
+  isDiscordLoading = false,
 }: SocialLoginProps) => {
+  const isAnyLoading = isGoogleLoading || isDiscordLoading;
+
   return (
     <div className="space-y-3">
       <div className="relative">
@@ -29,22 +37,38 @@ export const SocialLogin = ({
         <Button
           type="button"
           variant="outline"
+          disabled={isAnyLoading}
           onClick={onGoogleLogin}
-          className="w-full h-9 bg-gray-900/60 hover:bg-purple-950/40 text-gray-200 hover:text-white border-purple-900/40 hover:border-purple-600/50 font-medium transition-all duration-300"
+          className={cn(
+            "w-full h-9 bg-gray-900/60 hover:bg-purple-950/40 text-gray-200 hover:text-white border-purple-900/40 hover:border-purple-600/50 font-medium transition-all duration-300",
+            isGoogleLoading && "opacity-80"
+          )}
         >
-          <FcGoogle className="w-5 h-5" />
-          <span className="text-sm">Google</span>
+          {isGoogleLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+          ) : (
+            <FcGoogle className="w-5 h-5" />
+          )}
+          <span className="text-sm">{isGoogleLoading ? "Connecting..." : "Google"}</span>
         </Button>
 
         {onDiscordLogin && (
           <Button
             type="button"
             variant="outline"
+            disabled={isAnyLoading}
             onClick={onDiscordLogin}
-            className="w-full h-9 bg-gray-900/60 hover:bg-purple-950/40 text-gray-200 hover:text-white border-purple-900/40 hover:border-purple-600/50 font-medium transition-all duration-300"
+            className={cn(
+              "w-full h-9 bg-gray-900/60 hover:bg-purple-950/40 text-gray-200 hover:text-white border-purple-900/40 hover:border-purple-600/50 font-medium transition-all duration-300",
+              isDiscordLoading && "opacity-80"
+            )}
           >
-            <BsDiscord className="w-5 h-5 text-[#5865F2] group-hover:text-white" />
-            <span className="text-sm">Discord</span>
+            {isDiscordLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-[#5865F2]" />
+            ) : (
+              <BsDiscord className="w-5 h-5 text-[#5865F2]" />
+            )}
+            <span className="text-sm">{isDiscordLoading ? "Redirecting..." : "Discord"}</span>
           </Button>
         )}
       </div>

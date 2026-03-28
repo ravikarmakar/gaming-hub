@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 import { cn } from "@/lib/utils";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
 import { TOURNAMENT_ROUTES } from "@/features/tournaments/lib/routes";
 import { AUTH_ROUTES } from "@/features/auth/lib/routes";
 
@@ -97,7 +97,7 @@ const FeatureCard = ({
 // --- Main Hero Section ---
 const HeroSection = () => {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user } = useCurrentUser();
 
   const handleEnterArena = () => {
     if (user) {
@@ -167,7 +167,7 @@ const HeroSection = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.15 }}
-            className="text-center max-w-6xl mx-auto mb-8"
+            className="text-center max-w-[1280px] mx-auto mb-8"
           >
             <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-[7.5rem] font-black tracking-tighter leading-[0.85] select-none mb-4">
               <span className="block text-white drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]">
@@ -258,7 +258,7 @@ const HeroSection = () => {
       </div>
 
       {/* ====== FEATURE CARDS ====== */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 pb-12">
+      <div className="relative z-10 w-full max-w-[1440px] mx-auto px-4 pb-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
           <FeatureCard
             icon={Trophy}

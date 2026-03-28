@@ -1,10 +1,8 @@
-import { useEffect, useRef } from "react";
 import { Toaster } from "react-hot-toast";
 import { ErrorBoundary } from "react-error-boundary";
 
-// Stores
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { useCheckingAuth } from "@/features/auth/store/authSelectors";
+// Auth (TanStack Query)
+import { useAuthQuery, useSessionSync } from "@/features/auth";
 
 // Contexts
 import { SocketProvider } from "@/contexts/SocketContext";
@@ -19,19 +17,14 @@ import ScrollToTop from "@/components/shared/layout/ScrollToTop";
 import AppRoutes from "@/routes/AppRoutes";
 
 const App = () => {
-  const checkingAuth = useCheckingAuth();
-  const { checkAuth } = useAuthStore();
-  const hasCalled = useRef(false);
+  // Cross-tab session sync (instantly close all tabs on logout)
+  useSessionSync();
 
-  useEffect(() => {
-    if (!hasCalled.current) {
-      checkAuth();
-      hasCalled.current = true;
-    }
-  }, [checkAuth]);
+  // TanStack Query handles the initial auth check automatically on mount
+  const { isLoading } = useAuthQuery();
 
   // Only show the global blackout for the initial auth load
-  if (checkingAuth && !hasCalled.current) {
+  if (isLoading) {
     return <div className="fixed inset-0 z-[9999] bg-[#02000a]" />;
   }
 

@@ -6,14 +6,14 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { PLAYER_ROUTES } from "@/features/player/lib/routes";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
 
 
 export const UniqueFeatures = () => {
     const [activeTab, setActiveTab] = useState(0);
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { user } = useAuthStore()
+    const { user } = useCurrentUser()
 
     const setIsCreateTeamOpen = (open: boolean) => {
         if (open) {

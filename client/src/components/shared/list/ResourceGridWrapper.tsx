@@ -37,7 +37,7 @@ export const ResourceGridWrapper = <T,>(props: ResourceGridWrapperProps<T>) => {
             <div className="w-full relative z-10">
                 {/* ── Header ─────────────────────────────────────────────────── */}
                 <div className="relative overflow-hidden">
-                    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-2">
+                    <div className="relative max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-2">
                         {/* Title Row */}
                         <div className="mb-6 space-y-4">
                             {title}
@@ -101,7 +101,7 @@ export const ResourceGridWrapper = <T,>(props: ResourceGridWrapperProps<T>) => {
                             transition={{ duration: 0.3, ease: "easeInOut" }}
                             className="overflow-hidden relative z-10"
                         >
-                            <div id="player-filters" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+                            <div id="player-filters" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-2">
                                 {filters}
                             </div>
                         </motion.div>
@@ -109,7 +109,7 @@ export const ResourceGridWrapper = <T,>(props: ResourceGridWrapperProps<T>) => {
                 </AnimatePresence>
 
                 {/* ── Grid Rendering ────────────────────────────────────────── */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+                <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 pt-8">
                     <ResourceGrid 
                         isError={isError}
                         errorStateComponent={errorStateComponent}

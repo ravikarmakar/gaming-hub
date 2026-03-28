@@ -10,8 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { forgotPasswordSchema, ForgotPasswordSchemaType } from "@/features/auth/lib/authSchemas";
+import { useSendPassResetOtpMutation, forgotPasswordSchema, ForgotPasswordSchemaType } from "@/features/auth";
 import { useAuthLayout } from "@/features/auth/ui/components/auth-layout";
 import { AUTH_ROUTES } from "../../lib/routes";
 
@@ -21,7 +20,7 @@ interface ForgotPasswordRequestProps {
 
 export const ForgotPasswordRequest = ({ onSuccess }: ForgotPasswordRequestProps) => {
     const navigate = useNavigate();
-    const { sendPassResetOtp, isLoading } = useAuthStore();
+    const { mutateAsync: sendPassResetOtp, isPending: isLoading } = useSendPassResetOtpMutation();
     const { setTitle, setSubtitle } = useAuthLayout();
 
     const form = useForm<ForgotPasswordSchemaType>({
@@ -38,12 +37,12 @@ export const ForgotPasswordRequest = ({ onSuccess }: ForgotPasswordRequestProps)
     }, [setTitle, setSubtitle, form]);
 
     const onSubmit = async (values: ForgotPasswordSchemaType) => {
-        const { success, message } = await sendPassResetOtp(values.email);
-        if (success) {
-            toast.success(message || "Reset code sent successfully");
+        const result = await sendPassResetOtp(values.email).catch(() => null);
+        if (result?.success) {
+            toast.success(result.message || "Reset code sent successfully");
             onSuccess(values.email);
         } else {
-            form.setError("email", { message: message || "Failed to send reset code" });
+            form.setError("email", { message: result?.message || "Failed to send reset code" });
         }
     };
 

@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import toast from "react-hot-toast";
 import { AxiosError } from "axios";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { refetchAuthProfile } from "@/features/auth";
 import {
     useAddStaffMutation,
     useRemoveStaffMutation,
@@ -46,7 +46,7 @@ export const useManageOrgMembers = (orgId?: string) => {
     const { mutate: leaveOrg, isPending: isLeavingOrg } = useLeaveOrgMutation({
         onSuccess: async () => {
             toast.success("You have left the organization");
-            await useAuthStore.getState().checkAuth(true); // Pass true to force DB read, skipping async Redis expiration delays
+            await refetchAuthProfile(true); // Force DB read, skipping async Redis expiration delays
             navigate("/");
         },
         onError: (err) => handleError(err, "Failed to leave organization"),

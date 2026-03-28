@@ -1,13 +1,15 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
+import { useDiscordAuthMutation } from "@/features/auth";
 import { ROUTES } from "@/lib/routes";
 import { AUTH_ROUTES } from "../../lib/routes";
 
 const DiscordCallback = () => {
   const navigate = useNavigate();
-  const { loginWithDiscord, user } = useAuthStore();
+  const { user } = useCurrentUser();
+  const { mutateAsync: loginWithDiscord } = useDiscordAuthMutation();
   const [status, setStatus] = useState<"loading" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
   const hasCalledRef = useRef(false);
@@ -32,7 +34,7 @@ const DiscordCallback = () => {
     hasCalledRef.current = true;
 
     loginWithDiscord(code).then((result) => {
-      if (result) {
+      if (result?.user) {
         navigate(ROUTES.HOME);
       } else {
         setStatus("error");

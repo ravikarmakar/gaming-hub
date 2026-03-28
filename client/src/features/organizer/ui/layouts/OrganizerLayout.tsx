@@ -16,11 +16,10 @@ import { DashboardSidebar } from "@/features/dashboard/ui/components/DashboardSi
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { ORG_ACCESS } from "@/features/organizer/lib/access";
 import { useFilteredNavigation } from "@/hooks/useFilteredNavigation";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { useGetOrgByIdQuery } from "@/features/organizer/hooks/useOrganizerQueries";
-import { OrganizerLoading } from "../components/OrganizerLoading";
-import { OrganizerError } from "../components/OrganizerError";
+import { useCurrentUser } from "@/features/auth";
 import { useOrganizerSync } from "../../hooks/useOrganizerSync";
+
+
 
 const organizerSidebarLinks = [
   {
@@ -80,19 +79,11 @@ const organizerSidebarLinks = [
 const OrganizerLayout = () => {
   const filteredLinks = useFilteredNavigation(organizerSidebarLinks);
 
-  const { user } = useAuthStore();
-  const {
-    data: orgData,
-    isLoading,
-    error,
-    refetch
-  } = useGetOrgByIdQuery(user?.orgId as string);
-
-  const currentOrg = orgData?.data;
-  const orgId = user?.orgId as string;
-
+  const { user } = useCurrentUser();
   // 1. Join Socket.IO room & listen to incoming events cleanly
+  const orgId = user?.orgId as string;
   useOrganizerSync(orgId);
+
 
   return (
     <SidebarProvider>
@@ -105,17 +96,9 @@ const OrganizerLayout = () => {
         <div className="relative z-10 flex flex-col h-full">
           <DashboardNavbar />
           <div className="flex-1 overflow-y-auto p-6 md:p-8">
-            {isLoading && !currentOrg ? (
-              <OrganizerLoading />
-            ) : error && !currentOrg ? (
-              <OrganizerError
-                message={error.message || "Failed to load organization"}
-                onRetry={() => refetch()}
-              />
-            ) : (
-              <Outlet />
-            )}
+            <Outlet />
           </div>
+
         </div>
       </main>
     </SidebarProvider>

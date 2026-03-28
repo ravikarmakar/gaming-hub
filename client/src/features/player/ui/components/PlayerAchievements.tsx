@@ -3,7 +3,7 @@ import { Award, Zap, Flame, Crown, CircleCheckBig as CircleCheck2, Lock, Medal }
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
-import { User } from "@/features/auth/lib/types";
+import { User } from "@/features/auth";
 
 interface PlayerAchievementsProps {
   player: User;

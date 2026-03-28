@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
 
 interface AdminStats {
     totalUsers: number;
@@ -13,7 +13,7 @@ interface AdminStats {
 export const useAdminStats = () => {
     const [stats, setStats] = useState<AdminStats | null>(null);
     const [socket, setSocket] = useState<Socket | null>(null);
-    const { user } = useAuthStore();
+    const { user } = useCurrentUser();
 
     useEffect(() => {
         if (!user) return;

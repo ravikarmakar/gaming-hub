@@ -6,7 +6,7 @@ import { FixedSizeList as List } from "react-window";
 import { AutoSizer } from "react-virtualized-auto-sizer";
 
 import { useSocket } from "@/contexts/SocketContext";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
 import { useChatStore, ChatMessage } from "../../store/useChatStore";
 import { MessageItem } from "./MessageItem";
 import { MessageInput } from "./MessageInput";
@@ -48,7 +48,7 @@ export const ChatWindow = ({
   hideHeader
 }: ChatWindowProps) => {
   const { socket, isConnected } = useSocket();
-  const { user } = useAuthStore();
+  const { user } = useCurrentUser();
   const {
     messages,
     isLoading,
