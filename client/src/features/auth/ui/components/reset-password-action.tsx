@@ -9,8 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { verifyOtpSchema, resetPasswordSchema, VerifyOtpSchemaType, ResetPasswordSchemaType, } from "@/features/auth/lib/authSchemas";
+import { useSendPassResetOtpMutation, useVerifyPassResetOtpMutation, useResetPasswordMutation, verifyOtpSchema, resetPasswordSchema, VerifyOtpSchemaType, ResetPasswordSchemaType } from "@/features/auth";
 import { scaleVariants } from "@/features/auth/lib/animations";
 import { useAuthLayout } from "@/features/auth/ui/components/auth-layout";
 import { useCountdown } from "@/hooks/use-countdown";
@@ -25,7 +24,10 @@ interface ResetPasswordActionProps {
 export const ResetPasswordAction = ({ email, onRestart }: ResetPasswordActionProps) => {
     const navigate = useNavigate();
     const [step, setStep] = useState(2); // 2: OTP, 3: New Password
-    const { verifyPassResetOtp, resetPassword, sendPassResetOtp, isLoading, error } = useAuthStore();
+    const { mutateAsync: verifyPassResetOtp, isPending: isVerifyPending } = useVerifyPassResetOtpMutation();
+    const { mutateAsync: resetPassword, isPending: isResetPending, error } = useResetPasswordMutation();
+    const { mutateAsync: sendPassResetOtp, isPending: isResendPending } = useSendPassResetOtpMutation();
+    const isLoading = isVerifyPending || isResetPending || isResendPending;
     const { setTitle, setSubtitle } = useAuthLayout();
 
     useEffect(() => {
@@ -49,8 +51,8 @@ export const ResetPasswordAction = ({ email, onRestart }: ResetPasswordActionPro
     }, [step, startTimer, pauseTimer]);
 
     const handleResendOtp = async () => {
-        const { success } = await sendPassResetOtp(email);
-        if (success) {
+        const result = await sendPassResetOtp(email).catch(() => null);
+        if (result?.success) {
             resetTimer();
         }
     };
@@ -74,26 +76,26 @@ export const ResetPasswordAction = ({ email, onRestart }: ResetPasswordActionPro
     const passwordsMatch = password === confirmPassword && password.length >= 8;
 
     const handleOtpVerify = async (values: VerifyOtpSchemaType) => {
-        const { success, message } = await verifyPassResetOtp(email, values.otp);
-        if (success) {
-            toast.success(message || "Code verified successfully");
+        const result = await verifyPassResetOtp({ email, otp: values.otp }).catch(() => null);
+        if (result?.success) {
+            toast.success(result.message || "Code verified successfully");
             setStep(3);
         } else {
             otpForm.setError("otp", {
                 type: "manual",
-                message: message || "Invalid or expired code",
+                message: result?.message || "Invalid or expired code",
             });
         }
     };
 
     const handlePasswordReset = async (values: ResetPasswordSchemaType) => {
         const otpValue = otpForm.getValues("otp");
-        const { success, message } = await resetPassword(email, otpValue, values.password);
-        if (success) {
-            toast.success(message || "Password reset successful! Please login.");
+        const result = await resetPassword({ email, otp: otpValue, newPassword: values.password }).catch(() => null);
+        if (result?.success) {
+            toast.success(result.message || "Password reset successful! Please login.");
             navigate(AUTH_ROUTES.LOGIN);
         } else {
-            toast.error(error || "Reset failed");
+            toast.error(error?.message || "Reset failed");
         }
     };
 

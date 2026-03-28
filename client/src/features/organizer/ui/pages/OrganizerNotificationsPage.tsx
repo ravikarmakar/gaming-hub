@@ -4,7 +4,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Bell, Check, Clock, ShieldAlert, Users, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
 
 import {
     useOrgNotificationsQuery
@@ -14,7 +14,7 @@ import {
 } from "../../hooks/useOrganizerMutations";
 
 export const OrganizerNotificationsPage: React.FC = () => {
-    const { user } = useAuthStore();
+    const { user } = useCurrentUser();
     const orgId = user?.orgId;
 
     const { data: notifications, isLoading } = useOrgNotificationsQuery(orgId as string);

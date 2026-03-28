@@ -1,6 +1,6 @@
 import { axiosInstance } from "@/lib/axios";
 import { PLAYER_ROUTES } from "../lib/routes";
-import { User } from "@/features/auth/lib/types";
+import { User } from "@/features/auth";
 
 import { Pagination } from "@/features/organizer/types";
 

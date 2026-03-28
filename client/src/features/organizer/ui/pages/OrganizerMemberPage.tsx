@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
 
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { useAccess } from "@/features/auth/hooks/useAccess";
+import { useCurrentUser } from "@/features/auth";
+import { useAccess } from "@/features/auth/hooks/use-access";
 import { useGetOrgByIdQuery } from "@/features/organizer/hooks/useOrganizerQueries";
 import { useManageOrgMembers } from "@/features/organizer/hooks/useManageOrgMembers";
 import { OrganizerUserSearch } from "@/features/organizer/ui/components/OrganizerUserSearch";
@@ -37,7 +37,7 @@ export const OrganizerMemberPageContent = () => {
     memberId: null,
   });
 
-  const { user } = useAuthStore();
+  const { user } = useCurrentUser();
   const { can } = useAccess();
 
   const {
@@ -196,7 +196,12 @@ export const OrganizerMemberPageContent = () => {
             setSearchQuery(val);
             setPage(1); // Reset to page 1 on search
           }}
-          pagination={memberPagination || { total: 0, page: 1, limit: 20, pages: 1 }}
+          pagination={memberPagination ? {
+            total: memberPagination.totalCount,
+            page: memberPagination.currentPage,
+            limit: memberPagination.limit,
+            pages: memberPagination.totalPages
+          } : { total: 0, page: 1, limit: 20, pages: 1 }}
           onPageChange={setPage}
         />
         {currentOrg?._id && <OrganizerPendingInvites orgId={currentOrg._id} />}

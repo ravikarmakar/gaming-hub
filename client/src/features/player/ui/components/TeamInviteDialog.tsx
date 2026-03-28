@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useInviteMemberMutation } from "@/features/teams/hooks/useTeamMutations";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
 import toast from "react-hot-toast";
 import { LoaderCircle as Loader2, Send } from "lucide-react";
 
@@ -28,7 +28,7 @@ export const TeamInviteDialog: React.FC<TeamInviteDialogProps> = ({
     playerName,
 }) => {
     const [message, setMessage] = useState("");
-    const { user } = useAuthStore();
+    const { user } = useCurrentUser();
     const teamId = typeof user?.teamId === 'string' ? user.teamId : user?.teamId?._id;
     const inviteMutation = useInviteMemberMutation();
     const isLoading = inviteMutation.isPending;

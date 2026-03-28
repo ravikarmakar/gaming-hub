@@ -1,14 +1,16 @@
 import { useCallback } from "react";
+import { useParams } from "react-router-dom";
 
-import { useAuthStore } from "../store/useAuthStore";
+import { useCurrentUser } from "./use-current-user";
 import { SCOPES } from "../lib/scopes";
-import { SCOPE_ID_RESOLVER } from "../lib/scopeIdMap";
-import type { AccessRule } from "../lib/types";
+import { SCOPE_ID_RESOLVER } from "../lib/scope-id-map";
+import type { AccessRule } from "../types";
 
 const SUPER_ADMIN_ROLE = "platform:superadmin";
 
 export function useAccess() {
-    const { user } = useAuthStore();
+    const { user } = useCurrentUser();
+    const params = useParams();
 
     const can = useCallback((rule: AccessRule): boolean => {
         if (!user) return false;
@@ -21,8 +23,18 @@ export function useAccess() {
         );
         if (isSuperAdmin) return true;
 
+        // Level-based check (if specified in the rule)
+        if (rule.minLevel !== undefined) {
+            const userLevel = user.playerStats?.level ?? 0;
+            if (userLevel < rule.minLevel) return false;
+        }
+
+        // 10/10 Smart Context-Aware Resolution:
+        // Automatically check URL params (e.g., :orgId, :teamId) if scopeId isn't provided.
         const resolvedScopeId =
             rule.scopeId ??
+            params[`${rule.scope}Id`] ?? // Try standard param naming (e.g., teamId)
+            params.id ?? // Fallback to common id param
             SCOPE_ID_RESOLVER[rule.scope]?.(user);
 
         return user.roles?.some((r) => {

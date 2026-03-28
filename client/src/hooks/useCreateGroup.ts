@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { refetchAuthProfile } from "@/features/auth";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { getErrorMessage } from "@/lib/utils";
@@ -58,7 +58,7 @@ export function useCreateGroup<TFieldValues extends Record<string, any>>({
         setIsSuccess(true);
 
         // Update auth state to get the new teamId/orgId and roles before navigating
-        await useAuthStore.getState().checkAuth(true);
+        await refetchAuthProfile(true);
 
         setTimeout(() => {
             setIsSuccess(false);

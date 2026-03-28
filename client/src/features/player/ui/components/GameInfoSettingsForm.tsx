@@ -23,11 +23,13 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
+import { useUpdateProfileMutation } from "@/features/auth";
 import { playerSettingsSchema, PlayerSettingsValues } from "@/features/player/lib/playerSchema";
 
 export const GameInfoSettingsForm: React.FC = () => {
-    const { updateProfile, error, user } = useAuthStore();
+    const { user } = useCurrentUser();
+    const { mutateAsync: updateProfile, error: updateError } = useUpdateProfileMutation();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const form = useForm<PlayerSettingsValues>({
@@ -81,7 +83,7 @@ export const GameInfoSettingsForm: React.FC = () => {
             toast.success("Game information updated successfully");
             form.reset(values);
         } else {
-            toast.error(error || "Failed to update game information");
+            toast.error(updateError?.message || "Failed to update game information");
         }
     };
 

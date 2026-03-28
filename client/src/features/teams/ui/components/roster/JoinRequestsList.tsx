@@ -3,7 +3,7 @@ import { User, Clock, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { TeamPageHeader } from "@/features/teams/ui/components/common/TeamPageHeader";
-import { useAuthStore } from '@/features/auth/store/useAuthStore';
+import { useCurrentUser } from '@/features/auth';
 import { TeamLoading } from '@/features/teams/ui/components/common/TeamLoading';
 import { JoinRequestItem } from './JoinRequestItem';
 import { useTeamDialogs } from '@/features/teams/context/TeamDialogContext';
@@ -11,7 +11,7 @@ import { useTeamJoinRequestsQuery } from '@/features/teams/hooks/useTeamQueries'
 import { useRosterActions } from '@/features/teams/hooks/useRosterActions';
 
 export const JoinRequestsList: React.FC = () => {
-  const { user } = useAuthStore();
+  const { user } = useCurrentUser();
   const teamId = typeof user?.teamId === 'string' ? user.teamId : user?.teamId?._id;
 
   const { data: joinRequests = [], isLoading } = useTeamJoinRequestsQuery(teamId || "", {

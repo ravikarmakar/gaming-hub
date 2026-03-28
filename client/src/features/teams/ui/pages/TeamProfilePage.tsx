@@ -15,7 +15,7 @@ import { TeamMembersList } from "@/features/teams/ui/components/roster/TeamMembe
 import { useGetTeamByIdQuery } from "@/features/teams/hooks/useTeamQueries";
 import { TeamDialogProvider } from "@/features/teams/context/TeamDialogContext";
 import { TeamDialogOrchestrator } from "@/features/teams/ui/components/dialogs/TeamDialogOrchestrator";
-import { useAccess } from "@/features/auth/hooks/useAccess";
+import { useAccess } from "@/features/auth/hooks/use-access";
 import { TEAM_ACCESS as ACCESS } from "@/features/teams/lib/access";
 import { Team } from "@/features/teams/lib/types";
 import { ProfileBannerLayout } from "@/components/shared/profile/ProfileBannerLayout";

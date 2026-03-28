@@ -6,7 +6,7 @@ import { Organizer } from "@/features/organizer/types";
 import { UnifiedProfileHeader } from "@/components/shared/profile/UnifiedProfileHeader";
 import { ProfileBadge } from "@/components/shared/profile/ProfileBadge";
 import { ProfileActionButton } from "@/components/shared/profile/ProfileActionButton";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
 import { useJoinOrgMutation } from "../../../hooks/useOrganizerMutations";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +23,7 @@ interface OrganizerProfileHeaderProps {
 }
 
 export const OrganizerProfileHeader = ({ organizer }: OrganizerProfileHeaderProps) => {
-    const { user } = useAuthStore();
+    const { user } = useCurrentUser();
     const currentUserId = user?._id?.toString();
     const isMemberOfOrg = !!(currentUserId && (
         organizer.ownerId?.toString() === currentUserId ||
@@ -70,7 +70,7 @@ export const OrganizerProfileHeader = ({ organizer }: OrganizerProfileHeaderProp
 const JoinOrgButton = ({ organizer }: { organizer: Organizer }) => {
     const orgId = organizer._id?.toString();
     const orgName = organizer.name;
-    const { user } = useAuthStore();
+    const { user } = useCurrentUser();
     const joinMutation = useJoinOrgMutation();
     const [isOpen, setIsOpen] = useState(false);
     const [message, setMessage] = useState("");

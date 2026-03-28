@@ -3,7 +3,7 @@ import { Crown, Gamepad2, Star, Zap, Target, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
-import { User } from "@/features/auth/lib/types";
+import { User } from "@/features/auth";
 
 interface PlayerOverviewProps {
   player: User;

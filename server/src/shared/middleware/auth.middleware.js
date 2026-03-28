@@ -53,7 +53,7 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
       try {
         const results = await Promise.race([
           p.exec(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 5000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 300))
         ]);
 
         // results are [res, res]
@@ -94,7 +94,7 @@ export const isAuthenticated = TryCatchHandler(async (req, res, next) => {
       try {
         const rawProfile = await Promise.race([
           redis.get(`user_profile:${decoded.userId}`),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 5000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 300))
         ]);
         if (rawProfile) {
           cachedProfile = typeof rawProfile === "string" ? JSON.parse(rawProfile) : rawProfile;

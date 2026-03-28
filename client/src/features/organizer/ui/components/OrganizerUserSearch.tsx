@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 import { useDebounce } from "@/hooks/useDebounce";
-import { User } from "@/features/auth/lib/types";
+import { User } from "@/features/auth";
 import { useSearchAvailableUsersQuery } from "../../hooks/useOrganizerQueries";
 
 interface OrganizerUserSearchProps {

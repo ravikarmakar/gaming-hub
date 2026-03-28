@@ -9,10 +9,10 @@ import TournamentCard from "@/features/tournaments/ui/components/shared/Tourname
 import { Button } from "@/components/ui/button";
 import { TournamentLoading, TournamentEmpty } from "@/features/tournaments/ui/components";
 
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { useGetOrgTournamentsQuery } from "@/features/tournaments/hooks";
-import { useAccess } from "@/features/auth/hooks/useAccess";
+import { useAccess } from "@/features/auth/hooks/use-access";
 import { skipToken } from "@tanstack/react-query";
 
 // Extracted sub-components
@@ -20,7 +20,7 @@ import { TournamentControlBar } from "@/features/tournaments/ui/components/tourn
 import { ORG_ACCESS } from "@/features/organizer/lib/access";
 
 const OrganizerTournaments: React.FC = () => {
-  const { user } = useAuthStore();
+  const { user } = useCurrentUser();
   const navigate = useNavigate();
 
   const { data: orgEvents = [], isLoading } = useGetOrgTournamentsQuery(user?.orgId ? user.orgId : (skipToken as unknown as string));

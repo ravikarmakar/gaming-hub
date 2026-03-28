@@ -43,7 +43,7 @@ export const rateLimiter =
 
         const results = await Promise.race([
           p.exec(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 1000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Redis timeout")), 150))
         ]);
         const endTime = performance.now();
 

@@ -3,7 +3,7 @@ import { AxiosError } from "axios";
 import { teamApi } from "../api/teamApi";
 import { Team } from "../lib/types";
 import { teamKeys } from "./teamKeys";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { refetchAuthProfile } from "@/features/auth";
 
 /**
  * Custom hook to encapsulate common team invalidation logic.
@@ -69,8 +69,7 @@ export const useDeleteTeamMutation = (
     mutationFn: teamApi.deleteTeam,
     onSuccess: async (data, teamId, context) => {
       if (data.success) {
-        const checkAuth = useAuthStore.getState().checkAuth;
-        await checkAuth(true);
+        await refetchAuthProfile(true);
         await invalidate();
         queryClient.removeQueries({ queryKey: teamKeys.detail(teamId) });
         if (options?.onSuccess) await (options.onSuccess as any)(data, teamId, context);
@@ -107,8 +106,7 @@ export const useLeaveTeamMutation = (
     mutationFn: teamApi.leaveTeam,
     onSuccess: async (data, teamId, context) => {
       if (data.success !== false) {
-        const checkAuth = useAuthStore.getState().checkAuth;
-        await checkAuth(true);
+        await refetchAuthProfile(true);
         await invalidate(teamId);
         if (options?.onSuccess) await (options.onSuccess as any)(data, teamId, context);
       }
@@ -195,8 +193,7 @@ export const useTransferOwnershipMutation = (
     mutationFn: teamApi.transferOwnership,
     onSuccess: async (data, variables, context) => {
       if (data.success !== false) {
-        const checkAuth = useAuthStore.getState().checkAuth;
-        await checkAuth(true);
+        await refetchAuthProfile(true);
         await invalidate(variables.teamId);
         if (options?.onSuccess) await (options.onSuccess as any)(data, variables, context);
       }

@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import type { LucideIcon } from "lucide-react";
 
-import { useAccess } from "@/features/auth/hooks/useAccess";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import type { AccessRule } from "@/features/auth/lib/types";
+import { useAccess } from "@/features/auth/hooks/use-access";
+import { useCurrentUser } from "@/features/auth";
+import type { AccessRule } from "@/features/auth";
 
 export interface NavigationLink {
     label: string;
@@ -15,7 +15,7 @@ export interface NavigationLink {
 
 export function useFilteredNavigation(links: NavigationLink[]) {
     const { can } = useAccess();
-    const user = useAuthStore((state) => state.user);
+    const { user } = useCurrentUser();
 
     const filteredLinks = useMemo(() => {
         return links.filter((link) => {

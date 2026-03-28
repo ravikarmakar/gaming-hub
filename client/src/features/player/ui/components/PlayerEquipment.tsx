@@ -2,7 +2,7 @@ import React from "react";
 import { Mouse, Keyboard, Headphones, Monitor, Cpu, Settings2, ShieldOff } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import { User } from "@/features/auth/lib/types";
+import { User } from "@/features/auth";
 
 interface PlayerEquipmentProps {
   player: User;

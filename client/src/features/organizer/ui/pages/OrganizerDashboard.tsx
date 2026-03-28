@@ -11,7 +11,7 @@ import {
   PlusCircle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { useOrgDashboardStatsQuery } from "../../hooks/useOrganizerQueries";
 import {
@@ -25,12 +25,13 @@ import { DashboardProfile } from "../components/dashboard/DashboardProfile";
 import { RecentArenas } from "../components/dashboard/RecentArenas";
 import { QuickAccess } from "../components/dashboard/QuickAccess";
 import { ActivityLog } from "../components/dashboard/ActivityLog";
+import { OrganizerLoading } from "../components/OrganizerLoading";
 
 export const OrganizerDashboard = () => {
-  const { user } = useAuthStore();
+  const { user } = useCurrentUser();
   const orgId = user?.orgId;
 
-  const { data: dashboardData } = useOrgDashboardStatsQuery(orgId as string);
+  const { data: dashboardData, isLoading } = useOrgDashboardStatsQuery(orgId as string);
 
   const stats = useMemo(() => dashboardData?.stats || {
     totalEvents: 0,
@@ -41,6 +42,10 @@ export const OrganizerDashboard = () => {
 
   const recentEvents = useMemo(() => dashboardData?.recentEvents || [], [dashboardData]);
   const orgInfo = useMemo(() => dashboardData?.org || null, [dashboardData]);
+
+  if (isLoading && !dashboardData) {
+    return <OrganizerLoading />;
+  }
 
   const quickActions = [
     { label: "Create Event", icon: PlusCircle, link: ORGANIZER_ROUTES.ADD_TOURNAMENTS, color: "text-emerald-400" },

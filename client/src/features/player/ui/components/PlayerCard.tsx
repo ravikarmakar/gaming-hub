@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { User, ShieldCheck, Users, ChevronRight } from "lucide-react";
-import { User as UserType } from "@/features/auth/lib/types";
+import { User as UserType } from "@/features/auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { GlassCard } from "@/features/tournaments/ui/components/shared/ThemedComponents";

@@ -5,7 +5,7 @@ import { ErrorFallback } from "@/components/ErrorFallback";
 import { useState } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
 
 // Context Providers
 import { TournamentDialogProvider } from "@/features/tournaments/context/TournamentDialogContext";
@@ -51,7 +51,7 @@ const TABS_CONFIG = [
 const TournamentByIdContent = () => {
     const { id = "" } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { user } = useAuthStore();
+    const { user } = useCurrentUser();
     const [activeTab, setActiveTab] = useState("details");
 
     // Consume centralized tournament data from context
@@ -94,7 +94,7 @@ const TournamentByIdContent = () => {
             <TournamentHeader eventDetails={eventDetails} navigate={navigate} />
 
             {/* Main Content */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="space-y-2">
                     {/* Tournament Quick Stats Component */}
                     <TournamentQuickStats

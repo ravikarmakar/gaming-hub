@@ -20,9 +20,8 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 
-import { verifyOtpSchema, VerifyOtpSchemaType } from "@/features/auth/lib/authSchemas";
+import { useCurrentUser, useSendVerifyOtpMutation, useVerifyEmailMutation, useRefetchAuth, verifyOtpSchema, VerifyOtpSchemaType } from "@/features/auth";
 import { useAuthLayout } from "@/features/auth/ui/components/auth-layout";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useCountdown } from "@/hooks/use-countdown";
 import { ROUTES } from "@/lib/routes";
 
@@ -31,8 +30,10 @@ const VerifyEmail = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  const { isVerifying, verifyEmail, user, sendVerifyOtp, checkAuth } =
-    useAuthStore();
+  const { user } = useCurrentUser();
+  const { mutateAsync: verifyEmail, isPending: isVerifying } = useVerifyEmailMutation();
+  const { mutateAsync: sendVerifyOtp } = useSendVerifyOtpMutation();
+  const refetchAuth = useRefetchAuth();
   const { setTitle, setSubtitle } = useAuthLayout();
 
   const form = useForm<VerifyOtpSchemaType>({
@@ -63,30 +64,33 @@ const VerifyEmail = () => {
   const { formattedTime, isExpired, reset: resetTimer } = useCountdown(119);
 
   const onSubmit = async (values: VerifyOtpSchemaType) => {
-    const { success, message } = await verifyEmail(values.otp);
-    if (success) {
-      toast.success(message);
+    const result = await verifyEmail(values.otp).catch(() => null);
+    if (result?.success) {
+      toast.success(result.message);
       setIsSuccess(true);
       setTimeout(() => {
         navigate(ROUTES.HOME);
-        checkAuth();
+        refetchAuth();
       }, 1500);
+    } else if (result) {
+      toast.error(result.message);
+      form.setValue("otp", "");
+      form.setError("otp", { message: result.message });
     } else {
-      toast.error(message);
-      form.setValue("otp", ""); // Clear OTP on error
-      form.setError("otp", { message: message });
+      toast.error("Verification failed");
+      form.setValue("otp", "");
     }
   };
 
   const handleResend = async () => {
     if (resendCooldown > 0) return;
-    const { success, message } = await sendVerifyOtp();
-    if (success) {
-      toast.success(message);
+    const result = await sendVerifyOtp().catch(() => null);
+    if (result?.success) {
+      toast.success(result.message);
       setResendCooldown(60); // 60 seconds cooldown
       resetTimer(); // Reset expiration timer using hook
     } else {
-      toast.error(message);
+      toast.error(result?.message || "Failed to send OTP");
     }
   };
 

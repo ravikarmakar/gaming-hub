@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import { useLikeTournamentMutation } from '../../../hooks/useTournamentMutations';
-import { useAuthStore } from '@/features/auth/store/useAuthStore';
+import { useCurrentUser } from '@/features/auth';
 import { cn } from '@/lib/utils';
 
 interface TournamentHeaderProps {
@@ -22,7 +22,7 @@ interface TournamentHeaderProps {
 }
 
 export const TournamentHeader: React.FC<TournamentHeaderProps> = ({ eventDetails, navigate }) => {
-    const { user } = useAuthStore();
+    const { user } = useCurrentUser();
     const likeMutation = useLikeTournamentMutation();
     const [copied, setCopied] = React.useState(false);
 
@@ -84,7 +84,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({ eventDetails
 
                 {/* Dynamic Content Overlay - Centered with max-w */}
                 <div className="absolute inset-0 z-20">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-between py-6 sm:py-8">
+                    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-between py-6 sm:py-8">
                         {/* Top Bar inside Banner */}
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 sm:gap-4">

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { Users, UserPlus, Trophy, Settings, Bell, MessageSquare, } from "lucide-react";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -8,15 +8,14 @@ import { DashboardNavbar } from "@/features/dashboard/ui/components/DashboardNav
 import { DashboardSidebar } from "@/features/dashboard/ui/components/DashboardSidebar";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { useFilteredNavigation } from "@/hooks/useFilteredNavigation";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
 import { TeamDialogProvider } from "@/features/teams/context/TeamDialogContext";
 import { TeamDialogOrchestrator } from "@/features/teams/ui/components/dialogs/TeamDialogOrchestrator";
 import { TeamDashboardProvider } from "@/features/teams/context/TeamDashboardContext";
 import { useGetTeamByIdQuery } from "@/features/teams/hooks/useTeamQueries";
 import { useTeamSocket } from "@/features/teams/hooks/useTeamSocket";
 import { TEAM_ACCESS } from "@/features/teams/lib/access";
-import { TeamLoading } from "@/features/teams/ui/components/common/TeamLoading";
-import { TeamError } from "@/features/teams/ui/components/common/TeamError";
+
 // Removed unused cn import
 
 const teamSidebarLinks = [
@@ -62,21 +61,19 @@ const teamSidebarLinks = [
 ];
 
 const TeamLayout = () => {
-  const navigate = useNavigate();
   const filteredLinks = useFilteredNavigation(teamSidebarLinks);
-  const user = useAuthStore((state) => state.user);
+  const { user } = useCurrentUser();
   const teamId = typeof user?.teamId === 'string' ? user.teamId : user?.teamId?._id;
 
   const {
-    data,
-    isLoading,
     refetch
   } = useGetTeamByIdQuery(teamId || "", false, {
     enabled: !!teamId,
   });
-
   // Centralized Team Socket Management (Room + Events)
   useTeamSocket(teamId);
+
+
 
   useEffect(() => {
     if (!teamId) return;
@@ -104,17 +101,7 @@ const TeamLayout = () => {
           <TeamDashboardProvider teamId={teamId || ""} userId={user?._id}>
             <TeamDialogProvider>
               <div className="flex-1 overflow-hidden min-h-0 p-0">
-                {isLoading ? (
-                  <TeamLoading />
-                ) : (!teamId || !data) ? (
-                  <TeamError
-                    title="No Team Found"
-                    message="You are not currently a member of a team. Join or create one to access the dashboard."
-                    onRetry={() => navigate("/teams/discovery")}
-                  />
-                ) : (
-                  <Outlet />
-                )}
+                <Outlet />
               </div>
               <TeamDialogOrchestrator />
             </TeamDialogProvider>
