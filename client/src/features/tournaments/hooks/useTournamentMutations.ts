@@ -309,6 +309,23 @@ export const useResetGroupMutation = () => {
     });
 };
 
+export const useResetGroupMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: tournamentApi.resetGroup,
+        onSuccess: (data, variables) => {
+            toast.success(data.message || "Group matches reset successfully!");
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.groupDetails(variables.groupId) });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.leaderboard(variables.groupId) });
+            queryClient.invalidateQueries({ queryKey: [...tournamentKeys.all, 'groups'] });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
+        },
+        onError: (err) => {
+            toast.error(handleApiError(err, "Failed to reset group matches"));
+        }
+    });
+};
+
 export const useInjectTeamMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
