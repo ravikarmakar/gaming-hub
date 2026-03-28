@@ -12,11 +12,13 @@ import { useInfiniteScroll } from "./hooks/useInfiniteScroll";
 export interface ResourceGridProps<T = any> {
     children?: React.ReactNode;
     isLoading: boolean;
+    isError?: boolean;
     isEmpty: boolean;
     hasMore: boolean;
     onLoadMore: () => void;
     loadingItemCount?: number;
     emptyStateComponent?: React.ReactNode;
+    errorStateComponent?: React.ReactNode;
     isFetchingMore?: boolean;
     virtualize?: boolean;
     items?: T[];
@@ -58,11 +60,13 @@ const SkeletonGrid = ({ columns, gap, count, itemHeight }: { columns: number; ga
 export const ResourceGrid = <T,>({
     children,
     isLoading,
+    isError = false,
     isEmpty,
     hasMore,
     onLoadMore,
     loadingItemCount = 8,
     emptyStateComponent,
+    errorStateComponent,
     isFetchingMore = false,
     virtualize = false,
     items = [],
@@ -178,7 +182,9 @@ export const ResourceGrid = <T,>({
         <div className="w-full relative z-10">
             {!shouldVirtualize ? (
                 <div className="w-full">
-                    {isLoading && !items.length ? (
+                    {isError ? (
+                        errorStateComponent || null
+                    ) : isLoading && !items.length ? (
                         <SkeletonGrid 
                             columns={columns} 
                             gap={sanitizedColumnGap} 
@@ -222,7 +228,11 @@ export const ResourceGrid = <T,>({
                 </div>
             ) : (
                 <div ref={widthContainerRef} className="w-full">
-                    {isEmpty ? (
+                    {isError ? (
+                        <div className="w-full">
+                            {errorStateComponent || null}
+                        </div>
+                    ) : isEmpty ? (
                         <div className="w-full">
                             {emptyStateComponent || null}
                         </div>

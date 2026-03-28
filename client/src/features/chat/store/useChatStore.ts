@@ -15,18 +15,21 @@ export interface ChatMessage {
     updatedAt: string;
     isDeleted: boolean;
     isEdited: boolean;
+    isRead: boolean;
 }
 
 interface ChatState {
     messages: ChatMessage[];
     isLoading: boolean;
+    isLoadingMore: boolean;
+    hasMore: boolean;
     error: string | null;
     currentFetchId: number;
 
     editingMessage: ChatMessage | null;
     setEditingMessage: (message: ChatMessage | null) => void;
 
-    fetchHistory: (targetId: string, scope: "team" | "organizer" | "group" | "user") => Promise<void>;
+    fetchHistory: (targetId: string, scope: "team" | "organizer" | "group" | "user", loadMore?: boolean) => Promise<void>;
     addMessage: (message: ChatMessage) => void;
     updateMessage: (messageId: string, content: string) => Promise<void>;
     deleteMessage: (messageId: string) => Promise<void>;
@@ -38,24 +41,36 @@ interface ChatState {
     clearMessages: () => void;
 }
 
-export const useChatStore = create<ChatState>((set) => ({
+export const useChatStore = create<ChatState>((set, get) => ({
     messages: [],
     isLoading: false,
+    isLoadingMore: false,
+    hasMore: true,
     error: null,
     currentFetchId: 0,
     editingMessage: null,
 
     setEditingMessage: (message) => set({ editingMessage: message }),
 
-    fetchHistory: async (targetId, scope) => {
+    fetchHistory: async (targetId, scope, loadMore = false) => {
         const fetchId = Math.random();
-        set({ isLoading: true, error: null, currentFetchId: fetchId });
+        
+        if (loadMore) {
+            set({ isLoadingMore: true, error: null });
+        } else {
+            set({ isLoading: true, error: null, currentFetchId: fetchId, hasMore: true });
+        }
 
         // Bypass backend fetch for user-to-user chat until API is ready
         if (scope === "user") {
-            const { currentFetchId } = useChatStore.getState();
-            if (currentFetchId === fetchId) {
-                set({ messages: [], isLoading: false });
+            const { currentFetchId } = get();
+            if (currentFetchId === fetchId || loadMore) {
+                set((state) => ({ 
+                    messages: loadMore ? state.messages : [], 
+                    isLoading: false, 
+                    isLoadingMore: false, 
+                    hasMore: false 
+                }));
             }
             return;
         }
@@ -65,13 +80,34 @@ export const useChatStore = create<ChatState>((set) => ({
             if (scope === "organizer") baseUrl = "/organizers";
             else if (scope === "group") baseUrl = "/groups";
 
-            const response = await axiosInstance.get(`${baseUrl}/${targetId}/chat`, {
-                params: { scope }
-            });
-            set({ messages: response.data.data, isLoading: false });
+            const params: any = { scope };
+            if (loadMore && get().messages.length > 0) {
+                params.before = get().messages[0].createdAt;
+            }
+
+            const response = await axiosInstance.get(`${baseUrl}/${targetId}/chat`, { params });
+            const newMessages = response.data.data;
+            const hasMore = response.data.hasMore;
+
+            if (loadMore) {
+                set((state) => ({
+                    messages: [...newMessages, ...state.messages],
+                    isLoadingMore: false,
+                    hasMore
+                }));
+            } else {
+                const { currentFetchId } = get();
+                if (currentFetchId === fetchId) {
+                    set({ 
+                        messages: newMessages, 
+                        isLoading: false,
+                        hasMore
+                    });
+                }
+            }
         } catch (error) {
             const errMsg = getErrorMessage(error, "Failed to load chat history");
-            set({ error: errMsg, isLoading: false });
+            set({ error: errMsg, isLoading: false, isLoadingMore: false });
         }
     },
 

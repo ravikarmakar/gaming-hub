@@ -49,7 +49,8 @@ export const useInfiniteScroll = ({
     // Virtualized scroll (index based)
     useEffect(() => {
         if (!shouldVirtualize || !hasMore || isLoading || isFetchingMore) return;
-        const nearEnd = visibleEndIndex >= dataRowCount;
+        // Trigger when the user sees the last data row (or one row before it)
+        const nearEnd = dataRowCount > 0 && visibleEndIndex >= dataRowCount - 1;
         const newBatch = itemsLength !== lastLoadedCountRef.current;
         if (nearEnd && newBatch) {
             const delay = itemsLength === 0 ? 0 : scrollThrottlingDelay;

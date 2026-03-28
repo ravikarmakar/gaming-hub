@@ -96,6 +96,10 @@ export const MessageInput = ({ onSendMessage, isLoading }: MessageInputProps) =>
             console.error("Failed to process message:", error);
         } finally {
             setIsSubmitting(false);
+            // Re-focus after submitting state is cleared and input is enabled
+            setTimeout(() => {
+                textareaRef.current?.focus();
+            }, 0);
         }
     };
 
@@ -111,9 +115,9 @@ export const MessageInput = ({ onSendMessage, isLoading }: MessageInputProps) =>
     return (
         <form
             onSubmit={handleSubmit(onSubmit)}
-            className="pt-4 pb-4 mt-auto w-full flex flex-col"
+            className="mt-auto w-full flex flex-col group"
         >
-            <div className="relative w-full px-4 md:px-6">
+            <div className="relative w-full px-2 md:px-4">
                 {/* Editing Indicator Banner */}
                 {editingMessage && (
                     <div className="mb-2 flex items-center justify-between px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-t-2xl text-[11px] text-purple-400">
@@ -134,8 +138,8 @@ export const MessageInput = ({ onSendMessage, isLoading }: MessageInputProps) =>
 
                 {/* Main Input Container - WhatsApp Style Pill */}
                 <div className={cn(
-                    "relative flex items-end gap-2 bg-[#1A1D2D]/80 border border-white/10 p-1.5 backdrop-blur-xl transition-all duration-300 shadow-2xl group-focus-within:border-purple-500/40 group-focus-within:bg-[#1A1D2D]",
-                    editingMessage ? "rounded-b-[24px] rounded-t-none" : "rounded-[24px]"
+                    "relative flex items-end gap-2 bg-[#130F1C]/80 border border-purple-500/20 p-1 backdrop-blur-xl transition-all duration-300 shadow-2xl group-focus-within:border-purple-500/40 group-focus-within:bg-[#1A1625]",
+                    editingMessage ? "rounded-b-[20px] rounded-t-none" : "rounded-[20px]"
                 )}>
                     <Textarea
                         {...registerProps}
@@ -147,9 +151,10 @@ export const MessageInput = ({ onSendMessage, isLoading }: MessageInputProps) =>
                         onKeyDown={handleKeyDown}
                         placeholder={editingMessage ? "Update your message..." : "Type a message..."}
                         disabled={isLoading || isSubmitting}
+                        autoFocus
                         autoComplete="off"
                         rows={1}
-                        className="flex-1 bg-transparent border-none text-white placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0 py-2.5 px-3.5 text-sm resize-none scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent selection:bg-purple-500/30"
+                        className="flex-1 bg-transparent border-none text-white placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0 py-1.5 px-3 text-sm resize-none scrollbar-thin scrollbar-thumb-purple-500/20 scrollbar-track-transparent selection:bg-purple-500/30"
                     />
 
                     <Button

@@ -12,7 +12,7 @@ import { SocketProvider } from "@/contexts/SocketContext";
 // Components
 import { ErrorFallback } from "@/components/ErrorFallback";
 import CreateOrgDialog from "@/features/organizer/ui/components/CreateOrgDialog";
-import CreateTeamDialog from "@/features/teams/ui/components/CreateTeamDialog";
+import CreateTeamDialog from "@/features/teams/ui/components/dialogs/CreateTeamDialog";
 import ScrollToTop from "@/components/shared/layout/ScrollToTop";
 
 // Routes

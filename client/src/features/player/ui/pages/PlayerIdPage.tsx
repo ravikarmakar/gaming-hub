@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Award, BarChart3, Settings, Info, LucideIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";

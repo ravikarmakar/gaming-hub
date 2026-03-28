@@ -18,7 +18,6 @@ import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/routes";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { useAccess } from "@/features/auth/hooks/useAccess";
 import { ORG_ACTIONS, ORG_ACTIONS_ACCESS } from "@/features/organizer/lib/access";
@@ -49,7 +48,14 @@ const ProfileMenu = () => {
     }
     setSearchParams(searchParams);
   };
-  const { setIsCreateTeamOpen } = useTeamStore();
+  const setIsCreateTeamOpen = (open: boolean) => {
+    if (open) {
+      searchParams.set("modal", "create-team");
+    } else {
+      searchParams.delete("modal");
+    }
+    setSearchParams(searchParams);
+  };
 
   const { can } = useAccess();
   const isSuperAdmin = can(ADMIN_ACCESS.dashboard);

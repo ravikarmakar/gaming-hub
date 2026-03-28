@@ -1,4 +1,4 @@
-import { useQuery, useInfiniteQuery, UseQueryOptions, UseInfiniteQueryOptions, InfiniteData } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, UseQueryOptions, UseInfiniteQueryOptions, InfiniteData, keepPreviousData } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { organizerApi } from "../api/organizerApi";
 import { organizerKeys } from "./organizerKeys";
@@ -48,12 +48,18 @@ export const useInfiniteOrganizersQuery = (
         queryFn: ({ pageParam = 1 }) => organizerApi.fetchOrganizers(pageParam as number, limit, search),
         getNextPageParam: (lastPage) => {
             const { pagination } = lastPage;
-            if (pagination.page && pagination.pages && pagination.page < pagination.pages) {
-                return pagination.page + 1;
+            if (pagination && pagination.hasMore) {
+                return pagination.currentPage + 1;
             }
             return undefined;
         },
         initialPageParam: 1,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+        staleTime: 1000 * 60 * 30, // 30 min
+        gcTime: 1000 * 60 * 60,    // 1 hour
+        placeholderData: keepPreviousData,
         ...options,
     });
 };

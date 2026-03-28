@@ -3,28 +3,31 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bell, LoaderCircle as Loader2, Inbox, AlertTriangle } from "lucide-react";
 
 import { useTeamNotificationsQuery } from "@/features/notifications/hooks/useNotificationQueries";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import NotificationItem from "@/features/notifications/ui/components/NotificationItem";
-import { TeamPageHeader } from "../components/TeamPageHeader";
+import { TeamPageHeader } from "../components/common/TeamPageHeader";
+import { useTeamDashboard } from "../../context/TeamDashboardContext";
 
 
 const TeamNotificationsPage: React.FC = () => {
-    const { user } = useAuthStore();
-    const teamId = user?.teamId?.toString() || "";
-    const { data: notificationsData, isLoading, isError } = useTeamNotificationsQuery(teamId);
+    const { teamId } = useTeamDashboard();
+    const { data: notificationsData, isLoading, isError } = useTeamNotificationsQuery(
+        teamId || "",
+        1,
+        { enabled: !!teamId }
+    );
 
     const teamNotifications = notificationsData?.notifications || [];
 
     return (
-        <div className="h-full">
-            <div className="w-full relative z-10">
-                <TeamPageHeader
-                    icon={Bell}
-                    title="Team Notifications"
-                    subtitle="Stay updated with your team's tactical alerts and updates"
-                />
+        <div className="h-full flex flex-col overflow-hidden">
+            <TeamPageHeader
+                icon={Bell}
+                title="Team Notifications"
+                subtitle="Stay updated with your team's tactical alerts and updates"
+                noMargin={true}
+            />
 
-                {/* Notifications List */}
+            <main className="flex-1 overflow-y-auto w-full px-4 md:px-6 pt-2 md:pt-4 pb-4 md:pb-8">
                 <div className="space-y-4 w-full">
                     {!teamId ? (
                         <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -73,7 +76,7 @@ const TeamNotificationsPage: React.FC = () => {
                         </motion.div>
                     )}
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

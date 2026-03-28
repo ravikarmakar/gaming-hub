@@ -1,4 +1,4 @@
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { tournamentApi } from '../api/tournamentApi';
 import { Tournament, Round, Group, Leaderboard, TournamentListResponse } from '../types';
 
@@ -111,6 +111,12 @@ export const useGetInfiniteRegisteredTeamsQuery = (eventId: string, search = "",
         queryFn: ({ pageParam = null }) => tournamentApi.getRegisteredTeams(eventId, { cursor: pageParam, limit: 20, search }),
         initialPageParam: null,
         getNextPageParam: (lastPage: any) => lastPage?.nextCursor,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+        staleTime: 1000 * 60 * 30, // 30 min
+        gcTime: 1000 * 60 * 60,    // 1 hour
+        placeholderData: keepPreviousData,
         enabled: (options.enabled ?? true) && !!eventId,
     });
 };
@@ -123,6 +129,12 @@ export const useGetInfiniteInvitedTeamsQuery = (eventId: string, search = "", op
         queryFn: ({ pageParam = null }) => tournamentApi.getInvitedTeams(eventId, { cursor: pageParam, limit: 20, search }),
         initialPageParam: null,
         getNextPageParam: (lastPage: any) => lastPage?.nextCursor,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+        staleTime: 1000 * 60 * 30, // 30 min
+        gcTime: 1000 * 60 * 60,    // 1 hour
+        placeholderData: keepPreviousData,
         enabled: (options.enabled ?? true) && !!eventId,
     });
 };
@@ -145,6 +157,12 @@ export const useGetInfiniteT1SpecialTeamsQuery = (eventId: string, search = "", 
         queryFn: ({ pageParam = null }) => tournamentApi.getT1SpecialTeams(eventId, { cursor: pageParam, limit: 20, search }),
         initialPageParam: null,
         getNextPageParam: (lastPage: any) => lastPage?.nextCursor,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+        staleTime: 1000 * 60 * 30, // 30 min
+        gcTime: 1000 * 60 * 60,    // 1 hour
+        placeholderData: keepPreviousData,
         enabled: (options.enabled ?? true) && !!eventId,
     });
 };
@@ -181,6 +199,12 @@ export const useGetInfiniteTournamentsQuery = (params: { search?: string; game?:
             tournamentApi.getTournaments({ ...params, cursor: pageParam }),
         initialPageParam: null,
         getNextPageParam: (lastPage: any) => lastPage?.pagination?.nextCursor,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+        staleTime: 1000 * 60 * 30, // 30 min
+        gcTime: 1000 * 60 * 60,    // 1 hour
+        placeholderData: keepPreviousData,
         enabled: (options.enabled ?? true),
     });
 };

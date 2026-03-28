@@ -6,6 +6,8 @@ export interface ResourceGridWrapperProps<T = any> extends ResourceGridProps<T> 
     title: React.ReactNode;
     description?: string;
     stats?: { label: string; value: number | string };
+    isError?: boolean;
+    errorStateComponent?: React.ReactNode;
     filters: React.ReactNode;
     showFilters?: boolean;
     headerAction?: React.ReactNode;
@@ -16,6 +18,8 @@ export const ResourceGridWrapper = <T,>(props: ResourceGridWrapperProps<T>) => {
         title,
         description,
         stats,
+        isError,
+        errorStateComponent,
         filters,
         showFilters = true,
         headerAction,
@@ -106,7 +110,11 @@ export const ResourceGridWrapper = <T,>(props: ResourceGridWrapperProps<T>) => {
 
                 {/* ── Grid Rendering ────────────────────────────────────────── */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-                    <ResourceGrid {...gridProps} />
+                    <ResourceGrid 
+                        isError={isError}
+                        errorStateComponent={errorStateComponent}
+                        {...gridProps} 
+                    />
                 </div>
             </div>
         </div>

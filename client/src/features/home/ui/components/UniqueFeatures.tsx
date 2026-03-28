@@ -1,20 +1,28 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Users, Sword, ArrowRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { PLAYER_ROUTES } from "@/features/player/lib/routes";
-import { useTeamStore } from "@/features/teams/store/useTeamStore";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 
 
 export const UniqueFeatures = () => {
     const [activeTab, setActiveTab] = useState(0);
     const navigate = useNavigate();
-    const { setIsCreateTeamOpen } = useTeamStore()
+    const [searchParams, setSearchParams] = useSearchParams();
     const { user } = useAuthStore()
+
+    const setIsCreateTeamOpen = (open: boolean) => {
+        if (open) {
+            searchParams.set("modal", "create-team");
+        } else {
+            searchParams.delete("modal");
+        }
+        setSearchParams(searchParams);
+    };
 
     const features = [
         {

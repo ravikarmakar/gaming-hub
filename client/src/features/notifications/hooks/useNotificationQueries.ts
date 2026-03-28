@@ -25,11 +25,12 @@ export const useInfiniteNotificationsQuery = () => {
     });
 };
 
-export const useTeamNotificationsQuery = (teamId: string, page = 1) => {
+export const useTeamNotificationsQuery = (teamId: string, page = 1, options = {}) => {
     return useQuery({
         queryKey: NOTIFICATIONS_KEYS.teamList(teamId, page),
         queryFn: () => notificationsApi.getTeamNotifications(teamId, page),
         enabled: !!teamId,
+        ...options,
     });
 };
 

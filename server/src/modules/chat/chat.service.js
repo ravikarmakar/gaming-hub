@@ -209,12 +209,22 @@ class ChatService {
     }
 
     /**
-     * Fetch chat history
+     * Fetch chat history with cursor-based pagination
      */
-    async getHistory(scope, targetId, limit = 50) {
-        return await Chat.find({ targetId, scope, isDeleted: false })
+    async getHistory(scope, targetId, { limit = 50, before = null } = {}) {
+        // Upper bound validation to prevent resource exhaustion
+        const finalLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 100);
+        const query = { targetId, scope, isDeleted: false };
+        if (before) {
+            const date = new Date(before);
+            if (!isNaN(date.getTime())) {
+                query.createdAt = { $lt: date };
+            }
+        }
+
+        return await Chat.find(query)
             .sort({ createdAt: -1 })
-            .limit(limit)
+            .limit(finalLimit)
             .lean();
     }
 

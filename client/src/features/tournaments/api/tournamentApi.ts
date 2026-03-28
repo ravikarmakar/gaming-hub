@@ -46,7 +46,7 @@ export const tournamentApi = {
         });
         return res.data.rounds;
     },
-    updateRound: async (data: { roundId: string; eventId: string; [key: string]: unknown }): Promise<void> => {
+    updateRound: async (data: { roundId: string; eventId: string;[key: string]: unknown }): Promise<void> => {
         const { roundId, ...payload } = data;
         await axiosInstance.put(`/rounds/${roundId}`, payload);
     },
@@ -90,15 +90,15 @@ export const tournamentApi = {
     updateGroup: async (data: { groupId: string; eventId: string; payload: Record<string, unknown> }): Promise<void> => {
         await axiosInstance.put(`/groups/${data.groupId}`, { ...data.payload, eventId: data.eventId });
     },
-    resetGroup: async (data: { groupId: string; eventId: string }): Promise<{ message?: string; [key: string]: unknown }> => {
+    resetGroup: async (data: { groupId: string; eventId: string }): Promise<{ message?: string;[key: string]: unknown }> => {
         const { data: resData } = await axiosInstance.post(`/groups/${data.groupId}/reset`, { eventId: data.eventId });
         return resData;
     },
-    deleteGroup: async (data: { groupId: string; eventId: string }): Promise<{ message?: string; [key: string]: unknown }> => {
+    deleteGroup: async (data: { groupId: string; eventId: string }): Promise<{ message?: string;[key: string]: unknown }> => {
         const { data: resData } = await axiosInstance.delete(`/groups/${data.groupId}`, { params: { eventId: data.eventId } });
         return resData;
     },
-    mergeTeamsToGroup: async (data: { groupId: string; eventId: string }): Promise<{ message?: string; [key: string]: unknown }> => {
+    mergeTeamsToGroup: async (data: { groupId: string; eventId: string }): Promise<{ message?: string;[key: string]: unknown }> => {
         const res = await axiosInstance.post(`/groups/${data.groupId}/merge-qualified`, { eventId: data.eventId });
         return res.data;
     },
@@ -155,7 +155,7 @@ export const tournamentApi = {
         const res = await axiosInstance.post(`/events/${eventId}/like`);
         return res.data.data;
     },
-    registerTournament: async (eventId: string): Promise<{ message?: string; [key: string]: unknown }> => {
+    registerTournament: async (eventId: string): Promise<{ message?: string;[key: string]: unknown }> => {
         const response = await axiosInstance.post(TOURNAMENT_ENDPOINTS.REGISTER(eventId), {});
         return response.data;
     },

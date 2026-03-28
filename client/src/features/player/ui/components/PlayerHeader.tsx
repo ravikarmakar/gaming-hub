@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { Sword, Heart, Users, User as UserIcon } from "lucide-react";
@@ -6,9 +6,8 @@ import { Sword, Heart, Users, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { UnifiedProfileHeader } from "@/components/shared/profile/UnifiedProfileHeader";
-import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
+import { useGetTeamByIdQuery } from "@/features/teams/hooks/useTeamQueries";
 import { User } from "@/features/auth/lib/types";
-import { Team } from "@/features/teams/lib/types";
 import { TeamInviteDialog } from "./TeamInviteDialog";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { useAccess } from "@/features/auth/hooks/useAccess";
@@ -79,43 +78,11 @@ interface PlayerInfoBlocksProps {
 }
 
 export const PlayerInfoBlocks: React.FC<PlayerInfoBlocksProps> = ({ player }) => {
-  const { getTeamById } = useTeamManagementStore();
-  const [teamInfo, setTeamInfo] = useState<Pick<Team, "_id" | "teamName"> | null>(null);
-
   const teamIdString = extractTeamId(player);
-
-  // Pre-populate from the populated teamId object if available.
-  const populatedName = typeof player.teamId === "object" && player.teamId !== null ? player.teamId.teamName : null;
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchTeam = async () => {
-      if (!teamIdString) return;
-
-      // If we already have a name from the populated object, use it directly.
-      if (populatedName) {
-        if (isMounted) setTeamInfo({ _id: teamIdString, teamName: populatedName });
-        return;
-      }
-
-      try {
-        // Otherwise fetch from the store/API.
-        const team = await getTeamById(teamIdString);
-        if (isMounted && team) {
-          setTeamInfo({ _id: team._id, teamName: team.teamName });
-        }
-      } catch (error) {
-        console.error("Failed to fetch team info:", error);
-      }
-    };
-
-    fetchTeam();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [teamIdString, populatedName, getTeamById]);
+  const { data: teamData } = useGetTeamByIdQuery(teamIdString || "", false, {
+    enabled: !!teamIdString
+  });
+  const teamInfo = teamData && teamIdString === teamData._id ? { _id: teamData._id, teamName: teamData.teamName } : null;
 
   return (
     <div className="flex flex-nowrap items-baseline gap-2 md:gap-4 md:-mt-1 text-[9px] sm:text-xs md:text-xs text-gray-400 font-medium">
