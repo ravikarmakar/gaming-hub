@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useAuthQuery, refetchAuthProfile } from "@/features/auth";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface SocketContextType {
@@ -29,7 +29,8 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
     // Use a SELECTOR to only subscribe to the user's _id, NOT the full user object.
     // This prevents the entire SocketProvider (and all its children) from re-rendering
     // every time any user property changes (e.g., roles, XP, avatar).
-    const userId = useAuthStore((state) => state.user?._id);
+    const { data: user } = useAuthQuery();
+    const userId = user?._id;
 
     const queryClient = useQueryClient();
     const hasConnected = useRef(false);
@@ -41,8 +42,7 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
             clearTimeout(profileRefreshTimer.current);
         }
         profileRefreshTimer.current = setTimeout(() => {
-            const { checkAuth } = useAuthStore.getState();
-            checkAuth(true);
+            refetchAuthProfile(true);
             profileRefreshTimer.current = null;
         }, 300); // Wait 300ms for events to settle before refreshing
     }, []);

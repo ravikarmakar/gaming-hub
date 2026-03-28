@@ -1,7 +1,8 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { useAccess } from "@/features/auth/hooks/useAccess";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import type { AccessRule } from "@/features/auth/lib/types";
+import { useAccess } from "@/features/auth/hooks/use-access";
+import { useAuthQuery } from "@/features/auth";
+import { AUTH_ROUTES } from "@/features/auth/lib/routes";
+import type { AccessRule } from "@/features/auth";
 
 interface RoleGuardProps {
     access: AccessRule;
@@ -10,7 +11,7 @@ interface RoleGuardProps {
 
 const RoleGuard = ({ access, redirectTo = "/" }: RoleGuardProps) => {
     const { can } = useAccess();
-    const { user, checkingAuth } = useAuthStore();
+    const { data: user, isLoading: checkingAuth } = useAuthQuery();
     const location = useLocation();
 
     if (checkingAuth) {
@@ -18,7 +19,7 @@ const RoleGuard = ({ access, redirectTo = "/" }: RoleGuardProps) => {
     }
 
     if (!user) {
-        return <Navigate to="/auth/login" state={{ from: location }} replace />;
+        return <Navigate to={AUTH_ROUTES.LOGIN} state={{ from: location }} replace />;
     }
 
     if (!can(access)) {

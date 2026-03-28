@@ -1,11 +1,11 @@
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
 import { useGetOrgByIdQuery } from "@/features/organizer/hooks/useOrganizerQueries";
 import { ChatWindow } from "@/features/chat";
-import { useAccess } from "@/features/auth/hooks/useAccess";
+import { useAccess } from "@/features/auth/hooks/use-access";
 import { ORG_ACTIONS, ORG_ACTIONS_ACCESS } from "../../lib/access";
 
 export const OrganizerChatPage = () => {
-    const { user } = useAuthStore();
+    const { user } = useCurrentUser();
     const { can } = useAccess();
 
     const {

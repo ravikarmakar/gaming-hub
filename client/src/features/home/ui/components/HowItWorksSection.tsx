@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 import { cn } from "@/lib/utils";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
 import { AUTH_ROUTES } from "@/features/auth/lib/routes";
 import { PLAYER_ROUTES } from "@/features/player/lib/routes";
 
@@ -50,7 +50,7 @@ const STEPS = [
 
 export const HowItWorksSection = () => {
     const navigate = useNavigate();
-    const { user } = useAuthStore();
+    const { user } = useCurrentUser();
     const userId = user?._id || "";
 
     return (

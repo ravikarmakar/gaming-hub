@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 import { cn } from "@/lib/utils";
-import { User } from "@/features/auth/lib/types";
+import { User } from "@/features/auth";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
 import { ADMIN_ROUTES } from "@/features/admin/lib/routes";
 

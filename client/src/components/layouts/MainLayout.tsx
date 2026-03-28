@@ -25,14 +25,14 @@ const MainLayout = () => {
       <Navbar />
       <main className="flex-grow flex flex-col relative flex-1">
         <Suspense fallback={
-          <div className="flex-grow flex items-center justify-center min-h-[60vh]">
+          <div className="flex-grow flex-1 flex items-center justify-center min-h-screen">
             <LoadingSpinner />
           </div>
         }>
           <Outlet />
+          {!shouldHideFooter && <Footer />}
         </Suspense>
       </main>
-      {!shouldHideFooter && <Footer />}
     </div>
   );
 };

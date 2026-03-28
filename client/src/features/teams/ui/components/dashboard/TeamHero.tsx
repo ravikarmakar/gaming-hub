@@ -6,7 +6,7 @@ import { UnifiedProfileHeader } from '@/components/shared/profile/UnifiedProfile
 import { ProfileBadge } from '@/components/shared/profile/ProfileBadge';
 import { ProfileActionButton } from '@/components/shared/profile/ProfileActionButton';
 
-import { useAuthStore } from '@/features/auth/store/useAuthStore';
+import { useCurrentUser } from '@/features/auth';
 import { Team } from '@/features/teams/lib/types';
 import { useSendJoinRequestMutation } from '../../../hooks/useTeamMutations';
 
@@ -15,7 +15,7 @@ interface TeamHeroProps {
 }
 
 export const TeamHero: React.FC<TeamHeroProps> = ({ team }) => {
-    const { user } = useAuthStore();
+    const { user } = useCurrentUser();
     const joinMutation = useSendJoinRequestMutation();
     const [isApplied, setIsApplied] = React.useState(false);
 

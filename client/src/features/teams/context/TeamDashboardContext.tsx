@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useMemo, ReactNode } from "react";
 import { useGetTeamByIdQuery } from "@/features/teams/hooks/useTeamQueries";
 import { AxiosError } from "axios";
-import { useAccess } from "@/features/auth/hooks/useAccess";
+import { useAccess } from "@/features/auth/hooks/use-access";
 import { TEAM_ACTIONS, TEAM_ACTIONS_ACCESS } from "@/features/teams/lib/access";
 import { Team } from "@/features/teams/lib/types";
 

@@ -6,19 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
 
-import {
-    useOrgJoinRequestsQuery
-} from "../../hooks/useOrganizerQueries";
-import {
-    useManageJoinRequestMutation
-} from "../../hooks/useOrganizerMutations";
+import { useOrgJoinRequestsQuery } from "../../hooks/useOrganizerQueries";
+import { useManageJoinRequestMutation } from "../../hooks/useOrganizerMutations";
 import { JoinRequest } from "../../types";
 
 export const OrganizerJoinRequestsPage = () => {
     const [page, setPage] = useState(1);
-    const { user } = useAuthStore();
+    const { user } = useCurrentUser();
     const orgId = user?.orgId;
 
     const { data: joinRequestsData, isLoading } = useOrgJoinRequestsQuery(orgId as string, page);
@@ -60,7 +56,7 @@ export const OrganizerJoinRequestsPage = () => {
                 </div>
                 {joinRequestPagination && (
                     <Badge variant="outline" className="text-purple-400 border-purple-500/30 bg-purple-500/10">
-                        {joinRequestPagination.total} Total
+                        {joinRequestPagination.total ?? 0} Total
                     </Badge>
                 )}
             </div>
@@ -91,10 +87,10 @@ export const OrganizerJoinRequestsPage = () => {
                     </div>
 
                     {/* Pagination Footer */}
-                    {joinRequestPagination && joinRequestPagination.pages > 1 && (
+                    {joinRequestPagination && (joinRequestPagination.pages ?? 0) > 1 && (
                         <div className="flex items-center justify-between pt-6 border-t border-white/5">
                             <span className="text-xs text-gray-500">
-                                Showing <span className="text-gray-300">{(joinRequestPagination.page - 1) * joinRequestPagination.limit + 1}</span> - <span className="text-gray-300">{Math.min(joinRequestPagination.page * joinRequestPagination.limit, joinRequestPagination.total)}</span> of <span className="text-gray-300">{joinRequestPagination.total}</span> requests
+                                Showing <span className="text-gray-300">{((joinRequestPagination.page ?? 1) - 1) * joinRequestPagination.limit + 1}</span> - <span className="text-gray-300">{Math.min((joinRequestPagination.page ?? 1) * joinRequestPagination.limit, joinRequestPagination.total ?? 0)}</span> of <span className="text-gray-300">{joinRequestPagination.total ?? 0}</span> requests
                             </span>
                             <div className="flex items-center gap-2">
                                 <Button
@@ -109,13 +105,13 @@ export const OrganizerJoinRequestsPage = () => {
                                 <div className="flex items-center gap-1 mx-2 text-xs">
                                     <span className="text-white font-medium">{page}</span>
                                     <span className="text-gray-400">/</span>
-                                    <span className="text-gray-500">{joinRequestPagination.pages}</span>
+                                    <span className="text-gray-500">{joinRequestPagination.pages ?? 0}</span>
                                 </div>
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() => setPage(page + 1)}
-                                    disabled={page >= joinRequestPagination.pages}
+                                    disabled={page >= (joinRequestPagination.pages ?? 0)}
                                     className="h-8 w-8 p-0 bg-white/5 border-white/10"
                                 >
                                     <ChevronRight className="w-4 h-4" />

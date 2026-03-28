@@ -1,7 +1,7 @@
 import { axiosInstance } from "@/lib/axios";
 import { ORGANIZER_ENDPOINTS, PLAYER_ENDPOINTS } from "../lib/endpoints";
 import { Organizer, DashboardStats, Invite, JoinRequest } from "../types";
-import { User } from "@/features/auth/lib/types";
+import { User } from "@/features/auth";
 import { Notification } from "@/features/notifications/types";
 
 

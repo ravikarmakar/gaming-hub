@@ -3,7 +3,7 @@ import { AxiosError } from "axios";
 import { organizerApi } from "../api/organizerApi";
 import { organizerKeys } from "./organizerKeys";
 import { Organizer, DashboardStats, Invite, Pagination, JoinRequest } from "../types";
-import { User } from "@/features/auth/lib/types";
+import { User } from "@/features/auth";
 import { Notification } from "@/features/notifications/types";
 
 

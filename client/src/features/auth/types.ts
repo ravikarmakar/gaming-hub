@@ -1,10 +1,10 @@
-// auth/access/types.ts
-import type { Scope } from "./scopes";
+import { Scope } from "./lib/scopes"
 
 export type AccessRule = {
     scope: Scope;
     roles: readonly string[];
     scopeId?: string;
+    minLevel?: number; // Minimum player level required
 };
 
 export interface Roles {

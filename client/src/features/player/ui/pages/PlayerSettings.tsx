@@ -1,6 +1,6 @@
 import React from "react";
 import { UserCog, Shield, Gamepad2, LogOut } from "lucide-react";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useLogoutMutation } from "@/features/auth";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -34,7 +34,7 @@ const TABS = [
 ];
 
 const PlayerSettings: React.FC = () => {
-    const { logout } = useAuthStore();
+    const { mutateAsync: logout } = useLogoutMutation();
     const navigate = useNavigate();
 
     const handleLogout = async () => {
@@ -45,7 +45,7 @@ const PlayerSettings: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-[#06040a] text-zinc-100 pb-20 pt-24 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-7xl mx-auto space-y-12">
+            <div className="max-w-[1440px] mx-auto space-y-12">
                 <div className="relative">
                     <div className="flex md:flex-row md:items-end justify-between gap-6">
                         <div className="space-y-4">

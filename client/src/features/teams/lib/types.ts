@@ -11,7 +11,7 @@ export const roleInTeam = [
 
 export const systemRole = ["player", "owner", "manager"];
 
-import { User } from "@/features/auth/lib/types";
+import { User } from "@/features/auth";
 import { Organizer } from "@/features/organizer/types";
 
 export interface TeamMember {

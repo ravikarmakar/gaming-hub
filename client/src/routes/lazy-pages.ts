@@ -8,8 +8,8 @@ export const pages = {
     NotFound: lazy(() => import("@/components/NotFound")),
 
     // Auth
-    Login: lazy(() => import("@/features/auth/ui/LoginPage")),
-    Signup: lazy(() => import("@/features/auth/ui/SignupPage")),
+    Login: lazy(() => import("@/features/auth/ui/login-page")),
+    Signup: lazy(() => import("@/features/auth/ui/signup-page")),
     ForgotPassword: lazy(() => import("@/features/auth/ui/components/forgot-password")),
     VerifyEmail: lazy(() => import("@/features/auth/ui/components/verify-email")),
     DiscordCallback: lazy(() => import("@/features/auth/ui/components/discord-callback")),

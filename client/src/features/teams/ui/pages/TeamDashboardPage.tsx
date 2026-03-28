@@ -11,6 +11,8 @@ import { TeamRecentMatch } from "@/features/teams/ui/components/stats/TeamRecent
 import { TournamentItem } from "@/features/teams/ui/components/dashboard/TournamentItem";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { useTeamDashboard } from "@/features/teams/context/TeamDashboardContext";
+import { TeamLoading } from "@/features/teams/ui/components/common/TeamLoading";
+import { TeamError } from "@/features/teams/ui/components/common/TeamError";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -29,7 +31,7 @@ const itemVariants = {
 
 const TeamDashboardPage = () => {
   const navigate = useNavigate();
-  const { team: currentTeam, permissions } = useTeamDashboard();
+  const { team: currentTeam, permissions, isLoading, isError, error, refetch } = useTeamDashboard();
 
   const stats = currentTeam?.stats;
   const canManageSettings = permissions?.isOwner || permissions?.canManageStaff;
@@ -62,7 +64,30 @@ const TeamDashboardPage = () => {
     },
   ], [stats]);
 
-  if (!currentTeam) return null;
+  if (isLoading && !currentTeam) {
+    return <TeamLoading />;
+  }
+
+  if (isError && !currentTeam) {
+    return (
+      <TeamError
+        title="Failed to Load Dashboard"
+        message={error?.message || "There was an error loading your team dashboard."}
+        onRetry={() => refetch()}
+      />
+    );
+  }
+
+  if (!currentTeam) {
+    return (
+      <TeamError
+        title="No Team Found"
+        message="You are not currently a member of a team. Join or create one to access the dashboard."
+        onRetry={() => navigate("/teams/discovery")}
+      />
+    );
+  }
+
 
   return (
     <div className="h-full flex flex-col overflow-hidden">

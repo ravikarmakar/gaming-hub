@@ -16,7 +16,7 @@ interface Props {
 
 export const TeamHeader = ({ team, isDashboard }: Props) => {
     return (
-        <div className={isDashboard ? "" : "relative z-0 px-4 mx-auto max-w-7xl sm:px-6 lg:px-8"}>
+        <div className={isDashboard ? "" : "relative z-0 px-4 mx-auto max-w-[1440px] sm:px-6 lg:px-8"}>
             <div className="flex flex-col items-center gap-8 mb-8 lg:flex-row lg:items-start lg:gap-12">
                 {/* Team Logo */}
                 <div className="relative">

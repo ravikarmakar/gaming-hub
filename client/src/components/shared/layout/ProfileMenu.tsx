@@ -16,10 +16,11 @@ import {
 
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/routes";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
+import { useLogoutMutation } from "@/features/auth";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
-import { useAccess } from "@/features/auth/hooks/useAccess";
+import { useAccess } from "@/features/auth/hooks/use-access";
 import { ORG_ACTIONS, ORG_ACTIONS_ACCESS } from "@/features/organizer/lib/access";
 import { TEAM_ACCESS } from "@/features/teams/lib/access";
 import { PLAYER_ROUTES } from "@/features/player/lib/routes";
@@ -37,7 +38,8 @@ interface MenuOption {
 
 const ProfileMenu = () => {
   const navigate = useNavigate();
-  const { user, logout, isLoading } = useAuthStore();
+  const { user } = useCurrentUser();
+  const { mutateAsync: logout, isPending: isLoading } = useLogoutMutation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const setIsCreateOrgOpen = (open: boolean) => {

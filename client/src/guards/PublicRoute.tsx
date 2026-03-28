@@ -1,8 +1,8 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useAuthQuery } from "@/features/auth";
 
 const PublicRoute = () => {
-  const { user, checkingAuth } = useAuthStore();
+  const { data: user, isLoading: checkingAuth } = useAuthQuery();
 
   if (checkingAuth) {
     return null; // App.tsx handles the initial black screen

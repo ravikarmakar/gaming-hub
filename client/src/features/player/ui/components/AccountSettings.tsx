@@ -24,10 +24,13 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
+import { useCurrentUser } from "@/features/auth";
+import { useDeleteAccountMutation, useUpdateSettingsMutation } from "@/features/auth";
 
 export const AccountSettings: React.FC = () => {
-    const { deleteAccount, isLoading: isAuthLoading, user, updateSettings } = useAuthStore();
+    const { user } = useCurrentUser();
+    const { mutateAsync: deleteAccount, isPending: isAuthLoading } = useDeleteAccountMutation();
+    const { mutateAsync: updateSettings } = useUpdateSettingsMutation();
     const navigate = useNavigate();
     const [isSaving, setIsSaving] = useState(false);
     const [localSettings, setLocalSettings] = useState({
@@ -75,9 +78,9 @@ export const AccountSettings: React.FC = () => {
 
     const handleSaveSettings = async () => {
         setIsSaving(true);
-        const success = await updateSettings(localSettings);
+        const result = await updateSettings(localSettings).catch(() => null);
         setIsSaving(false);
-        if (success) {
+        if (result?.success) {
             toast.success("Tactical preferences updated");
         } else {
             toast.error("Failed to sync preferences");
@@ -85,8 +88,8 @@ export const AccountSettings: React.FC = () => {
     };
 
     const handleDeleteAccount = async () => {
-        const success = await deleteAccount();
-        if (success) {
+        const result = await deleteAccount().catch(() => null);
+        if (result?.success) {
             toast.success("Account deleted successfully");
             navigate("/");
         } else {
