@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 
 import FileUpload from "@/components/FileUpload";
+import { cn } from "@/lib/utils";
 
 interface CreateGroupDialogProps {
     title: string;
@@ -99,18 +100,16 @@ const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({
             >
                 <div className="h-1 w-full bg-gradient-to-r from-purple-600 via-indigo-500 to-purple-600" />
 
-                {!isSuccess && (
-                    <DialogHeader className="px-5 pt-5 pb-2 space-y-2">
-                        <div className="space-y-0.5 text-center">
-                            <DialogTitle className="text-xl font-black italic font-orbitron tracking-tight text-white uppercase">
-                                {title}
-                            </DialogTitle>
-                            <DialogDescription className="text-purple-200/40 text-[10px] font-medium tracking-wide">
-                                {description}
-                            </DialogDescription>
-                        </div>
-                    </DialogHeader>
-                )}
+                <DialogHeader className={cn("px-5 pt-5 pb-2 space-y-2", isSuccess && "sr-only")}>
+                    <div className="space-y-0.5 text-center">
+                        <DialogTitle className="text-xl font-black italic font-orbitron tracking-tight text-white uppercase">
+                            {title}
+                        </DialogTitle>
+                        <DialogDescription className="text-purple-200/40 text-[10px] font-medium tracking-wide">
+                            {description}
+                        </DialogDescription>
+                    </div>
+                </DialogHeader>
 
                 <div className="px-5 pb-5">
                     <AnimatePresence mode="wait">

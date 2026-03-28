@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import LoadingSpinner from "../LoadingSpinner";
 import { ROUTES } from "@/lib/routes";
 
-import { useUIStore } from "@/store/useUIStore";
+import { UIProvider, useUI } from "@/contexts/UIContext";
 import Footer from "../shared/layout/Footer";
 
 const HIDE_FOOTER_ROUTES = [
@@ -12,9 +12,9 @@ const HIDE_FOOTER_ROUTES = [
   // Add other routes here as needed
 ];
 
-const MainLayout = () => {
+const MainLayoutContent = () => {
   const location = useLocation();
-  const { isFooterSuppressed } = useUIStore();
+  const { isFooterSuppressed } = useUI();
   const shouldHideFooter = HIDE_FOOTER_ROUTES.includes(location.pathname) || isFooterSuppressed;
 
   return (
@@ -37,4 +37,11 @@ const MainLayout = () => {
   );
 };
 
+const MainLayout = () => (
+  <UIProvider>
+    <MainLayoutContent />
+  </UIProvider>
+);
+
 export default MainLayout;
+

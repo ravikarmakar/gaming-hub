@@ -57,6 +57,12 @@ const chatSchema = new mongoose.Schema(
 // Index for fetching message history efficiently across any scope
 chatSchema.index({ targetId: 1, scope: 1, createdAt: -1 });
 
+// For moderation/GDPR full-scan avoidance (e.g. Find all messages by user X)
+chatSchema.index({ sender: 1, createdAt: -1 });
+
+// Optimized filtered reads (avoid scanning soft-deleted items heavily)
+chatSchema.index({ targetId: 1, scope: 1, isDeleted: 1, createdAt: -1 });
+
 const Chat = mongoose.models.Chat || mongoose.model("Chat", chatSchema);
 
 export default Chat;

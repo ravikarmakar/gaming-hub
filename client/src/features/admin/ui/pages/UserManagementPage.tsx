@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
     MoreHorizontal,
     Search,
@@ -31,51 +31,61 @@ import {
     TableRow,
 } from "@/components/ui/table";
 
-import { useAdminStore } from "../../store/useAdminStore";
+import { useAdminEntitiesQuery } from "../../hooks/useAdminQueries";
+import { useUpdateEntityStatusMutation } from "../../hooks/useAdminMutations";
 import { useDebounce } from "@/hooks/useDebounce";
 import { throttle, formatDate } from "@/lib/utils";
 import { GlassCard, NeonBadge } from "@/features/tournaments/ui/components/shared/ThemedComponents";
+import { useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 
 import { cn } from "@/lib/utils";
 
+const PAGE_SIZE = 10;
+
 const UserManagementPage = () => {
-    const {
-        entities,
-        isLoading,
-        activeTab,
-        currentPage,
-        totalPages,
-        pageSize,
-        totalEntities: totalUsers,
-        searchQuery,
-        fetchEntities,
-        setTab,
-        setSearch,
-        setPage,
-        updateEntityStatus
-    } = useAdminStore();
-
-    const users = entities as any[]; // Type cast for simplicity in UI, ideally use a User interface if available in the scope or define it locally.
-
-
-    // Local state for search to achieve debouncing
-    const [searchTerm, setSearchTerm] = useState(searchQuery);
+    const queryClient = useQueryClient();
+    const [currentPage, setCurrentPage] = useState(1);
+    const [activeTab, setActiveTab] = useState("all");
+    const [searchTerm, setSearchTerm] = useState("");
     const debouncedSearch = useDebounce(searchTerm, 500);
 
-    useEffect(() => {
-        fetchEntities("User", currentPage, activeTab, searchQuery);
-    }, []);
+    const { data, isLoading, isError } = useAdminEntitiesQuery("User", {
+        page: currentPage,
+        pageSize: PAGE_SIZE,
+        search: debouncedSearch,
+        filter: activeTab,
+    });
 
-    // Effect to sync debounced search with the store
-    useEffect(() => {
-        if (debouncedSearch !== searchQuery) {
-            setSearch(debouncedSearch);
+    const updateStatusMutation = useUpdateEntityStatusMutation();
+
+    const users = (data?.data ?? []) as any[];
+    const totalUsers = data?.total ?? 0;
+    const totalPages = data?.totalPages ?? 1;
+
+    const handleSetTab = useMemo(() => throttle((id: "all" | "verified" | "banned") => {
+        setActiveTab(id);
+        setCurrentPage(1);
+    }, 800), []);
+
+    const handleSetPage = useMemo(() => throttle((page: number) => {
+        setCurrentPage(page);
+    }, 800), []);
+
+    const handleUpdateStatus = async (id: string, updates: any) => {
+        try {
+            await toast.promise(
+                updateStatusMutation.mutateAsync({ type: "User", id, updates }),
+                {
+                    loading: "Updating user status...",
+                    success: "User status updated successfully",
+                    error: (err: any) => err?.message || "Failed to update user status",
+                }
+            );
+        } catch (error) {
+            console.error("Status update failed:", error);
         }
-    }, [debouncedSearch]);
-
-    // Throttled actions to prevent API spam
-    const throttledSetTab = useMemo(() => throttle((id: "all" | "verified" | "banned") => setTab(id), 800), [setTab]);
-    const throttledSetPage = useMemo(() => throttle((page: number) => setPage(page), 800), [setPage]);
+    };
 
     const tabs = [
         { id: "all", label: "All Users", icon: UsersIcon },
@@ -118,7 +128,7 @@ const UserManagementPage = () => {
                         return (
                             <button
                                 key={tab.id}
-                                onClick={() => throttledSetTab(tab.id)}
+                                onClick={() => handleSetTab(tab.id)}
                                 className={cn(
                                     "px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border",
                                     isActive
@@ -132,6 +142,25 @@ const UserManagementPage = () => {
                         );
                     })}
                 </div>
+
+                {isError && (
+                    <div className="p-8 rounded-2xl bg-red-500/5 border border-red-500/10 flex flex-col items-center justify-center text-center space-y-4">
+                        <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
+                            <Ban className="w-6 h-6 text-red-500" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-white">Failed to load users</h3>
+                            <p className="text-sm text-gray-500">There was an error fetching the user list. Please try again.</p>
+                        </div>
+                        <Button
+                            onClick={() => queryClient.invalidateQueries({ queryKey: ["adminEntities", "User"] })}
+                            variant="outline"
+                            className="border-red-500/20 text-red-400 hover:bg-red-500/10"
+                        >
+                            Retry Loading
+                        </Button>
+                    </div>
+                )}
 
                 <GlassCard className="overflow-hidden border-white/5 p-0">
                     <Table>
@@ -147,7 +176,7 @@ const UserManagementPage = () => {
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                Array.from({ length: pageSize }).map((_, i) => (
+                                Array.from({ length: PAGE_SIZE }).map((_, i) => (
                                     <TableRow key={i} className="border-white/5 hover:bg-transparent">
                                         <TableCell className="px-6 py-4">
                                             <div className="flex items-center gap-3">
@@ -241,21 +270,21 @@ const UserManagementPage = () => {
                                                 <DropdownMenuContent align="end" className="bg-[#16161c] border-white/10 text-white shadow-2xl">
                                                     <DropdownMenuItem
                                                         className="focus:bg-blue-600/20 focus:text-blue-400 cursor-pointer flex items-center gap-2 py-2.5"
-                                                        onClick={() => updateEntityStatus("User", user._id, { isPlayerVerified: !user.isPlayerVerified })}
+                                                        onClick={() => handleUpdateStatus(user._id, { isPlayerVerified: !user.isPlayerVerified })}
                                                     >
                                                         <UserCheck className="w-4 h-4 text-green-400" />
                                                         {user.isPlayerVerified ? "Revoke Verification" : "Verify Player"}
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
                                                         className="focus:bg-blue-600/20 focus:text-blue-400 cursor-pointer flex items-center gap-2 py-2.5"
-                                                        onClick={() => updateEntityStatus("User", user._id, { canCreateOrg: !user.canCreateOrg })}
+                                                        onClick={() => handleUpdateStatus(user._id, { canCreateOrg: !user.canCreateOrg })}
                                                     >
                                                         <UserPlus className="w-4 h-4 text-purple-400" />
                                                         {user.canCreateOrg ? "Revoke Org Perms" : "Grant Org Perms"}
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
                                                         className="focus:bg-red-500/10 focus:text-red-400 cursor-pointer flex items-center gap-2 py-2.5 text-red-400"
-                                                        onClick={() => updateEntityStatus("User", user._id, { isBlocked: !user.isBlocked })}
+                                                        onClick={() => handleUpdateStatus(user._id, { isBlocked: !user.isBlocked })}
                                                     >
                                                         {user.isBlocked ? (
                                                             <>
@@ -282,14 +311,18 @@ const UserManagementPage = () => {
                     {/* Pagination */}
                     <div className="px-6 py-4 border-t border-white/5 flex items-center justify-between bg-white/[0.01]">
                         <p className="text-xs text-gray-500 font-medium">
-                            Showing <span className="text-white">{(currentPage - 1) * pageSize + 1}</span> to <span className="text-white">{Math.min(currentPage * pageSize, totalUsers)}</span> of <span className="text-white">{totalUsers}</span> users
+                            {totalUsers === 0 ? (
+                                <span>No users found</span>
+                            ) : (
+                                <>Showing <span className="text-white">{(currentPage - 1) * PAGE_SIZE + 1}</span> to <span className="text-white">{Math.min(currentPage * PAGE_SIZE, totalUsers)}</span> of <span className="text-white">{totalUsers}</span> users</>
+                            )}
                         </p>
                         <div className="flex items-center gap-2">
                             <Button
                                 variant="outline"
                                 size="sm"
                                 disabled={currentPage === 1 || isLoading}
-                                onClick={() => throttledSetPage(currentPage - 1)}
+                                onClick={() => handleSetPage(currentPage - 1)}
                                 className="h-9 border-white/5 bg-transparent hover:bg-white/5 disabled:opacity-30"
                             >
                                 <ChevronLeft className="w-4 h-4" />
@@ -298,7 +331,7 @@ const UserManagementPage = () => {
                                 {Array.from({ length: totalPages }).map((_, i) => (
                                     <button
                                         key={i}
-                                        onClick={() => throttledSetPage(i + 1)}
+                                        onClick={() => handleSetPage(i + 1)}
                                         className={cn(
                                             "w-9 h-9 rounded-lg text-xs font-bold transition-all",
                                             currentPage === i + 1
@@ -314,7 +347,7 @@ const UserManagementPage = () => {
                                 variant="outline"
                                 size="sm"
                                 disabled={currentPage === totalPages || isLoading}
-                                onClick={() => throttledSetPage(currentPage + 1)}
+                                onClick={() => handleSetPage(currentPage + 1)}
                                 className="h-9 border-white/5 bg-transparent hover:bg-white/5 disabled:opacity-30"
                             >
                                 <ChevronRight className="w-4 h-4" />

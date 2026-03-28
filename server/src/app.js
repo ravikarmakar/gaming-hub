@@ -87,6 +87,7 @@ v1Router.use("/organizers", organizerRouter);
 v1Router.use("/organizers", chatRouter);
 v1Router.use("/invitations", invitationRouter);
 v1Router.use("/players", userRouter);
+v1Router.use("/players", chatRouter);
 v1Router.use("/events", eventRouter);
 v1Router.use("/rounds", roundsRouter);
 v1Router.use("/groups", groupsRouter);

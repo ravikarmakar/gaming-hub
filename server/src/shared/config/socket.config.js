@@ -10,6 +10,7 @@ import { Roles, Scopes } from "../constants/roles.js";
 import { initializeIORedis } from "./ioredis.js";
 import { redis } from "./redis.js";
 import { LRUCache } from "lru-cache";
+import ChatService from "../../modules/chat/chat.service.js";
 
 let io;
 const chatRateLimiters = new LRUCache({
@@ -254,11 +255,19 @@ export const initializeSocket = async (httpServer) => {
         // Generic Chat Join handler
         socket.on("join:chat", async ({ targetId, scope }) => {
             if (!targetId || !scope) return;
-            if (!["team", "organizer", "group"].includes(scope)) return;
+            if (!["team", "organizer", "group", "user"].includes(scope)) return;
             if (!mongoose.Types.ObjectId.isValid(targetId)) return;
 
+            let room;
+            if (scope === "user") {
+                const ids = [socket.userId.toString(), targetId.toString()].sort();
+                room = `chat:user:${ids[0]}--${ids[1]}`;
+            } else {
+                room = `chat:${scope}:${targetId}`;
+            }
+            if (socket.rooms.has(room)) return;
+
             try {
-                const ChatService = (await import("../../modules/chat/chat.service.js")).default;
                 const hasAccess = await ChatService.checkAccess(scope, socket.userId, targetId);
 
                 if (!hasAccess) {
@@ -267,7 +276,6 @@ export const initializeSocket = async (httpServer) => {
                     return;
                 }
 
-                const room = `chat:${scope}:${targetId}`;
                 socket.join(room);
                 logger.info(`User ${maskId(socket.userId)} joined chat room: ${room}`);
             } catch (error) {
@@ -278,15 +286,23 @@ export const initializeSocket = async (httpServer) => {
         // Generic Chat Leave handler
         socket.on("leave:chat", ({ targetId, scope }) => {
             if (!targetId || !scope) return;
-            if (!["team", "organizer", "group"].includes(scope)) return;
-            const room = `chat:${scope}:${targetId}`;
+            if (!["team", "organizer", "group", "user"].includes(scope)) return;
+            if (!mongoose.Types.ObjectId.isValid(targetId)) return;
+
+            let room;
+            if (scope === "user") {
+                const ids = [socket.userId.toString(), targetId.toString()].sort();
+                room = `chat:user:${ids[0]}--${ids[1]}`;
+            } else {
+                room = `chat:${scope}:${targetId}`;
+            }
             socket.leave(room);
             logger.info(`User ${maskId(socket.userId)} left chat room: ${room}`);
         });
 
         // Chat message handler (Refactored to be generic)
-        socket.on("chat:message", async (data) => {
-            const { targetId, content, scope = "team" } = data;
+        socket.on("chat:message", async (data, callback) => {
+            const { targetId, content, scope = "team", localId } = data;
 
             if (!targetId || !content) return;
 
@@ -297,7 +313,9 @@ export const initializeSocket = async (httpServer) => {
 
             if (recentMsgs.length >= 5) {
                 logger.warn(`Chat rate limit exceeded for user ${maskId(socket.userId)}`);
-                socket.emit("error", { message: "You are sending messages too fast. Please wait." });
+                const errorMsg = "You are sending messages too fast. Please wait.";
+                socket.emit("error", { message: errorMsg });
+                if (callback) callback({ success: false, error: errorMsg });
                 chatRateLimiters.set(socket.userId, recentMsgs); // Limit memory leak
                 return;
             }
@@ -308,13 +326,25 @@ export const initializeSocket = async (httpServer) => {
             try {
                 if (!mongoose.Types.ObjectId.isValid(targetId)) return;
 
-                const ChatService = (await import("../../modules/chat/chat.service.js")).default;
+                if (!["team", "organizer", "group", "user"].includes(scope)) {
+                    if (callback) callback({ success: false, error: "Invalid scope" });
+                    return;
+                }
 
-                // 1. Authorization check
-                const hasAccess = await ChatService.checkAccess(scope, socket.userId, targetId);
-                if (!hasAccess) {
-                    logger.warn(`Unauthorized chat attempt: User ${maskId(socket.userId)} for ${scope}:${maskId(targetId)}`);
-                    socket.emit("error", { message: `Unauthorized to send message to this ${scope} chat` });
+                let room;
+                if (scope === "user") {
+                    const ids = [socket.userId.toString(), targetId.toString()].sort();
+                    room = `chat:user:${ids[0]}--${ids[1]}`;
+                } else {
+                    room = `chat:${scope}:${targetId}`;
+                }
+
+                // 1. Authorization check: Trust room membership instead of DB
+                if (!socket.rooms.has(room)) {
+                    logger.warn(`Unauthorized chat attempt: User ${maskId(socket.userId)} not in room ${room}`);
+                    const errorMsg = `Unauthorized to send message to this ${scope} chat`;
+                    socket.emit("error", { message: errorMsg });
+                    if (callback) callback({ success: false, error: errorMsg });
                     return;
                 }
 
@@ -349,13 +379,19 @@ export const initializeSocket = async (httpServer) => {
                 });
 
                 // 4. Broadcast to the generic room
-                const room = `chat:${scope}:${targetId}`;
-                io.to(room).emit("chat:message", newMessage);
+                const broadcastPayload = newMessage.toObject();
+                if (localId) broadcastPayload.localId = localId;
+
+                io.to(room).emit("chat:message", broadcastPayload);
+
+                if (callback) callback({ success: true, message: broadcastPayload });
 
                 logger.info(`Chat message sent by ${maskId(socket.userId)} to ${room}`);
             } catch (error) {
                 logger.error(`Error in chat:message for ${scope}:${maskId(targetId)}:`, error.message);
-                socket.emit("error", { message: "Failed to send message" });
+                const errorMsg = "Failed to send message";
+                socket.emit("error", { message: errorMsg });
+                if (callback) callback({ success: false, error: errorMsg });
             }
         });
 

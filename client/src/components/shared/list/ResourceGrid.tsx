@@ -2,7 +2,7 @@ import React, { useEffect, useCallback, useId } from "react";
 import { LoaderCircle as Loader2 } from "lucide-react";
 import { useInView } from "react-intersection-observer";
 
-import { useUIStore } from "@/store/useUIStore";
+import { useUI } from "@/contexts/UIContext";
 import { useWindowVirtualizer } from "@/hooks/useWindowVirtualizer";
 import { MemoizedVirtualRow } from "./MemoizedVirtualRow";
 import { PremiumSkeleton } from "../feedback/PremiumSkeleton";
@@ -81,7 +81,7 @@ export const ResourceGrid = <T,>({
 }: ResourceGridProps<T>) => {
     const sanitizedColumnGap = typeof columnGap === 'number' ? `${columnGap}px` : columnGap;
     const gridId = useId();
-    const { suppressFooter } = useUIStore();
+    const { suppressFooter } = useUI();
 
     useEffect(() => {
         if (hasMore || isLoading || isFetchingMore) {
