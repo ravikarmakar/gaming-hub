@@ -4,11 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FormField, FormControl, FormMessage } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import FileUpload from "@/components/FileUpload";
-import { MAX_FILE_SIZE, TeamForm } from "@/features/teams/lib/teamSchema";
+import { TeamForm, MAX_FILE_SIZE } from "@/features/teams/lib/validation";
+
+import { Team } from "@/features/teams/lib/types";
 
 interface BrandingFormProps {
     control: Control<TeamForm>;
-    currentTeam: any; // Type strictly if possible, but 'any' matches the original usage or infer from store
+    currentTeam: Team;
 }
 
 export const BrandingForm = ({ control, currentTeam }: BrandingFormProps) => {

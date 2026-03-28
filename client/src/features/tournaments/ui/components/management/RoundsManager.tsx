@@ -1,79 +1,28 @@
-import { Trophy, PanelTopClose, PanelTopOpen } from "lucide-react";
-import { useState, useEffect } from "react";
-
+import { PanelTopOpen, PanelTopClose, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useRoundsSidebar, useRoundActions } from "@/features/tournaments/hooks";
-import { RoundHeader } from "./rounds/RoundHeader";
-import { GroupsGrid } from "./GroupsGrid";
 import { RoadmapTabs } from "../details/RoadmapTabs";
-import { RoundsSidebar } from "./RoundsSidebar";
-import { RoundsManagerDialogs } from "./RoundsManagerDialogs";
+import { RoundsSidebar } from "./rounds/RoundsSidebar";
+import { RoundHeader } from "./rounds/RoundHeader";
+import { GroupsGrid } from "./groups/GroupsGrid";
+import { useTournamentDashboard } from "@/features/tournaments/context/TournamentDashboardContext";
+import { useRoundsContext } from "@/features/tournaments/context/TournamentRoundsContext";
+import { TournamentEmpty } from "../shared/TournamentFeedback";
 
-interface RoundsManagerProps {
-    eventId: string;
-    isFocusMode?: boolean;
-    onToggleFocus?: () => void;
-}
-
-export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsManagerProps) => {
-    // 1. Manage Sidebar & Data
+export const RoundsManager = () => {
     const {
-        rounds,
-        event,
-        isLoading,
-        refetchRounds,
-        refetchEvent,
-        selectedRoundId,
-        setSelectedRoundId,
-        selectedRound,
-        isSidebarCollapsed,
-        setIsSidebarCollapsed,
+        isFocusMode,
+        setIsFocusMode,
         activeRoundTab,
         setActiveRoundTab,
-        filteredSidebarItems,
-        teamPreview,
-        isCreateDisabled
-    } = useRoundsSidebar(eventId);
+    } = useTournamentDashboard();
 
-    // Filter state lifted here so RoundHeader and GroupsGrid can share it
-    const [search, setSearch] = useState("");
-    const [statusFilter, setStatusFilter] = useState("");
-    const [sortBy, setSortBy] = useState("matchTime-asc");
+    const { selectedRound, event } = useRoundsContext();
 
-    // Reset filters whenever user switches rounds
-    useEffect(() => {
-        setSearch("");
-        setStatusFilter("");
-        setSortBy("matchTime-asc");
-    }, [selectedRoundId]);
+    const toggleFocus = () => setIsFocusMode((prev: boolean) => !prev);
 
-    // 2. Manage Actions & Dialogs
-    const {
-        isCreateRoundOpen,
-        setIsCreateRoundOpen,
-        isEditRoundOpen,
-        setIsEditRoundOpen,
-        isResetRoundOpen,
-        setIsResetRoundOpen,
-        actionRound,
-        setActionRound,
-        isSavingStatus,
-        isConfirmGroupsOpen,
-        setIsConfirmGroupsOpen,
-        isConfirmManualGroupOpen,
-        setIsConfirmManualGroupOpen,
-        isConfirmMergeOpen,
-        setIsConfirmMergeOpen,
-        cooldown,
-        handleRefresh,
-        handleCreateGroups,
-        handleManualCreateGroup,
-        handleCompleteRound,
-        handleMergeTeams,
-        isCreatingGroups,
-        isCreatingSingleGroup,
-        isMergingTeams
-    } = useRoundActions(eventId);
+    // Derived flags for the placeholder state
+    const isMainRoadmap = activeRoundTab === 'tournament';
+    const hasMappings = event?.hasMappings;
 
     return (
         <div className="flex flex-col h-full w-full">
@@ -85,135 +34,54 @@ export const RoundsManager = ({ eventId, isFocusMode, onToggleFocus }: RoundsMan
                     showT1Special={event?.hasT1SpecialTeams}
                 />
 
-                {onToggleFocus && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={onToggleFocus}
-                        className={`h-8 w-8 p-0 transition-all duration-300 ${isFocusMode ? 'text-purple-400 bg-purple-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
-                        title={isFocusMode ? "Exit Focus Mode" : "Enter Focus Mode"}
-                    >
-                        {isFocusMode ? <PanelTopOpen className="w-4 h-4" /> : <PanelTopClose className="w-4 h-4" />}
-                    </Button>
-                )}
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleFocus}
+                    className={`h-8 w-8 p-0 transition-all duration-300 ${isFocusMode ? 'text-purple-400 bg-purple-500/10' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+                    title={isFocusMode ? "Exit Focus Mode" : "Enter Focus Mode"}
+                >
+                    {isFocusMode ? <PanelTopOpen className="w-4 h-4" /> : <PanelTopClose className="w-4 h-4" />}
+                </Button>
             </div>
 
             <div className="flex flex-1 min-h-0 overflow-hidden">
-                <RoundsSidebar
-                    isLoading={isLoading}
-                    event={event}
-                    rounds={rounds}
-                    filteredSidebarItems={filteredSidebarItems}
-                    selectedRoundId={selectedRoundId}
-                    setSelectedRoundId={setSelectedRoundId}
-                    isSidebarCollapsed={isSidebarCollapsed}
-                    setIsSidebarCollapsed={setIsSidebarCollapsed}
-                    activeRoundTab={activeRoundTab}
-                    setActionRound={setActionRound}
-                    setIsEditRoundOpen={setIsEditRoundOpen}
-                    setIsResetRoundOpen={setIsResetRoundOpen}
-                />
+                <RoundsSidebar />
 
                 {/* Main Content: Round Details */}
                 <div className="flex-1 flex flex-col min-w-0 bg-black/5 overflow-hidden">
                     {selectedRound ? (
                         <>
-                            {/* Sticky Round Header */}
-                            <RoundHeader
-                                round={selectedRound}
-                                activeRoundTab={activeRoundTab}
-                                isSavingStatus={isSavingStatus}
-                                isCreatingSingleGroup={isCreatingSingleGroup}
-                                isCreatingGroups={isCreatingGroups}
-                                isMergingTeams={isMergingTeams}
-                                cooldown={cooldown}
-                                isCreateDisabled={isCreateDisabled}
-                                onComplete={() => handleCompleteRound(selectedRound)}
-                                onStart={() => {
-                                    setActionRound(selectedRound);
-                                    setIsCreateRoundOpen(true);
-                                }}
-                                onMergeTeams={() => setIsConfirmMergeOpen(true)}
-                                onCreateGroup={() => {
-                                    setSearch("");
-                                    setStatusFilter("");
-                                    setIsConfirmManualGroupOpen(true);
-                                }}
-                                onRefresh={() => handleRefresh([refetchRounds, refetchEvent], selectedRoundId || undefined)}
-                                onCreateGroups={() => setIsConfirmGroupsOpen(true)}
-                                search={search}
-                                setSearch={setSearch}
-                                statusFilter={statusFilter}
-                                setStatusFilter={setStatusFilter}
-                                sortBy={sortBy}
-                                setSortBy={setSortBy}
-                                onResetFilters={() => {
-                                    setSearch("");
-                                    setStatusFilter("");
-                                    setSortBy("matchTime-asc");
-                                }}
-                            />
+                            <RoundHeader />
 
-                            {/* Scrollable Groups Grid Area */}
-                            <div className="flex-1 py-2 overflow-y-auto custom-scrollbar">
+                            <div className="flex-1 py-2 overflow-y-auto scrollbar-hide">
                                 {!selectedRound.isPlaceholder ? (
-                                    <GroupsGrid
-                                        roundId={selectedRound._id}
-                                        eventId={eventId}
-                                        search={search}
-                                        statusFilter={statusFilter}
-                                        sortBy={sortBy}
-                                        onResetFilters={() => {
-                                            setSearch("");
-                                            setStatusFilter("");
-                                            setSortBy("matchTime-asc");
-                                        }}
-                                    />
+                                    <GroupsGrid />
                                 ) : (
-                                    <div className="flex flex-col items-center justify-center h-64 bg-white/5 border border-dashed border-white/10 rounded-2xl">
-                                        <Trophy className="w-12 h-12 text-gray-700 mb-4" />
-                                        <p className="text-gray-400">This round hasn't started yet.</p>
-                                        <p className="text-sm text-gray-500 mt-1">Complete the previous round to start this one from the roadmap.</p>
+                                    <div className="h-full flex items-center justify-center p-4">
+                                        <TournamentEmpty 
+                                            message="Round Not Ready"
+                                            subMessage={isMainRoadmap && hasMappings && selectedRound?.status === 'pending' ? 
+                                                "This round hasn't been initialized yet. You need to complete the previous round or manually merge teams." : 
+                                                "This round hasn't been initialized yet. You need to complete the previous round or manually merge teams."
+                                            }
+                                            icon={AlertTriangle}
+                                            className="w-full max-w-2xl bg-white/5 border-white/5 shadow-none py-12"
+                                        />
                                     </div>
                                 )}
                             </div>
                         </>
-
                     ) : (
-                        <div className="flex h-full items-center justify-center text-gray-500">
-                            Select a round to view details
-                        </div>
+                        <TournamentEmpty 
+                            message="Select a Round"
+                            subMessage="Choose a round from the sidebar to view matching groups and results."
+                            icon={PanelTopOpen}
+                            className="h-full bg-transparent border-none shadow-none"
+                        />
                     )}
                 </div>
             </div>
-
-            <RoundsManagerDialogs
-                eventId={eventId}
-                activeRoundTab={activeRoundTab}
-                actionRound={actionRound}
-                setActionRound={setActionRound}
-                isCreateRoundOpen={isCreateRoundOpen}
-                setIsCreateRoundOpen={setIsCreateRoundOpen}
-                isEditRoundOpen={isEditRoundOpen}
-                setIsEditRoundOpen={setIsEditRoundOpen}
-                isResetRoundOpen={isResetRoundOpen}
-                setIsResetRoundOpen={setIsResetRoundOpen}
-                isConfirmGroupsOpen={isConfirmGroupsOpen}
-                setIsConfirmGroupsOpen={setIsConfirmGroupsOpen}
-                isConfirmManualGroupOpen={isConfirmManualGroupOpen}
-                setIsConfirmManualGroupOpen={setIsConfirmManualGroupOpen}
-                isConfirmMergeOpen={isConfirmMergeOpen}
-                setIsConfirmMergeOpen={setIsConfirmMergeOpen}
-                selectedRound={selectedRound}
-                setSelectedRoundId={setSelectedRoundId}
-                teamPreview={teamPreview}
-                isCreatingGroups={isCreatingGroups}
-                isCreatingSingleGroup={isCreatingSingleGroup}
-                isMergingTeams={isMergingTeams}
-                handleCreateGroups={handleCreateGroups}
-                handleManualCreateGroup={handleManualCreateGroup}
-                handleMergeTeams={handleMergeTeams}
-            />
         </div>
     );
 };

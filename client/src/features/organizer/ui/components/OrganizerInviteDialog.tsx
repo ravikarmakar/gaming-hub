@@ -5,7 +5,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useInviteStaffMutation } from "../../hooks/useOrganizerMutations";
 import { useSearchAvailableUsersQuery } from "../../hooks/useOrganizerQueries";
 import { ORG_ROLE } from "@/features/organizer/lib/access";
-import { InviteDialog } from "@/components/shared/InviteDialog";
+import { InviteDialog } from "@/components/shared/dialogs/InviteDialog";
 
 interface OrganizerInviteDialogProps {
     open: boolean;

@@ -1,4 +1,4 @@
-import { CheckCircle2, Activity, Clock } from "lucide-react";
+import { CircleCheckBig as CircleCheck2, Activity, Clock } from "lucide-react";
 
 interface GroupStatusIndicatorProps {
     status: 'pending' | 'ongoing' | 'completed' | 'cancelled' | undefined;
@@ -9,7 +9,7 @@ export const GroupStatusIndicator = ({ status }: GroupStatusIndicatorProps) => {
         case 'completed':
             return (
                 <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-green-500/10 border border-green-500/20 rounded-full">
-                    <CheckCircle2 className="w-3 h-3 text-green-400" />
+                    <CircleCheck2 className="w-3 h-3 text-green-400" />
                     <span className="text-[9px] font-bold text-green-400 uppercase tracking-wider">Finished</span>
                 </div>
             );

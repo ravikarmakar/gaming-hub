@@ -1,14 +1,25 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useGetRoundsQuery, useGetTournamentDetailsQuery } from './useTournamentQueries';
+import { useMemo, useEffect } from 'react';
+import { useGetRoundsQuery } from './useTournamentQueries';
 import { useTournamentRoadmap } from './useTournamentRoadmap';
+import { useTournamentDashboard } from '../context/TournamentDashboardContext';
 
 export const useRoundsSidebar = (eventId: string) => {
-    const { data: rounds = [], isLoading, refetch: refetchRounds } = useGetRoundsQuery(eventId);
-    const { data: event, refetch: refetchEvent } = useGetTournamentDetailsQuery(eventId);
+    const { 
+        selectedRoundId, 
+        setSelectedRoundId, 
+        activeRoundTab,
+        activeTab,
+        eventDetails: event,
+        refetch: refetchEvent,
+        isSidebarCollapsed,
+        setIsSidebarCollapsed
+    } = useTournamentDashboard();
 
-    const [selectedRoundId, setSelectedRoundId] = useState<string | null>(null);
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [activeRoundTab, setActiveRoundTab] = useState<"tournament" | "invited-tournament" | "t1-special">("tournament");
+    const isRoundsNeeded = activeTab !== 'overview' && activeTab !== 'overview-v2' && activeTab !== 'settings' && activeTab !== 'teams';
+
+    const { data: rounds = [], isLoading, refetch: refetchRounds } = useGetRoundsQuery(eventId, {
+        enabled: isRoundsNeeded
+    });
 
     // Unified list of rounds and roadmap placeholders using shared hook
     const { roadmapItems } = useTournamentRoadmap(
@@ -22,13 +33,15 @@ export const useRoundsSidebar = (eventId: string) => {
     // Reset selection ONLY when tab changes to avoid stale data from previous tab
     useEffect(() => {
         if (roadmapItems.length > 0) {
-            // Either select the ongoing round or the first round in the current tab
-            const active = roadmapItems.find(item => item.status === 'ongoing') || roadmapItems[0];
-            setSelectedRoundId(active._id || null);
-        } else {
-            setSelectedRoundId(null);
+            // Check if current selection is still valid in new tab
+            const stillValid = roadmapItems.find(item => item._id === selectedRoundId);
+            if (!stillValid) {
+                // If not valid, select the ongoing round or the first round in the current tab
+                const active = roadmapItems.find(item => item.status === 'ongoing') || roadmapItems[0];
+                setSelectedRoundId(active._id || null);
+            }
         }
-    }, [activeRoundTab]); // ONLY depend on activeRoundTab to reset when switching tabs
+    }, [activeRoundTab, roadmapItems.length]); // Depend on tab change and roadmap availability
 
     // Derive selected round
     const selectedRound = useMemo(() => {
@@ -36,7 +49,7 @@ export const useRoundsSidebar = (eventId: string) => {
         return roadmapItems.find(item => item._id === selectedRoundId) || null;
     }, [roadmapItems, selectedRoundId]);
 
-    // Auto-select logic
+    // Auto-select logic for initial load if nothing selected
     useEffect(() => {
         if (roadmapItems.length > 0 && !selectedRoundId) {
             const active = roadmapItems.find(item => item.status === 'ongoing') || roadmapItems[0];
@@ -80,7 +93,7 @@ export const useRoundsSidebar = (eventId: string) => {
         const isReady = unreadySources.length === 0;
         
         const hasPending = sources.some((s: any) => s.hasTeamsToMerge);
-
+        
         return {
             label: mainLabel,
             count: mainCount,
@@ -107,9 +120,8 @@ export const useRoundsSidebar = (eventId: string) => {
         setSelectedRoundId,
         selectedRound,
         isSidebarCollapsed,
-        setIsSidebarCollapsed,
+        setIsSidebarCollapsed, // Still returning for interface consistency
         activeRoundTab,
-        setActiveRoundTab,
         filteredSidebarItems,
         teamPreview,
         isCreateDisabled

@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { MessageSquare, UserPlus, CheckCircle2 } from "lucide-react";
+import { MessageSquare, UserPlus, CircleCheckBig as CircleCheck2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,7 +52,7 @@ export const GroupCard = memo(({ group, roundMatches, onSelect, onEdit, onDelete
                     />
                     {group.status === 'completed' && (
                         <div className="bg-green-500/10 p-1 rounded-full border border-green-500/20 mr-1">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                            <CircleCheck2 className="w-3.5 h-3.5 text-green-500" />
                         </div>
                     )}
                 </div>

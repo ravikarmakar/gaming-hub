@@ -2,7 +2,7 @@ import { useLocation, Link } from "react-router-dom";
 import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/lib/routes";
-import ProfileMenu from "@/components/shared/ProfileMenu";
+import ProfileMenu from "@/components/shared/layout/ProfileMenu";
 import {
   Search,
   Slash,

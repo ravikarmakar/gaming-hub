@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ShieldCheck, Users, BarChart3, XCircle, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, Users, BarChart3, CircleX as XCircle, CircleCheckBig } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -106,7 +106,7 @@ export const WhyChooseUsSection = () => {
                             <div className={cn("relative p-6 lg:p-8", item.bgGlow)}>
                                 <div className="flex items-start gap-3 mb-6">
                                     <div className={cn("w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center flex-shrink-0 mt-0.5", item.accentFrom, item.accentTo)}>
-                                        <CheckCircle2 className="w-4 h-4 text-white" />
+                                        <CircleCheckBig className="w-4 h-4 text-white" />
                                     </div>
                                     <div>
                                         <h4 className="text-lg font-black text-white mb-1">{item.solution}</h4>

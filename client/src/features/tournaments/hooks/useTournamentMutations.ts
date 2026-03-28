@@ -3,6 +3,7 @@ import { handleApiError } from '@/lib/api-helper';
 import { tournamentKeys } from './useTournamentQueries';
 import toast from 'react-hot-toast'; // Assuming toast is used for error/success reporting in UI normally handled by components, but we'll return promises so components can handle it
 import { tournamentApi } from '../api/tournamentApi';
+import { Tournament } from '../types';
 
 // TOURNAMENT MUTATIONS
 export const useCreateTournamentMutation = () => {
@@ -102,7 +103,6 @@ export const useUpdateRoundMutation = () => {
     return useMutation({
         mutationFn: tournamentApi.updateRound,
         onSuccess: (_, variables) => {
-            queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.details(variables.eventId) });
             queryClient.invalidateQueries({ queryKey: [...tournamentKeys.all, 'leaderboard'] });
             queryClient.invalidateQueries({ queryKey: [...tournamentKeys.all, 'groups'] });
@@ -232,12 +232,12 @@ export const useUpdateTeamScoreMutation = () => {
             await queryClient.cancelQueries({ queryKey: tournamentKeys.leaderboard(groupId) });
             const previousLeaderboard = queryClient.getQueryData(tournamentKeys.leaderboard(groupId));
 
-            queryClient.setQueryData(tournamentKeys.leaderboard(groupId), (old: any) => {
+            queryClient.setQueryData(tournamentKeys.leaderboard(groupId), (old: { leaderboard?: Array<{ teamId: string | { _id: string } } & Record<string, unknown>> } | undefined) => {
                 if (!old) return old;
                 return {
                     ...old,
-                    leaderboard: old.leaderboard?.map((entry: any) =>
-                        entry.teamId?._id === teamId || entry.teamId === teamId
+                    leaderboard: old.leaderboard?.map((entry) =>
+                        (typeof entry.teamId === 'object' && entry.teamId !== null && '_id' in entry.teamId ? entry.teamId._id : entry.teamId) === teamId
                             ? { ...entry, ...stats }
                             : entry
                     )
@@ -281,13 +281,30 @@ export const useDeleteGroupMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: tournamentApi.deleteGroup,
-        onSuccess: (data, variables) => {
+        onSuccess: (data: { message?: string }, variables) => {
             toast.success(data.message || "Group deleted!");
             queryClient.invalidateQueries({ queryKey: [...tournamentKeys.all, 'groups'] });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
         },
-        onError: (error: any) => {
-            toast.error(error.response?.data?.message || "Failed to delete group");
+        onError: (err) => {
+            toast.error(handleApiError(err, "Failed to delete group"));
+        }
+    });
+};
+
+export const useResetGroupMutation = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: tournamentApi.resetGroup,
+        onSuccess: (data: { message?: string }, variables) => {
+            toast.success(data.message || "Group matches reset successfully!");
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.groupDetails(variables.groupId) });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.leaderboard(variables.groupId) });
+            queryClient.invalidateQueries({ queryKey: [...tournamentKeys.all, 'groups'] });
+            queryClient.invalidateQueries({ queryKey: tournamentKeys.rounds(variables.eventId) });
+        },
+        onError: (err) => {
+            toast.error(handleApiError(err, "Failed to reset group matches"));
         }
     });
 };
@@ -343,7 +360,7 @@ export const useMergeTeamsToGroupMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: tournamentApi.mergeTeamsToGroup,
-        onSuccess: (data, variables) => {
+        onSuccess: (data: { message?: string }, variables) => {
             queryClient.invalidateQueries({ queryKey: tournamentKeys.groupDetails(variables.groupId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.leaderboard(variables.groupId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
@@ -367,7 +384,7 @@ export const useLikeTournamentMutation = () => {
             const previousTournament = queryClient.getQueryData(tournamentKeys.details(eventId));
 
             // Optimistically update to the new value
-            queryClient.setQueryData(tournamentKeys.details(eventId), (old: any) => {
+            queryClient.setQueryData(tournamentKeys.details(eventId), (old: Tournament | undefined) => {
                 if (!old) return old;
                 // Since this is a toggle, we simulate the change
                 const isLiked = !old.isLiked;
@@ -390,7 +407,7 @@ export const useLikeTournamentMutation = () => {
         },
         onSuccess: (data, eventId) => {
             // Update the specific tournament details query cache with official data
-            queryClient.setQueryData(tournamentKeys.details(eventId), (oldData: any) => {
+            queryClient.setQueryData(tournamentKeys.details(eventId), (oldData: Tournament | undefined) => {
                 if (!oldData) return oldData;
                 return {
                     ...oldData,
@@ -410,7 +427,7 @@ export const useRegisterTournamentMutation = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: tournamentApi.registerTournament,
-        onSuccess: (data, eventId) => {
+        onSuccess: (data: { message?: string }, eventId: string) => {
             queryClient.invalidateQueries({ queryKey: [...tournamentKeys.all, 'registration-status', eventId] });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.details(eventId) });
             queryClient.invalidateQueries({ queryKey: tournamentKeys.all });

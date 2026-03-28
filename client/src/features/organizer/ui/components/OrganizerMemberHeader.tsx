@@ -1,4 +1,4 @@
-import { MemberListHeader } from "@/components/shared/MemberListHeader";
+import { MemberListHeader } from "@/components/shared/list/MemberListHeader";
 
 interface OrganizerMemberHeaderProps {
     memberCount: number;

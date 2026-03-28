@@ -1,6 +1,6 @@
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { tournamentApi } from '../api/tournamentApi';
-import { Tournament, Round, Group, Leaderboard } from '../types';
+import { Tournament, Round, Group, Leaderboard, TournamentListResponse } from '../types';
 
 const TOURNAMENT_QUERY_CONFIG = {
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -21,6 +21,12 @@ export const tournamentKeys = {
     invitedTeams: (eventId: string, search: string, type: 'infinite' | 'standard' = 'standard') => [...tournamentKeys.all, 'invited-teams', type, eventId, search] as const,
     t1SpecialTeams: (eventId: string, search: string, type: 'infinite' | 'standard' = 'standard') => [...tournamentKeys.all, 't1-special-teams', type, eventId, search] as const,
     registrationStatus: (eventId: string, teamId: string) => [...tournamentKeys.all, 'registration-status', eventId, teamId] as const,
+};
+
+// Helper to check if an ID is a valid backend ID (not a roadmap placeholder)
+const isValidId = (id: string | null | undefined): boolean => {
+    if (!id) return false;
+    return !id.startsWith('placeholder-');
 };
 
 // Queries
@@ -51,7 +57,7 @@ export const useGetGroupsQuery = (roundId: string, page = 1, limit = 20, search 
         ...options,
         queryKey: tournamentKeys.groups(roundId, page, limit, search, status, sortBy),
         queryFn: () => tournamentApi.getGroups({ roundId, page, limit, search, status, sortBy }),
-        enabled: (options.enabled ?? true) && !!roundId,
+        enabled: (options.enabled ?? true) && isValidId(roundId),
     });
 };
 
@@ -62,7 +68,7 @@ export const useGetGroupDetailsQuery = (groupId: string, options: any = {}) => {
         ...options,
         queryKey: tournamentKeys.groupDetails(groupId),
         queryFn: () => tournamentApi.getGroupDetails(groupId),
-        enabled: (options.enabled ?? true) && !!groupId,
+        enabled: (options.enabled ?? true) && isValidId(groupId),
     });
 };
 
@@ -73,7 +79,7 @@ export const useGetLeaderboardQuery = (groupId: string, options: any = {}) => {
         ...options,
         queryKey: tournamentKeys.leaderboard(groupId),
         queryFn: () => tournamentApi.getLeaderboard(groupId),
-        enabled: (options.enabled ?? true) && !!groupId,
+        enabled: (options.enabled ?? true) && isValidId(groupId),
     });
 };
 
@@ -105,6 +111,12 @@ export const useGetInfiniteRegisteredTeamsQuery = (eventId: string, search = "",
         queryFn: ({ pageParam = null }) => tournamentApi.getRegisteredTeams(eventId, { cursor: pageParam, limit: 20, search }),
         initialPageParam: null,
         getNextPageParam: (lastPage: any) => lastPage?.nextCursor,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+        staleTime: 1000 * 60 * 30, // 30 min
+        gcTime: 1000 * 60 * 60,    // 1 hour
+        placeholderData: keepPreviousData,
         enabled: (options.enabled ?? true) && !!eventId,
     });
 };
@@ -117,6 +129,12 @@ export const useGetInfiniteInvitedTeamsQuery = (eventId: string, search = "", op
         queryFn: ({ pageParam = null }) => tournamentApi.getInvitedTeams(eventId, { cursor: pageParam, limit: 20, search }),
         initialPageParam: null,
         getNextPageParam: (lastPage: any) => lastPage?.nextCursor,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+        staleTime: 1000 * 60 * 30, // 30 min
+        gcTime: 1000 * 60 * 60,    // 1 hour
+        placeholderData: keepPreviousData,
         enabled: (options.enabled ?? true) && !!eventId,
     });
 };
@@ -139,6 +157,12 @@ export const useGetInfiniteT1SpecialTeamsQuery = (eventId: string, search = "", 
         queryFn: ({ pageParam = null }) => tournamentApi.getT1SpecialTeams(eventId, { cursor: pageParam, limit: 20, search }),
         initialPageParam: null,
         getNextPageParam: (lastPage: any) => lastPage?.nextCursor,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+        staleTime: 1000 * 60 * 30, // 30 min
+        gcTime: 1000 * 60 * 60,    // 1 hour
+        placeholderData: keepPreviousData,
         enabled: (options.enabled ?? true) && !!eventId,
     });
 };
@@ -157,7 +181,7 @@ export const useGetT1SpecialTeamsQuery = (eventId: string, search = "", options:
 };
 
 export const useGetTournamentsQuery = (params: { search?: string; game?: string; category?: string; cursor?: string | null; limit?: number }, options: any = {}) => {
-    return useQuery({
+    return useQuery<TournamentListResponse>({
         ...TOURNAMENT_QUERY_CONFIG,
         ...options,
         queryKey: [...tournamentKeys.all, 'list', params],
@@ -167,14 +191,20 @@ export const useGetTournamentsQuery = (params: { search?: string; game?: string;
 };
 
 export const useGetInfiniteTournamentsQuery = (params: { search?: string; game?: string; category?: string; limit?: number }, options: any = {}) => {
-    return useInfiniteQuery({
+    return useInfiniteQuery<TournamentListResponse>({
         ...TOURNAMENT_QUERY_CONFIG,
         ...options,
         queryKey: [...tournamentKeys.all, 'infinite-list', params],
         queryFn: ({ pageParam = null }: { pageParam?: any }) => 
             tournamentApi.getTournaments({ ...params, cursor: pageParam }),
         initialPageParam: null,
-        getNextPageParam: (lastPage: any) => lastPage?.nextCursor,
+        getNextPageParam: (lastPage: any) => lastPage?.pagination?.nextCursor,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+        staleTime: 1000 * 60 * 30, // 30 min
+        gcTime: 1000 * 60 * 60,    // 1 hour
+        placeholderData: keepPreviousData,
         enabled: (options.enabled ?? true),
     });
 };

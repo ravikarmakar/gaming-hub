@@ -2,12 +2,17 @@ import { Trophy, AlertTriangle, RefreshCw } from "lucide-react";
 import { GroupLeaderboardTable } from "@/features/tournaments/ui/components/management/groups/GroupLeaderboardTable";
 import { useGetRoundsQuery, useGetGroupsQuery, useGetLeaderboardQuery } from "@/features/tournaments/hooks";
 import { Button } from "@/components/ui/button";
+import { useTournamentDashboard } from "@/features/tournaments/context/TournamentDashboardContext";
+import { TournamentLoading, TournamentEmpty } from "@/features/tournaments/ui/components";
 
-interface ResultsTabProps {
-    eventId: string;
-}
+/**
+ * ResultsTab displays the final standings for the tournament.
+ * Consumes TournamentDashboardContext for eventId.
+ */
+export function ResultsTab({ eventId: propEventId }: { eventId?: string; eventDetails?: any }) {
+    const context = useTournamentDashboard();
+    const eventId = propEventId || context.eventId;
 
-export function ResultsTab({ eventId }: ResultsTabProps) {
     const { 
         data: rounds = [], 
         isLoading: isRoundsLoading,
@@ -15,6 +20,7 @@ export function ResultsTab({ eventId }: ResultsTabProps) {
         refetch: refetchRounds
     } = useGetRoundsQuery(eventId);
     
+    // Results are typically based on the last round's final group
     const lastRound = rounds[rounds.length - 1];
 
     const { 
@@ -47,12 +53,7 @@ export function ResultsTab({ eventId }: ResultsTabProps) {
     };
 
     if (isLoading) {
-        return (
-            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-                <div className="w-10 h-10 border-2 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
-                <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">Reconstructing Standings...</p>
-            </div>
-        );
+        return <TournamentLoading text="Reconstructing Standings..." />;
     }
 
     if (isError) {
@@ -89,15 +90,11 @@ export function ResultsTab({ eventId }: ResultsTabProps) {
                     openMergeModal={() => { }}
                 />
             ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-white/5 rounded-3xl border border-dashed border-white/10 group">
-                    <div className="h-16 w-16 rounded-full bg-white/5 flex items-center justify-center text-gray-500 mb-2 group-hover:scale-110 transition-transform duration-500">
-                        <Trophy size={32} className="group-hover:text-amber-500/50 transition-colors" />
-                    </div>
-                    <div className="space-y-1">
-                        <h3 className="text-xl font-black text-white uppercase tracking-tight">Awaiting Finalization</h3>
-                        <p className="text-gray-500 max-w-sm text-xs font-medium leading-relaxed">Tournament results are being verified by the Arena Master. Final standings will be broadcasted shortly.</p>
-                    </div>
-                </div>
+                <TournamentEmpty 
+                    message="Awaiting Finalization"
+                    subMessage="Tournament results are being verified by the Arena Master. Final standings will be broadcasted shortly."
+                    icon={Trophy}
+                />
             )}
         </div>
     );

@@ -10,8 +10,12 @@ import { CustomError } from "../../shared/utils/CustomError.js";
  */
 export const getChatHistory = TryCatchHandler(async (req, res, next) => {
     const { targetId } = req.params;
-    const { scope = "team" } = req.query;
+    const { scope = "team", before } = req.query;
     const userId = req.user._id;
+
+    // Sanitize and validate limit (default 50, max 100, min 1)
+    const parsedLimit = parseInt(req.query.limit);
+    const limit = isNaN(parsedLimit) ? 50 : Math.min(Math.max(1, parsedLimit), 100);
 
     if (!["team", "organizer", "group"].includes(scope)) {
         return next(new CustomError("Invalid scope parameter", 400));
@@ -24,11 +28,15 @@ export const getChatHistory = TryCatchHandler(async (req, res, next) => {
     }
 
     // 2. Fetch history via service
-    const messages = await ChatService.getHistory(scope, targetId);
+    const messages = await ChatService.getHistory(scope, targetId, { 
+        limit, 
+        before 
+    });
 
     res.status(200).json({
         status: "success",
         data: messages.reverse(),
+        hasMore: messages.length === limit
     });
 });
 

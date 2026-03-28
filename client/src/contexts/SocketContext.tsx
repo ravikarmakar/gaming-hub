@@ -8,7 +8,7 @@ interface SocketContextType {
     isConnected: boolean;
 }
 
-const SocketContext = createContext<SocketContextType | undefined>(undefined);
+export const SocketContext = createContext<SocketContextType | undefined>(undefined);
 
 export const useSocket = () => {
     const context = useContext(SocketContext);
@@ -78,19 +78,16 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
 
         // Connection event handlers
         newSocket.on("connect", () => {
-            console.log("✅ Socket.IO connected:", newSocket.id);
             setIsConnected(true);
 
             // Failure Mode Scenario B: Resync state on reconnection to fix missed events
             if (hasConnected.current) {
-                console.log("🔄 Socket reconnected: invalidating queries to sync state");
                 queryClient.invalidateQueries({ refetchType: 'active' });
             }
             hasConnected.current = true;
         });
 
-        newSocket.on("disconnect", (reason) => {
-            console.log("❌ Socket.IO disconnected:", reason);
+        newSocket.on("disconnect", () => {
             setIsConnected(false);
         });
 
@@ -100,8 +97,7 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
         });
 
         // Global User Listeners — debounced to prevent thundering herd
-        newSocket.on("user:profile_updated", (data) => {
-            console.log("👤 Profile update received:", data);
+        newSocket.on("user:profile_updated", () => {
             debouncedCheckAuth();
         });
 

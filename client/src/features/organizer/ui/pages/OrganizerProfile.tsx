@@ -1,19 +1,21 @@
 import { useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
+import { Calendar, Info, MessageSquare, LucideIcon } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import LoadingSpinner from "@/components/LoadingSpinner";
 import { OrganizerProfileHeader } from "../components/profile/OrganizerProfileHeader";
 import { OrganizerEventsTab } from "../components/profile/OrganizerEventsTab";
 import { OrganizerAboutTab } from "../components/profile/OrganizerAboutTab";
-import { ProfileBannerLayout } from "@/components/shared/ProfileBannerLayout";
+import { ProfileBannerLayout } from "@/components/shared/profile/ProfileBannerLayout";
 import { useGetOrgByIdQuery } from "@/features/organizer/hooks/useOrganizerQueries";
 import { useGetOrgTournamentsQuery } from "@/features/tournaments/hooks/useTournamentQueries";
 import { skipToken } from "@tanstack/react-query";
 
 // Extracted sub-components
 import { ReviewsTab } from "../components/profile/ReviewsTab";
+import { ArenaLoading } from "@/components/shared/feedback/ArenaLoading";
 
 export const OrganizerProfile = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,65 +38,79 @@ export const OrganizerProfile = () => {
     following: 890,
   }), [orgEvents, currentOrg]);
 
-  const tabItems = useMemo(() => {
+  interface TabItem {
+    id: string;
+    label: string;
+    icon: LucideIcon;
+    content: React.ReactNode;
+  }
+
+  const tabItems = useMemo<TabItem[]>(() => {
     if (!currentOrg) return [];
 
     return [
       {
         id: "events",
         label: "Events",
+        icon: Calendar,
         content: <OrganizerEventsTab events={orgEvents || []} />,
       },
       {
         id: "about",
         label: "About",
+        icon: Info,
         content: <OrganizerAboutTab organizer={currentOrg} stats={stats} />,
       },
       {
         id: "reviews",
         label: "Reviews",
+        icon: MessageSquare,
         content: <ReviewsTab />,
       },
     ];
   }, [currentOrg, orgEvents, stats]);
 
   if (isOrgLoading || isEventsLoading || !currentOrg) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <LoadingSpinner />
-      </div>
-    );
+    return <ArenaLoading message="Synchronizing Organization Data..." />;
   }
 
   return (
-    <ProfileBannerLayout>
+    <ProfileBannerLayout bannerImage={currentOrg?.bannerUrl}>
       <OrganizerProfileHeader organizer={currentOrg} stats={stats} />
 
       {/* Navigation Tabs */}
-      <div className="relative z-10 mb-6 sm:mb-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="px-2 overflow-x-auto border-b border-white/10">
-            <TabsList className="h-auto p-0 bg-transparent gap-6">
+      <div className="pb-24">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-10">
+          <div className="flex items-center border-b border-white/5">
+            <TabsList className="bg-transparent h-auto p-0 flex space-x-4 sm:space-x-8 md:space-x-10">
               {tabItems.map((tab) => (
                 <TabsTrigger
                   key={tab.id}
                   value={tab.id}
-                  className="px-0 py-3 text-base bg-transparent border-b-2 border-transparent rounded-none shadow-none text-gray-400 hover:text-gray-300 data-[state=active]:border-purple-500 data-[state=active]:text-white data-[state=active]:bg-transparent data-[state=active]:shadow-none transition-colors"
+                  className="px-0 py-3 sm:py-4 bg-transparent border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent rounded-none text-zinc-400 data-[state=active]:text-white font-black uppercase text-[9px] sm:text-[11px] tracking-[1px] sm:tracking-[2px] transition-all"
                 >
-                  {tab.label}
+                  <div className="flex items-center space-x-1.5 sm:space-x-2">
+                    {tab.icon && <tab.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
+                    <span>{tab.label}</span>
+                  </div>
                 </TabsTrigger>
               ))}
             </TabsList>
           </div>
 
-          {/* Content */}
-          <div className="py-8">
-            {tabItems.map((tab) => (
-              <TabsContent key={tab.id} value={tab.id} className="mt-0 focus-visible:ring-0">
-                {tab.content}
-              </TabsContent>
-            ))}
-          </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              <div className="py-0">
+                {tabItems.find(tab => tab.id === activeTab)?.content}
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </Tabs>
       </div>
     </ProfileBannerLayout>

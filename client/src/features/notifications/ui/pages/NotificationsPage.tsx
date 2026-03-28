@@ -1,16 +1,32 @@
-import React, { useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Trash2, Loader2, Inbox } from "lucide-react";
-import { useNotificationStore } from "../../store/useNotificationStore";
+import React, { useMemo } from "react";
+import { motion } from "framer-motion";
+import { Bell, CheckCheck } from "lucide-react";
+import { useInfiniteNotificationsQuery, useUnreadCountQuery } from "../../hooks/useNotificationQueries";
+import { useMarkAllAsReadMutation } from "../../hooks/useNotificationMutations";
 import NotificationItem from "../components/NotificationItem";
 import { Button } from "@/components/ui/button";
+import { ResourceGrid } from "@/components/shared/list/ResourceGrid";
+import { EmptyState } from "@/components/shared/feedback/EmptyState";
 
 const NotificationsPage: React.FC = () => {
-    const { notifications, isLoading, unreadCount, fetchNotifications, markAllAsRead, pagination } = useNotificationStore();
+    const {
+        data: infiniteData,
+        isLoading: isQueryLoading,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage
+    } = useInfiniteNotificationsQuery();
 
-    useEffect(() => {
-        fetchNotifications();
-    }, [fetchNotifications]);
+    const { data: unreadCount = 0 } = useUnreadCountQuery();
+    const markAllAsReadMutation = useMarkAllAsReadMutation();
+
+    // Flatten notifications from all pages
+    const notifications = useMemo(() => {
+        return infiniteData?.pages.flatMap(page => page.notifications) || [];
+    }, [infiniteData]);
+
+    const isLoading = isQueryLoading && !notifications.length;
+    const isActionPending = markAllAsReadMutation.isPending;
 
     return (
         <div className="min-h-screen pt-24 pb-12 bg-brand-dark relative overflow-hidden">
@@ -22,8 +38,8 @@ const NotificationsPage: React.FC = () => {
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-                    <div className="flex flex-col gap-3">
+                <div className="flex md:flex-row md:items-end justify-between gap-6 mb-8">
+                    <div className="flex gap-3">
                         <motion.div
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
@@ -32,7 +48,6 @@ const NotificationsPage: React.FC = () => {
                             <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
                                 <Bell className="w-4 h-4 text-purple-400" />
                             </div>
-                            <span className="text-purple-400 font-bold tracking-[0.2em] text-[9px] uppercase opacity-70">Nexus Messaging</span>
                         </motion.div>
                         <motion.h1
                             initial={{ opacity: 0, x: -20 }}
@@ -53,60 +68,33 @@ const NotificationsPage: React.FC = () => {
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => markAllAsRead()}
-                            disabled={isLoading || unreadCount === 0}
-                            className="flex-1 sm:flex-none bg-white/[0.03] border-white/10 text-gray-400 hover:text-red-400 rounded-xl h-10 px-4 backdrop-blur-sm transition-all hover:bg-red-500/10 hover:border-red-500/20 text-xs font-bold"
+                            onClick={() => markAllAsReadMutation.mutate()}
+                            disabled={isActionPending || unreadCount === 0}
+                            className="bg-white/[0.03] border-white/10 text-gray-400 hover:text-purple-400 rounded-xl h-10 w-10 sm:w-auto px-0 sm:px-4 backdrop-blur-sm transition-all hover:bg-purple-500/10 hover:border-purple-500/20 text-xs font-bold flex items-center justify-center"
                         >
-                            <Trash2 className="w-3.5 h-3.5 mr-2" />
-                            Clear
+                            <CheckCheck className="w-3.5 h-3.5 sm:mr-2" />
+                            <span className="hidden sm:inline">Read</span>
                         </Button>
                     </motion.div>
                 </div>
 
-                {/* Notifications List */}
-                <div className="space-y-4">
-                    {isLoading && notifications.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20">
-                            <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-4" />
-                            <p className="text-purple-200/60 font-medium">Synchronizing signals...</p>
-                        </div>
-                    ) : notifications.length > 0 ? (
-                        <>
-                            <AnimatePresence mode="popLayout">
-                                {notifications.map((notification) => (
-                                    <NotificationItem key={notification._id} notification={notification} />
-                                ))}
-                            </AnimatePresence>
-
-                            {pagination.totalPages > pagination.currentPage && (
-                                <div className="flex justify-center mt-12">
-                                    <Button
-                                        variant="ghost"
-                                        onClick={() => fetchNotifications(pagination.currentPage + 1)}
-                                        disabled={isLoading}
-                                        className="text-purple-400 hover:text-white hover:bg-purple-500/10 px-8 h-12 rounded-xl border border-purple-500/20"
-                                    >
-                                        {isLoading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : "Load More"}
-                                    </Button>
-                                </div>
-                            )}
-                        </>
-                    ) : (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="flex flex-col items-center justify-center py-32 text-center"
-                        >
-                            <div className="w-24 h-24 rounded-full bg-white/[0.02] flex items-center justify-center mb-6">
-                                <Inbox className="w-12 h-12 text-gray-700" />
-                            </div>
-                            <h3 className="text-2xl font-bold text-white mb-2">Clean Slate</h3>
-                            <p className="text-gray-500 max-w-xs mx-auto">
-                                Your nexus is quiet for now. New invitations and alerts will appear here.
-                            </p>
-                        </motion.div>
+                {/* Notifications List via ResourceGrid */}
+                <ResourceGrid
+                    items={notifications}
+                    isLoading={isLoading}
+                    isEmpty={!isLoading && notifications.length === 0}
+                    hasMore={!!hasNextPage}
+                    onLoadMore={fetchNextPage}
+                    isFetchingMore={isFetchingNextPage}
+                    virtualize={true}
+                    columns={1}
+                    itemHeight={120} // Increased height for better content fit
+                    rowGap={10} // Increased gap for visual clarity
+                    emptyStateComponent={<EmptyState message="Clean Slate" subMessage="Your nexus is quiet for now. New invitations and alerts will appear here." />}
+                    renderItem={(notification) => (
+                        <NotificationItem key={notification._id} notification={notification} />
                     )}
-                </div>
+                />
             </div>
         </div>
     );

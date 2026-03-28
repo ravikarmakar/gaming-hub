@@ -1,30 +1,62 @@
-import { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useParams } from "react-router-dom";
-import { Award, BarChart3, Settings, Info } from "lucide-react";
+import { Award, BarChart3, Settings, Info, LucideIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { usePlayerStore } from "../../store/usePlayerStore";
-import { PlayerHeader } from "../components/PlayerHeader";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import { usePlayerByIdQuery } from "../../hooks/usePlayerQueries";
 import { PlayerOverview } from "../components/PlayerOverview";
 import { PlayerAchievements } from "../components/PlayerAchievements";
 import { PlayerStats } from "../components/PlayerStats";
 import { PlayerEquipment } from "../components/PlayerEquipment";
+import { User } from "@/features/auth/lib/types";
+import { ArenaLoading } from "@/components/shared/feedback/ArenaLoading";
+import { ProfileBannerLayout } from "@/components/shared/profile/ProfileBannerLayout";
+import { PlayerHeader } from "../components/PlayerHeader";
 
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import LoadingSpinner from "@/components/LoadingSpinner";
-import { ProfileBannerLayout } from "@/components/shared/ProfileBannerLayout";
+interface PlayerTab {
+  value: string;
+  label: string;
+  icon: LucideIcon;
+  component: React.FC<{ player: User }>;
+}
+
+const PLAYER_TABS: PlayerTab[] = [
+  {
+    value: "overview",
+    label: "Overview",
+    icon: Info,
+    component: PlayerOverview,
+  },
+  {
+    value: "stats",
+    label: "Stats",
+    icon: BarChart3,
+    component: PlayerStats,
+  },
+  {
+    value: "achievements",
+    label: "Achievements",
+    icon: Award,
+    component: PlayerAchievements,
+  },
+  {
+    value: "equipment",
+    label: "Equipment",
+    icon: Settings,
+    component: PlayerEquipment,
+  },
+];
 
 const PlayerIdPage = () => {
   const { id } = useParams();
-  const { fetchPlayerById, selectedPlayer, isLoading } = usePlayerStore();
-  const [activeTab, setActiveTab] = useState("overview");
-
-  useEffect(() => {
-    if (id) fetchPlayerById(id, true);
-  }, [id, fetchPlayerById]);
+  const { data, isLoading } = usePlayerByIdQuery(id || "");
+  const selectedPlayer = data?.player;
+  const [activeTab, setActiveTab] = useState(PLAYER_TABS[0].value);
 
   if (isLoading && !selectedPlayer) {
-    return <LoadingSpinner />;
+    return <ArenaLoading message="Accessing Player Data..." />;
   }
 
   if (!selectedPlayer) {
@@ -35,56 +67,30 @@ const PlayerIdPage = () => {
     );
   }
 
+  const ActiveComponent = PLAYER_TABS.find((tab) => tab.value === activeTab)?.component;
+
   return (
     <ProfileBannerLayout bannerImage={selectedPlayer.coverImage}>
       {/* Header Component */}
-      <PlayerHeader player={selectedPlayer} type="player" />
+      <PlayerHeader player={selectedPlayer} />
 
       {/* Tactical Interface (Tabs) */}
       <div className="pb-24">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="flex justify-center mb-10 overflow-x-auto pb-2 scrollbar-none">
-            <TabsList className="bg-white/[0.03] border border-white/10 p-1.5 rounded-2xl h-auto flex-nowrap shrink-0">
-              <TabsTrigger
-                value="overview"
-                className="px-6 py-2.5 rounded-xl data-[state=active]:bg-violet-600 data-[state=active]:text-white transition-all duration-300"
-              >
-                <div className="flex items-center gap-2">
-                  <Info className="w-4 h-4" />
-                  <span className="text-[10px] font-black tracking-widest hidden sm:inline">Tactical Overview</span>
-                  <span className="text-[10px] font-black tracking-widest sm:hidden">Overview</span>
-                </div>
-              </TabsTrigger>
-              <TabsTrigger
-                value="stats"
-                className="px-6 py-2.5 rounded-xl data-[state=active]:bg-violet-600 data-[state=active]:text-white transition-all duration-300"
-              >
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4" />
-                  <span className="text-[10px] font-black tracking-widest hidden sm:inline">Battle Stats</span>
-                  <span className="text-[10px] font-black tracking-widest sm:hidden">Stats</span>
-                </div>
-              </TabsTrigger>
-              <TabsTrigger
-                value="achievements"
-                className="px-6 py-2.5 rounded-xl data-[state=active]:bg-violet-600 data-[state=active]:text-white transition-all duration-300"
-              >
-                <div className="flex items-center gap-2">
-                  <Award className="w-4 h-4" />
-                  <span className="text-[10px] font-black tracking-widest hidden sm:inline">Commendations</span>
-                  <span className="text-[10px] font-black tracking-widest sm:hidden">Honors</span>
-                </div>
-              </TabsTrigger>
-              <TabsTrigger
-                value="equipment"
-                className="px-6 py-2.5 rounded-xl data-[state=active]:bg-violet-600 data-[state=active]:text-white transition-all duration-300"
-              >
-                <div className="flex items-center gap-2">
-                  <Settings className="w-4 h-4" />
-                  <span className="text-[10px] font-black tracking-widest hidden sm:inline">Gear Setup</span>
-                  <span className="text-[10px] font-black tracking-widest sm:hidden">Setup</span>
-                </div>
-              </TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-10">
+          <div className="flex items-center border-b border-white/5">
+            <TabsList className="bg-transparent h-auto p-0 flex space-x-4 sm:space-x-8 md:space-x-10">
+              {PLAYER_TABS.map((tab) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="px-0 py-3 sm:py-4 bg-transparent border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent rounded-none text-zinc-400 data-[state=active]:text-white font-black uppercase text-[9px] sm:text-[11px] tracking-[1px] sm:tracking-[2px] transition-all"
+                >
+                  <div className="flex items-center space-x-1.5 sm:space-x-2">
+                    <tab.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    <span>{tab.label}</span>
+                  </div>
+                </TabsTrigger>
+              ))}
             </TabsList>
           </div>
 
@@ -96,10 +102,7 @@ const PlayerIdPage = () => {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
             >
-              {activeTab === "overview" && <PlayerOverview player={selectedPlayer} />}
-              {activeTab === "stats" && <PlayerStats player={selectedPlayer} />}
-              {activeTab === "achievements" && <PlayerAchievements player={selectedPlayer} />}
-              {activeTab === "equipment" && <PlayerEquipment player={selectedPlayer} />}
+              {ActiveComponent && <ActiveComponent player={selectedPlayer} />}
             </motion.div>
           </AnimatePresence>
         </Tabs>

@@ -1,4 +1,4 @@
-import { Plus, RefreshCw, Loader2, Search, RotateCcw } from "lucide-react";
+import { Plus, RefreshCw, LoaderCircle as Loader2, Search, RotateCcw, CircleCheckBig as CircleCheck2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -11,56 +11,49 @@ import {
 } from "@/components/ui/select";
 import { RoundInfoTooltip } from "./RoundInfoTooltip";
 
-interface RoundHeaderProps {
-    round: any;
-    activeRoundTab: string;
-    isSavingStatus: boolean;
-    isCreatingSingleGroup: boolean;
-    isCreatingGroups: boolean;
-    isMergingTeams?: boolean;
-    cooldown: number;
-    isCreateDisabled: boolean;
-    onComplete: () => Promise<void>;
-    onStart: () => void;
-    onMergeTeams?: () => void;
-    onCreateGroup: () => void;
-    onRefresh: () => void;
-    onCreateGroups: () => void;
-    // Filter props (optional — header hides them for placeholder/completed rounds)
-    search?: string;
-    setSearch?: (v: string) => void;
-    statusFilter?: string;
-    setStatusFilter?: (v: string) => void;
-    sortBy?: string;
-    setSortBy?: (v: string) => void;
-    onResetFilters?: () => void;
-}
+import { useTournamentDashboard } from "@/features/tournaments/context/TournamentDashboardContext";
+import { useRoundsContext } from "@/features/tournaments/context/TournamentRoundsContext";
+import { useTournamentDialogs } from "@/features/tournaments/context/TournamentDialogContext";
 
-export const RoundHeader = ({
-    round,
-    activeRoundTab,
-    isCreatingSingleGroup,
-    isCreatingGroups,
-    isMergingTeams,
-    cooldown,
-    isCreateDisabled,
-    onStart,
-    onMergeTeams,
-    onCreateGroup,
-    onRefresh,
-    onCreateGroups,
-    search = "",
-    setSearch,
-    statusFilter = "",
-    setStatusFilter,
-    sortBy = "matchTime-asc",
-    setSortBy,
-    onResetFilters,
-}: RoundHeaderProps) => {
-    const hasMappings = round.mergeInfo?.hasInvitedMapping || round.mergeInfo?.hasT1Mapping;
+export const RoundHeader = () => {
+    const {
+        selectedRound,
+        isSavingStatus,
+        cooldown,
+        isCreateDisabled,
+        handleRefresh,
+        handleCompleteRound,
+    } = useRoundsContext();
+
+    const {
+        activeRoundTab,
+        search,
+        setSearch,
+        statusFilter,
+        setStatusFilter,
+        sortBy,
+        setSortBy,
+        onResetFilters
+    } = useTournamentDashboard();
+
+    // Use the specialized TournamentRound interface for better type safety
+    const round = selectedRound || null;
+
+    const onComplete = () => round && handleCompleteRound(round);
+    const onRefresh = () => handleRefresh();
+    const { openDialog, activeDialog } = useTournamentDialogs();
+    const onStart = () => round && openDialog('createRound', round);
+    
+    const isCreatingGroups = activeDialog === 'confirmGroups';
+    const isCreatingSingleGroup = activeDialog === 'confirmManual';
+    const isMergingTeams = activeDialog === 'mergeTeamsFromPrevious';
+
+    if (!round) return null;
+
+    const hasMappings = round?.mergeInfo?.hasInvitedMapping || round?.mergeInfo?.hasT1Mapping;
     const isMainRoadmap = activeRoundTab === 'tournament';
-    const showFilters = !round.isPlaceholder && !!setSearch;
-    const is18TeamLeague = round.roadmapData?.isLeague && round.roadmapData?.leagueType === '18-teams';
+    const showFilters = !round?.isPlaceholder && !!setSearch;
+    const is18TeamLeague = round?.roadmapData?.isLeague && round?.roadmapData?.leagueType === '18-teams';
 
     const statusOptions = [
         { value: "all", label: "All" },
@@ -83,7 +76,7 @@ export const RoundHeader = ({
             <div className="flex items-center gap-2 shrink-0 min-w-0 max-w-[220px]">
                 <div className="flex items-center gap-1.5 min-w-0">
                     <h2 className="text-sm font-black text-white uppercase tracking-tight leading-none truncate">
-                        {round.roundName?.replace(/Round \d+ - /, '')}
+                        {(round.roundName || '').replace(/Round \d+ - /, '')}
                     </h2>
                     {!round.isPlaceholder && <RoundInfoTooltip round={round} />}
                 </div>
@@ -100,7 +93,7 @@ export const RoundHeader = ({
                 </Badge>
                 {(round.roadmapData?.isLeague || round.roadmapData?.isFinale) && (round.roadmapData?.leagueType || round.roadmapData?.grandFinaleType) && (
                     <Badge variant="outline" className="shrink-0 text-[9px] h-4 px-1.5 font-black border-white/10 text-gray-400 uppercase tracking-tighter pointer-events-none bg-white/5">
-                        {(round.roadmapData?.leagueType || round.roadmapData?.grandFinaleType).replaceAll("-", " ")}
+                        {(round.roadmapData?.leagueType || round.roadmapData?.grandFinaleType || "").replaceAll("-", " ")}
                     </Badge>
                 )}
             </div>
@@ -171,7 +164,7 @@ export const RoundHeader = ({
                     </div>
                 )}
                 {/* Progress pill — hidden if round is completed or has no groups */}
-                {!round.isPlaceholder && round.status !== 'completed' && round.groups?.length > 0 && (
+                {!round.isPlaceholder && round.status !== 'completed' && (round.groups || []).length > 0 && (
                     <div className="flex items-center gap-2 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
                         <span className="text-[9px] text-gray-500 uppercase font-black tracking-widest hidden sm:inline">Progress</span>
                         <span className="text-xs font-black text-white">
@@ -195,7 +188,7 @@ export const RoundHeader = ({
                     </Button>
                 ) : (
                     <div className="flex items-center gap-1">
-                        {round.status === 'completed' && round.groups?.length > 0 ? (
+                        {round.status === 'completed' && (round.groups || []).length > 0 ? (
                             <div className="flex items-center gap-3 px-3 py-1 bg-white/[0.02] border border-white/5 rounded-xl">
                                 <div className="flex items-center gap-1.5">
                                     <p className="text-[9px] text-gray-500 uppercase font-black tracking-widest">Groups</p>
@@ -211,11 +204,11 @@ export const RoundHeader = ({
                             </div>
                         ) : (
                             <>
-                                {isMainRoadmap && hasMappings && round.status === 'pending' && (!round.groups || round.groups.length === 0) && (
+                                {isMainRoadmap && hasMappings && round.status === 'pending' && (round.groups || []).length === 0 && (
                                     <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => onMergeTeams?.()}
+                                        onClick={() => openDialog('mergeTeamsFromPrevious', round)}
                                         disabled={isMergingTeams}
                                         className="h-7 text-xs font-bold border-indigo-500/20 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 px-3"
                                     >
@@ -226,13 +219,7 @@ export const RoundHeader = ({
 
                                 <Button
                                     size="sm"
-                                    onClick={() => {
-                                        if (is18TeamLeague) {
-                                            onCreateGroup(); // This will trigger the dialog which then calls handleManualCreateGroup
-                                        } else {
-                                            onCreateGroup();
-                                        }
-                                    }}
+                                    onClick={() => openDialog('confirmManual', round)}
                                     disabled={isCreatingSingleGroup}
                                     title={is18TeamLeague ? "Create League Group" : "Create One Manual Group"}
                                     aria-label={is18TeamLeague ? "Create League Group" : "Create Manual Group"}
@@ -268,10 +255,10 @@ export const RoundHeader = ({
                                     )}
                                 </Button>
 
-                                {!is18TeamLeague && (!round.groups || round.groups.length === 0) && (
+                                {!is18TeamLeague && (round.groups || []).length === 0 && (
                                     <Button
                                         size="sm"
-                                        onClick={onCreateGroups}
+                                        onClick={() => openDialog('confirmGroups', round)}
                                         disabled={isCreatingGroups}
                                         className={`h-7 text-xs font-bold ${activeRoundTab === 'invited-tournament' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-purple-600 hover:bg-purple-700'} text-white px-3`}
                                     >
@@ -281,6 +268,18 @@ export const RoundHeader = ({
                                             <Plus className="w-3.5 h-3.5 mr-1.5" />
                                         )}
                                         Create Groups
+                                    </Button>
+                                )}
+
+                                {round.status === 'ongoing' && (round.groups || []).length > 0 && (round.groups || []).every((g: any) => g.status === 'completed') && (
+                                    <Button
+                                        size="sm"
+                                        onClick={onComplete}
+                                        disabled={isSavingStatus}
+                                        className="h-7 text-xs font-bold bg-green-600 hover:bg-green-700 text-white px-3"
+                                    >
+                                        {isSavingStatus ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <CircleCheck2 className="w-3.5 h-3.5 mr-1.5" />}
+                                        Complete Round
                                     </Button>
                                 )}
                             </>

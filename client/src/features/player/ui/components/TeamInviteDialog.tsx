@@ -9,10 +9,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useJoinRequestStore } from "@/features/teams/store/useJoinRequestStore";
-import { useTeamManagementStore } from "@/features/teams/store/useTeamManagementStore";
+import { useInviteMemberMutation } from "@/features/teams/hooks/useTeamMutations";
+import { useAuthStore } from "@/features/auth/store/useAuthStore";
 import toast from "react-hot-toast";
-import { Loader2, Send } from "lucide-react";
+import { LoaderCircle as Loader2, Send } from "lucide-react";
 
 interface TeamInviteDialogProps {
     open: boolean;
@@ -28,22 +28,27 @@ export const TeamInviteDialog: React.FC<TeamInviteDialogProps> = ({
     playerName,
 }) => {
     const [message, setMessage] = useState("");
-    const { inviteMember, isLoading } = useJoinRequestStore();
-    const { currentTeam } = useTeamManagementStore();
+    const { user } = useAuthStore();
+    const teamId = typeof user?.teamId === 'string' ? user.teamId : user?.teamId?._id;
+    const inviteMutation = useInviteMemberMutation();
+    const isLoading = inviteMutation.isPending;
 
     const handleInvite = async () => {
-        if (!currentTeam) {
+        if (!teamId) {
             toast.error("You must have an active team selected to send invites.");
             return;
         }
-        const result = await inviteMember(playerId, currentTeam._id, message);
-        if (result.success) {
-            toast.success(result.message || `Invitation sent to ${playerName}`);
-            onOpenChange(false);
-            setMessage("");
-        } else {
-            toast.error(result.message || "Failed to send invitation");
-        }
+
+        inviteMutation.mutate({ teamId, playerId, message }, {
+            onSuccess: (data) => {
+                toast.success(data.message || `Invitation sent to ${playerName}`);
+                onOpenChange(false);
+                setMessage("");
+            },
+            onError: (error: any) => {
+                toast.error(error.response?.data?.message || "Failed to send invitation");
+            }
+        });
     };
 
     return (

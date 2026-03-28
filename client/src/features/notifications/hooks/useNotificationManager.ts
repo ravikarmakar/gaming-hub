@@ -1,29 +1,24 @@
-import { useEffect, useRef } from "react";
-import { useAuthStore } from "@/features/auth/store/useAuthStore";
-import { useNotificationStore } from "@/features/notifications/store/useNotificationStore";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSocketEvent } from "@/hooks/useSocket";
+import { useUnreadCountQuery } from "@/features/notifications/hooks/useNotificationQueries";
+import { NOTIFICATIONS_KEYS } from "./notificationKeys";
 
 export const useNotificationManager = () => {
-    const { user } = useAuthStore();
-    const { fetchNotifications, unreadCount } = useNotificationStore();
-    const hasFetched = useRef(false);
+    const queryClient = useQueryClient();
+    const { data: unreadCount = 0 } = useUnreadCountQuery();
 
-    useEffect(() => {
-        // Reset fetch state when user changes (login/logout)
-        if (!user) {
-            hasFetched.current = false;
-            return;
-        }
+    // Listen for real-time notification updates
+    useSocketEvent("notification:new", () => {
+        // Invalidate all notification related queries to get fresh data
+        queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEYS.all });
+    });
 
-        const platformNotificationsEnabled = user.settings?.notifications?.platform !== false;
+    useSocketEvent("notification:updated", () => {
+        queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEYS.all });
+    });
 
-        if (user && !hasFetched.current) {
-            if (platformNotificationsEnabled) {
-                // Always fetch on mount if enabled, regardless of unreadCount (which starts at 0)
-                fetchNotifications();
-            }
-            hasFetched.current = true;
-        }
-    }, [user, fetchNotifications]);
+    // useNotificationManager facilitates real-time unread count updates
+    // across the application via WebSocket events and the TanStack Query cache.
 
     return {
         unreadCount,

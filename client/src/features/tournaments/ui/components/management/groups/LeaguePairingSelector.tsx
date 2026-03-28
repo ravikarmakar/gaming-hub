@@ -1,13 +1,13 @@
 import { Swords } from "lucide-react";
+import { LeaguePairingType } from "@/features/tournaments/types";
+import { PAIRING_CONFIG } from "@/features/tournaments/lib/constants";
 
 interface LeaguePairingSelectorProps {
-    selectedPairing: 'AxB' | 'BxC' | 'AxC' | null | undefined;
-    onPairingChange: (pairing: 'AxB' | 'BxC' | 'AxC' | null) => void;
+    selectedPairing: LeaguePairingType | null | undefined;
+    onPairingChange: (pairing: LeaguePairingType | null) => void;
     pairingMatches: Record<string, number> | undefined;
     effectiveTotalMatch: number;
 }
-
-import { PAIRING_CONFIG } from "@/features/tournaments/lib/constants";
 
 export const LeaguePairingSelector = ({
     selectedPairing,

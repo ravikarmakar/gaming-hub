@@ -1,9 +1,8 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Search, ExternalLink, Loader2, ShieldAlert } from "lucide-react";
+import { Users, Search, ExternalLink } from "lucide-react";
 import debounce from "lodash.debounce";
 import { useInView } from "react-intersection-observer";
-import { AutoSizer as _AutoSizer } from "react-virtualized-auto-sizer";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,26 +10,32 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 
-import { useGetInfiniteRegisteredTeamsQuery, useGetInfiniteInvitedTeamsQuery, useGetInfiniteT1SpecialTeamsQuery, useGetTournamentDetailsQuery } from "@/features/tournaments/hooks/useTournamentQueries";
+import { useGetInfiniteRegisteredTeamsQuery, useGetInfiniteInvitedTeamsQuery, useGetInfiniteT1SpecialTeamsQuery } from "@/features/tournaments/hooks/useTournamentQueries";
+import { useTournamentDashboard } from "@/features/tournaments/context/TournamentDashboardContext";
+import { TournamentLoading, TournamentEmpty } from "@/features/tournaments/ui/components";
 
 interface RegisteredTeamsListProps {
-    eventId: string;
+    eventId?: string;
+    eventDetails?: any;
     showSearch?: boolean;
     showStats?: boolean;
-    eventDetails?: any;
 }
 
+/**
+ * RegisteredTeamsList displays the teams registered, invited, or special for a tournament.
+ * Consumes TournamentDashboardContext for eventId and eventDetails.
+ */
 export const RegisteredTeamsList = ({
-    eventId,
+    eventId: propEventId,
+    eventDetails: propEventDetails,
     showSearch = true,
-    showStats = true,
-    eventDetails: propEvent
+    showStats = true
 }: RegisteredTeamsListProps) => {
+    const context = useTournamentDashboard();
+    const eventId = propEventId || context.eventId;
+    const event = propEventDetails || context.eventDetails;
     const navigate = useNavigate();
-    const { data: fetchedEvent } = useGetTournamentDetailsQuery(eventId, {
-        enabled: !propEvent
-    });
-    const event = propEvent || fetchedEvent;
+
     const [activeTab, setActiveTab] = useState<"registered" | "invited" | "t1-special">("registered");
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -121,9 +126,9 @@ export const RegisteredTeamsList = ({
                             {showStats && (
                                 <div className="flex items-center gap-2 px-0 h-10 bg-transparent text-[10px] font-black text-gray-400 uppercase tracking-widest">
                                     <Users className="w-3.5 h-3.5 text-purple-400" />
-                                    {debouncedSearch ? "Matches: " : "Total Teams: "} 
-                                    {debouncedSearch 
-                                        ? allTeams.length 
+                                    {debouncedSearch ? "Matches: " : "Total Teams: "}
+                                    {debouncedSearch
+                                        ? allTeams.length
                                         : (
                                             activeTab === "registered"
                                                 ? (event?.joinedSlots || 0)
@@ -141,10 +146,7 @@ export const RegisteredTeamsList = ({
 
             <div className="flex-1 min-h-0 bg-transparent w-full relative">
                 {activeQuery.isLoading ? (
-                    <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
-                        <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-4" />
-                        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Assembling Squads...</p>
-                    </div>
+                    <TournamentLoading text="Assembling Squads..." />
                 ) : allTeams.length > 0 ? (
                     <div className="absolute inset-0 overflow-y-auto p-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -178,28 +180,15 @@ export const RegisteredTeamsList = ({
                         <div ref={ref} className="h-10" />
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center min-h-[500px] text-center p-8">
-                        <div className="relative mb-8">
-                            <div className="h-24 w-24 rounded-[2rem] bg-white/5 border border-white/10 flex items-center justify-center">
-                                <Users className="w-10 h-10 text-gray-600" />
-                            </div>
-                            <div className="absolute -top-2 -right-2 h-10 w-10 rounded-2xl bg-rose-500 border border-white/20 flex items-center justify-center shadow-lg shadow-rose-500/40">
-                                <ShieldAlert className="w-5 h-5 text-white" />
-                            </div>
-                        </div>
-
-                        <h3 className="text-2xl font-black text-white mb-3 tracking-tight uppercase">
-                            No Teams <span className="text-rose-500">Found</span>
-                        </h3>
-                    </div>
+                    <TournamentEmpty 
+                        message="No Teams Found" 
+                        icon={Users}
+                    />
                 )}
             </div>
 
             {activeQuery.isFetchingNextPage && (
-                <div className="py-4 flex justify-center bg-transparent border-t border-white/5">
-                    <Loader2 className="w-5 h-5 text-purple-500 animate-spin mr-2" />
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Loading more...</span>
-                </div>
+                <TournamentLoading variant="inline" text="Loading more..." />
             )}
         </div>
     );

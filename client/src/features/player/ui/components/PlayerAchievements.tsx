@@ -1,5 +1,5 @@
 import React from "react";
-import { Award, Zap, Flame, Crown, CheckCircle2, Lock, Medal } from "lucide-react";
+import { Award, Zap, Flame, Crown, CircleCheckBig as CircleCheck2, Lock, Medal } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
@@ -68,7 +68,7 @@ const AchievementCard: React.FC<{ achievement: any, index: number }> = ({ achiev
                 </h4>
                 <div className="flex items-center gap-2">
                   <span className={`text-[9px] font-black tracking-[0.3em] ${config.text}`}>{achievement.rarity} Commendation</span>
-                  {isUnlocked && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
+                  {isUnlocked && <CircleCheck2 className="w-3 h-3 text-emerald-500" />}
                 </div>
               </div>
               {isUnlocked && (

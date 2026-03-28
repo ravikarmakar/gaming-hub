@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Loader2, ChevronRight, FileText, Map as MapIcon } from "lucide-react";
+import { ChevronLeft, LoaderCircle as Loader2, ChevronRight, FileText, Map as MapIcon } from "lucide-react";
 import { FormProvider } from "react-hook-form";
 import { motion } from "framer-motion";
 

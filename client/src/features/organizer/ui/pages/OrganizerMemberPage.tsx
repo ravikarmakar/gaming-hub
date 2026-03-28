@@ -14,7 +14,7 @@ import { OrganizerMemberList } from "../components/OrganizerMemberList";
 import { ORG_ACTIONS, ORG_ACTIONS_ACCESS } from "../../lib/access";
 import { PLAYER_ROUTES } from "@/features/player/lib/routes";
 
-import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import { ConfirmActionDialog } from "@/components/shared/dialogs/ConfirmActionDialog";
 import { ErrorFallback } from "@/components/ErrorFallback";
 import { OrganizerError } from "../components/OrganizerError";
 

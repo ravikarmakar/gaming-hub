@@ -210,7 +210,7 @@ const HeroSection = () => {
               onClick={handleEnterArena}
               className="w-full sm:w-auto h-14 px-10 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-base 
                          hover:from-purple-500 hover:to-indigo-500 transition-all duration-300 
-                         animate-pulse-glow transform hover:-translate-y-1 hover:scale-[1.02] active:translate-y-0 active:scale-100"
+                         transform hover:-translate-y-1 hover:scale-[1.02] active:translate-y-0 active:scale-100"
             >
               ENTER THE ARENA
               <ArrowRight className="w-5 h-5 ml-2" />

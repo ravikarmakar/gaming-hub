@@ -1,86 +1,83 @@
-import React from 'react';
-import { RefreshCw, AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ConfirmActionDialog } from "@/components/shared/ConfirmActionDialog";
+import React from "react";
 import { CreateRoundDialog } from "./rounds/CreateRoundDialog";
-import { ResetRoundDialog } from "./rounds/ResetRoundDialog";
 import { EditRoundDialog } from "./rounds/EditRoundDialog";
-import { Round, RoundTabType } from "@/features/tournaments/types";
+import { ResetRoundDialog } from "./rounds/ResetRoundDialog";
+import { DeleteRoundDialog } from "./rounds/DeleteRoundDialog";
+import { RoundInfoDialog } from "./rounds/RoundInfoDialog";
+import { Round } from "@/features/tournaments/types";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { LoaderCircle as Loader2, AlertTriangle } from "lucide-react";
 
-interface RoundsManagerDialogsProps {
-    eventId: string;
-    activeRoundTab: RoundTabType;
-    actionRound: Round | null;
-    setActionRound: (round: Round | null) => void;
-    isCreateRoundOpen: boolean;
-    setIsCreateRoundOpen: (open: boolean) => void;
-    isEditRoundOpen: boolean;
-    setIsEditRoundOpen: (open: boolean) => void;
-    isResetRoundOpen: boolean;
-    setIsResetRoundOpen: (open: boolean) => void;
-    isConfirmGroupsOpen: boolean;
-    setIsConfirmGroupsOpen: (open: boolean) => void;
-    isConfirmManualGroupOpen: boolean;
-    setIsConfirmManualGroupOpen: (open: boolean) => void;
-    isConfirmMergeOpen: boolean;
-    setIsConfirmMergeOpen: (open: boolean) => void;
-    selectedRound: Round | null;
-    setSelectedRoundId: (id: string) => void;
-    teamPreview: any;
-    isCreatingGroups: boolean;
-    isCreatingSingleGroup: boolean;
-    isMergingTeams: boolean;
-    handleCreateGroups: (roundId: string) => Promise<void>;
-    handleManualCreateGroup: (roundId: string, groupType?: string, groupSize?: number) => Promise<void>;
-    handleMergeTeams: (roundId: string) => Promise<void>;
-}
+import { useTournamentDialogs } from "@/features/tournaments/context/TournamentDialogContext";
+import { useRoundsContext } from "@/features/tournaments/context/TournamentRoundsContext";
 
-export const RoundsManagerDialogs: React.FC<RoundsManagerDialogsProps> = ({
-    eventId,
-    activeRoundTab,
-    actionRound,
-    setActionRound,
-    isCreateRoundOpen,
-    setIsCreateRoundOpen,
-    isEditRoundOpen,
-    setIsEditRoundOpen,
-    isResetRoundOpen,
-    setIsResetRoundOpen,
-    isConfirmGroupsOpen,
-    setIsConfirmGroupsOpen,
-    isConfirmManualGroupOpen,
-    setIsConfirmManualGroupOpen,
-    isConfirmMergeOpen,
-    setIsConfirmMergeOpen,
-    selectedRound,
-    setSelectedRoundId,
-    teamPreview,
-    isCreatingGroups,
-    isCreatingSingleGroup,
-    isMergingTeams,
-    handleCreateGroups,
-    handleManualCreateGroup,
-    handleMergeTeams,
-}) => {
+/**
+ * A wrapper for all round-level management dialogs.
+ * This helps keep the TournamentDialogOrchestrator clean.
+ */
+export const RoundsManagerDialogs: React.FC = () => {
+    const { 
+        isOpen, 
+        dialogData, 
+        closeDialog 
+    } = useTournamentDialogs();
+
+    const {
+        eventId,
+        selectedRound,
+        handleCreateGroups,
+        handleManualCreateGroup,
+        handleMergeTeams,
+    } = useRoundsContext();
+
+    // Mapping new context actions and data to existing dialog names/props
+    const isCreateRoundOpen = isOpen('createRound');
+    const isEditRoundOpen = isOpen('editRound');
+    const isResetRoundOpen = isOpen('resetRound');
+    const isDeleteRoundOpen = isOpen('deleteRound');
+    const isRoundInfoOpen = isOpen('roundInfo');
+    const isConfirmGroupsOpen = isOpen('confirmGroups');
+    const isConfirmManualGroupOpen = isOpen('confirmManual');
+    const isConfirmMergeOpen = isOpen('mergeTeamsFromPrevious');
+
+    const setIsCreateRoundOpen = (open: boolean) => !open && closeDialog();
+    const setIsEditRoundOpen = (open: boolean) => !open && closeDialog();
+    const setIsResetRoundOpen = (open: boolean) => !open && closeDialog();
+    const setIsDeleteRoundOpen = (open: boolean) => !open && closeDialog();
+    const setIsRoundInfoOpen = (open: boolean) => !open && closeDialog();
+    const setIsConfirmGroupsOpen = (open: boolean) => !open && closeDialog();
+    const setIsConfirmManualGroupOpen = (open: boolean) => !open && closeDialog();
+    const setIsConfirmMergeOpen = (open: boolean) => !open && closeDialog();
+
+    // Use dialogData or fallback to selectedRound
+    const actionRound = (dialogData as Round) || selectedRound;
+    
+    // Check pending states from dialog metadata or context if available
+    // For now, we'll keep it simple as these are usually managed in the context we just created.
+    // However, the context needs to provide these creating/merging states too if not already there.
     return (
         <>
+            {/* 1. Standard Round Dialogs */}
             <CreateRoundDialog
+                eventId={eventId}
                 open={isCreateRoundOpen}
                 onOpenChange={setIsCreateRoundOpen}
-                eventId={eventId}
-                type={activeRoundTab}
-                roadmapIndex={actionRound?.roadmapIndex}
-                initialName={actionRound?.roundName}
-                onSuccess={setSelectedRoundId}
+                type="tournament" // Default to standard tournament round
             />
-            
-            {actionRound && !actionRound.isPlaceholder && (
+
+            {actionRound && (
                 <>
                     <EditRoundDialog
-                        open={isEditRoundOpen}
-                        onOpenChange={setIsEditRoundOpen}
-                        roundId={actionRound._id}
                         eventId={eventId}
+                        roundId={actionRound._id}
                         initialName={actionRound.roundName}
                         initialQualifyingTeams={actionRound.qualifyingTeams}
                         initialMatchesPerGroup={actionRound.matchesPerGroup}
@@ -90,191 +87,114 @@ export const RoundsManagerDialogs: React.FC<RoundsManagerDialogsProps> = ({
                         initialGapMinutes={actionRound.gapMinutes}
                         initialGroupSize={actionRound.groupSize}
                         initialIsLeague={actionRound.isLeague}
-                        initialLeaguePairingType={actionRound.leaguePairingType}
+                        open={isEditRoundOpen}
+                        onOpenChange={setIsEditRoundOpen}
                     />
+
                     <ResetRoundDialog
+                        eventId={eventId}
+                        roundId={actionRound._id}
+                        roundName={actionRound.roundName}
                         open={isResetRoundOpen}
                         onOpenChange={setIsResetRoundOpen}
-                        roundId={actionRound._id}
+                    />
+
+                    <DeleteRoundDialog
                         eventId={eventId}
+                        roundId={actionRound._id}
                         roundName={actionRound.roundName}
-                        onReset={() => {
-                            setSelectedRoundId(actionRound._id);
-                            setActionRound(null);
-                        }}
+                        open={isDeleteRoundOpen}
+                        onOpenChange={setIsDeleteRoundOpen}
+                    />
+
+                    <RoundInfoDialog
+                        round={actionRound}
+                        open={isRoundInfoOpen}
+                        onOpenChange={setIsRoundInfoOpen}
                     />
                 </>
             )}
 
+            {/* 2. Generic Confirmations for intensive operations */}
             <ConfirmActionDialog
-                open={isConfirmGroupsOpen}
+                title="Auto-Generate Groups"
+                description="This will automatically distribute all checked-in teams into groups based on the round configuration. Existing groups in this round will be overwritten."
+                isOpen={isConfirmGroupsOpen}
                 onOpenChange={setIsConfirmGroupsOpen}
-                title="Generate Groups?"
-                description={
-                    <div className="space-y-4">
-                        <p>This will automatically generate groups for <strong className="text-white">{selectedRound?.roundName}</strong> based on the available team data.</p>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            {teamPreview && (
-                                <div className="bg-white/5 border border-white/10 rounded-lg p-3">
-                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">
-                                        {(teamPreview as any).mainLabel}
-                                    </p>
-                                    <p className="text-xl font-black text-purple-400">
-                                        {(teamPreview as any).mainCount ?? (teamPreview as any).count}
-                                    </p>
-                                </div>
-                            )}
-
-                            {(teamPreview as any)?.invitedCount > 0 && (teamPreview as any).sources.map((source: any, idx: number) => (
-                                <div key={idx} className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex flex-col justify-center">
-                                    <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-1">
-                                        Qualified from {source.sourceRoundName || source.name}
-                                    </p>
-                                    <div className="flex items-baseline gap-2">
-                                        <p className="text-xl font-black text-blue-400">{source.mergedCount || 0}</p>
-                                        {source.pendingCount > 0 && (
-                                            <p className="text-[10px] text-amber-500 font-bold">
-                                                +{source.pendingCount} Pending
-                                            </p>
-                                        )}
-                                    </div>
-                                    <p className="text-[9px] text-blue-500/60 font-medium truncate italic">
-                                        {source.name}
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-
-                        {teamPreview && ((teamPreview as any).totalCount || (teamPreview as any).mainCount) && (
-                            <div className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-white/10 rounded-lg p-3 flex items-center justify-between">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">Total Participating Teams</span>
-                                <span className="text-xl font-black text-white">{(teamPreview as any)?.totalCount || (teamPreview as any)?.mainCount} Teams</span>
-                            </div>
-                        )}
-
-                        {teamPreview && (teamPreview as any).hasPending && (
-                            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-4 space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex flex-col">
-                                        <span className="text-indigo-400 text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                                            <RefreshCw className="w-3 h-3" />
-                                            Merge Roadmap Teams
-                                        </span>
-                                        <span className="text-[10px] text-indigo-400/60 font-medium ml-5">
-                                            Merges into {(teamPreview as any).currentRoundName}
-                                        </span>
-                                    </div>
-                                    <Button
-                                        size="sm"
-                                        disabled={!(teamPreview as any).isReady || isMergingTeams}
-                                        onClick={(e) => { e.stopPropagation(); setIsConfirmMergeOpen(true); }}
-                                        className="h-7 px-3 bg-indigo-500 hover:bg-indigo-600 text-white text-[10px] font-bold"
-                                    >
-                                        {(teamPreview as any).isReady ? "Merge Now" : "Locked"}
-                                    </Button>
-                                </div>
-
-                                {!(teamPreview as any).isReady ? (
-                                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded flex items-center gap-3">
-                                        <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
-                                        <p className="text-[11px] text-red-400 font-bold leading-relaxed">
-                                            Please complete all mapped rounds in the following roadmaps first: {(teamPreview as any).unreadySources?.join(", ") || "Active Roadmaps"}.
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <p className="text-[10px] text-gray-500 leading-relaxed italic">
-                                        The "Generate" button is disabled until you merge invited teams to ensure data integrity.
-                                    </p>
-                                )}
-                            </div>
-                        )}
-
-                        <p className="text-sm text-gray-500 italic">
-                            {(teamPreview as any)?.hasPending ? "Merge teams to enable generation." : "Are you sure you want to proceed?"}
-                        </p>
-                    </div>
-                }
-                actionLabel="Generate"
-                confirmDisabled={!!(teamPreview as any)?.hasPending}
-                onConfirm={async () => {
-                    if (selectedRound) await handleCreateGroups(selectedRound._id);
-                    setIsConfirmGroupsOpen(false);
-                }}
-                isLoading={isCreatingGroups}
-                variant="default"
+                isPending={false} // Managed by confirm action buttons in header if needed, or by round actions hook
+                onConfirm={() => selectedRound && handleCreateGroups(selectedRound._id)}
             />
 
             <ConfirmActionDialog
-                open={isConfirmManualGroupOpen}
+                title="Create Group Manually"
+                description="This will add a single empty group to this round. You can then drag and drop teams into it."
+                isOpen={isConfirmManualGroupOpen}
                 onOpenChange={setIsConfirmManualGroupOpen}
-                title={selectedRound?.roadmapData?.isLeague ? "Create League Group?" : "Create One New Group?"}
-                description={
-                    <div className="space-y-4">
-                        <p>Are you sure you want to create <strong className="text-white">{selectedRound?.roadmapData?.isLeague ? "a league group" : "one new group"}</strong> manually in <strong className="text-white">{selectedRound?.roundName}</strong>?</p>
-                        <p className="text-xs text-gray-500 italic">
-                            {selectedRound?.roadmapData?.isLeague && selectedRound?.roadmapData?.leagueType === '18-teams'
-                                ? "This will automatically resolve 18 teams for the league and create the group with pairings."
-                                : "This will create an empty group with default settings. You can add teams to it later."}
-                        </p>
-                    </div>
-                }
-                actionLabel={selectedRound?.roadmapData?.isLeague ? "Create League" : "Create Group"}
-                onConfirm={async () => {
-                    if (selectedRound) {
-                        const isLeague = selectedRound.roadmapData?.isLeague;
-                        const leagueType = selectedRound.roadmapData?.leagueType;
-                        
-                        if (isLeague) {
-                            // Extract team count from leagueType (e.g., "18-teams" -> 18)
-                            const teamCount = parseInt(leagueType?.split("-")[0]);
-                            if (!isNaN(teamCount)) {
-                                await handleManualCreateGroup(selectedRound._id, 'league', teamCount);
-                            } else {
-                                await handleManualCreateGroup(selectedRound._id, 'league');
-                            }
-                        } else {
-                            await handleManualCreateGroup(selectedRound._id);
-                        }
-                    }
-                    setIsConfirmManualGroupOpen(false);
-                }}
-                isLoading={isCreatingSingleGroup}
-                variant="default"
+                isPending={false}
+                onConfirm={() => selectedRound && handleManualCreateGroup(selectedRound._id)}
             />
 
             <ConfirmActionDialog
-                open={isConfirmMergeOpen}
+                title="Merge Teams from Previous Round"
+                description="This will pull all qualifying teams from the previous round into this one. Use this when the previous round is finished."
+                isOpen={isConfirmMergeOpen}
                 onOpenChange={setIsConfirmMergeOpen}
-                title="Merge Roadmap Teams?"
-                description={
-                    <div className="space-y-4">
-                        <p>Are you sure you want to merge qualified teams from other roadmaps into <strong className="text-white">{selectedRound?.roundName}</strong>?</p>
-                        {selectedRound?.mergeInfo?.sources && (
-                            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3">
-                                <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mb-2">Sources:</p>
-                                <ul className="space-y-1">
-                                    {selectedRound.mergeInfo.sources.map((s: any, idx: number) => (
-                                        <li key={idx} className="text-xs text-gray-300 flex items-center gap-2">
-                                            <div className="w-1 h-1 rounded-full bg-indigo-500" />
-                                            <span className="font-bold">{s.name}</span>
-                                            <span className="text-gray-500 italic">({s.type})</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                        <p className="text-sm text-gray-500 italic">This will pull all currently qualified teams. You can run this again if more teams qualify later.</p>
-                    </div>
-                }
-                actionLabel="Merge Teams"
-                onConfirm={async () => {
-                    if (selectedRound) await handleMergeTeams(selectedRound._id);
-                    setIsConfirmMergeOpen(false);
-                }}
-                isLoading={isMergingTeams}
-                variant="default"
+                isPending={false}
+                onConfirm={() => selectedRound && handleMergeTeams(selectedRound._id)}
             />
         </>
+    );
+};
+
+interface ConfirmActionDialogProps {
+    title: string;
+    description: string;
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void;
+    isPending: boolean;
+}
+
+const ConfirmActionDialog: React.FC<ConfirmActionDialogProps> = ({
+    title,
+    description,
+    isOpen,
+    onOpenChange,
+    onConfirm,
+    isPending
+}) => {
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="bg-brand-dark/95 border-white/10 text-white">
+                <DialogHeader>
+                    <div className="flex items-center gap-3 text-amber-500 mb-2">
+                        <AlertTriangle className="w-5 h-5" />
+                        <DialogTitle className="uppercase font-black font-orbitron italic tracking-tight">
+                            {title}
+                        </DialogTitle>
+                    </div>
+                    <DialogDescription className="text-gray-400 text-sm">
+                        {description}
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="mt-4 gap-2">
+                    <Button
+                        variant="ghost"
+                        onClick={() => onOpenChange(false)}
+                        className="text-gray-400 hover:text-white hover:bg-white/5"
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={onConfirm}
+                        disabled={isPending}
+                        className="bg-purple-600 hover:bg-purple-500 text-white font-bold"
+                    >
+                        {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        Confirm Action
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 };

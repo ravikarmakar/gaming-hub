@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, Calendar, Clock, Trophy, Layers, ArrowRight, Info } from "lucide-react";
+import { LoaderCircle as Loader2, Calendar, Clock, Trophy, Layers, ArrowRight, Info } from "lucide-react";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -113,7 +113,7 @@ export const CreateRoundDialog = ({ eventId, open, onOpenChange, type, roadmapIn
             });
 
             if (result?._id && onSuccess) {
-                onSuccess(result._id);
+                onSuccess(result._id as string);
             }
 
             onOpenChange(false);

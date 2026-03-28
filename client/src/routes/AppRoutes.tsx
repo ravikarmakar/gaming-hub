@@ -37,12 +37,12 @@ const AppRoutes = () => {
                 <Route path={TOURNAMENT_ROUTES.TOURNAMENTS} element={<pages.AllTournaments />} />
                 <Route path={TEAM_ROUTES.ALL_TEAMS} element={<pages.FindTeams />} />
                 <Route path={ORGANIZER_ROUTES.ORGANIZERS} element={<pages.FindOrganizers />} />
+                <Route path={PLAYER_ROUTES.ALL_PLAYERS} element={<pages.FindPlayers />} />
                 <Route path={ROUTES.SUPPORT} element={<pages.Support />} />
 
                 {/* Protected Feature Routes */}
                 <Route element={<ProtectedRoute />}>
                     <Route path={ORGANIZER_ROUTES.PROFILE} element={<pages.OrganizerProfile />} />
-                    <Route path={PLAYER_ROUTES.ALL_PLAYERS} element={<pages.FindPlayers />} />
                     <Route path={PLAYER_ROUTES.PLAYER_DETAILS} element={<pages.PlayerId />} />
                     <Route path={PLAYER_ROUTES.PLAYER_SETTINGS} element={<pages.PlayerSettings />} />
                     <Route path={TEAM_ROUTES.PROFILE} element={<pages.TeamId />} />

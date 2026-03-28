@@ -5,21 +5,18 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
 import { formatDate } from "@/lib/utils";
-import { Tournament } from "@/features/tournaments/types";
+import { Roadmaps } from "../details/Roadmaps";
+import { TournamentQuickStats } from "../shared/TournamentQuickStats";
+import { PrizeDistribution } from "../details/PrizeDistribution";
+import { useTournamentDashboard } from "@/features/tournaments/context/TournamentDashboardContext";
 
-import {
-    Roadmaps,
-    TournamentQuickStats,
-    PrizeDistribution
-} from "..";
-
-interface TournamentOverviewProps {
-    eventDetails?: Tournament;
-}
-
-export const TournamentOverview = ({ eventDetails }: TournamentOverviewProps) => {
-    // No longer fetching rounds directly - using roadmap status from event object instead
-    // const { data: rounds = [] } = useGetRoundsQuery(eventDetails?._id || "");
+/**
+ * TournamentOverview provides a high-level summary of the tournament's progress, 
+ * slots, and schedule.
+ * Consumes TournamentDashboardContext for eventDetails.
+ */
+export const TournamentOverview = () => {
+    const { eventDetails } = useTournamentDashboard();
 
     const stats = useMemo(() => {
         if (!eventDetails) return null;

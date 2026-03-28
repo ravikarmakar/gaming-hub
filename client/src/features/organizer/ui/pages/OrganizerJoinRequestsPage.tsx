@@ -1,5 +1,5 @@
 import { useState, memo } from "react";
-import { Check, X, Clock, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, X, Clock, LoaderCircle as Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 import { Button } from "@/components/ui/button";
