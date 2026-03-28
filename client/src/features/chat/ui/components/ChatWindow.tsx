@@ -1,34 +1,19 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, UIEvent } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { MessageSquare, LoaderCircle as Loader2, Maximize2, ArrowDown } from "lucide-react";
-import { FixedSizeList as List } from "react-window";
-import { AutoSizer } from "react-virtualized-auto-sizer";
-
+import { useQueryClient } from "@tanstack/react-query";
 import { useSocket } from "@/contexts/SocketContext";
 import { useCurrentUser } from "@/features/auth";
-import { useChatStore, ChatMessage } from "../../store/useChatStore";
+import { useChatHistoryQuery, useChatCacheHelpers } from "../../hooks/useChatQueries";
+import { useChatSocket } from "../../hooks/useChatSocket";
+import { chatKeys } from "../../hooks/chatKeys";
+import { ChatProvider } from "../../contexts/ChatContext";
 import { MessageItem } from "./MessageItem";
 import { MessageInput } from "./MessageInput";
 import { cn } from "@/lib/utils";
 import { TEAM_ROUTES } from "@/features/teams/lib/routes";
 import { ORGANIZER_ROUTES } from "@/features/organizer/lib/routes";
-
-const MessageRow = ({ index, style, data }: { index: number, style: React.CSSProperties, data: any }) => {
-  const { messages, user, canDeleteParent, isPage } = data;
-  const msg = messages[index];
-  if (!msg) return null;
-
-  return (
-    <div style={style} className={cn("px-4 md:px-6", isPage && "md:px-4")}>
-      <MessageItem
-        message={msg}
-        isOwnMessage={msg.sender === user?._id}
-        canDeleteParent={canDeleteParent}
-      />
-    </div>
-  );
-};
 
 interface ChatWindowProps {
   targetId: string;
@@ -39,7 +24,7 @@ interface ChatWindowProps {
   hideHeader?: boolean;
 }
 
-export const ChatWindow = ({
+const ChatWindowInner = ({
   targetId,
   targetName,
   scope,
@@ -49,59 +34,33 @@ export const ChatWindow = ({
 }: ChatWindowProps) => {
   const { socket, isConnected } = useSocket();
   const { user } = useCurrentUser();
-  const {
-    messages,
-    isLoading,
-    isLoadingMore,
-    hasMore,
-    fetchHistory,
-    addMessage,
-    clearMessages
-  } = useChatStore();
+  const queryClient = useQueryClient();
 
-  const listRef = useRef<List>(null);
+  // Fetch initial history via TanStack Query
+  const { data: historyData, isLoading, isError } = useChatHistoryQuery(targetId, scope);
+  const messages = historyData?.messages ?? [];
+
+  // WebSocket integration + load-more
+  const { isLoadingMore, hasMore, setHasMore, loadMoreMessages } = useChatSocket({
+    targetId,
+    scope,
+    socket,
+    isConnected,
+  });
+
+  // Sync hasMore from initial query
+  useEffect(() => {
+    if (historyData?.hasMore !== undefined) {
+      setHasMore(historyData.hasMore);
+    }
+  }, [historyData?.hasMore, setHasMore]);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const prevMessagesCount = useRef(messages.length);
 
   const isPage = variant === "page";
-
-  // Initialize/Cleanup
-  useEffect(() => {
-    fetchHistory(targetId, scope);
-
-    if (socket && isConnected) {
-      socket.emit("join:chat", { targetId, scope });
-
-      socket.on("chat:message", (message: ChatMessage) => {
-        if (message.targetId === targetId && message.scope === scope) {
-          addMessage(message);
-        }
-      });
-
-      socket.on("chat:update", (message: ChatMessage) => {
-        useChatStore.getState().handleRemoteUpdate(message);
-      });
-
-      socket.on("chat:delete", ({ messageId, targetId: msgTargetId }: { messageId: string, targetId: string }) => {
-        if (msgTargetId === targetId) {
-          useChatStore.getState().handleRemoteDelete(messageId);
-        }
-      });
-
-      return () => {
-        socket.off("chat:message");
-        socket.off("chat:update");
-        socket.off("chat:delete");
-        socket.emit("leave:chat", { targetId, scope });
-        clearMessages();
-      };
-    }
-
-    return () => {
-      clearMessages();
-    };
-  }, [targetId, scope, socket, isConnected, fetchHistory, addMessage, clearMessages]);
 
   // Handle auto-scroll to bottom on new messages
   useEffect(() => {
@@ -112,7 +71,9 @@ export const ChatWindow = ({
 
       if (addedToBottom) {
         if (isOwnMessage || isAtBottom) {
-          listRef.current?.scrollToItem(messages.length - 1, "end");
+          setTimeout(() => {
+            if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+          }, 50);
           if (isOwnMessage) {
             setIsAtBottom(true);
             setShowScrollToBottom(false);
@@ -123,17 +84,19 @@ export const ChatWindow = ({
       }
     } else if (messages.length > 0 && prevMessagesCount.current === 0) {
       // Initial load
-      listRef.current?.scrollToItem(messages.length - 1, "end");
+      setTimeout(() => {
+        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }, 50);
       setIsAtBottom(true);
     }
     prevMessagesCount.current = messages.length;
   }, [messages, isAtBottom, user?._id]);
 
-  const handleScroll = useCallback(({ scrollOffset, scrollDirection, scrollUpdateWasRequested }: any, containerHeight: number) => {
-    if (scrollUpdateWasRequested) return;
-
-    const itemSize = 70;
-    const totalHeight = messages.length * itemSize;
+  const handleScroll = useCallback((e: UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const scrollOffset = target.scrollTop;
+    const containerHeight = target.clientHeight;
+    const totalHeight = target.scrollHeight;
 
     // Detect if at bottom (within 100px)
     const isNearBottom = scrollOffset + containerHeight >= totalHeight - 100;
@@ -146,19 +109,75 @@ export const ChatWindow = ({
     }
 
     // Infinite scroll: fetch history when near top
-    if (scrollDirection === "backward" && scrollOffset < 100 && hasMore && !isLoadingMore) {
-      fetchHistory(targetId, scope, true);
+    if (scrollOffset < 50 && hasMore && !isLoadingMore && messages.length > 0) {
+      loadMoreMessages(messages[0].createdAt);
     }
-  }, [messages.length, hasMore, isLoadingMore, fetchHistory, targetId, scope]);
+  }, [hasMore, isLoadingMore, loadMoreMessages, messages]);
 
-  const handleSendMessage = (content: string) => {
-    if (socket && isConnected) {
-      socket.emit("chat:message", { targetId, scope, content });
-    }
+  const { removeMessageByLocalId } = useChatCacheHelpers(targetId, scope);
+
+  const handleSendMessage = (content: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if (!socket || !isConnected) {
+        reject(new Error("Chat is currently disconnected."));
+        return;
+      }
+
+      const localId = `local_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
+      // Optimistic cache update
+      queryClient.setQueryData(chatKeys.history(targetId, scope), (old: any) => {
+        if (!old) return old;
+        const optimisticMessage = {
+          _id: localId,
+          localId,
+          content,
+          sender: user?._id,
+          senderName: user?.username,
+          senderAvatar: user?.avatar,
+          createdAt: new Date().toISOString(),
+          isPending: true,
+        };
+        return {
+          ...old,
+          messages: [...old.messages, optimisticMessage],
+        };
+      });
+
+      let rolledBack = false;
+
+      // Timeout fallback (10 seconds)
+      const timeout = setTimeout(() => {
+        rolledBack = true;
+        removeMessageByLocalId(localId);
+        reject(new Error("Message send timed out. Please try again."));
+      }, 10000);
+
+      socket.emit("chat:message", { targetId, scope, content, localId }, (response: any) => {
+        clearTimeout(timeout);
+        if (rolledBack) return; // Already handled by timeout
+
+        if (response?.success) {
+          setTimeout(() => {
+            if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+          }, 50);
+          resolve();
+        } else {
+          // Rollback on server failure
+          removeMessageByLocalId(localId);
+          reject(new Error(response?.error || "Failed to send message."));
+        }
+      });
+
+      // Immediate scroll for UX
+      setTimeout(() => {
+        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }, 50);
+    });
   };
 
   const scrollToBottom = () => {
-    listRef.current?.scrollToItem(messages.length - 1, "end");
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     setShowScrollToBottom(false);
     setIsAtBottom(true);
   };
@@ -172,6 +191,21 @@ export const ChatWindow = ({
         isPage ? "flex-1 rounded-none border-none" : "h-[500px] rounded-2xl"
       )}>
         <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className={cn(
+        "flex flex-col items-center justify-center bg-[#0F111A]/40 border border-white/10 backdrop-blur-xl text-center p-6",
+        isPage ? "flex-1 rounded-none border-none" : "h-[500px] rounded-2xl"
+      )}>
+        <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4 border border-red-500/20">
+          <MessageSquare className="w-6 h-6 text-red-500" />
+        </div>
+        <h3 className="text-white font-bold mb-2">Failed to load chat</h3>
+        <p className="text-gray-400 text-sm">Please refresh the page or try again later.</p>
       </div>
     );
   }
@@ -240,25 +274,28 @@ export const ChatWindow = ({
             <p className="text-gray-400 text-sm italic">Be the first to say something!</p>
           </div>
         ) : (
-          <AutoSizer renderProp={({ height, width }: { height?: number; width?: number }) => (
-            <List
-              ref={listRef}
-              height={height || 600}
-              width={width || 400}
-              itemCount={messages.length}
-              itemSize={70}
-              onScroll={(props) => handleScroll(props, height || 600)}
-              className="no-scrollbar"
-              itemData={{
-                messages,
-                user,
-                canDeleteParent,
-                isPage
-              }}
-            >
-              {MessageRow}
-            </List>
-          )} />
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto w-full no-scrollbar flex flex-col gap-3 pb-4"
+          >
+            <div className="flex-1" /> {/* Spacer to push messages to bottom if few */}
+            {messages.map((msg, index) => {
+              const prevMsg = messages[index - 1];
+              const isFirstOfDay = !prevMsg || new Date(msg.createdAt).toDateString() !== new Date(prevMsg.createdAt).toDateString();
+
+              return (
+                <div key={msg._id} className={cn("px-4 md:px-6 shrink-0", isPage && "md:px-4")}>
+                  <MessageItem
+                    message={msg}
+                    isOwnMessage={msg.sender === user?._id}
+                    canDeleteParent={canDeleteParent}
+                    showDateDivider={isFirstOfDay}
+                  />
+                </div>
+              );
+            })}
+          </div>
         )}
 
         {showScrollToBottom && (
@@ -277,5 +314,16 @@ export const ChatWindow = ({
         <MessageInput onSendMessage={handleSendMessage} isLoading={!isConnected} />
       </div>
     </motion.div >
+  );
+};
+
+/**
+ * ChatWindow wrapped in ChatProvider to scope editingMessage state.
+ */
+export const ChatWindow = (props: ChatWindowProps) => {
+  return (
+    <ChatProvider>
+      <ChatWindowInner {...props} />
+    </ChatProvider>
   );
 };

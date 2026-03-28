@@ -1,7 +1,7 @@
 import React from 'react';
 import { MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ChatWindow } from "@/features/chat/ui/components/ChatWindow";
 import { useCurrentUser } from '@/features/auth';
 
@@ -33,12 +33,15 @@ const ChatDialog = ({
   name: string;
 }) => (
   <Dialog open={Boolean(open && entityId)} onOpenChange={onOpenChange}>
-    <DialogContent className="max-w-2xl h-[600px] bg-[#0F111A] border-white/10 p-0 overflow-hidden flex flex-col">
+    <DialogContent className="max-w-2xl h-[600px] bg-[#0F111A] border-white/10 p-0 overflow-hidden flex flex-col focus:outline-none focus:ring-0 focus-visible:ring-0 ring-0 ring-offset-0">
       <DialogHeader className="p-4 border-b border-white/10 flex-shrink-0">
         <DialogTitle className="flex items-center gap-2 text-white">
           <MessageSquare className="w-5 h-5 text-purple-400" />
           {name} - Chat
         </DialogTitle>
+        <DialogDescription className="sr-only">
+          Private communication channel with {name}
+        </DialogDescription>
       </DialogHeader>
       <div className="flex-1 overflow-hidden p-4">
         {open && entityId && (

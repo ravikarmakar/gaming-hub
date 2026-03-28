@@ -1,2 +1,2 @@
 export * from "./ui/components/ChatWindow";
-export * from "./store/useChatStore";
+export type { ChatMessage } from "./api/chatApi";
