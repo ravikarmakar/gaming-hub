@@ -10,7 +10,7 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
@@ -72,6 +72,10 @@ export const OrganizerUserSearch = ({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="overflow-hidden p-0 bg-brand-dark border-purple-500/20 shadow-2xl sm:max-w-[500px] max-w-[95vw]">
+                <DialogTitle className="sr-only">Search and Add Users</DialogTitle>
+                <DialogDescription className="sr-only">
+                    Search for users and add them to your organization team
+                </DialogDescription>
                 <Command className="rounded-lg bg-transparent">
                     <div className="relative border-b border-purple-500/10">
                         <CommandInput

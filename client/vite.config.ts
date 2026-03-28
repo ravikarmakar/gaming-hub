@@ -18,7 +18,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ["react-window"],
+    include: ["react-window", "dompurify"],
   },
   test: {
     globals: true,

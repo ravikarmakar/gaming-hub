@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
     MoreHorizontal,
     Search,
@@ -30,50 +30,47 @@ import {
     TableRow,
 } from "@/components/ui/table";
 
-import { useAdminStore } from "../../store/useAdminStore";
+import { useAdminEntitiesQuery } from "../../hooks/useAdminQueries";
+import { useUpdateEntityStatusMutation } from "../../hooks/useAdminMutations";
 import { useDebounce } from "@/hooks/useDebounce";
 import { throttle } from "@/lib/utils";
 import { GlassCard, NeonBadge } from "@/features/tournaments/ui/components/shared/ThemedComponents";
 
 import { cn } from "@/lib/utils";
 
-const TeamManagementPage = () => {
-    const {
-        entities,
-        isLoading,
-        activeTab,
-        currentPage,
-        totalPages,
-        pageSize,
-        totalEntities,
-        searchQuery,
-        fetchEntities,
-        setTab,
-        setSearch,
-        setPage,
-        updateEntityStatus
-    } = useAdminStore();
+const PAGE_SIZE = 10;
 
-    // Local state for search to achieve debouncing
-    const [searchTerm, setSearchTerm] = useState(searchQuery);
+const TeamManagementPage = () => {
+    const [currentPage, setCurrentPage] = useState(1);
+    const [activeTab, setActiveTab] = useState("all");
+    const [searchTerm, setSearchTerm] = useState("");
     const debouncedSearch = useDebounce(searchTerm, 500);
 
-    const teams = entities as any[]; // Type cast for simplicity in UI
+    const { data, isLoading } = useAdminEntitiesQuery("Team", {
+        page: currentPage,
+        pageSize: PAGE_SIZE,
+        search: debouncedSearch,
+        filter: activeTab,
+    });
 
-    useEffect(() => {
-        fetchEntities("Team", currentPage, activeTab, searchQuery);
-    }, []);
+    const updateStatusMutation = useUpdateEntityStatusMutation();
 
-    // Effect to sync debounced search with the store
-    useEffect(() => {
-        if (debouncedSearch !== searchQuery) {
-            setSearch(debouncedSearch);
-        }
-    }, [debouncedSearch]);
+    const teams = (data?.data ?? []) as any[];
+    const totalEntities = data?.total ?? 0;
+    const totalPages = data?.totalPages ?? 1;
 
-    // Throttled actions to prevent API spam
-    const throttledSetTab = useMemo(() => throttle((id: string) => setTab(id), 800), [setTab]);
-    const throttledSetPage = useMemo(() => throttle((page: number) => setPage(page), 800), [setPage]);
+    const handleSetTab = useMemo(() => throttle((id: string) => {
+        setActiveTab(id);
+        setCurrentPage(1);
+    }, 800), []);
+
+    const handleSetPage = useMemo(() => throttle((page: number) => {
+        setCurrentPage(page);
+    }, 800), []);
+
+    const handleUpdateStatus = (id: string, updates: any) => {
+        updateStatusMutation.mutate({ type: "Team", id, updates });
+    };
 
     const tabs = [
         { id: "all", label: "All Teams", icon: UsersIcon },
@@ -116,7 +113,7 @@ const TeamManagementPage = () => {
                         return (
                             <button
                                 key={tab.id}
-                                onClick={() => throttledSetTab(tab.id)}
+                                onClick={() => handleSetTab(tab.id)}
                                 className={cn(
                                     "px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border",
                                     isActive
@@ -144,7 +141,7 @@ const TeamManagementPage = () => {
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                Array.from({ length: pageSize }).map((_, i) => (
+                                Array.from({ length: PAGE_SIZE }).map((_, i) => (
                                     <TableRow key={i} className="border-white/5 hover:bg-transparent">
                                         <TableCell className="px-6 py-4">
                                             <div className="flex items-center gap-3">
@@ -218,7 +215,7 @@ const TeamManagementPage = () => {
                                                 <DropdownMenuContent align="end" className="bg-[#16161c] border-white/10 text-white shadow-2xl">
                                                     <DropdownMenuItem
                                                         className="focus:bg-red-500/10 focus:text-red-400 cursor-pointer flex items-center gap-2 py-2.5 text-red-400"
-                                                        onClick={() => updateEntityStatus("Team", team._id, { isBlocked: !team.isBlocked })}
+                                                        onClick={() => handleUpdateStatus(team._id, { isBlocked: !team.isBlocked })}
                                                     >
                                                         {team.isBlocked ? (
                                                             <>
@@ -245,14 +242,14 @@ const TeamManagementPage = () => {
                     {/* Pagination */}
                     <div className="px-6 py-4 border-t border-white/5 flex items-center justify-between bg-white/[0.01]">
                         <p className="text-xs text-gray-500 font-medium">
-                            Showing <span className="text-white">{(currentPage - 1) * pageSize + 1}</span> to <span className="text-white">{Math.min(currentPage * pageSize, totalEntities)}</span> of <span className="text-white">{totalEntities}</span> teams
+                            Showing <span className="text-white">{totalEntities === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}</span> to <span className="text-white">{Math.min(currentPage * PAGE_SIZE, totalEntities)}</span> of <span className="text-white">{totalEntities}</span> teams
                         </p>
                         <div className="flex items-center gap-2">
                             <Button
                                 variant="outline"
                                 size="sm"
                                 disabled={currentPage === 1 || isLoading}
-                                onClick={() => throttledSetPage(currentPage - 1)}
+                                onClick={() => handleSetPage(currentPage - 1)}
                                 className="h-9 border-white/5 bg-transparent hover:bg-white/5 disabled:opacity-30"
                             >
                                 <ChevronLeft className="w-4 h-4" />
@@ -261,7 +258,7 @@ const TeamManagementPage = () => {
                                 {Array.from({ length: totalPages }).map((_, i) => (
                                     <button
                                         key={i}
-                                        onClick={() => throttledSetPage(i + 1)}
+                                        onClick={() => handleSetPage(i + 1)}
                                         className={cn(
                                             "w-9 h-9 rounded-lg text-xs font-bold transition-all",
                                             currentPage === i + 1
@@ -277,7 +274,7 @@ const TeamManagementPage = () => {
                                 variant="outline"
                                 size="sm"
                                 disabled={currentPage === totalPages || isLoading}
-                                onClick={() => throttledSetPage(currentPage + 1)}
+                                onClick={() => handleSetPage(currentPage + 1)}
                                 className="h-9 border-white/5 bg-transparent hover:bg-white/5 disabled:opacity-30"
                             >
                                 <ChevronRight className="w-4 h-4" />
