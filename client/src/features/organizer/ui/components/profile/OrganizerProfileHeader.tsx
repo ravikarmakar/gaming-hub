@@ -46,6 +46,8 @@ export const OrganizerProfileHeader = ({ organizer }: OrganizerProfileHeaderProp
             isVerified={organizer.isVerified}
             showUserChat={!isMemberOfOrg}
             entityId={organizer._id?.toString()}
+            chatTargetId={organizer.ownerId?.toString()}
+            chatScope="user"
             description={organizer.description || "No biography provided."}
             badges={
                 <>

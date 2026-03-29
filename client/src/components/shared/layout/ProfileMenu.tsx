@@ -95,8 +95,8 @@ const ProfileMenu = () => {
       },
     ];
 
-    const teamId = user?.teamId?.toString();
-    const orgId = user?.orgId?.toString();
+    const teamId = typeof user?.teamId === 'string' ? user.teamId : user?.teamId?._id;
+    const orgId = typeof user?.orgId === 'string' ? user.orgId : user?.orgId?._id;
 
   const teamOptions: MenuOption[] = user?.teamId
     ? [

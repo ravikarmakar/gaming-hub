@@ -27,7 +27,7 @@ export interface User {
     countryCode?: string;
     isLookingForTeam?: boolean;
     roles: Roles[];
-    orgId: string;
+    orgId: string | { _id: string; orgName?: string };
     teamId: string | { _id: string; teamName: string; tag: string };
     esportsRole: EsportsRole;
     canCreateOrg: boolean;

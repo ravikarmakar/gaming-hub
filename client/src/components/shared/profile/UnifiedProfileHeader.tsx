@@ -19,20 +19,26 @@ interface UnifiedProfileHeaderProps {
   actions?: React.ReactNode;
   entityId?: string;
   showUserChat?: boolean;
+  chatTargetId?: string;
+  chatScope?: "user" | "team" | "group" | "organizer";
 }
 
 const ChatDialog = ({
   open,
   onOpenChange,
   entityId,
-  name
+  name,
+  chatTargetId,
+  chatScope
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   entityId?: string;
   name: string;
+  chatTargetId?: string;
+  chatScope?: "user" | "team" | "group" | "organizer";
 }) => (
-  <Dialog open={Boolean(open && entityId)} onOpenChange={onOpenChange}>
+  <Dialog open={Boolean(open && (chatTargetId || entityId))} onOpenChange={onOpenChange}>
     <DialogContent className="max-w-2xl h-[600px] bg-[#0F111A] border-white/10 p-0 overflow-hidden flex flex-col focus:outline-none focus:ring-0 focus-visible:ring-0 ring-0 ring-offset-0">
       <DialogHeader className="p-4 border-b border-white/10 flex-shrink-0">
         <DialogTitle className="flex items-center gap-2 text-white">
@@ -44,11 +50,11 @@ const ChatDialog = ({
         </DialogDescription>
       </DialogHeader>
       <div className="flex-1 overflow-hidden p-4">
-        {open && entityId && (
+        {open && (chatTargetId || entityId) && (
           <ChatWindow
-            targetId={entityId}
+            targetId={chatTargetId || entityId!}
             targetName={name}
-            scope="user"
+            scope={chatScope || "user"}
             variant="window"
           />
         )}
@@ -71,7 +77,9 @@ export const UnifiedProfileHeader = ({
   badges,
   actions,
   entityId,
-  showUserChat
+  showUserChat,
+  chatTargetId,
+  chatScope
 }: UnifiedProfileHeaderProps) => {
   const navigate = useNavigate();
   const { user } = useCurrentUser();
@@ -123,6 +131,8 @@ export const UnifiedProfileHeader = ({
           onOpenChange={(open) => setIsChatOpen(open)}
           entityId={entityId}
           name={name}
+          chatTargetId={chatTargetId}
+          chatScope={chatScope}
         />
       </div>
     </div>

@@ -164,50 +164,46 @@ export default function TeamProfilePage() {
     <ProfileBannerLayout bannerImage={currentTeam.bannerUrl || undefined}>
       <TeamDialogProvider>
         <TeamDialogOrchestrator />
-        <div className="h-full flex flex-col overflow-hidden">
-          <main className="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-8 space-y-10">
-            {/* Hero Section */}
-            <TeamHero team={currentTeam} />
+        {/* Layout Unification: Match Player profile structure with banner overlap and standard spacing */}
+        <TeamHero team={currentTeam} />
 
-            {/* Dynamic Content Tabs */}
-            <div className="pb-24">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-10">
-                <div className="flex items-center border-b border-white/5">
-                  <TabsList className="bg-transparent h-auto p-0 flex space-x-4 sm:space-x-8 md:space-x-10">
-                    {TEAM_TABS.map((tab) => (
-                      <TabsTrigger
-                        key={tab.value}
-                        value={tab.value}
-                        id={`tab-trigger-${tab.value}`}
-                        className="px-0 py-3 sm:py-4 bg-transparent border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent rounded-none text-zinc-400 data-[state=active]:text-white font-black uppercase text-[9px] sm:text-[11px] tracking-[1px] sm:tracking-[2px] transition-all"
-                      >
-                        <div className="flex items-center space-x-1.5 sm:space-x-2">
-                          <tab.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                          <span>{tab.label}</span>
-                        </div>
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </div>
-
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeTab}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    role="tabpanel"
-                    id={`tabpanel-${activeTab}`}
-                    tabIndex={0}
-                    aria-labelledby={`tab-trigger-${activeTab}`}
+        {/* Dynamic Content Tabs */}
+        <div className="pb-24">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-10">
+            <div className="flex items-center border-b border-white/5">
+              <TabsList className="bg-transparent h-auto p-0 flex space-x-4 sm:space-x-8 md:space-x-10">
+                {TEAM_TABS.map((tab) => (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    id={`tab-trigger-${tab.value}`}
+                    className="px-0 py-3 sm:py-4 bg-transparent border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent rounded-none text-zinc-400 data-[state=active]:text-white font-black uppercase text-[9px] sm:text-[11px] tracking-[1px] sm:tracking-[2px] transition-all"
                   >
-                    {renderTabContent()}
-                  </motion.div>
-                </AnimatePresence>
-              </Tabs>
+                    <div className="flex items-center space-x-1.5 sm:space-x-2">
+                      <tab.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                      <span>{tab.label}</span>
+                    </div>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
             </div>
-          </main>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                role="tabpanel"
+                id={`tabpanel-${activeTab}`}
+                tabIndex={0}
+                aria-labelledby={`tab-trigger-${activeTab}`}
+              >
+                {renderTabContent()}
+              </motion.div>
+            </AnimatePresence>
+          </Tabs>
         </div>
       </TeamDialogProvider>
     </ProfileBannerLayout>

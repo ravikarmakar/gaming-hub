@@ -41,7 +41,7 @@ export const PlayerHeader: React.FC<Props> = ({ player }) => {
 
   const [isInviteOpen, setIsInviteOpen] = useState(false);
 
-  const isOwnProfile = currentUser?._id === player?._id;
+  const isOwnProfile = !!(currentUser?._id && player?._id && currentUser._id.toString() === player._id.toString());
   const canInvite = can(TEAM_ACTIONS_ACCESS[TEAM_ACTIONS.inviteMember]) && !isOwnProfile;
 
 

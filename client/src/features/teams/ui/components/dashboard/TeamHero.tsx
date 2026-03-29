@@ -24,7 +24,7 @@ export const TeamHero: React.FC<TeamHeroProps> = ({ team }) => {
     // Check if user is already a member of *this* team specifically
     const isMemberOfThisTeam = team.teamMembers?.some(m => {
         const mUserId = typeof m.user === 'string' ? m.user : m.user?._id;
-        return mUserId === user?._id;
+        return mUserId?.toString() === user?._id?.toString();
     });
 
     // Show the button only if the team is recruiting and the user is NOT in any team
@@ -69,6 +69,8 @@ export const TeamHero: React.FC<TeamHeroProps> = ({ team }) => {
             isVerified={team.isVerified}
             showUserChat={!isMemberOfThisTeam}
             entityId={team._id}
+            chatTargetId={team.captain}
+            chatScope="user"
             description={
                 <div className="space-y-2">
                     <p>{team.bio || "No biography provided for this team yet."}</p>
