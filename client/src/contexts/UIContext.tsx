@@ -33,7 +33,11 @@ export const UIProvider = ({ children }: { children: React.ReactNode }) => {
 export const useUI = (): UIContextValue => {
     const ctx = useContext(UIContext);
     if (!ctx) {
-        throw new Error("useUI must be used within a UIProvider");
+        // Safe-fallback: return a no-op implementation for usage outside MainLayout
+        return {
+            isFooterSuppressed: false,
+            suppressFooter: () => { },
+        };
     }
     return ctx;
 };
